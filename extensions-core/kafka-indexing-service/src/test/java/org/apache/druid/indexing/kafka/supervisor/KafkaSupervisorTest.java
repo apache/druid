@@ -482,7 +482,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2).getStandardMinutes()
+            Duration.standardHours(2).getStandardMinutes(),
+            null
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -5448,6 +5449,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
+        null,
         idleConfig,
         null,
         true
@@ -5544,6 +5546,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -5634,6 +5637,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
@@ -5784,7 +5788,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             maximumMessageTime,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2).getStandardMinutes()
+            Duration.standardHours(2).getStandardMinutes(),
+            null
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER
