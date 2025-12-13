@@ -41,6 +41,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -81,6 +82,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final SegmentLoaderConfig config;
   private final ObjectMapper jsonMapper;
+  private final HistoricalStartupCacheLoadStrategy loadStrategy;
 
   private final List<StorageLocation> locations;
 
@@ -131,6 +133,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.locations = locations;
     this.strategy = strategy;
     this.indexIO = indexIO;
+    this.loadStrategy = config.getStartupCacheLoadStrategy();
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
@@ -1012,7 +1015,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
           @SuppressWarnings("ObjectEquality")
-          final boolean lazy = config.isLazyLoadOnStart() && lazyLoadCallback != SegmentLazyLoadFailCallback.NOOP;
+          final boolean lazy = lazyLoadCallback != SegmentLazyLoadFailCallback.NOOP
+                               && loadStrategy.shouldLoadLazily(dataSegment);
           final Segment segment = factory.factorize(dataSegment, storageDir, lazy, lazyLoadCallback);
           // wipe load callback after calling
           lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
