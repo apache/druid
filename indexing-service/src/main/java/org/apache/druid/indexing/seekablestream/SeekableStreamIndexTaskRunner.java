@@ -238,6 +238,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
+  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
 
   protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
@@ -454,6 +455,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
+      this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1662,6 +1664,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put("pollIdleRatio", this.recordSupplier.getPollIdleRatioMetric());
+    }
     return returnMap;
   }
 

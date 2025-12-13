@@ -128,7 +128,6 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * returns the set of partitions under the given stream
    *
    * @param stream name of stream
-   *
    * @return set of partitions
    */
   Set<PartitionIdType> getPartitionIds(String stream);
@@ -139,6 +138,15 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return Map from Partition ID to the corresponding end offset
    */
   default Map<PartitionIdType, SequenceOffsetType> getLatestSequenceNumbers(Set<StreamPartition<PartitionIdType>> partitions)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * @return Kafka's `poll-idle-ratio-avg` an it's analog for Kinesis,
+   * required for correct autoscaler work
+   */
+  default double getPollIdleRatioMetric()
   {
     throw new UnsupportedOperationException();
   }
