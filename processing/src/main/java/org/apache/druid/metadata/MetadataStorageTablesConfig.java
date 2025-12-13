@@ -94,7 +94,7 @@ public class MetadataStorageTablesConfig
       @JsonProperty("upgradeSegments") String upgradeSegmentsTable,
       @JsonProperty("segmentSchemas") String segmentSchemasTable,
       @JsonProperty("useShortIndexNames") Boolean useShortIndexNames,
-      @JsonProperty("compactionStatesTable") String compactionStatesTable
+      @JsonProperty("compactionStates") String compactionStatesTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
