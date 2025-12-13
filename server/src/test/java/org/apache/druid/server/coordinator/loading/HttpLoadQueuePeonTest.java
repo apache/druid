@@ -58,6 +58,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -91,7 +92,8 @@ public class HttpLoadQueuePeonTest
             httpClient.processingExecutor,
             true
         ),
-        httpClient.callbackExecutor
+        httpClient.callbackExecutor,
+        new ReentrantReadWriteLock()
     );
     httpLoadQueuePeon.start();
   }
@@ -338,7 +340,8 @@ public class HttpLoadQueuePeonTest
             httpClient.processingExecutor,
             true
         ),
-        httpClient.callbackExecutor
+        httpClient.callbackExecutor,
+        new ReentrantReadWriteLock()
     );
 
     Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
