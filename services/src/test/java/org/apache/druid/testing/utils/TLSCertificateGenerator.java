@@ -21,10 +21,12 @@ package org.apache.druid.testing.utils;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
@@ -41,6 +43,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
@@ -70,6 +73,15 @@ public class TLSCertificateGenerator
     }
   }
 
+  private static X500Name createX500Name(String commonName)
+  {
+    X500NameBuilder builder = new X500NameBuilder();
+    builder.addRDN(org.bouncycastle.asn1.x500.style.RFC4519Style.c, "US");
+    builder.addRDN(org.bouncycastle.asn1.x500.style.RFC4519Style.o, "Apache Druid Test");
+    builder.addRDN(org.bouncycastle.asn1.x500.style.RFC4519Style.cn, commonName);
+    return builder.build();
+  }
+
   /**
    * Generates a complete set of TLS certificates to a temporary directory.
    * The directory will contain:
@@ -87,6 +99,9 @@ public class TLSCertificateGenerator
   public static TLSCertificateBundle generateToTempDirectory() throws Exception
   {
     Path tempDir = FileUtils.createTempDir().toPath();
+    // Set readable and executable permissions for all users (required for containers)
+    tempDir.toFile().setReadable(true, false);
+    tempDir.toFile().setExecutable(true, false);
     return generateToDirectory(tempDir);
   }
 
@@ -103,20 +118,18 @@ public class TLSCertificateGenerator
     KeyPair caKeyPair = generateKeyPair();
     X509Certificate caCert = generateCACertificate(caKeyPair);
 
-    // Generate server certificate with SAN for localhost
+    // Generate server certificate with SAN for localhost and additional hostnames
     KeyPair serverKeyPair = generateKeyPair();
     X509Certificate serverCert = generateServerCertificate(
         serverKeyPair,
-        caCert,
         caKeyPair.getPrivate(),
-        "localhost"
+        new String[]{"localhost", "127.0.0.1", "server.dc1", "consul"}
     );
 
     // Generate client certificate for mTLS
     KeyPair clientKeyPair = generateKeyPair();
     X509Certificate clientCert = generateClientCertificate(
         clientKeyPair,
-        caCert,
         caKeyPair.getPrivate(),
         "druid-client"
     );
@@ -143,105 +156,104 @@ public class TLSCertificateGenerator
     return keyGen.generateKeyPair();
   }
 
-  private static X509Certificate generateCACertificate(KeyPair keyPair) throws Exception
+  private static X509v3CertificateBuilder createCertificateBuilder(X500Name subject, KeyPair keyPair)
   {
-    X500Name issuer = new X500Name("CN=Test CA, O=Apache Druid Test, C=US");
+    X500Name issuer = createX500Name("Test CA");
     BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
     Date notBefore = new Date();
     Date notAfter = new Date(notBefore.getTime() + VALIDITY_DAYS * 24 * 60 * 60 * 1000L);
 
-    X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-        issuer,       // issuer
-        serial,       // serial
-        notBefore,    // notBefore
-        notAfter,     // notAfter
-        issuer,       // subject (self-signed)
+    return new JcaX509v3CertificateBuilder(
+        issuer,
+        serial,
+        notBefore,
+        notAfter,
+        subject,
         keyPair.getPublic()
     );
+  }
 
-    // Mark as CA certificate
-    certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
-
+  private static X509Certificate buildCertificate(X509v3CertificateBuilder certBuilder, PrivateKey signingKey) throws Exception
+  {
     ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
         .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-        .build(keyPair.getPrivate());
+        .build(signingKey);
 
     return new JcaX509CertificateConverter()
         .setProvider(BouncyCastleProvider.PROVIDER_NAME)
         .getCertificate(certBuilder.build(signer));
+  }
+
+  private static X509Certificate generateCACertificate(KeyPair keyPair) throws Exception
+  {
+    X500Name subject = createX500Name("Test CA");
+    X509v3CertificateBuilder certBuilder = createCertificateBuilder(subject, keyPair);
+
+    certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
+    certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign));
+
+    return buildCertificate(certBuilder, keyPair.getPrivate());
+  }
+
+  private static boolean isIpAddress(String hostname)
+  {
+    if (hostname == null || hostname.isEmpty()) {
+      return false;
+    }
+    String[] parts = hostname.split("\\.");
+    if (parts.length != 4) {
+      return false;
+    }
+    try {
+      for (String part : parts) {
+        int value = Integer.parseInt(part);
+        if (value < 0 || value > 255) {
+          return false;
+        }
+      }
+      return true;
+    }
+    catch (NumberFormatException e) {
+      return false;
+    }
   }
 
   private static X509Certificate generateServerCertificate(
       KeyPair keyPair,
-      X509Certificate caCert,
       PrivateKey caKey,
-      String hostname
+      String[] hostnames
   ) throws Exception
   {
-    X500Name issuer = new X500Name(caCert.getSubjectX500Principal().getName());
-    X500Name subject = new X500Name("CN=" + hostname + ", O=Apache Druid Test, C=US");
-    BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
-    Date notBefore = new Date();
-    Date notAfter = new Date(notBefore.getTime() + VALIDITY_DAYS * 24 * 60 * 60 * 1000L);
+    X500Name subject = createX500Name(hostnames[0]);
+    X509v3CertificateBuilder certBuilder = createCertificateBuilder(subject, keyPair);
 
-    X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-        issuer,
-        serial,
-        notBefore,
-        notAfter,
-        subject,
-        keyPair.getPublic()
-    );
+    GeneralName[] altNames = new GeneralName[hostnames.length];
+    for (int i = 0; i < hostnames.length; i++) {
+      String hostname = hostnames[i];
+      if (isIpAddress(hostname)) {
+        altNames[i] = new GeneralName(GeneralName.iPAddress, hostname);
+      } else {
+        altNames[i] = new GeneralName(GeneralName.dNSName, hostname);
+      }
+    }
+    certBuilder.addExtension(Extension.subjectAlternativeName, false, new GeneralNames(altNames));
+    certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
 
-    // Add Subject Alternative Names for localhost
-    GeneralName[] altNames = new GeneralName[]{
-        new GeneralName(GeneralName.dNSName, hostname),
-        new GeneralName(GeneralName.iPAddress, "127.0.0.1")
-    };
-    certBuilder.addExtension(
-        Extension.subjectAlternativeName,
-        false,
-        new GeneralNames(altNames)
-    );
-
-    ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
-        .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-        .build(caKey);
-
-    return new JcaX509CertificateConverter()
-        .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-        .getCertificate(certBuilder.build(signer));
+    return buildCertificate(certBuilder, caKey);
   }
 
   private static X509Certificate generateClientCertificate(
       KeyPair keyPair,
-      X509Certificate caCert,
       PrivateKey caKey,
       String commonName
   ) throws Exception
   {
-    X500Name issuer = new X500Name(caCert.getSubjectX500Principal().getName());
-    X500Name subject = new X500Name("CN=" + commonName + ", O=Apache Druid Test, C=US");
-    BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
-    Date notBefore = new Date();
-    Date notAfter = new Date(notBefore.getTime() + VALIDITY_DAYS * 24 * 60 * 60 * 1000L);
+    X500Name subject = createX500Name(commonName);
+    X509v3CertificateBuilder certBuilder = createCertificateBuilder(subject, keyPair);
 
-    X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-        issuer,
-        serial,
-        notBefore,
-        notAfter,
-        subject,
-        keyPair.getPublic()
-    );
+    certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
 
-    ContentSigner signer = new JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
-        .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-        .build(caKey);
-
-    return new JcaX509CertificateConverter()
-        .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-        .getCertificate(certBuilder.build(signer));
+    return buildCertificate(certBuilder, caKey);
   }
 
   private static void writePEM(Path path, String type, byte[] content) throws Exception
@@ -250,6 +262,7 @@ public class TLSCertificateGenerator
          PemWriter pemWriter = new PemWriter(fileWriter)) {
       pemWriter.writeObject(new PemObject(type, content));
     }
+    setWorldReadable(path);
   }
 
   private static Path createTrustStore(Path directory, X509Certificate caCert) throws Exception
@@ -262,6 +275,8 @@ public class TLSCertificateGenerator
     try (FileOutputStream fos = new FileOutputStream(trustStorePath.toFile())) {
       trustStore.store(fos, STORE_PASSWORD.toCharArray());
     }
+
+    setWorldReadable(trustStorePath);
 
     return trustStorePath;
   }
@@ -286,6 +301,18 @@ public class TLSCertificateGenerator
       keyStore.store(fos, STORE_PASSWORD.toCharArray());
     }
 
+    setWorldReadable(keyStorePath);
+
     return keyStorePath;
+  }
+
+  private static void setWorldReadable(Path path)
+  {
+    try {
+      Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-r--r--"));
+    }
+    catch (Exception e) {
+      path.toFile().setReadable(true, false);
+    }
   }
 }

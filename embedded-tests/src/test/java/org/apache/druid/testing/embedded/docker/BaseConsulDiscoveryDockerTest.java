@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
@@ -218,6 +219,7 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
   /**
    * Creates an HTTP client with proper SSL configuration using the test trust store.
    * For TLS/mTLS modes, this loads the actual trust store used by the Consul test container.
+   * For mTLS mode, also loads the client certificate from the key store.
    */
   private HttpClient createHttpClient() throws Exception
   {
@@ -236,8 +238,19 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
     TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     tmf.init(trustStore);
 
+    KeyManagerFactory kmf = null;
+    if (getConsulSecurityMode() == ConsulSecurityMode.MTLS) {
+      // For mTLS, load the client certificate from the key store
+      KeyStore keyStore = KeyStore.getInstance("PKCS12");
+      try (FileInputStream fis = new FileInputStream(consulResource.getKeyStorePath())) {
+        keyStore.load(fis, consulResource.getStorePassword().toCharArray());
+      }
+      kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+      kmf.init(keyStore, consulResource.getStorePassword().toCharArray());
+    }
+
     SSLContext sslContext = SSLContext.getInstance("TLS");
-    sslContext.init(null, tmf.getTrustManagers(), null);
+    sslContext.init(kmf != null ? kmf.getKeyManagers() : null, tmf.getTrustManagers(), null);
 
     return HttpClient.newBuilder()
                      .sslContext(sslContext)

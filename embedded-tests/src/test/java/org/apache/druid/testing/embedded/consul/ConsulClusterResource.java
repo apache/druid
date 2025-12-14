@@ -74,7 +74,6 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   protected GenericContainer<?> createContainer()
   {
     try {
-      // Generate certificates for TLS/mTLS modes
       if (securityMode == ConsulSecurityMode.TLS || securityMode == ConsulSecurityMode.MTLS) {
         certBundle = TLSCertificateGenerator.generateToTempDirectory();
         log.info("Generated TLS certificates for Consul in: %s", certBundle.getCertificateDirectory());
@@ -83,54 +82,21 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
       GenericContainer<?> container = new GenericContainer<>(CONSUL_IMAGE);
 
       if (securityMode == ConsulSecurityMode.PLAIN) {
-        // Plain HTTP mode
         container
-            .withCommand(
-                "agent",
-                "-server",
-                "-bootstrap-expect=1",
-                "-client=0.0.0.0",
-                "-bind=0.0.0.0",
-                "-ui",
-                "-datacenter=dc1"
-            )
+            .withCommand("agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-bind=0.0.0.0", "-ui", "-datacenter=dc1")
             .withExposedPorts(CONSUL_HTTP_PORT)
-            .waitingFor(
-                Wait.forHttp("/v1/status/leader")
-                    .forStatusCode(200)
-                    .withStartupTimeout(Duration.ofMinutes(2))
-          );
+            .waitingFor(Wait.forHttp("/v1/status/leader").forStatusCode(200).withStartupTimeout(Duration.ofMinutes(2)));
       } else {
-        // TLS or mTLS mode
         String configFile = securityMode == ConsulSecurityMode.TLS
                             ? "consul-config-tls-only.json"
                             : "consul-config-mtls.json";
 
         container
-            .withCommand(
-                "agent",
-                "-dev",
-                "-config-file=/consul/config/" + configFile
-            )
-            .withExposedPorts(CONSUL_HTTPS_PORT)
-            // Mount certificate directory
-            .withFileSystemBind(
-                certBundle.getCertificateDirectory(),
-                "/tls",
-                BindMode.READ_ONLY
-            )
-            // Mount Consul TLS config from test resources
-            .withClasspathResourceMapping(
-                "tls/" + configFile,
-                "/consul/config/" + configFile,
-                BindMode.READ_ONLY
-            )
-            .waitingFor(
-                Wait.forHttps("/v1/status/leader")
-                    .allowInsecure() // Self-signed certificate
-                    .forStatusCode(200)
-                    .withStartupTimeout(Duration.ofMinutes(2))
-          );
+            .withCommand("agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-bind=0.0.0.0", "-config-file=/consul/config/" + configFile)
+            .withExposedPorts(CONSUL_HTTPS_PORT, CONSUL_HTTP_PORT)
+            .withFileSystemBind(certBundle.getCertificateDirectory(), "/tls", BindMode.READ_ONLY)
+            .withClasspathResourceMapping("tls/" + configFile, "/consul/config/" + configFile, BindMode.READ_ONLY)
+            .waitingFor(Wait.forLogMessage(".*agent: Consul agent running!.*", 1).withStartupTimeout(Duration.ofMinutes(2)));
       }
 
       return container;
@@ -143,22 +109,9 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    // Store internal IP for container-to-container communication.
-    // Tests use getConsulHostForDruid()/getConsulPortForDruid() for containers
-    // and getMappedPort() for embedded servers running on the host.
-    consulHostForDruid = getContainer()
-        .getContainerInfo()
-        .getNetworkSettings()
-        .getIpAddress();
+    consulHostForDruid = getContainer().getContainerInfo().getNetworkSettings().getIpAddress();
+    consulPortForDruid = securityMode == ConsulSecurityMode.PLAIN ? CONSUL_HTTP_PORT : CONSUL_HTTPS_PORT;
 
-    // Use appropriate port based on security mode
-    consulPortForDruid = securityMode == ConsulSecurityMode.PLAIN
-                         ? CONSUL_HTTP_PORT
-                         : CONSUL_HTTPS_PORT;
-
-    // Only set type and prefix - host/port must be configured by tests
-    // because embedded servers need localhost:mappedPort while containers
-    // need internalIP:port
     cluster.addCommonProperty("druid.discovery.type", "consul");
     cluster.addCommonProperty("druid.discovery.consul.service.servicePrefix", "druid");
   }
@@ -167,108 +120,61 @@ public class ConsulClusterResource extends TestcontainerResource<GenericContaine
   public void stop()
   {
     super.stop();
-    // Clean up generated certificates
     if (certBundle != null) {
       certBundle.cleanup();
       certBundle = null;
     }
   }
 
-  /**
-   * Host value that Druid containers should use when connecting to Consul.
-   */
   public String getConsulHostForDruid()
   {
     return consulHostForDruid;
   }
 
-  /**
-   * TCP port that Druid containers should use when connecting to Consul.
-   * This is the internal port (8500).
-   */
   public int getConsulPortForDruid()
   {
     return consulPortForDruid;
   }
 
-  /**
-   * TCP port mapped on host for accessing Consul HTTP/HTTPS API.
-   * Use this for embedded servers running on the host machine.
-   */
   public int getMappedPort()
   {
     ensureRunning();
-    int internalPort = securityMode == ConsulSecurityMode.PLAIN
-                       ? CONSUL_HTTP_PORT
-                       : CONSUL_HTTPS_PORT;
+    int internalPort = securityMode == ConsulSecurityMode.PLAIN ? CONSUL_HTTP_PORT : CONSUL_HTTPS_PORT;
     return getContainer().getMappedPort(internalPort);
   }
 
-  /**
-   * Builds a host-accessible URI for the Consul HTTP/HTTPS API.
-   */
   public URI getHttpUri(String pathAndQuery)
   {
     ensureRunning();
-    final String normalizedPath = pathAndQuery.startsWith("/") ? pathAndQuery : "/" + pathAndQuery;
-    final String scheme = securityMode == ConsulSecurityMode.PLAIN ? "http" : "https";
-    final int internalPort = securityMode == ConsulSecurityMode.PLAIN
-                             ? CONSUL_HTTP_PORT
-                             : CONSUL_HTTPS_PORT;
-
-    return URI.create(
-        StringUtils.format(
-            "%s://%s:%d%s",
-            scheme,
-            getContainer().getHost(),
-            getContainer().getMappedPort(internalPort),
-            normalizedPath
-        )
-    );
+    String normalizedPath = pathAndQuery.startsWith("/") ? pathAndQuery : "/" + pathAndQuery;
+    String scheme = securityMode == ConsulSecurityMode.PLAIN ? "http" : "https";
+    int internalPort = securityMode == ConsulSecurityMode.PLAIN ? CONSUL_HTTP_PORT : CONSUL_HTTPS_PORT;
+    return URI.create(StringUtils.format("%s://%s:%d%s", scheme, getContainer().getHost(), getContainer().getMappedPort(internalPort), normalizedPath));
   }
 
-  /**
-   * Returns the security mode of this Consul cluster.
-   */
   public ConsulSecurityMode getSecurityMode()
   {
     return securityMode;
   }
 
-  /**
-   * Returns the certificate bundle for TLS/mTLS modes.
-   * Returns null for PLAIN mode.
-   */
   @Nullable
   public TLSCertificateBundle getCertificateBundle()
   {
     return certBundle;
   }
 
-  /**
-   * Returns the path to the truststore for TLS/mTLS modes.
-   * Returns null for PLAIN mode.
-   */
   @Nullable
   public String getTrustStorePath()
   {
     return certBundle != null ? certBundle.getTrustStorePath() : null;
   }
 
-  /**
-   * Returns the path to the keystore for mTLS mode.
-   * Returns null for PLAIN and TLS modes.
-   */
   @Nullable
   public String getKeyStorePath()
   {
     return certBundle != null ? certBundle.getKeyStorePath() : null;
   }
 
-  /**
-   * Returns the password for keystores/truststores.
-   * Always returns "changeit" for test certificates.
-   */
   public String getStorePassword()
   {
     return "changeit";
