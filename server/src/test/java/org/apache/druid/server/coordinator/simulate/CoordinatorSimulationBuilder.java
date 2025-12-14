@@ -515,7 +515,8 @@ public class CoordinatorSimulationBuilder
           ruleManager,
           null,
           null,
-          NoopSegmentMetadataCache.instance()
+          NoopSegmentMetadataCache.instance(),
+          null // TODO does this need impl
       );
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);

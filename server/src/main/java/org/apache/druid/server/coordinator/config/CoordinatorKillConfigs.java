@@ -28,7 +28,7 @@ import org.joda.time.Period;
 public class CoordinatorKillConfigs
 {
   public static CoordinatorKillConfigs DEFAULT
-      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      = new CoordinatorKillConfigs(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
   @JsonProperty("supervisor")
   private final MetadataCleanupConfig supervisors;
@@ -74,6 +74,9 @@ public class CoordinatorKillConfigs
   @JsonProperty("maxInterval")
   private final Period killUnusedMaxInterval;
 
+  @JsonProperty("compactionStates")
+  private final MetadataCleanupConfig compactionStates;
+
   @JsonCreator
   public CoordinatorKillConfigs(
       @JsonProperty("pendingSegments") MetadataCleanupConfig pendingSegments,
@@ -83,6 +86,7 @@ public class CoordinatorKillConfigs
       @JsonProperty("rule") MetadataCleanupConfig rules,
       @JsonProperty("compaction") MetadataCleanupConfig compactionConfigs,
       @JsonProperty("segmentSchema") MetadataCleanupConfig segmentSchemas,
+      @JsonProperty("segmentSchema") MetadataCleanupConfig compactionStates,
       // Configs for cleanup of unused segments
       @JsonProperty("on") Boolean killUnusedEnabled,
       @JsonProperty("period") Duration killUnusedPeriod,
@@ -100,6 +104,7 @@ public class CoordinatorKillConfigs
     this.rules = Configs.valueOrDefault(rules, MetadataCleanupConfig.DEFAULT);
     this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, MetadataCleanupConfig.DEFAULT);
     this.segmentSchemas = Configs.valueOrDefault(segmentSchemas, MetadataCleanupConfig.DEFAULT);
+    this.compactionStates = Configs.valueOrDefault(compactionStates, MetadataCleanupConfig.DEFAULT);
 
     this.killUnusedEnabled = killUnusedEnabled;
     this.killUnusedPeriod = killUnusedPeriod;
@@ -143,6 +148,11 @@ public class CoordinatorKillConfigs
   public MetadataCleanupConfig segmentSchemas()
   {
     return segmentSchemas;
+  }
+
+  public MetadataCleanupConfig compactionStates()
+  {
+    return compactionStates;
   }
 
   /**

@@ -77,6 +77,7 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
+import org.apache.druid.server.coordinator.duty.KillUnreferencedCompactionState;
 import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchema;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkEternityTombstonesAsUnused;
@@ -613,6 +614,7 @@ public class DruidCoordinator
     duties.add(
         new KillCompactionConfig(killConfigs.compactionConfigs(), metadataManager.indexer(), metadataManager.configs())
     );
+    duties.add(new KillUnreferencedCompactionState(killConfigs.compactionStates(), metadataManager.compactionStates()));
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       duties.add(new KillUnreferencedSegmentSchema(killConfigs.segmentSchemas(), metadataManager.schemas()));
     }

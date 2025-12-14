@@ -188,7 +188,8 @@ public class DruidCoordinatorTest
         metadataRuleManager,
         null,
         null,
-        NoopSegmentMetadataCache.instance()
+        NoopSegmentMetadataCache.instance(),
+        compactionStateManager
     );
   }
 
