@@ -17,5 +17,6 @@
   "key_file": "/tls/consul-server-key.pem",
   "verify_incoming": false,
   "verify_outgoing": false,
-  "verify_server_hostname": false
+  "verify_server_hostname": false,
+  "primary_datacenter": "dc1"
 }

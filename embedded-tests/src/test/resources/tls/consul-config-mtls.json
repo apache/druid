@@ -7,7 +7,7 @@
   "ui": true,
   "client_addr": "0.0.0.0",
   "ports": {
-    "http": -1,
+    "http": 8500,
     "https": 8501,
     "grpc": -1,
     "grpc_tls": -1
@@ -17,6 +17,7 @@
   "key_file": "/tls/consul-server-key.pem",
   "verify_incoming": true,
   "verify_outgoing": true,
-  "verify_server_hostname": false
+  "verify_server_hostname": false,
+  "primary_datacenter": "dc1"
 }
 

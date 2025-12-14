@@ -609,6 +609,19 @@
                 <include>*DockerTest*</include>
               </includes>
               <redirectTestOutputToFile>true</redirectTestOutputToFile>
+              <argLine>
+                ${jdk.strong.encapsulation.argLine}
+                -Xmx2048m
+                -XX:MaxDirectMemorySize=2500m
+                -XX:+ExitOnOutOfMemoryError
+                -XX:+HeapDumpOnOutOfMemoryError
+                -Duser.language=en
+                -Dfile.encoding=UTF-8
+                -Duser.timezone=UTC
+                -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                -Daws.region=us-east-1
+                -Ddruid.test.stupidPool.poison=true
+              </argLine>
             </configuration>
             <executions>
               <execution>
