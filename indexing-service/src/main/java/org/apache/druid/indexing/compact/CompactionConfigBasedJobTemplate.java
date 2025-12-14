@@ -143,7 +143,8 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         Intervals.complementOf(searchInterval),
         // This policy is used only while creating jobs
         // The actual order of jobs is determined by the policy used in CompactionJobQueue
-        new NewestSegmentFirstPolicy(null)
+        new NewestSegmentFirstPolicy(null),
+        params.getCompactionStateManager()
     );
 
     // Collect stats for segments that are already compacted

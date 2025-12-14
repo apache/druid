@@ -37,6 +37,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -46,7 +47,9 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -58,6 +61,14 @@ public class CompactionStatusTest
       = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 0))
                    .size(100_000_000L)
                    .build();
+
+  private CompactionStateManager compactionStateManager;
+
+  @Before
+  public void setUp()
+  {
+    compactionStateManager = EasyMock.createMock(CompactionStateManager.class);
+  }
 
   @Test
   public void testFindPartitionsSpecWhenGivenIsNull()
@@ -326,8 +337,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -375,8 +387,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -429,8 +442,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertFalse(status.isComplete());
   }
 
@@ -482,8 +496,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -535,8 +550,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertFalse(status.isComplete());
   }
 
@@ -552,8 +568,9 @@ public class CompactionStatusTest
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
 
     Assert.assertFalse(status.isComplete());
     Assert.assertEquals(expectedReason, status.getReason());

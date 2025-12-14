@@ -196,8 +196,9 @@ public class CompactSegments implements CoordinatorCustomDuty
         policy,
         compactionConfigs,
         dataSources.getUsedSegmentsTimelinesPerDataSource(),
-        slotManager.getDatasourceIntervalsToSkipCompaction()
-    );
+        slotManager.getDatasourceIntervalsToSkipCompaction(),
+        compactionStateManager
+        );
 
     final CompactionSnapshotBuilder compactionSnapshotBuilder = new CompactionSnapshotBuilder(stats);
     final int numSubmittedCompactionTasks = submitCompactionTasks(

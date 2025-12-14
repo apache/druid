@@ -135,7 +135,8 @@ public class NewestSegmentFirstPolicyBenchmark
         policy,
         compactionConfigs,
         dataSources,
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        null // TODO does this need impl
     );
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());
