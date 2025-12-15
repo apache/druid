@@ -197,7 +197,6 @@ public class KafkaConsumerMonitor extends AbstractMonitor
    * Average poll-to-idle ratio as reported by the Kafka consumer.
    * A value of 0 represents that the consumer is never idle, i.e. always consuming.
    * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
-   * @return
    */
   public double getPollIdleRatioAvg()
   {
