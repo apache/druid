@@ -58,7 +58,6 @@ public class WeightedCostFunctionTest
   public void testComputeCostReturnsFiniteNonNegativeForValidInput()
   {
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
-    costFunction.updateLagBounds(metrics.getAvgPartitionLag());
 
     double cost = costFunction.computeCost(metrics, 10, config);
 
@@ -74,8 +73,6 @@ public class WeightedCostFunctionTest
     // In high lag mode, more tasks = less idle (inverted relationship)
     // So adding tasks should move idle from 0.7 toward ideal range [0.2, 0.6]
     CostMetrics metrics = createMetrics(3000.0, 5, 100, 0.7);
-    costFunction.updateLagBounds(1000.0);
-    costFunction.updateLagBounds(5000.0);
 
     double cost5 = costFunction.computeCost(metrics, 5, config);
     double cost10 = costFunction.computeCost(metrics, 10, config);
@@ -87,14 +84,17 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testComputeCostHandlesIdenticalBoundsWithoutException()
+  public void testComputeCostWithZeroLag()
   {
-    CostMetrics metrics = createMetrics(1000.0, 10, 100, 0.3);
+    // With zero lag, lag cost should be 0 and only idle cost matters
+    // Use idle=0.5 which when scaled by log1p(1)/log1p(2)=0.63 gives ~0.32, still in ideal range
+    CostMetrics metrics = createMetrics(0.0, 10, 100, 0.5);
 
-    // First call - bounds will be min=max=1000
     double cost = costFunction.computeCost(metrics, 10, config);
 
+    // With 0 lag and idle that stays in ideal range after estimation, cost should be very low
     Assert.assertTrue(Double.isFinite(cost));
+    Assert.assertTrue("Cost should be near zero with 0 lag and ideal idle", cost < 0.1);
   }
 
   @Test
@@ -116,18 +116,19 @@ public class WeightedCostFunctionTest
                                                                    .idleWeight(1.0)
                                                                    .build();
 
-    // Use different lag and idle values to ensure costs differ
-    // Lag at 100000, idle at 0.3 - these will produce different normalized values
-    CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
-    // Create a range for lag normalization: [50000, 200000] -> 100000 normalizes to ~0.33
-    costFunction.updateLagBounds(50000.0);
-    costFunction.updateLagBounds(200000.0);
+    // Use 100k lag and idle that produces non-zero idle cost when estimated
+    // With idle=0.1 and 10 tasks, estimated idle = 0.1 * log1p(1)/log1p(2) ≈ 0.063
+    // idleCost = (0.2 - 0.063) / 0.2 ≈ 0.685
+    CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
 
     double costLag = costFunction.computeCost(metrics, 10, lagHeavy);
     double costIdle = costFunction.computeCost(metrics, 10, idleHeavy);
 
-    // costLag should be ~0.33 (normalized lag), costIdle should be 0.3 (idle ratio)
+    // costLag should be ~1.0 (100000 / 100000 ABSOLUTE_HIGH_LAG_THRESHOLD)
+    // costIdle incorporates idle estimation scaling
     Assert.assertNotEquals("Different weights should produce different costs", costLag, costIdle, 0.0001);
+    Assert.assertEquals("Lag-only cost should be lag/threshold", 1.0, costLag, 0.1);
+    Assert.assertTrue("Idle-only cost should be positive", costIdle > 0.0);
   }
 
   @Test
@@ -360,6 +361,64 @@ public class WeightedCostFunctionTest
     Assert.assertTrue("Underutilized should have positive cost", underutilizedCost > 0.0);
     Assert.assertTrue("Ideal should have lower cost than overloaded", idealCost < overloadedCost);
     Assert.assertTrue("Ideal should have lower cost than underutilized", idealCost < underutilizedCost);
+  }
+
+  @Test
+  public void testExtremeLagForcesScaleUpEvenWithIdealIdle()
+  {
+    // With 1M lag, even with perfect idle, we should scale up
+    // lagCost = 1,000,000 / 100,000 = 10.0 (unbounded, dominates idle)
+    // idle=0.4 -> estimated ~0.25 (in ideal range) -> idleCost=0
+    CostMetrics extremeLagMetrics = createMetrics(1_000_000.0, 10, 100, 0.4);
+
+    double cost10 = costFunction.computeCost(extremeLagMetrics, 10, config);
+    double cost50 = costFunction.computeCost(extremeLagMetrics, 50, config);
+
+    // Even with ideal idle (cost = 0), the extreme lag should force scale up
+    Assert.assertTrue("More tasks should reduce cost even with ideal idle", cost50 < cost10);
+
+    // With lagWeight=0.3, lagCost=10 -> lagComponent = 3.0
+    // With idleWeight=0.7, idleCost=0 -> idleComponent = 0
+    // Total cost = 3.0
+    Assert.assertEquals("Extreme lag should produce cost of 3.0", 3.0, cost10, 0.01);
+  }
+
+  @Test
+  public void testLagCostUsesAbsoluteThreshold()
+  {
+    // Verify lag cost = predictedLag / ABSOLUTE_HIGH_LAG_THRESHOLD (100,000)
+    CostBasedAutoScalerConfig lagOnly = CostBasedAutoScalerConfig.builder()
+                                                                  .taskCountMax(100)
+                                                                  .taskCountMin(1)
+                                                                  .enableTaskAutoScaler(true)
+                                                                  .lagWeight(1.0)
+                                                                  .idleWeight(0.0)
+                                                                  .build();
+
+    // With taskCount == currentTaskCount, predictedLag == avgPartitionLag (scaleFactor = 1.0)
+    // So lagCost = avgPartitionLag / 100,000
+
+    // 100k lag should give lagCost = 1.0
+    CostMetrics metrics100k = createMetrics(100_000.0, 10, 100, 0.4);
+    double cost100k = costFunction.computeCost(metrics100k, 10, lagOnly);
+    Assert.assertEquals("100k lag should give cost 1.0", 1.0, cost100k, 0.0001);
+
+    // 1M lag should give lagCost = 10.0
+    CostMetrics metrics1M = createMetrics(1_000_000.0, 10, 100, 0.4);
+    double cost1M = costFunction.computeCost(metrics1M, 10, lagOnly);
+    Assert.assertEquals("1M lag should give cost 10.0", 10.0, cost1M, 0.0001);
+
+    // 10k lag should give lagCost = 0.1
+    CostMetrics metrics10k = createMetrics(10_000.0, 10, 100, 0.4);
+    double cost10k = costFunction.computeCost(metrics10k, 10, lagOnly);
+    Assert.assertEquals("10k lag should give cost 0.1", 0.1, cost10k, 0.0001);
+  }
+
+  @Test
+  public void testHighLagThresholdConstant()
+  {
+    // Verify the ABSOLUTE_HIGH_LAG_THRESHOLD is 100,000
+    Assert.assertEquals(100_000.0, WeightedCostFunction.ABSOLUTE_HIGH_LAG_THRESHOLD, 0.0);
   }
 
   private CostMetrics createMetrics(

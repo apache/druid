@@ -319,7 +319,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> getStreamerMetrics(String id)
+  public ListenableFuture<Map<String, Object>> getStreamConsumerMetrics(String id)
   {
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/rowStats?autoScalerStatsOnly=true"))
         .handler(new BytesFullResponseHandler())

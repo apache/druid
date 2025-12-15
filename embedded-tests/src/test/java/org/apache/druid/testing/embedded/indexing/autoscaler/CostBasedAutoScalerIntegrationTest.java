@@ -27,6 +27,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedA
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -145,7 +146,9 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(spec));
 
     // Wait for the supervisor to be healthy and running
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time").hasDimension(DruidMetrics.DATASOURCE, dataSource));
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count to 4
@@ -198,12 +201,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the supervisor to be healthy and running
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time").hasDimension(DruidMetrics.DATASOURCE, dataSource));
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // First, wait for any optimalTaskCount metric to verify the autoscaler is running
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, superId)
     );
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-up

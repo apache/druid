@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 /**
  * Weighted cost function combining lag, idle time, and change distance metrics.
- * Uses adaptive bounds for normalization based on recent history.
+ * Uses absolute thresholds for lag cost calculation instead of adaptive normalization.
  */
 public class WeightedCostFunction
 {
@@ -31,8 +31,23 @@ public class WeightedCostFunction
 
   /**
    * Lag threshold above which we consider the system to have significant backlog.
+   * Used for idle ratio estimation mode selection.
    */
   private static final double HIGH_LAG_THRESHOLD = 1_000.0;
+
+  /**
+   * Absolute lag threshold for cost calculation.
+   * Lag cost is computed as: predictedLag / ABSOLUTE_HIGH_LAG_THRESHOLD
+   * This means:
+   * <ul>
+   *   <li>0 lag → lagCost = 0</li>
+   *   <li>100k lag → lagCost = 1.0</li>
+   *   <li>1M lag → lagCost = 10.0 (dominates idle cost, forcing scale up)</li>
+   * </ul>
+   * Unlike normalized costs (bounded 0-1), this cost is unbounded and can exceed 1.0
+   * for extreme lag values, ensuring that very high lag always triggers scaling up.
+   */
+  static final double ABSOLUTE_HIGH_LAG_THRESHOLD = 100_000.0;
 
   /**
    * Minimum lag threshold for unstable high idle detection.
@@ -58,13 +73,6 @@ public class WeightedCostFunction
   static final double IDEAL_IDLE_MIN = 0.2;
   static final double IDEAL_IDLE_MAX = 0.6;
 
-  private final AdaptiveBounds lagBounds;
-
-  public WeightedCostFunction()
-  {
-    this.lagBounds = new AdaptiveBounds();
-  }
-
   private static double clamp(double value)
   {
     return Math.max(0.0, Math.min(1.0, value));
@@ -82,11 +90,16 @@ public class WeightedCostFunction
   /**
    * Computes cost for a given task count (lower is better).
    * <p>
-   * Formula: {@code lagWeight * normalizedLag + idleWeight * idleCost}
+   * Formula: {@code lagWeight * lagCost + idleWeight * idleCost}
+   * <p>
+   * The lag cost uses absolute scaling: {@code lagCost = predictedLag / ABSOLUTE_HIGH_LAG_THRESHOLD}.
+   * Unlike normalized costs (0-1), lagCost is <b>unbounded</b> and can exceed 1.0 for extreme lag values.
+   * This ensures that a very high lag (e.g., 1M records) will always dominate the cost function
+   * and trigger scaling up, regardless of idle state.
    * <p>
    * The idle cost uses a target range approach where idle ratios within
    * [{@value #IDEAL_IDLE_MIN}, {@value #IDEAL_IDLE_MAX}] have zero cost,
-   * while values outside this range incur increasing penalties.
+   * while values outside this range incur increasing penalties (bounded 0-1).
    *
    * @return cost score, or {@link Double#POSITIVE_INFINITY} for invalid inputs
    */
@@ -97,41 +110,23 @@ public class WeightedCostFunction
     }
 
     final double predictedLag = predictLag(metrics, taskCount);
-    final double normalizedLag = normalize(predictedLag, lagBounds);
+    final double lagCost = Math.max(0.0, predictedLag) / ABSOLUTE_HIGH_LAG_THRESHOLD;
     final double predictedIdleRatio = estimateIdleRatio(metrics, taskCount);
     final double idleCost = computeIdleCost(predictedIdleRatio);
 
-    final double cost = config.getLagWeight() * normalizedLag + config.getIdleWeight() * idleCost;
+    final double cost = config.getLagWeight() * lagCost + config.getIdleWeight() * idleCost;
 
     log.debug(
         "Cost for taskCount[%d]: lag[%.2f -> %.4f], idle[%.4f -> %.4f], final cost[%.4f]",
         taskCount,
         predictedLag,
-        normalizedLag,
+        lagCost,
         predictedIdleRatio,
         idleCost,
         cost
     );
 
     return cost;
-  }
-
-  /**
-   * Normalizes a value to the range [0.0, 1.0] using adaptive bounds.
-   */
-  private double normalize(double value, AdaptiveBounds bounds)
-  {
-    final double min = bounds.getMin();
-    final double max = bounds.getMax();
-    final double range = max - min;
-
-    // Handle edge cases
-    if (range <= 0 || Double.isInfinite(range) || Double.isNaN(range)) {
-      // If bounds are invalid or identical, return zero value
-      return 0.0;
-    }
-
-    return clamp((value - min) / range);
   }
 
   /**
@@ -277,48 +272,4 @@ public class WeightedCostFunction
     return clamp(currentPollIdleRatio * scaleFactor);
   }
 
-  /**
-   * Updates the lag bounds with an observed lag value from actual metrics.
-   * This should ONLY be called with observed lag values, NOT predicted values.
-   * The bounds are used for normalization tracking in cost calculations.
-   */
-  public void updateLagBounds(double observedLag)
-  {
-    lagBounds.update(observedLag);
-  }
-
-  /**
-   * Maintains min/max bounds for normalization.
-   */
-  static class AdaptiveBounds
-  {
-    private double min;
-    private double max;
-
-    AdaptiveBounds()
-    {
-      this.min = Float.POSITIVE_INFINITY;
-      this.max = 0.0;
-    }
-
-    void update(double value)
-    {
-      if (value < min) {
-        min = value;
-      }
-      if (value > max) {
-        max = value;
-      }
-    }
-
-    double getMin()
-    {
-      return min;
-    }
-
-    double getMax()
-    {
-      return max;
-    }
-  }
 }

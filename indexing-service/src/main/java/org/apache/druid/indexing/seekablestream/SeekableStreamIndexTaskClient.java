@@ -141,7 +141,7 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    *
    * @param id task id
    */
-  ListenableFuture<Map<String, Object>> getStreamerMetrics(String id);
+  ListenableFuture<Map<String, Object>> getStreamConsumerMetrics(String id);
 
   /**
    * Get parse errors for a task. Retries on failure.

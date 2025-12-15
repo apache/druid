@@ -47,8 +47,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  private static final int SCALE_UP_FACTOR_DISCRETE_DISTANCE = 2;
-  private static final int SCALE_DOWN_FACTOR_DISCRETE_DISTANCE = SCALE_UP_FACTOR_DISCRETE_DISTANCE * 2;
+  private static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
+  private static final int MIN_INCREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
   private final String supervisorId;
@@ -182,10 +182,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    // Update bounds with observed lag BEFORE optimization loop
-    // This ensures normalization uses historical observed values, not predicted values
-    costFunction.updateLagBounds(metrics.getAvgPartitionLag());
-
     int optimalTaskCount = -1;
     double optimalCost = Double.POSITIVE_INFINITY;
 
@@ -235,12 +231,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     List<Integer> result = new ArrayList<>();
     final int currentPartitionsPerTask = partitionCount / currentTaskCount;
     // Minimum partitions per task corresponds to maximum number of tasks (scale up) and vice versa.
-    final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - SCALE_UP_FACTOR_DISCRETE_DISTANCE);
+    final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - MAX_INCREASE_IN_PARTITIONS_PER_TASK);
     final int maxPartitionsPerTask = Math.min(
         partitionCount,
         Math.max(
             minPartitionsPerTask,
-            currentPartitionsPerTask + SCALE_DOWN_FACTOR_DISCRETE_DISTANCE
+            currentPartitionsPerTask + MIN_INCREASE_IN_PARTITIONS_PER_TASK
         )
     );
 

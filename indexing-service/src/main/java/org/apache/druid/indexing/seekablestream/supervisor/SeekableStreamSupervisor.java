@@ -1466,10 +1466,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamerStats)
+  public Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamConsumerStats)
   {
     try {
-      return getCurrentStats(includeOnlyStreamerStats);
+      return getCurrentStats(includeOnlyStreamConsumerStats);
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1522,7 +1522,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futures.add(
             Futures.transform(
                 includeOnlyStreamerStats
-                ? taskClient.getStreamerMetrics(taskId)
+                ? taskClient.getStreamConsumerMetrics(taskId)
                 : taskClient.getMovingAveragesAsync(taskId),
                 (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                     groupId,
@@ -4384,7 +4384,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Map<String, Map<String, Object>> taskMetrics = getStats(true);
     if (taskMetrics.isEmpty()) {
-      return 1.;
+      return 0.;
     }
 
     double sum = 0;
@@ -4404,7 +4404,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    return count > 0 ? sum / count : 1.;
+    return count > 0 ? sum / count : 0.;
   }
 
   /**
