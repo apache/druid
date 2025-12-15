@@ -133,7 +133,7 @@ public class CompactionStateManager
 
   /**
    * Persist unique compaction state fingerprints in the DB.
-   *
+   * <p>
    * This method uses per-datasource locking to prevent concurrent insert race conditions
    * when multiple threads attempt to persist the same fingerprints simultaneously.
    */
@@ -151,105 +151,106 @@ public class CompactionStateManager
     lock.lock();
     try {
       connector.retryWithHandle(handle -> {
-      // Fetch already existing compaction state fingerprints
-      final Set<String> existingFingerprints = getExistingFingerprints(
-          handle,
-          fingerprintToStateMap.keySet()
-      );
-
-      if (!existingFingerprints.isEmpty()) {
-        log.info(
-            "Found already existing compaction state in the DB for dataSource[%s]. Fingerprints: %s.",
-            dataSource,
-            existingFingerprints
+        // Fetch already existing compaction state fingerprints
+        final Set<String> existingFingerprints = getExistingFingerprints(
+            handle,
+            fingerprintToStateMap.keySet()
         );
-        String setFingerprintsUsedSql = StringUtils.format(
-            "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
-            + "WHERE fingerprint = :fingerprint",
+
+        if (!existingFingerprints.isEmpty()) {
+          log.info(
+              "Found already existing compaction state in the DB for dataSource[%s]. Fingerprints: %s.",
+              dataSource,
+              existingFingerprints
+          );
+          String setFingerprintsUsedSql = StringUtils.format(
+              "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
+              + "WHERE fingerprint = :fingerprint",
+              dbTables.getCompactionStatesTable()
+          );
+          PreparedBatch markUsedBatch = handle.prepareBatch(setFingerprintsUsedSql);
+          for (String fingerprint : existingFingerprints) {
+            final String now = updateTime.toString();
+            markUsedBatch.add()
+                         .bind("used", true)
+                         .bind("used_status_last_updated", now)
+                         .bind("fingerprint", fingerprint);
+          }
+          markUsedBatch.execute();
+        }
+
+        Map<String, CompactionState> statesToPersist = new HashMap<>();
+
+        for (Map.Entry<String, CompactionState> entry : fingerprintToStateMap.entrySet()) {
+          if (!existingFingerprints.contains(entry.getKey())) {
+            statesToPersist.put(entry.getKey(), entry.getValue());
+          }
+        }
+
+        if (statesToPersist.isEmpty()) {
+          log.info("No compaction state to persist for dataSource [%s].", dataSource);
+          return null;
+        }
+
+        final List<List<String>> partitionedFingerprints = Lists.partition(
+            new ArrayList<>(statesToPersist.keySet()),
+            DB_ACTION_PARTITION_SIZE
+        );
+
+        String insertSql = StringUtils.format(
+            "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
+            + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
             dbTables.getCompactionStatesTable()
         );
-        PreparedBatch markUsedBatch = handle.prepareBatch(setFingerprintsUsedSql);
-        for (String fingerprint : existingFingerprints) {
-          final String now = updateTime.toString();
-          markUsedBatch.add()
-                       .bind("used", true)
-                       .bind("used_status_last_updated", now)
-                       .bind("fingerprint", fingerprint);
-        }
-        markUsedBatch.execute();
-      }
 
-      Map<String, CompactionState> statesToPersist = new HashMap<>();
-
-      for (Map.Entry<String, CompactionState> entry : fingerprintToStateMap.entrySet()) {
-        if (!existingFingerprints.contains(entry.getKey())) {
-          statesToPersist.put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      if (statesToPersist.isEmpty()) {
-        log.info("No compaction state to persist for dataSource [%s].", dataSource);
-        return null;
-      }
-
-      final List<List<String>> partitionedFingerprints = Lists.partition(
-          new ArrayList<>(statesToPersist.keySet()),
-          DB_ACTION_PARTITION_SIZE
-      );
-
-      String insertSql = StringUtils.format(
-          "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-          + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
-          dbTables.getCompactionStatesTable()
-      );
-
-      // Insert compaction states
-      PreparedBatch stateInsertBatch = handle.prepareBatch(insertSql);
-      for (List<String> partition : partitionedFingerprints) {
-        for (String fingerprint : partition) {
-          final String now = updateTime.toString();
-          try {
-            stateInsertBatch.add()
-                            .bind("created_date", now)
-                            .bind("datasource", dataSource)
-                            .bind("fingerprint", fingerprint)
-                            .bind("payload", jsonMapper.writeValueAsBytes(fingerprintToStateMap.get(fingerprint)))
-                            .bind("used", true)
-                            .bind("used_status_last_updated", now);
+        // Insert compaction states
+        PreparedBatch stateInsertBatch = handle.prepareBatch(insertSql);
+        for (List<String> partition : partitionedFingerprints) {
+          for (String fingerprint : partition) {
+            final String now = updateTime.toString();
+            try {
+              stateInsertBatch.add()
+                              .bind("created_date", now)
+                              .bind("datasource", dataSource)
+                              .bind("fingerprint", fingerprint)
+                              .bind("payload", jsonMapper.writeValueAsBytes(fingerprintToStateMap.get(fingerprint)))
+                              .bind("used", true)
+                              .bind("used_status_last_updated", now);
+            }
+            catch (JsonProcessingException e) {
+              throw InternalServerError.exception(
+                  e,
+                  "Failed to serialize compaction state for fingerprint[%s]",
+                  fingerprint
+              );
+            }
           }
-          catch (JsonProcessingException e) {
-            throw InternalServerError.exception(
-                e,
-                "Failed to serialize compaction state for fingerprint[%s]",
-                fingerprint
+          final int[] affectedRows = stateInsertBatch.execute();
+          final List<String> failedInserts = new ArrayList<>();
+          for (int i = 0; i < partition.size(); ++i) {
+            if (affectedRows[i] != 1) {
+              failedInserts.add(partition.get(i));
+            }
+          }
+          if (failedInserts.isEmpty()) {
+            log.info(
+                "Published compaction states %s to DB for datasource[%s].",
+                partition,
+                dataSource
+            );
+          } else {
+            throw new ISE(
+                "Failed to publish compaction states[%s] to DB for datasource[%s]",
+                failedInserts,
+                dataSource
             );
           }
         }
-        final int[] affectedRows = stateInsertBatch.execute();
-        final List<String> failedInserts = new ArrayList<>();
-        for (int i = 0; i < partition.size(); ++i) {
-          if (affectedRows[i] != 1) {
-            failedInserts.add(partition.get(i));
-          }
-        }
-        if (failedInserts.isEmpty()) {
-          log.info(
-              "Published compaction states %s to DB for datasource[%s].",
-              partition,
-              dataSource
-          );
-        } else {
-          throw new ISE(
-              "Failed to publish compaction states[%s] to DB for datasource[%s]",
-              failedInserts,
-              dataSource
-          );
-        }
-      }
-      warmCache(fingerprintToStateMap);
-      return null;
-    });
-    } finally {
+        warmCache(fingerprintToStateMap);
+        return null;
+      });
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -339,14 +340,18 @@ public class CompactionStateManager
   public CompactionState getCompactionStateByFingerprint(String fingerprint)
   {
     try {
-      return fingerprintCache.get(fingerprint, () -> {
-        CompactionState fromDb = loadCompactionStateFromDatabase(fingerprint);
-        if (fromDb == null) {
-          throw new CacheLoader.InvalidCacheLoadException("Fingerprint not found"); // Guava won't cache nulls
-        }
-        return fromDb;
-      });
-    } catch (ExecutionException | CacheLoader.InvalidCacheLoadException e) {
+      return fingerprintCache.get(
+          fingerprint,
+          () -> {
+            CompactionState fromDb = loadCompactionStateFromDatabase(fingerprint);
+            if (fromDb == null) {
+              throw new CacheLoader.InvalidCacheLoadException("Fingerprint not found"); // Guava won't cache nulls
+            }
+            return fromDb;
+          }
+      );
+    }
+    catch (ExecutionException | CacheLoader.InvalidCacheLoadException e) {
       return null;
     }
   }
@@ -498,7 +503,7 @@ public class CompactionStateManager
    * Must be followed by a call to {@link #bindValuesToInClause(List, String, SQLStatement)}.
    *
    * @param parameterPrefix prefix for parameter names (e.g., "fingerprint")
-   * @param valueCount number of values in the IN clause
+   * @param valueCount      number of values in the IN clause
    * @return parameterized IN clause like "(?, ?, ?)" but with named parameters
    */
   private static String buildParameterizedInClause(String parameterPrefix, int valueCount)
@@ -516,9 +521,9 @@ public class CompactionStateManager
   /**
    * Binds values to a parameterized IN clause in a SQL query.
    *
-   * @param values list of values to bind
+   * @param values          list of values to bind
    * @param parameterPrefix prefix used when building the IN clause
-   * @param query the SQL statement to bind values to
+   * @param query           the SQL statement to bind values to
    */
   private static void bindValuesToInClause(
       List<String> values,

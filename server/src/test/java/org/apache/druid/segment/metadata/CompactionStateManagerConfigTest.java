@@ -20,7 +20,6 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
