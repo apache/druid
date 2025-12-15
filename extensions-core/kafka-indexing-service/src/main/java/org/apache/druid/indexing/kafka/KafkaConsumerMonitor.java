@@ -52,7 +52,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
   /**
    * Kafka metric name -> Kafka metric descriptor. Taken from
-   * <a href="https://kafka.apache.org/documentation/#consumer_fetch_monitoring">documentation</a>.
+   * <a href="https://kafka.apache.org/documentation/#consumer_fetch_monitoring">Kafka documentation</a>.
    */
   private static final Map<String, KafkaConsumerMetric> METRICS =
       Stream.of(
