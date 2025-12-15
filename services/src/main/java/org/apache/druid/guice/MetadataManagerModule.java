@@ -42,6 +42,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateManagerConfig;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -103,6 +104,8 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.manager.compactionState", CompactionStateManagerConfig.class);
     binder.bind(CompactionStateManager.class)
           .in(ManageLifecycle.class);
 

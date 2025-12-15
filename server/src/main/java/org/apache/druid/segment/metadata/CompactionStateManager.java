@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.ManageLifecycle;
@@ -54,6 +56,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.Lock;
 
 /**
  * Handles compaction state persistence on the Coordinator.
@@ -63,27 +67,30 @@ public class CompactionStateManager
 {
   private static final EmittingLogger log = new EmittingLogger(CompactionStateManager.class);
   private static final int DB_ACTION_PARTITION_SIZE = 100;
-  private static final int DEFAULT_CACHE_SIZE = 100;
   private static final int DEFAULT_PREWARM_SIZE = 100;
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
   private final SQLMetadataConnector connector;
+  private final CompactionStateManagerConfig config;
   private final Cache<String, CompactionState> fingerprintCache;
+  private final Striped<Lock> datasourceLocks = Striped.lock(128);
 
   @Inject
   public CompactionStateManager(
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
-      @Nonnull SQLMetadataConnector connector
+      @Nonnull SQLMetadataConnector connector,
+      @Nonnull CompactionStateManagerConfig config
   )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
     this.connector = connector;
+    this.config = config;
 
     this.fingerprintCache = CacheBuilder.newBuilder()
-                                        .maximumSize(DEFAULT_CACHE_SIZE)
+                                        .maximumSize(config.getCacheSize())
                                         .build();
   }
 
@@ -115,16 +122,20 @@ public class CompactionStateManager
   }
 
   @VisibleForTesting
-  protected CompactionStateManager()
+  CompactionStateManager()
   {
     this.dbTables = null;
     this.jsonMapper = null;
     this.connector = null;
+    this.config = null;
     this.fingerprintCache = null;
   }
 
   /**
    * Persist unique compaction state fingerprints in the DB.
+   *
+   * This method uses per-datasource locking to prevent concurrent insert race conditions
+   * when multiple threads attempt to persist the same fingerprints simultaneously.
    */
   public void persistCompactionState(
       final String dataSource,
@@ -136,7 +147,10 @@ public class CompactionStateManager
       return;
     }
 
-    connector.retryWithHandle(handle -> {
+    final Lock lock = datasourceLocks.get(dataSource);
+    lock.lock();
+    try {
+      connector.retryWithHandle(handle -> {
       // Fetch already existing compaction state fingerprints
       final Set<String> existingFingerprints = getExistingFingerprints(
           handle,
@@ -235,6 +249,9 @@ public class CompactionStateManager
       warmCache(fingerprintToStateMap);
       return null;
     });
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -321,19 +338,17 @@ public class CompactionStateManager
   @Nullable
   public CompactionState getCompactionStateByFingerprint(String fingerprint)
   {
-    // Check cache first
-    CompactionState cached = fingerprintCache.getIfPresent(fingerprint);
-    if (cached != null) {
-      return cached;
+    try {
+      return fingerprintCache.get(fingerprint, () -> {
+        CompactionState fromDb = loadCompactionStateFromDatabase(fingerprint);
+        if (fromDb == null) {
+          throw new CacheLoader.InvalidCacheLoadException("Fingerprint not found"); // Guava won't cache nulls
+        }
+        return fromDb;
+      });
+    } catch (ExecutionException | CacheLoader.InvalidCacheLoadException e) {
+      return null;
     }
-
-    // Cache miss - load from database
-    CompactionState fromDb = loadCompactionStateFromDatabase(fingerprint);
-    if (fromDb != null) {
-      fingerprintCache.put(fingerprint, fromDb);
-    }
-
-    return fromDb;
   }
 
   /**
