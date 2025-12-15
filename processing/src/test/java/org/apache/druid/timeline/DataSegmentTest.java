@@ -41,6 +41,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
@@ -519,15 +520,12 @@ public class DataSegmentTest
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
     final String fingerprint = "abc123def456";
+    final SegmentId segmentId = SegmentId.of("something", interval, "1", new NumberedShardSpec(3, 0));
 
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource("something")
-                                     .interval(interval)
-                                     .version("1")
+    DataSegment segment = DataSegment.builder(segmentId)
                                      .loadSpec(loadSpec)
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
-                                     .shardSpec(new NumberedShardSpec(3, 0))
                                      .compactionStateFingerprint(fingerprint)
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
@@ -551,15 +549,12 @@ public class DataSegmentTest
   {
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+    final SegmentId segmentId = SegmentId.of("something", interval, "1", new NumberedShardSpec(3, 0));
 
-    DataSegment segment = DataSegment.builder()
-                                     .dataSource("something")
-                                     .interval(interval)
-                                     .version("1")
+    DataSegment segment = DataSegment.builder(segmentId)
                                      .loadSpec(loadSpec)
                                      .dimensions(Arrays.asList("dim1", "dim2"))
                                      .metrics(Arrays.asList("met1", "met2"))
-                                     .shardSpec(new NumberedShardSpec(3, 0))
                                      .compactionStateFingerprint(null)
                                      .binaryVersion(TEST_VERSION)
                                      .size(1)
@@ -606,19 +601,16 @@ public class DataSegmentTest
   public void testWithCompactionStateFingerprint()
   {
     final String fingerprint = "test_fingerprint_12345";
-    final DataSegment segment1 = DataSegment.builder()
-                                            .dataSource("foo")
-                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                            .shardSpec(getShardSpec(7))
+    final Interval interval = Intervals.of("2012-01-01/2012-01-02");
+    final String version = DateTimes.of("2012-01-01T11:22:33.444Z").toString();
+    final ShardSpec shardSpec = getShardSpec(7);
+    final SegmentId segmentId = SegmentId.of("foo", interval, version, shardSpec);
+
+    final DataSegment segment1 = DataSegment.builder(segmentId)
                                             .size(0)
                                             .compactionStateFingerprint(fingerprint)
                                             .build();
-    final DataSegment segment2 = DataSegment.builder()
-                                            .dataSource("foo")
-                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                            .shardSpec(getShardSpec(7))
+    final DataSegment segment2 = DataSegment.builder(segmentId)
                                             .size(0)
                                             .build();
 
