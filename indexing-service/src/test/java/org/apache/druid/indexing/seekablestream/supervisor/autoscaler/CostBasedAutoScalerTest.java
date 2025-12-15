@@ -77,7 +77,7 @@ public class CostBasedAutoScalerTest
   {
     // Verify gradual scaling: for 100 partitions, going from 25 tasks (4 partitions/task)
     // the next step should be 34 tasks (3 partitions/task)
-    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100);
+    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100, 25);
 
     int idx25 = Arrays.binarySearch(validTaskCounts, 25);
     int idx34 = Arrays.binarySearch(validTaskCounts, 34);

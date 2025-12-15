@@ -31,7 +31,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
@@ -163,7 +162,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(partitionCount);
+    final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(partitionCount, currentTaskCount);
 
     if (validTaskCounts.length == 0) {
       log.warn("No valid task counts after applying constraints for supervisorId [%s]", supervisorId);
@@ -189,19 +188,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int optimalTaskCount = -1;
     double optimalCost = Double.POSITIVE_INFINITY;
 
-    final int bestTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
-    for (int i = bestTaskCountIndex - SCALE_DOWN_FACTOR_DISCRETE_DISTANCE;
-         i <= bestTaskCountIndex + SCALE_UP_FACTOR_DISCRETE_DISTANCE; i++) {
-      // Range check.
-      if (i < 0 || i >= validTaskCounts.length) {
-        continue;
-      }
-      int taskCount = validTaskCounts[i];
-      if (taskCount < config.getTaskCountMin()) {
-        continue;
-      } else if (taskCount > config.getTaskCountMax()) {
-        break;
-      }
+    for (int taskCount : validTaskCounts) {
       double cost = costFunction.computeCost(metrics, taskCount, config);
       log.debug("Proposed task count: %d, Cost: %.4f", taskCount, cost);
       if (cost < optimalCost) {
@@ -238,16 +225,26 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return sorted list of valid task counts within bounds
    */
-  static int[] computeValidTaskCounts(int partitionCount)
+  static int[] computeValidTaskCounts(int partitionCount, int currentTaskCount)
   {
     if (partitionCount <= 0) {
       return new int[]{};
     }
 
     List<Integer> result = new ArrayList<>();
+    final int currentPartitionsPerTask = partitionCount / currentTaskCount;
+    // To avoid confusion: minimum partitions per task means maximum amount of tasks (scale up) and vice versa.
+    final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - SCALE_UP_FACTOR_DISCRETE_DISTANCE);
+    final int maxPartitionsPerTask = Math.min(
+        partitionCount,
+        Math.max(
+            minPartitionsPerTask,
+            currentPartitionsPerTask + SCALE_DOWN_FACTOR_DISCRETE_DISTANCE
+        )
+    );
 
-    for (int partitionsPerTask = partitionCount; partitionsPerTask >= 1; partitionsPerTask--) {
-      int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
+    for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask; partitionsPerTask--) {
+      final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
       if (result.isEmpty() || result.get(result.size() - 1) != taskCount) {
         result.add(taskCount);
       }
