@@ -143,8 +143,10 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   }
 
   /**
-   * @return Kafka's `poll-idle-ratio-avg` an it's analog for Kinesis,
-   * required for correct autoscaler work
+   * Average poll-to-idle ratio as reported by the stream consumer.
+   * A value of 0 represents that the consumer is never idle, i.e. always consuming.
+   * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   * Used by the supervisor auto-scaler to find an optimal task count that minimizes idle time.
    */
   default double getPollIdleRatioMetric()
   {

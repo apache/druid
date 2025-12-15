@@ -319,6 +319,23 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
+  public ListenableFuture<Map<String, Object>> getStreamerMetrics(String id)
+  {
+    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/rowStats?autoScalerStatsOnly=true"))
+        .handler(new BytesFullResponseHandler())
+        .onSuccess(r -> {
+          if (isNullOrEmpty(r.getContent())) {
+            log.warn("Got empty response when calling getStreamerMetrics, id[%s]", id);
+            return null;
+          } else {
+            return JacksonUtils.readValue(jsonMapper, r.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+          }
+        })
+        .onNotAvailable(e -> Either.value(Collections.emptyMap()))
+        .go();
+  }
+
+  @Override
   public ListenableFuture<List<ParseExceptionReport>> getParseErrorsAsync(String id)
   {
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/unparseableEvents"))

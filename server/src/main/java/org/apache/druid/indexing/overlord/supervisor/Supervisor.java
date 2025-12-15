@@ -66,7 +66,7 @@ public interface Supervisor
 
   SupervisorStateManager.State getState();
 
-  default Map<String, Map<String, Object>> getStats()
+  default Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamerStats)
   {
     return ImmutableMap.of();
   }

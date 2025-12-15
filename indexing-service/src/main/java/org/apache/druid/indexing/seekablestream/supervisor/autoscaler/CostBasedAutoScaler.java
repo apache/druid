@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Cost-based auto-scaler for seekable stream supervisors.
@@ -48,7 +47,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
+  private static final int SCALE_UP_FACTOR_DISCRETE_DISTANCE = 2;
+  private static final int SCALE_DOWN_FACTOR_DISCRETE_DISTANCE = SCALE_UP_FACTOR_DISCRETE_DISTANCE * 2;
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
   private final String supervisorId;
@@ -57,13 +57,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final SupervisorSpec spec;
   private final CostBasedAutoScalerConfig config;
   private final ServiceMetricEvent.Builder metricBuilder;
-  /**
-   * Atomic reference to CostMetrics object. All operations must be performed
-   * with sequentially consistent semantics (volatile reads/writes).
-   * However, it may be fine-tuned with acquire/release semantics,
-   * but requires careful reasoning about correctness.
-   */
-  private final AtomicReference<CostMetrics> currentMetrics;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
 
@@ -80,12 +73,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
-    this.currentMetrics = new AtomicReference<>(null);
     this.costFunction = new WeightedCostFunction();
 
     this.autoscalerExecutor = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(spec.getId()));
     this.metricBuilder = ServiceMetricEvent.builder()
-                                           .setDimension(DruidMetrics.DATASOURCE, supervisorId)
+                                           .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                            .setDimension(
                                                DruidMetrics.STREAM,
                                                this.supervisor.getIoConfig().getStream()
@@ -95,28 +87,20 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public void start()
   {
-    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(currentMetrics);
-    Runnable onSuccessfulScale = () -> currentMetrics.set(null);
-
-    autoscalerExecutor.scheduleAtFixedRate(
-        this::collectMetrics,
-        config.getMetricsCollectionIntervalMillis(),
-        config.getMetricsCollectionIntervalMillis(),
-        TimeUnit.MILLISECONDS
-    );
+    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(this.collectMetrics());
+    Runnable onSuccessfulScale = () -> {
+    };
 
     autoscalerExecutor.scheduleAtFixedRate(
         supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
-        config.getScaleActionStartDelayMillis(),
+        config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
     );
 
     log.info(
-        "CostBasedAutoScaler started for dataSource [%s]: collecting metrics every [%d]ms, "
-        + "evaluating scaling every [%d]ms",
+        "CostBasedAutoScaler started for supervisorId [%s]: evaluating scaling every [%d]ms",
         supervisorId,
-        config.getMetricsCollectionIntervalMillis(),
         config.getScaleActionPeriodMillis()
     );
   }
@@ -125,42 +109,33 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void stop()
   {
     autoscalerExecutor.shutdownNow();
-    log.info("CostBasedAutoScaler stopped for dataSource [%s]", supervisorId);
+    log.info("CostBasedAutoScaler stopped for supervisorId [%s]", supervisorId);
   }
 
   @Override
   public void reset()
   {
-    currentMetrics.set(null);
+    // No-op.
   }
 
-  private void collectMetrics()
+  private CostMetrics collectMetrics()
   {
     if (spec.isSuspended()) {
       log.debug("Supervisor [%s] is suspended, skipping a metrics collection", supervisorId);
-      return;
+      return null;
     }
 
     final LagStats lagStats = supervisor.computeLagStats();
     if (lagStats == null) {
-      log.debug("Lag stats unavailable for dataSource [%s], skipping collection", supervisorId);
-      return;
+      log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
+      return null;
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
     final int partitionCount = supervisor.getPartitionCount();
     final double pollIdleRatio = supervisor.getPollIdleRatioMetric();
 
-    currentMetrics.set(
-        new CostMetrics(
-            lagStats.getAvgLag(),
-            currentTaskCount,
-            partitionCount,
-            pollIdleRatio
-        )
-    );
-
-    log.debug("Collected metrics for dataSource [%s]", supervisorId);
+    return new CostMetrics(lagStats.getAvgLag(), currentTaskCount, partitionCount, pollIdleRatio);
   }
 
   /**
@@ -175,11 +150,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return optimal task count for scale-up, or -1 if no scaling action needed
    */
-  public int computeOptimalTaskCount(AtomicReference<CostMetrics> currentMetricsRef)
+  public int computeOptimalTaskCount(CostMetrics metrics)
   {
-    final CostMetrics metrics = currentMetricsRef.get();
     if (metrics == null) {
-      log.debug("No metrics available yet for dataSource [%s]", supervisorId);
+      log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
       return -1;
     }
 
@@ -189,10 +163,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    final int[] validTaskCounts = CostBasedAutoScaler.computeFactors(partitionCount);
+    final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(partitionCount);
 
     if (validTaskCounts.length == 0) {
-      log.warn("No valid task counts after applying constraints for dataSource [%s]", supervisorId);
+      log.warn("No valid task counts after applying constraints for supervisorId [%s]", supervisorId);
       return -1;
     }
 
@@ -201,7 +175,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double currentIdleRatio = metrics.getPollIdleRatio();
     if (currentIdleRatio >= 0 && WeightedCostFunction.isIdleInIdealRange(currentIdleRatio)) {
       log.info(
-          "Idle ratio [%.3f] is in ideal range for dataSource [%s], no scaling needed",
+          "Idle ratio [%.3f] is in ideal range for supervisorId [%s], no scaling needed",
           currentIdleRatio,
           supervisorId
       );
@@ -216,8 +190,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     double optimalCost = Double.POSITIVE_INFINITY;
 
     final int bestTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
-    for (int i = bestTaskCountIndex - SCALE_FACTOR_DISCRETE_DISTANCE;
-         i <= bestTaskCountIndex + SCALE_FACTOR_DISCRETE_DISTANCE; i++) {
+    for (int i = bestTaskCountIndex - SCALE_DOWN_FACTOR_DISCRETE_DISTANCE;
+         i <= bestTaskCountIndex + SCALE_UP_FACTOR_DISCRETE_DISTANCE; i++) {
       // Range check.
       if (i < 0 || i >= validTaskCounts.length) {
         continue;
@@ -238,8 +212,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     emitter.emit(metricBuilder.setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
 
-    log.info(
-        "Cost-based scaling evaluation for dataSource [%s]: current=%d, optimal=%d, cost=%.4f, "
+    log.debug(
+        "Cost-based scaling evaluation for supervisorId [%s]: current=%d, optimal=%d, cost=%.4f, "
         + "avgPartitionLag=%.2f, pollIdleRatio=%.3f",
         supervisorId,
         metrics.getCurrentTaskCount(),
@@ -249,21 +223,22 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         metrics.getPollIdleRatio()
     );
 
-    if (optimalTaskCount > currentTaskCount) {
-      return optimalTaskCount;
-    } else if (optimalTaskCount < currentTaskCount) {
-      supervisor.getIoConfig().setTaskCount(optimalTaskCount);
+    if (optimalTaskCount == currentTaskCount) {
+      return -1;
     }
-    return -1;
+    // Temporarily, we equalize scaleup and scaledown effects, due to uncompleted state of task rollover.
+    // The behaviour will be changed by complementing task rollover state machine.
+    return optimalTaskCount;
   }
 
   /**
    * Generates valid task counts based on partitions-per-task ratios.
    * This enables gradual scaling and avoids large jumps.
+   * Limits the range of task counts considered to avoid excessive computation.
    *
    * @return sorted list of valid task counts within bounds
    */
-  static int[] computeFactors(int partitionCount)
+  static int[] computeValidTaskCounts(int partitionCount)
   {
     if (partitionCount <= 0) {
       return new int[]{};

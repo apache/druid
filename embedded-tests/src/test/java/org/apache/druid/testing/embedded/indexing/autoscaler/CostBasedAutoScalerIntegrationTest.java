@@ -23,7 +23,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -42,6 +41,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Seconds;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -134,8 +134,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMin(1)
         .taskCountMax(100)
         .taskCountStart(initialTaskCount)
-        .metricsCollectionIntervalMillis(1000)
-        .scaleActionStartDelayMillis(1500)
         .scaleActionPeriodMillis(1500)
         .minTriggerScaleActionFrequencyMillis(3000)
         // Weight configuration: strongly favor lag reduction over idle time
@@ -149,13 +147,13 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(spec));
 
     // Wait for the supervisor to be healthy and running
-    waitForSupervisorRunning(superId);
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time"));
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count to 4
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.equalTo(4L))
+                      .hasValueMatching(Matchers.equalTo(6L))
     );
 
     // Suspend the supervisor
@@ -163,7 +161,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(60)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
     final String superId = dataSource + "_super_scaleup";
@@ -185,8 +182,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMin(1)
         .taskCountMax(50)
         .taskCountStart(lowInitialTaskCount)
-        .metricsCollectionIntervalMillis(500)
-        .scaleActionStartDelayMillis(500)
         .scaleActionPeriodMillis(500)
         .minTriggerScaleActionFrequencyMillis(1000)
         // Weight configuration: favor lag as the primary signal for scale-up scenarios
@@ -205,7 +200,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the supervisor to be healthy and running
-    waitForSupervisorRunning(superId);
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time"));
 
     // First, wait for any optimalTaskCount metric to verify the autoscaler is running
     overlord.latchableEmitter().waitForEvent(
@@ -236,27 +231,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     // Suspend the supervisor
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
-  }
-
-  private void waitForSupervisorRunning(String supervisorId)
-  {
-    int maxAttempts = 10;
-    int attempt = 0;
-    while (attempt < maxAttempts) {
-      SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorId);
-      if (status != null && "RUNNING".equals(status.getState()) && status.isHealthy()) {
-        return;
-      }
-      attempt++;
-      try {
-        Thread.sleep(1000);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-    }
-    throw new AssertionError("Supervisor did not reach RUNNING state within timeout");
   }
 
   private void produceRecordsToKafka(int recordCount, int iterations)
@@ -302,6 +276,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
+                .withTaskDuration(Seconds.THREE.toPeriod())
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .withId(supervisorId)

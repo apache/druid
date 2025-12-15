@@ -41,8 +41,6 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private static final long DEFAULT_METRICS_COLLECTION_INTERVAL_MILLIS = 3 * 60 * 1000; // 3 minutes
-  private static final long DEFAULT_SCALE_ACTION_START_DELAY_MILLIS = 10 * 60 * 1000; // 10 minutes
   private static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 15 * 60 * 1000; // 15 minutes
   private static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 1200000; // 20 minutes
   private static final double DEFAULT_LAG_WEIGHT = 0.25;
@@ -51,11 +49,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
   private final int taskCountMin;
-  private Integer taskCountStart;
+  private final Integer taskCountStart;
   private final long minTriggerScaleActionFrequencyMillis;
   private final Double stopTaskCountRatio;
-  private final long metricsCollectionIntervalMillis;
-  private final long scaleActionStartDelayMillis;
   private final long scaleActionPeriodMillis;
 
   private final double lagWeight;
@@ -69,8 +65,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("taskCountStart") Integer taskCountStart,
       @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
       @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio,
-      @Nullable @JsonProperty("metricsCollectionIntervalMillis") Long metricsCollectionIntervalMillis,
-      @Nullable @JsonProperty("scaleActionStartDelayMillis") Long scaleActionStartDelayMillis,
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight
@@ -79,12 +73,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
 
     // Timing configuration with defaults
-    this.metricsCollectionIntervalMillis = metricsCollectionIntervalMillis != null
-                                           ? metricsCollectionIntervalMillis
-                                           : DEFAULT_METRICS_COLLECTION_INTERVAL_MILLIS;
-    this.scaleActionStartDelayMillis = scaleActionStartDelayMillis != null
-                                       ? scaleActionStartDelayMillis
-                                       : DEFAULT_SCALE_ACTION_START_DELAY_MILLIS;
     this.scaleActionPeriodMillis = scaleActionPeriodMillis != null
                                    ? scaleActionPeriodMillis
                                    : DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
@@ -178,18 +166,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @JsonProperty
-  public long getMetricsCollectionIntervalMillis()
-  {
-    return metricsCollectionIntervalMillis;
-  }
-
-  @JsonProperty
-  public long getScaleActionStartDelayMillis()
-  {
-    return scaleActionStartDelayMillis;
-  }
-
-  @JsonProperty
   public long getScaleActionPeriodMillis()
   {
     return scaleActionPeriodMillis;
@@ -229,8 +205,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && taskCountMax == that.taskCountMax
            && taskCountMin == that.taskCountMin
            && minTriggerScaleActionFrequencyMillis == that.minTriggerScaleActionFrequencyMillis
-           && metricsCollectionIntervalMillis == that.metricsCollectionIntervalMillis
-           && scaleActionStartDelayMillis == that.scaleActionStartDelayMillis
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
@@ -248,8 +222,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         taskCountStart,
         minTriggerScaleActionFrequencyMillis,
         stopTaskCountRatio,
-        metricsCollectionIntervalMillis,
-        scaleActionStartDelayMillis,
         scaleActionPeriodMillis,
         lagWeight,
         idleWeight
@@ -266,8 +238,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", taskCountStart=" + taskCountStart +
            ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
            ", stopTaskCountRatio=" + stopTaskCountRatio +
-           ", metricsCollectionIntervalMillis=" + metricsCollectionIntervalMillis +
-           ", scaleActionStartDelayMillis=" + scaleActionStartDelayMillis +
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
@@ -286,8 +256,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Integer taskCountStart;
     private Long minTriggerScaleActionFrequencyMillis;
     private Double stopTaskCountRatio;
-    private Long metricsCollectionIntervalMillis;
-    private Long scaleActionStartDelayMillis;
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
     private Double idleWeight;
@@ -332,18 +300,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder metricsCollectionIntervalMillis(long metricsCollectionIntervalMillis)
-    {
-      this.metricsCollectionIntervalMillis = metricsCollectionIntervalMillis;
-      return this;
-    }
-
-    public Builder scaleActionStartDelayMillis(long scaleActionStartDelayMillis)
-    {
-      this.scaleActionStartDelayMillis = scaleActionStartDelayMillis;
-      return this;
-    }
-
     public Builder scaleActionPeriodMillis(long scaleActionPeriodMillis)
     {
       this.scaleActionPeriodMillis = scaleActionPeriodMillis;
@@ -371,8 +327,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           taskCountStart,
           minTriggerScaleActionFrequencyMillis,
           stopTaskCountRatio,
-          metricsCollectionIntervalMillis,
-          scaleActionStartDelayMillis,
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight

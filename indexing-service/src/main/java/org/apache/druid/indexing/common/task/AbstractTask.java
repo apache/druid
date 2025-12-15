@@ -69,7 +69,7 @@ public abstract class AbstractTask implements Task
   {
     REPLACE, // replace with tombstones
     APPEND, // append to existing segments
-    REPLACE_LEGACY, // original 'replace', it does not replace existing data for empty time chunks in input intervals
+    REPLACE_LEGACY, // original replace, it does not replace existing data for empty time chunks in input intervals
     HADOOP, // non-native batch, hadoop ingestion
     NONE; // not an ingestion task (i.e. a kill task)
 

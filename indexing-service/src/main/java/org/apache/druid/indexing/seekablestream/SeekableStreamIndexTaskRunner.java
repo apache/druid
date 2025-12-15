@@ -145,6 +145,9 @@ import java.util.stream.Collectors;
 public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
     implements ChatHandler
 {
+  public static final String AUTOSCALER_METRICS_KEY = "autoscalerMetrics";
+  public static final String POLL_IDLE_RATIO_KEY = "pollIdleRatio";
+
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   public enum Status
@@ -319,7 +322,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Returns the supervisorId for the task this runner is executing.
    * Backwards compatibility: if task spec from metadata has a null supervisorId field, falls back to dataSource
-  */
+   */
   public String getSupervisorId()
   {
     return task.getSupervisorId();
@@ -1210,7 +1213,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return metrics;
   }
 
-
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
@@ -1647,9 +1649,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
   }
 
-  public Map<String, Object> doGetRowStats()
+  public Map<String, Object> doGetRowStats(boolean autoScalerStatsOnly)
   {
     Map<String, Object> returnMap = new HashMap<>();
+    if (this.recordSupplier != null) {
+      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+    }
+    if (autoScalerStatsOnly) {
+      return returnMap;
+    }
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
 
@@ -1664,9 +1672,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
-    if (this.recordSupplier != null) {
-      returnMap.put("pollIdleRatio", this.recordSupplier.getPollIdleRatioMetric());
-    }
     return returnMap;
   }
 
@@ -1678,7 +1683,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats());
+    payload.put("rowStats", doGetRowStats(false));
 
     ingestionStatsAndErrors.put("taskId", task.getId());
     ingestionStatsAndErrors.put("payload", payload);
@@ -1691,11 +1696,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
-      @Context final HttpServletRequest req
+      @Context final HttpServletRequest req,
+      @QueryParam("autoScalerStatsOnly") boolean autoScalerStatsOnly
   )
   {
     authorizationCheck(req);
-    return Response.ok(doGetRowStats()).build();
+    return Response.ok(doGetRowStats(autoScalerStatsOnly)).build();
   }
 
   @GET

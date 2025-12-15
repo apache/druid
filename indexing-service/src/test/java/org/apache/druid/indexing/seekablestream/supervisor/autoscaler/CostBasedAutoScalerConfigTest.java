@@ -39,9 +39,6 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"taskCountStart\": 10,\n"
                   + "  \"minTriggerScaleActionFrequencyMillis\": 600000,\n"
                   + "  \"stopTaskCountRatio\": 0.8,\n"
-                  + "  \"metricsCollectionIntervalMillis\": 30000,\n"
-                  + "  \"metricsCollectionRangeMillis\": 600000,\n"
-                  + "  \"scaleActionStartDelayMillis\": 300000,\n"
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
@@ -56,8 +53,6 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(Integer.valueOf(10), config.getTaskCountStart());
     Assert.assertEquals(600000L, config.getMinTriggerScaleActionFrequencyMillis());
     Assert.assertEquals(Double.valueOf(0.8), config.getStopTaskCountRatio());
-    Assert.assertEquals(30000L, config.getMetricsCollectionIntervalMillis());
-    Assert.assertEquals(300000L, config.getScaleActionStartDelayMillis());
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
@@ -86,8 +81,6 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(2, config.getTaskCountMin());
 
     // Check defaults
-    Assert.assertEquals(180000L, config.getMetricsCollectionIntervalMillis());
-    Assert.assertEquals(600000L, config.getScaleActionStartDelayMillis());
     Assert.assertEquals(900000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(1200000L, config.getMinTriggerScaleActionFrequencyMillis());
     Assert.assertEquals(0.25, config.getLagWeight(), 0.001);

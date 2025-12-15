@@ -103,7 +103,7 @@ public class WeightedCostFunction
 
     final double cost = config.getLagWeight() * normalizedLag + config.getIdleWeight() * idleCost;
 
-    log.info(
+    log.debug(
         "Cost for taskCount[%d]: lag[%.2f -> %.4f], idle[%.4f -> %.4f], final cost[%.4f]",
         taskCount,
         predictedLag,

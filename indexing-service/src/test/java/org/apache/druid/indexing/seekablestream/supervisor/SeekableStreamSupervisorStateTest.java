@@ -1900,7 +1900,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ImmutableSet.of("task2"),
         ImmutableSet.of()
     );
-    Map<String, Map<String, Object>> stats = supervisor.getStats();
+    Map<String, Map<String, Object>> stats = supervisor.getStats(false);
 
     verifyAll();
 

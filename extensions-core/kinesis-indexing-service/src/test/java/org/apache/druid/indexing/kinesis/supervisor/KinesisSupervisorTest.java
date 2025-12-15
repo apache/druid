@@ -3762,7 +3762,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     replayAll();
 
-    Map<String, Map<String, Object>> stats = supervisor.getStats();
+    Map<String, Map<String, Object>> stats = supervisor.getStats(false);
 
     verifyAll();
 

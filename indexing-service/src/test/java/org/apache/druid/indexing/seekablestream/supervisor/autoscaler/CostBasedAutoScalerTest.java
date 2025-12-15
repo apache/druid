@@ -29,7 +29,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.Mockito.when;
 
@@ -60,8 +59,6 @@ public class CostBasedAutoScalerTest
                                       .enableTaskAutoScaler(true)
                                       .taskCountStart(10)
                                       .minTriggerScaleActionFrequencyMillis(600000L)
-                                      .metricsCollectionIntervalMillis(30000L)
-                                      .scaleActionStartDelayMillis(300000L)
                                       .scaleActionPeriodMillis(60000L)
                                       .lagWeight(0.6)
                                       .idleWeight(0.4)
@@ -76,14 +73,14 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testComputeFactorsGradualScaling()
+  public void testComputeValidTaskCountsGradualScaling()
   {
     // Verify gradual scaling: for 100 partitions, going from 25 tasks (4 partitions/task)
     // the next step should be 34 tasks (3 partitions/task)
-    int[] factors = autoScaler.computeFactors(100);
+    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100);
 
-    int idx25 = Arrays.binarySearch(factors, 25);
-    int idx34 = Arrays.binarySearch(factors, 34);
+    int idx25 = Arrays.binarySearch(validTaskCounts, 25);
+    int idx34 = Arrays.binarySearch(validTaskCounts, 34);
     Assert.assertTrue("25 should be in factors", idx25 >= 0);
     Assert.assertTrue("34 should be in factors", idx34 >= 0);
     Assert.assertEquals("34 should be the next factor after 25", idx25 + 1, idx34);
@@ -93,7 +90,7 @@ public class CostBasedAutoScalerTest
   public void testComputeOptimalTaskCountInvalidInputs()
   {
     // Empty metrics list
-    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(null));
+    int result = autoScaler.computeOptimalTaskCount(null);
     Assert.assertEquals(-1, result);
 
     // Zero partitions
@@ -104,7 +101,7 @@ public class CostBasedAutoScalerTest
         0.0   // pollIdleRatio
     );
 
-    result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(zeroPartitionsMetrics));
+    result = autoScaler.computeOptimalTaskCount(zeroPartitionsMetrics);
     Assert.assertEquals(-1, result);
   }
 
@@ -119,7 +116,7 @@ public class CostBasedAutoScalerTest
         0.001       // pollIdleRatio - very low idle (tasks are overloaded)
     );
 
-    int initialResult = autoScaler.computeOptimalTaskCount(new AtomicReference<>(oldMetrics));
+    int initialResult = autoScaler.computeOptimalTaskCount(oldMetrics);
 
     // Very low idle (0.001) is below ideal range, but at 100 tasks (max), there's nowhere to scale up
     // The cost function might recommend staying or scaling down depends on the bounds
@@ -133,7 +130,7 @@ public class CostBasedAutoScalerTest
         0.05        // pollIdleRatio - low idle (below ideal range 0.2)
     );
 
-    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(newMetrics));
+    int result = autoScaler.computeOptimalTaskCount(newMetrics);
     // With low idle (below ideal range 0.2), the algorithm should recommend scaling up
     // to increase idle toward the ideal range [0.2, 0.6]
     Assert.assertTrue("Should recommend scaling up when idle < 0.2", result > 34);
@@ -150,7 +147,7 @@ public class CostBasedAutoScalerTest
         0.01         // pollIdleRatio - low idle (tasks are busy)
     );
 
-    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(metrics));
+    int result = autoScaler.computeOptimalTaskCount(metrics);
     // With very high lag and low idle, the algorithm should recommend scaling up aggressively
     Assert.assertEquals(50, result);
   }
@@ -168,7 +165,7 @@ public class CostBasedAutoScalerTest
         100,      // partitionCount
         0.2       // pollIdleRatio - at lower bound of ideal range [0.2, 0.6]
     );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(new AtomicReference<>(metricsLowIdeal)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsLowIdeal));
 
     // Test with idle in middle of ideal range
     CostMetrics metricsMidIdeal = new CostMetrics(
@@ -177,7 +174,7 @@ public class CostBasedAutoScalerTest
         100,      // partitionCount
         0.4       // pollIdleRatio - in middle of ideal range
     );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(new AtomicReference<>(metricsMidIdeal)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsMidIdeal));
 
     // Test with idle at upper bound of ideal range
     CostMetrics metricsHighIdeal = new CostMetrics(
@@ -186,7 +183,7 @@ public class CostBasedAutoScalerTest
         100,      // partitionCount
         0.6       // pollIdleRatio - at upper bound of ideal range
     );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(new AtomicReference<>(metricsHighIdeal)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsHighIdeal));
   }
 
   @Test
@@ -201,7 +198,7 @@ public class CostBasedAutoScalerTest
         100,      // partitionCount
         0.1       // pollIdleRatio - below ideal range (overloaded)
     );
-    int resultOverloaded = autoScaler.computeOptimalTaskCount(new AtomicReference<>(metricsOverloaded));
+    int resultOverloaded = autoScaler.computeOptimalTaskCount(metricsOverloaded);
     Assert.assertTrue("Should recommend scaling up when idle < 0.2", resultOverloaded > 25);
 
     // Above ideal range (underutilized) with low lag - should scale down (returns -1 but sets config)
@@ -211,7 +208,7 @@ public class CostBasedAutoScalerTest
         100,      // partitionCount
         0.8       // pollIdleRatio - above ideal range (underutilized)
     );
-    int resultUnderutilized = autoScaler.computeOptimalTaskCount(new AtomicReference<>(metricsUnderutilized));
+    int resultUnderutilized = autoScaler.computeOptimalTaskCount(metricsUnderutilized);
     // For scale-down, the method returns -1 but sets the config internally
     Assert.assertEquals(-1, resultUnderutilized);
   }

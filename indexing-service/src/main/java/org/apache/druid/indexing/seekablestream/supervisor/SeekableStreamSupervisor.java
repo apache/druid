@@ -1466,10 +1466,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Map<String, Map<String, Object>> getStats()
+  public Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamerStats)
   {
     try {
-      return getCurrentTotalStats();
+      return getCurrentStats(includeOnlyStreamerStats);
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1504,11 +1504,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Collect row ingestion stats from all tasks managed by this supervisor.
    *
+   * @param includeOnlyStreamerStats Whether to include only streamer stats(metrics) or all stats
    * @return A map of groupId->taskId->task row stats
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private Map<String, Map<String, Object>> getCurrentTotalStats()
+  private Map<String, Map<String, Object>> getCurrentStats(boolean includeOnlyStreamerStats)
       throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();
@@ -1520,7 +1521,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       for (String taskId : group.taskIds()) {
         futures.add(
             Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
+                includeOnlyStreamerStats
+                ? taskClient.getStreamerMetrics(taskId)
+                : taskClient.getMovingAveragesAsync(taskId),
                 (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                     groupId,
                     taskId,
@@ -4379,7 +4382,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   public double getPollIdleRatioMetric()
   {
-    Map<String, Map<String, Object>> taskMetrics = getStats();
+    Map<String, Map<String, Object>> taskMetrics = getStats(true);
     if (taskMetrics.isEmpty()) {
       return 1.;
     }
@@ -4389,10 +4392,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Map<String, Object> groupMetrics : taskMetrics.values()) {
       for (Object taskMetric : groupMetrics.values()) {
         if (taskMetric instanceof Map) {
-          Object pollIdleRatio = ((Map<?, ?>) taskMetric).get("pollIdleRatio");
-          if (pollIdleRatio instanceof Number) {
-            sum += ((Number) pollIdleRatio).doubleValue();
-            count++;
+          Object autoScalerMetricsMap = ((Map<?, ?>) taskMetric).get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
+          if (autoScalerMetricsMap instanceof Map) {
+            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
+            if (pollIdleRatioAvg instanceof Number) {
+              sum += ((Number) pollIdleRatioAvg).doubleValue();
+              count++;
+            }
           }
         }
       }
