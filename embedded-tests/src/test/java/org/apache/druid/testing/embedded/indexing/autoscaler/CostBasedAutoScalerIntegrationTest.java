@@ -145,7 +145,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(spec));
 
     // Wait for the supervisor to be healthy and running
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time"));
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time").hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count to 4
@@ -198,11 +198,12 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(superId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the supervisor to be healthy and running
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time"));
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/run/time").hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // First, wait for any optimalTaskCount metric to verify the autoscaler is running
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, superId)
     );
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-up

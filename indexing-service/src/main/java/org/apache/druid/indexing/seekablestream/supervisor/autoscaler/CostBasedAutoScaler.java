@@ -40,7 +40,8 @@ import java.util.concurrent.TimeUnit;
  * Cost-based auto-scaler for seekable stream supervisors.
  * Uses a cost function combining lag and idle time metrics to determine optimal task counts.
  * Task counts are selected from pre-calculated values (not arbitrary factors).
- * Scale-up happens incrementally, scale-down only during task rollover.
+ * Scale-up and scale-down are both performed proactively.
+ * Future versions may perform scale-down on task rollover only.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
@@ -74,7 +75,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     this.costFunction = new WeightedCostFunction();
 
-    this.autoscalerExecutor = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(spec.getId()));
+    this.autoscalerExecutor = Execs.scheduledSingleThreaded("CostBasedAutoScaler-" + StringUtils.encodeForFormat(spec.getId()));
     this.metricBuilder = ServiceMetricEvent.builder()
                                            .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                            .setDimension(
@@ -98,7 +99,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
 
     log.info(
-        "CostBasedAutoScaler started for supervisorId [%s]: evaluating scaling every [%d]ms",
+        "CostBasedAutoScaler started for supervisorId[%s]: evaluating scaling every [%d]ms",
         supervisorId,
         config.getScaleActionPeriodMillis()
     );
@@ -213,8 +214,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (optimalTaskCount == currentTaskCount) {
       return -1;
     }
-    // Temporarily, we equalize scaleup and scaledown effects, due to uncompleted state of task rollover.
-    // The behaviour will be changed by complementing task rollover state machine.
+    // Perform both scale-up and scale-down proactively
+    // Future versions may perform scale-down on task rollover only
     return optimalTaskCount;
   }
 
@@ -233,7 +234,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     List<Integer> result = new ArrayList<>();
     final int currentPartitionsPerTask = partitionCount / currentTaskCount;
-    // To avoid confusion: minimum partitions per task means maximum amount of tasks (scale up) and vice versa.
+    // Minimum partitions per task corresponds to maximum number of tasks (scale up) and vice versa.
     final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - SCALE_UP_FACTOR_DISCRETE_DISTANCE);
     final int maxPartitionsPerTask = Math.min(
         partitionCount,
