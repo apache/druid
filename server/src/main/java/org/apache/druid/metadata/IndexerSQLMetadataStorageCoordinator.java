@@ -2024,7 +2024,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
           segmentMetadata == null ? null : segmentMetadata.getNumRows(),
           upgradedFromSegmentIdMap.get(segment.getId().toString()),
-          segment.getCompactionStateFingerprint() // TODO this might look different eventually
+          segment.getCompactionStateFingerprint()
       );
     }).collect(Collectors.toSet());
 
