@@ -81,6 +81,8 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     );
 
     if (segmentIterator.hasNext()) {
+      // If we are going to create compaction jobs for this compaction state, we need to persist the fingerprint -> state
+      // mapping so compacted segments from these jobs can reference a valid compaction state.
       params.getCompactionStateManager().persistCompactionState(
           config.getDataSource(),
           Map.of(compactionStateFingerprint, compactionState),

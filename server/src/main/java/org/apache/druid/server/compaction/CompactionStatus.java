@@ -345,6 +345,7 @@ public class CompactionStatus
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
     private final List<DataSegment> fingerprintedSegments = new ArrayList<>();
+    private final List<DataSegment> compactedSegments = new ArrayList<>();
     private final List<DataSegment> uncompactedSegments = new ArrayList<>();
     private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
 
@@ -399,17 +400,21 @@ public class CompactionStatus
       );
 
       // Consider segments which have passed all checks to be compacted
-      final List<DataSegment> compactedSegments = unknownStateToSegments
-          .values()
-          .stream()
-          .flatMap(List::stream)
-          .collect(Collectors.toList());
+      // Includes segments with correct fingerprints and segments that passed all state checks
+      final List<DataSegment> allCompactedSegments = new ArrayList<>(this.compactedSegments);
+      allCompactedSegments.addAll(
+          unknownStateToSegments
+              .values()
+              .stream()
+              .flatMap(List::stream)
+              .collect(Collectors.toList())
+      );
 
       if (reasonsForCompaction.isEmpty()) {
         return COMPLETE;
       } else {
         return CompactionStatus.pending(
-            createStats(compactedSegments),
+            createStats(allCompactedSegments),
             createStats(uncompactedSegments),
             reasonsForCompaction.get(0)
         );
@@ -433,6 +438,9 @@ public class CompactionStatus
           mismatchedFingerprintToSegmentMap
               .computeIfAbsent(fingerprint, k -> new ArrayList<>())
               .add(segment);
+        } else if (fingerprint != null && fingerprint.equals(targetFingerprint)) {
+          // Segment has correct fingerprint - add to compacted segments
+          compactedSegments.add(segment);
         }
       }
 

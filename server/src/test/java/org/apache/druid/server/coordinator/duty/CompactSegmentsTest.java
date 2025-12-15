@@ -276,6 +276,7 @@ public class CompactSegmentsTest
             .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
             .addValue(OverlordClient.class, overlordClient)
             .addValue(CompactionStatusTracker.class, statusTracker)
+            .addValue(CompactionStateManager.class, compactionStateManager)
             .addValue(MetadataCatalog.class, NullMetadataCatalog.INSTANCE)
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );

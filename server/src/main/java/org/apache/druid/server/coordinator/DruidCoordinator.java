@@ -219,8 +219,8 @@ public class DruidCoordinator
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
     this.cloneStatusManager = cloneStatusManager;
 
-    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.compactionStateManager = compactionStateManager;
+    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
 
   public boolean isLeader()

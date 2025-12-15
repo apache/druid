@@ -56,18 +56,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 
 /**
- * Handles compaction state persistence on the Coordinator.
+ * Manages the persistence and retrieval of {@link CompactionState} objects in the metadata storage.
+ * <p>
+ * Compaction states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content. A cache
+ * of compaction states using the fingerprints as keys is maintained in memory to optimize retrieval performance.
+ * </p>
+ * <p>
+ * A striped locking mechanism is used to ensure thread-safe persistence of compaction states on a per-datasource basis.
+ * </p>
  */
 @ManageLifecycle
 public class CompactionStateManager
 {
   private static final EmittingLogger log = new EmittingLogger(CompactionStateManager.class);
   private static final int DB_ACTION_PARTITION_SIZE = 100;
-  private static final int DEFAULT_PREWARM_SIZE = 100;
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
@@ -105,7 +110,7 @@ public class CompactionStateManager
       );
       if (tableExists) {
         log.info("Pre-warming compaction state cache");
-        prewarmCache(DEFAULT_PREWARM_SIZE);
+        prewarmCache(config.getPrewarmFingerprintCount());
       } else {
         log.info("Compaction states table does not exist, skipping pre-warm");
       }
@@ -351,7 +356,9 @@ public class CompactionStateManager
           }
       );
     }
-    catch (ExecutionException | CacheLoader.InvalidCacheLoadException e) {
+    catch (Exception e) {
+      // Return null for any cache loading failure (ExecutionException, UncheckedExecutionException, InvalidCacheLoadException, etc.)
+      log.debug(e, "Failed to load compaction state for fingerprint[%s] from cache", fingerprint);
       return null;
     }
   }

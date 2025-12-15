@@ -284,6 +284,8 @@ public class CompactSegments implements CoordinatorCustomDuty
           config.getDataSource()
       );
 
+      // If we are going to create compaction jobs for this compaction state, we need to persist the fingerprint -> state
+      // mapping so compacted segments from these jobs can reference a valid compaction state.
       compactionStateManager.persistCompactionState(
           config.getDataSource(),
           Map.of(compactionStateFingerprint, compactionState),

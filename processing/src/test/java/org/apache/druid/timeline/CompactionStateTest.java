@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -67,7 +68,7 @@ public class CompactionStateTest
   }
 
   @Test
-  public void test_generateCompactionStateFingerprint_listOrderDoesNotInfluenceFingerprint()
+  public void test_generateCompactionStateFingerprint_metricsListOrderDifferenceResultsInNewFingerprint()
   {
     List<AggregatorFactory> metrics1 = Arrays.asList(
         new CountAggregatorFactory("count"),
@@ -106,6 +107,47 @@ public class CompactionStateTest
         fingerprint1,
         fingerprint2,
         "Metrics order currently matters (arrays preserve order in JSON)"
+    );
+  }
+
+  @Test
+  public void test_generateCompactionStateFingerprint_dimensionsListOrderDifferenceResultsInNewFingerprint()
+  {
+    DimensionsSpec dimensions1 = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
+    );
+
+    DimensionsSpec dimensions2 = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim3", "dim2", "dim1"))
+    );
+
+    CompactionState state1 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        dimensions1,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    CompactionState state2 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        dimensions2,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    String fingerprint1 = CompactionState.generateCompactionStateFingerprint(state1, "test-ds");
+    String fingerprint2 = CompactionState.generateCompactionStateFingerprint(state2, "test-ds");
+
+    Assertions.assertNotEquals(
+        fingerprint1,
+        fingerprint2,
+        "Dimensions order currently matters (arrays preserve order in JSON)"
     );
   }
 

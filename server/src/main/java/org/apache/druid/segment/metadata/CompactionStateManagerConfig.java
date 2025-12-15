@@ -23,11 +23,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class CompactionStateManagerConfig
 {
+  /**
+   * The maximum number of fingerprints to keep in the in-memory cache.
+   */
   @JsonProperty
   private int cacheSize = 100;
+
+  /**
+   * The number of fingerprints to prewarm into the cache on startup.
+   */
+  @JsonProperty
+  private int prewarmFingerprintCount = 100;
 
   public int getCacheSize()
   {
     return cacheSize;
+  }
+
+  public int getPrewarmFingerprintCount()
+  {
+    return prewarmFingerprintCount;
   }
 }

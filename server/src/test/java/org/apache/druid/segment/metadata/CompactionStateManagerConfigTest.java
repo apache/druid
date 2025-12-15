@@ -34,15 +34,17 @@ public class CompactionStateManagerConfigTest
     String json = "{}";
     CompactionStateManagerConfig config = mapper.readValue(json, CompactionStateManagerConfig.class);
     Assert.assertEquals(100, config.getCacheSize());
+    Assert.assertEquals(100, config.getPrewarmFingerprintCount());
   }
 
   @Test
   public void testSerdeRoundTripWithOverrides() throws Exception
   {
-    String json = "{\"cacheSize\": 1000}";
+    String json = "{\"cacheSize\": 1000, \"prewarmFingerprintCount\": 500}";
     CompactionStateManagerConfig config = mapper.readValue(json, CompactionStateManagerConfig.class);
     String serialized = mapper.writeValueAsString(config);
     CompactionStateManagerConfig deserialized = mapper.readValue(serialized, CompactionStateManagerConfig.class);
     Assert.assertEquals(1000, deserialized.getCacheSize());
+    Assert.assertEquals(500, deserialized.getPrewarmFingerprintCount());
   }
 }
