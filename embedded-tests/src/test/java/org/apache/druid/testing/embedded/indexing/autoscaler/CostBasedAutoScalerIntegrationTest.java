@@ -126,8 +126,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     final String superId = dataSource + "_super";
     final int initialTaskCount = 10;
 
-    // Produce some amount of data to Kafka, to trigger a 'scale down' decision to 4 tasks.
-
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
         .enableTaskAutoScaler(true)
