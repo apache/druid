@@ -48,6 +48,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -82,7 +83,7 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-  private final CompactionStateManager compactionStateManager = null; // TODO does this need impl?
+  private final CompactionStateManager compactionStateManager = new HeapMemoryCompactionStateManager();
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()

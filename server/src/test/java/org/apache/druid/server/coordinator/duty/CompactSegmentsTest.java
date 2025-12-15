@@ -80,6 +80,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -199,16 +200,7 @@ public class CompactSegmentsTest
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
   private final Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
-  private final CompactionStateManager compactionStateManager = new CompactionStateManager() {
-    @Override
-    public void persistCompactionState(
-        final String dataSource,
-        final Map<String, CompactionState> fingerprintToStateMap,
-        final DateTime updateTime
-    )
-    {
-    }
-  };
+  private final CompactionStateManager compactionStateManager = new HeapMemoryCompactionStateManager();
 
   public CompactSegmentsTest(
       PartitionsSpec partitionsSpec,

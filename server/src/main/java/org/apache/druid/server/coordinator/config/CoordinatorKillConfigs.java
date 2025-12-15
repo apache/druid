@@ -74,7 +74,7 @@ public class CoordinatorKillConfigs
   @JsonProperty("maxInterval")
   private final Period killUnusedMaxInterval;
 
-  @JsonProperty("compactionStates")
+  @JsonProperty("compactionState")
   private final MetadataCleanupConfig compactionStates;
 
   @JsonCreator
@@ -86,7 +86,7 @@ public class CoordinatorKillConfigs
       @JsonProperty("rule") MetadataCleanupConfig rules,
       @JsonProperty("compaction") MetadataCleanupConfig compactionConfigs,
       @JsonProperty("segmentSchema") MetadataCleanupConfig segmentSchemas,
-      @JsonProperty("segmentSchema") MetadataCleanupConfig compactionStates,
+      @JsonProperty("compactionState") MetadataCleanupConfig compactionStates,
       // Configs for cleanup of unused segments
       @JsonProperty("on") Boolean killUnusedEnabled,
       @JsonProperty("period") Duration killUnusedPeriod,

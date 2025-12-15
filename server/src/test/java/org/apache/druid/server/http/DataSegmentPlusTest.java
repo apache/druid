@@ -88,6 +88,7 @@ public class DataSegmentPlusTest
             loadSpec,
             Arrays.asList("dim1", "dim2"),
             Arrays.asList("met1", "met2"),
+            null,
             new NumberedShardSpec(3, 0),
             new CompactionState(
                 new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
@@ -101,7 +102,9 @@ public class DataSegmentPlusTest
                 null
             ),
             TEST_VERSION,
-            1
+            1,
+            compactionStateFingerprint,
+            DataSegment.PruneSpecsHolder.DEFAULT
         ),
         createdDate,
         usedStatusLastUpdatedDate,
@@ -124,7 +127,7 @@ public class DataSegmentPlusTest
     );
 
     // verify dataSegment
-    Assert.assertEquals(11, segmentObjectMap.size());
+    Assert.assertEquals(12, segmentObjectMap.size());
     Assert.assertEquals("something", segmentObjectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), segmentObjectMap.get("interval"));
     Assert.assertEquals("1", segmentObjectMap.get("version"));
@@ -135,6 +138,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
     Assert.assertEquals(1, segmentObjectMap.get("size"));
     Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
+    Assert.assertEquals("abc123", segmentObjectMap.get("compactionStateFingerprint"));
 
     // verify extra metadata
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));
@@ -153,6 +157,7 @@ public class DataSegmentPlusTest
     Assert.assertEquals(segmentPlus.getDataSegment().getSize(), deserializedSegmentPlus.getDataSegment().getSize());
     Assert.assertEquals(segmentPlus.getDataSegment().getId(), deserializedSegmentPlus.getDataSegment().getId());
     Assert.assertEquals(segmentPlus.getDataSegment().getLastCompactionState(), deserializedSegmentPlus.getDataSegment().getLastCompactionState());
+    Assert.assertEquals(segmentPlus.getDataSegment().getCompactionStateFingerprint(), deserializedSegmentPlus.getDataSegment().getCompactionStateFingerprint());
 
     // verify extra metadata
     Assert.assertEquals(segmentPlus.getCreatedDate(), deserializedSegmentPlus.getCreatedDate());
