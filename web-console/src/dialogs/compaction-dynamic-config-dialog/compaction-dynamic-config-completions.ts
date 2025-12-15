@@ -44,6 +44,11 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         value: 'engine',
         documentation: 'Engine used for running compaction tasks (native or msq)',
       },
+      {
+        value: 'legacyPersistLastCompactionStateInSegments',
+        documentation:
+          'Whether to persist the full compaction state in segment metadata (default: true)',
+      },
     ],
   },
   // compactionTaskSlotRatio values
@@ -115,5 +120,21 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$.engine',
     condition: obj => !obj.useSupervisors,
     completions: [{ value: 'native', documentation: 'Native indexing engine (default)' }],
+  },
+  // legacyPersistLastCompactionStateInSegments values
+  {
+    path: '$.legacyPersistLastCompactionStateInSegments',
+    completions: [
+      {
+        value: 'true',
+        documentation:
+          'Store full compaction state in segment metadata (legacy behavior, default)',
+      },
+      {
+        value: 'false',
+        documentation:
+          'Store only fingerprint reference in segment metadata (reduces storage overhead)',
+      },
+    ],
   },
 ];
