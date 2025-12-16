@@ -36,6 +36,7 @@ import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -51,7 +52,6 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.timeline.CompactionState;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.Period;
@@ -300,7 +300,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void verifyCompactedSegmentsHaveFingerprints(DataSourceCompactionConfig compactionConfig)
   {
-    String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(
+    CompactionStateManager compactionStateManager = overlord
+        .bindings()
+        .getInstance(CompactionStateManager.class);
+
+    String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(
         CompactSegments.createCompactionStateFromConfig(compactionConfig),
         dataSource
     );

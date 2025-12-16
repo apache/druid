@@ -19,12 +19,20 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
@@ -33,12 +41,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,6 +61,7 @@ public class CompactionStateManagerTest
       new TestDerbyConnector.DerbyConnectorRule5();
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper deterministicMapper = createDeterministicMapper();
 
   private static TestDerbyConnector derbyConnector;
   private static MetadataStorageTablesConfig tablesConfig;
@@ -73,7 +85,7 @@ public class CompactionStateManagerTest
       return null;
     });
 
-    manager = new CompactionStateManager(tablesConfig, jsonMapper, derbyConnector, new CompactionStateManagerConfig());
+    manager = new CompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector, new CompactionStateManagerConfig());
   }
 
   @Test
@@ -282,6 +294,7 @@ public class CompactionStateManagerTest
     CompactionStateManager newManager = new CompactionStateManager(
         tablesConfig,
         jsonMapper,
+        deterministicMapper,
         derbyConnector,
         new CompactionStateManagerConfig()
     );
@@ -401,6 +414,176 @@ public class CompactionStateManagerTest
     assertEquals(0, manager.markCompactionStatesAsUsed(List.of()));
   }
 
+  // ===== Fingerprint Generation Tests =====
+
+  @Test
+  public void test_generateCompactionStateFingerprint_deterministicFingerprinting()
+  {
+    CompactionState compactionState1 = createBasicCompactionState();
+    CompactionState compactionState2 = createBasicCompactionState();
+
+    String fingerprint1 = manager.generateCompactionStateFingerprint(compactionState1, "test-ds");
+    String fingerprint2 = manager.generateCompactionStateFingerprint(compactionState2, "test-ds");
+
+    assertEquals(
+        fingerprint1,
+        fingerprint2,
+        "Same CompactionState should produce identical fingerprints when datasource is same"
+    );
+  }
+
+  @Test
+  public void test_generateCompactionStateFingerprint_differentDatasourcesWithSameState_differentFingerprints()
+  {
+    CompactionState compactionState = createBasicCompactionState();
+
+    String fingerprint1 = manager.generateCompactionStateFingerprint(compactionState, "ds1");
+    String fingerprint2 = manager.generateCompactionStateFingerprint(compactionState, "ds2");
+
+    assertNotEquals(
+        fingerprint1,
+        fingerprint2,
+        "Different datasources should produce different fingerprints despite same state"
+    );
+  }
+
+  @Test
+  public void test_generateCompactionStateFingerprint_metricsListOrderDifferenceResultsInNewFingerprint()
+  {
+    List<AggregatorFactory> metrics1 = Arrays.asList(
+        new CountAggregatorFactory("count"),
+        new LongSumAggregatorFactory("sum", "value")
+    );
+
+    List<AggregatorFactory> metrics2 = Arrays.asList(
+        new LongSumAggregatorFactory("sum", "value"),
+        new CountAggregatorFactory("count")
+    );
+
+    CompactionState state1 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        DimensionsSpec.EMPTY,
+        metrics1,
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    CompactionState state2 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        DimensionsSpec.EMPTY,
+        metrics2,
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
+    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+
+    assertNotEquals(
+        fingerprint1,
+        fingerprint2,
+        "Metrics order currently matters (arrays preserve order in JSON)"
+    );
+  }
+
+  @Test
+  public void test_generateCompactionStateFingerprint_dimensionsListOrderDifferenceResultsInNewFingerprint()
+  {
+    DimensionsSpec dimensions1 = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
+    );
+
+    DimensionsSpec dimensions2 = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim3", "dim2", "dim1"))
+    );
+
+    CompactionState state1 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        dimensions1,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    CompactionState state2 = new CompactionState(
+        new DynamicPartitionsSpec(null, null),
+        dimensions2,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
+    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+
+    assertNotEquals(
+        fingerprint1,
+        fingerprint2,
+        "Dimensions order currently matters (arrays preserve order in JSON)"
+    );
+  }
+
+  @Test
+  public void testGenerateCompactionStateFingerprint_differentPartitionsSpec()
+  {
+    CompactionState state1 = new CompactionState(
+        new DynamicPartitionsSpec(5000000, null),
+        DimensionsSpec.EMPTY,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    CompactionState state2 = new CompactionState(
+        new HashedPartitionsSpec(null, 2, Collections.singletonList("dim1")),
+        DimensionsSpec.EMPTY,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
+    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+
+    assertNotEquals(
+        fingerprint1,
+        fingerprint2,
+        "Different PartitionsSpec should produce different fingerprints"
+    );
+  }
+
+  private static ObjectMapper createDeterministicMapper()
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+    return mapper;
+  }
+
+  private CompactionState createBasicCompactionState()
+  {
+    return new CompactionState(
+        new DynamicPartitionsSpec(5000000, null),
+        DimensionsSpec.EMPTY,
+        Collections.singletonList(new CountAggregatorFactory("count")),
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+  }
 
   private CompactionState createTestCompactionState()
   {

@@ -26,10 +26,14 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Lists;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,6 +80,7 @@ public class CompactionStateManager
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
+  private final ObjectMapper deterministicMapper;
   private final SQLMetadataConnector connector;
   private final CompactionStateManagerConfig config;
   private final Cache<String, CompactionState> fingerprintCache;
@@ -85,12 +90,14 @@ public class CompactionStateManager
   public CompactionStateManager(
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
+      @Deterministic @Nonnull ObjectMapper deterministicMapper,
       @Nonnull SQLMetadataConnector connector,
       @Nonnull CompactionStateManagerConfig config
   )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
+    this.deterministicMapper = deterministicMapper;
     this.connector = connector;
     this.config = config;
 
@@ -131,6 +138,7 @@ public class CompactionStateManager
   {
     this.dbTables = null;
     this.jsonMapper = null;
+    this.deterministicMapper = null;
     this.connector = null;
     this.config = null;
     this.fingerprintCache = null;
@@ -362,6 +370,37 @@ public class CompactionStateManager
       return null;
     }
   }
+
+  /**
+   * Generates a deterministic fingerprint for the given compaction state and datasource.
+   * The fingerprint is a SHA-256 hash of the datasource name and serialized compaction state.
+   *
+   * @param compactionState The compaction configuration to fingerprint
+   * @param dataSource The datasource name
+   * @return A hex-encoded SHA-256 fingerprint string
+   */
+  @SuppressWarnings("UnstableApiUsage")
+  public String generateCompactionStateFingerprint(
+      final CompactionState compactionState,
+      final String dataSource
+  )
+  {
+    final Hasher hasher = Hashing.sha256().newHasher();
+
+    hasher.putBytes(StringUtils.toUtf8(dataSource));
+    hasher.putByte((byte) 0xff);
+
+    try {
+      hasher.putBytes(deterministicMapper.writeValueAsBytes(compactionState));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize CompactionState for fingerprinting", e);
+    }
+    hasher.putByte((byte) 0xff);
+
+    return BaseEncoding.base16().encode(hasher.hash().asBytes());
+  }
+
 
   /**
    * Warms cache with specific states (after persisting).

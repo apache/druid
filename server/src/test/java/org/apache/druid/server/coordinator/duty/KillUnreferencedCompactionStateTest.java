@@ -19,7 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -70,7 +72,10 @@ public class KillUnreferencedCompactionStateTest
     derbyConnector.createCompactionStatesTable();
     derbyConnector.createSegmentTable();
 
-    compactionStateManager = new CompactionStateManager(tablesConfig, jsonMapper, derbyConnector, new CompactionStateManagerConfig());
+    compactionStateManager = new CompactionStateManager(tablesConfig, jsonMapper, createDeterministicMapper(),
+                                                        derbyConnector,
+                                                        new CompactionStateManagerConfig()
+    );
 
     mockParams = EasyMock.createMock(DruidCoordinatorRuntimeParams.class);
     CoordinatorRunStats runStats = new CoordinatorRunStats();
@@ -258,5 +263,13 @@ public class KillUnreferencedCompactionStateTest
     );
 
     return usedStatus.isEmpty() ? null : usedStatus.get(0);
+  }
+
+  private static ObjectMapper createDeterministicMapper()
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+    return mapper;
   }
 }

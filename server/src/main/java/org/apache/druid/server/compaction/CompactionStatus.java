@@ -265,7 +265,7 @@ public class CompactionStatus
   )
   {
     final CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(config);
-    final String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(expectedState, config.getDataSource());
+    final String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, config.getDataSource());
     return new Evaluator(candidateSegments, config, expectedFingerprint, compactionStateManager).evaluate();
   }
 

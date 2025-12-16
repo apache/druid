@@ -20,7 +20,9 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -28,9 +30,11 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.jackson.DefaultObjectMapper;
 
 import javax.validation.Validator;
 import java.util.Properties;
@@ -90,6 +94,19 @@ public class DruidSecondaryModule implements Module
     setupJackson(injector, smileMapper);
     return smileMapper;
   }
+
+  @Provides
+  @LazySingleton
+  @Deterministic
+  public ObjectMapper getSortedMapper(Injector injector)
+  {
+    final ObjectMapper sortedMapper = new DefaultObjectMapper();
+    sortedMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    sortedMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+    setupJackson(injector, sortedMapper);
+    return sortedMapper;
+  }
+
 
   public static void setupJackson(Injector injector, final ObjectMapper mapper)
   {

@@ -279,7 +279,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       CompactionState compactionState =
           createCompactionStateFromConfig(config);
 
-      String compactionStateFingerprint = CompactionState.generateCompactionStateFingerprint(
+      String compactionStateFingerprint = compactionStateManager.generateCompactionStateFingerprint(
           compactionState,
           config.getDataSource()
       );
