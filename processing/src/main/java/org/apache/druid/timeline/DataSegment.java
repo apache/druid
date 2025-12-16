@@ -116,6 +116,10 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
 
   /**
    * SHA-256 fingerprint representation of the CompactionState.
+   * <p>
+   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before compaction
+   * fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
+   * </p>
    */
   @Nullable
   private final String compactionStateFingerprint;
@@ -353,6 +357,13 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
   }
 
+  /**
+   * Get the compaction state fingerprint associated with this segment.
+   * <p>
+   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before compaction
+   * fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
+   * </p>
+   */
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
