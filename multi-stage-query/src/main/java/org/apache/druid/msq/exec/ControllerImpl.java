@@ -73,6 +73,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -1696,7 +1697,7 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
-      String compactionStateFingerprint = querySpec.getContext()
+      final String compactionStateFingerprint = querySpec.getContext()
           .getString(
               Tasks.COMPACTION_STATE_FINGERPRINT_KEY,
               null
@@ -1728,7 +1729,8 @@ public class ControllerImpl implements Controller
         }
       }
       if (compactionStateFingerprint != null) {
-        compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(addCompactionStateFingerprintToSegments(compactionStateFingerprint));
+        compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(
+            AbstractBatchIndexTask.addCompactionStateFingerprintToSegments(compactionStateFingerprint));
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);
@@ -1757,19 +1759,6 @@ public class ControllerImpl implements Controller
       List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
       log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
       exportMetadataManager.writeMetadata(exportedFiles);
-    }
-  }
-
-  private static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFingerprintToSegments(String compactionStateFingerprint)
-  {
-    if (compactionStateFingerprint != null) {
-      return segments -> segments.stream()
-                                 .map(
-                                     segment -> segment.withCompactionStateFingerprint(compactionStateFingerprint)
-                                 )
-                                 .collect(Collectors.toSet());
-    } else {
-      return Function.identity();
     }
   }
 
