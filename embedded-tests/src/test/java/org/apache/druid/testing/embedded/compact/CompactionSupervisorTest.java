@@ -310,24 +310,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
         .forEach(segment -> {
-          String fingerprint = segment.getCompactionStateFingerprint();
-          Assertions.assertNotNull(
-              fingerprint,
-              "Segment " + segment.getId() + " should have a compaction state fingerprint"
-          );
-          Assertions.assertFalse(
-              fingerprint.isEmpty(),
-              "Segment " + segment.getId() + " fingerprint should not be empty"
-          );
-          // SHA-256 fingerprints should be 64 hex characters
-          Assertions.assertEquals(
-              64,
-              fingerprint.length(),
-              "Segment " + segment.getId() + " fingerprint should be 64 characters (SHA-256)"
-          );
           Assertions.assertEquals(
               expectedFingerprint,
-              fingerprint,
+              segment.getCompactionStateFingerprint(),
               "Segment " + segment.getId() + " fingerprint should match expected fingerprint"
           );
         });
