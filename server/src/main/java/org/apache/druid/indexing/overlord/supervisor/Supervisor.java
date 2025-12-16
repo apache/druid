@@ -70,7 +70,7 @@ public interface Supervisor
    * Returns all stats from stream consumer. If {@code includeOnlyStreamConsumerStats} is true,
    * returns only stream platform stats, like Kafka metrics.
    */
-  default Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamConsumerStats)
+  default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();
   }

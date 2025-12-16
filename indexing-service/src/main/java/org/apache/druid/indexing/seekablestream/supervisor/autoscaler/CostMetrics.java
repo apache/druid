@@ -23,7 +23,8 @@ import java.util.Objects;
 
 /**
  * Data class that encapsulates all metrics collected for cost-based auto-scaling decisions.
- * This includes lag metrics, task counts, partition information, and idle time measurements.
+ * This includes lag metrics, task counts, partition information, idle time measurements,
+ * processing rates, and task duration for compute time calculations.
  */
 public class CostMetrics
 {
@@ -31,18 +32,26 @@ public class CostMetrics
   private final int currentTaskCount;
   private final int partitionCount;
   private final double pollIdleRatio;
+  private final long taskDurationSeconds;
+  private final double avgProcessingRate;
+  private double aggregateLag;
 
   public CostMetrics(
       double avgPartitionLag,
       int currentTaskCount,
       int partitionCount,
-      double pollIdleRatio
+      double pollIdleRatio,
+      long taskDurationSeconds,
+      double avgProcessingRate
   )
   {
     this.avgPartitionLag = avgPartitionLag;
     this.currentTaskCount = currentTaskCount;
     this.partitionCount = partitionCount;
     this.pollIdleRatio = pollIdleRatio;
+    this.taskDurationSeconds = taskDurationSeconds;
+    this.avgProcessingRate = avgProcessingRate;
+    this.aggregateLag = avgPartitionLag * partitionCount;
   }
 
   /**
@@ -73,6 +82,29 @@ public class CostMetrics
     return pollIdleRatio;
   }
 
+  /**
+   * Returns the aggregated lag across all partitions.
+   * Pre-computed as avgPartitionLag * partitionCount.
+   */
+  public double getAggregateLag()
+  {
+    return aggregateLag;
+  }
+
+  public long getTaskDurationSeconds()
+  {
+    return taskDurationSeconds;
+  }
+
+  /**
+   * Returns the average processing rate in records per second per task.
+   * Used for estimating lag recovery time.
+   */
+  public double getAvgProcessingRate()
+  {
+    return avgProcessingRate;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -86,7 +118,9 @@ public class CostMetrics
     return Double.compare(that.avgPartitionLag, avgPartitionLag) == 0
            && currentTaskCount == that.currentTaskCount
            && partitionCount == that.partitionCount
-           && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0;
+           && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0
+           && taskDurationSeconds == that.taskDurationSeconds
+           && Double.compare(that.avgProcessingRate, avgProcessingRate) == 0;
   }
 
   @Override
@@ -96,7 +130,9 @@ public class CostMetrics
         avgPartitionLag,
         currentTaskCount,
         partitionCount,
-        pollIdleRatio
+        pollIdleRatio,
+        taskDurationSeconds,
+        avgProcessingRate
     );
   }
 
@@ -108,6 +144,8 @@ public class CostMetrics
            ", currentTaskCount=" + currentTaskCount +
            ", partitionCount=" + partitionCount +
            ", pollIdleRatio=" + pollIdleRatio +
+           ", taskDurationSeconds=" + taskDurationSeconds +
+           ", avgProcessingRate=" + avgProcessingRate +
            '}';
   }
 }

@@ -318,7 +318,7 @@ public class SupervisorManager
   public Optional<Map<String, Map<String, Object>>> getSupervisorStats(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats(false));
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
   }
 
   public Optional<List<ParseExceptionReport>> getSupervisorParseErrors(String id)

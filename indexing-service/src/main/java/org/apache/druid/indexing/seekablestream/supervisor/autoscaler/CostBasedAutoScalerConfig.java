@@ -36,7 +36,9 @@ import java.util.Objects;
 /**
  * Configuration for cost-based auto-scaling of seekable stream supervisor tasks.
  * Uses a cost function combining lag and idle time metrics to determine optimal task counts.
- * Task counts are constrained to be factors/divisors of the partition count.
+ * Task counts are selected from a bounded range derived from the current partitions-per-task (PPT)
+ * ratio, not strictly from factors/divisors of the partition count. This bounded PPT window enables
+ * gradual scaling while avoiding large jumps and still allowing non-divisor task counts when needed.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
@@ -45,6 +47,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 1200000; // 20 minutes
   private static final double DEFAULT_LAG_WEIGHT = 0.25;
   private static final double DEFAULT_IDLE_WEIGHT = 0.75;
+  private static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -56,6 +59,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   private final double lagWeight;
   private final double idleWeight;
+  private final double defaultProcessingRate;
 
   @JsonCreator
   public CostBasedAutoScalerConfig(
@@ -67,7 +71,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio,
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
-      @Nullable @JsonProperty("idleWeight") Double idleWeight
+      @Nullable @JsonProperty("idleWeight") Double idleWeight,
+      @Nullable @JsonProperty("defaultProcessingRate") Double defaultProcessingRate
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -84,6 +89,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Cost function weights with defaults
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
+    this.defaultProcessingRate = Configs.valueOrDefault(defaultProcessingRate, DEFAULT_PROCESSING_RATE);
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -111,6 +117,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Validate weights are non-negative
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
+    Preconditions.checkArgument(this.defaultProcessingRate > 0, "defaultProcessingRate must be > 0");
   }
 
   /**
@@ -183,6 +190,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return idleWeight;
   }
 
+  @JsonProperty
+  public double getDefaultProcessingRate()
+  {
+    return defaultProcessingRate;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -208,6 +221,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
+           && Double.compare(that.defaultProcessingRate, defaultProcessingRate) == 0
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -224,7 +238,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         stopTaskCountRatio,
         scaleActionPeriodMillis,
         lagWeight,
-        idleWeight
+        idleWeight,
+        defaultProcessingRate
     );
   }
 
@@ -241,6 +256,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
+           ", defaultProcessingRate=" + defaultProcessingRate +
            '}';
   }
 
@@ -259,6 +275,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
     private Double idleWeight;
+    private Double defaultProcessingRate;
 
     private Builder()
     {
@@ -318,6 +335,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder defaultProcessingRate(double defaultProcessingRate)
+    {
+      this.defaultProcessingRate = defaultProcessingRate;
+      return this;
+    }
+
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -329,7 +352,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           stopTaskCountRatio,
           scaleActionPeriodMillis,
           lagWeight,
-          idleWeight
+          idleWeight,
+          defaultProcessingRate
       );
     }
   }

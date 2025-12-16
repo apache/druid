@@ -85,7 +85,6 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(1200000L, config.getMinTriggerScaleActionFrequencyMillis());
     Assert.assertEquals(0.25, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.75, config.getIdleWeight(), 0.001);
-    // changeWeight is not used in the cost function anymore
   }
 
   @Test

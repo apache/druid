@@ -135,15 +135,6 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
   ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id);
 
   /**
-   * Get streamer metrics for a task. Retries on failure.
-   *
-   * Task-side is {@link SeekableStreamIndexTaskRunner#getRowStats}.
-   *
-   * @param id task id
-   */
-  ListenableFuture<Map<String, Object>> getStreamConsumerMetrics(String id);
-
-  /**
    * Get parse errors for a task. Retries on failure.
    *
    * Task-side is {@link SeekableStreamIndexTaskRunner#getUnparseableEvents}.

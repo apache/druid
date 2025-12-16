@@ -4393,7 +4393,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     replayAll();
 
-    Map<String, Map<String, Object>> stats = supervisor.getStats(false);
+    Map<String, Map<String, Object>> stats = supervisor.getStats();
 
     verifyAll();
 

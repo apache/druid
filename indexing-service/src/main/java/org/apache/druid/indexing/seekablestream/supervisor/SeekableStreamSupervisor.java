@@ -1466,10 +1466,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Map<String, Map<String, Object>> getStats(boolean includeOnlyStreamConsumerStats)
+  public Map<String, Map<String, Object>> getStats()
   {
     try {
-      return getCurrentStats(includeOnlyStreamConsumerStats);
+      return getCurrentStats();
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1504,12 +1504,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Collect row ingestion stats from all tasks managed by this supervisor.
    *
-   * @param includeOnlyStreamerStats Whether to include only streamer stats(metrics) or all stats
    * @return A map of groupId->taskId->task row stats
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private Map<String, Map<String, Object>> getCurrentStats(boolean includeOnlyStreamerStats)
+  private Map<String, Map<String, Object>> getCurrentStats()
       throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();
@@ -1521,9 +1520,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       for (String taskId : group.taskIds()) {
         futures.add(
             Futures.transform(
-                includeOnlyStreamerStats
-                ? taskClient.getStreamConsumerMetrics(taskId)
-                : taskClient.getMovingAveragesAsync(taskId),
+                taskClient.getMovingAveragesAsync(taskId),
                 (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                     groupId,
                     taskId,
@@ -4372,39 +4369,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public ConcurrentHashMap<PartitionIdType, SequenceOffsetType> getPartitionOffsets()
   {
     return partitionOffsets;
-  }
-
-  /**
-   * Calculates the average poll-idle-ratio metric across all active tasks.
-   * This metric indicates how much time the consumer spends idle waiting for data.
-   *
-   * @return the average poll-idle-ratio across all tasks, or 1 (full idle) if no tasks or metrics are available
-   */
-  public double getPollIdleRatioMetric()
-  {
-    Map<String, Map<String, Object>> taskMetrics = getStats(true);
-    if (taskMetrics.isEmpty()) {
-      return 0.;
-    }
-
-    double sum = 0;
-    int count = 0;
-    for (Map<String, Object> groupMetrics : taskMetrics.values()) {
-      for (Object taskMetric : groupMetrics.values()) {
-        if (taskMetric instanceof Map) {
-          Object autoScalerMetricsMap = ((Map<?, ?>) taskMetric).get(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY);
-          if (autoScalerMetricsMap instanceof Map) {
-            Object pollIdleRatioAvg = ((Map<?, ?>) autoScalerMetricsMap).get(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY);
-            if (pollIdleRatioAvg instanceof Number) {
-              sum += ((Number) pollIdleRatioAvg).doubleValue();
-              count++;
-            }
-          }
-        }
-      }
-    }
-
-    return count > 0 ? sum / count : 0.;
   }
 
   /**

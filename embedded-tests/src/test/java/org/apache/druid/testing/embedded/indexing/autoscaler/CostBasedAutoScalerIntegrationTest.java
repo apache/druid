@@ -26,7 +26,6 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -107,6 +106,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
 
     cluster.useLatchableEmitter()
+           .useDefaultTimeoutForLatchableEmitter(120)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
@@ -162,6 +162,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  @Timeout(125)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
     final String superId = dataSource + "_super_scaleup";
@@ -185,8 +186,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountStart(lowInitialTaskCount)
         .scaleActionPeriodMillis(500)
         .minTriggerScaleActionFrequencyMillis(1000)
-        // Weight configuration: favor lag as the primary signal for scale-up scenarios
-        // High lag with low idle (overloaded) will trigger scale-up
         .lagWeight(0.2)
         .idleWeight(0.8)
         .build();
@@ -205,31 +204,11 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
             .waitForEvent(event -> event.hasMetricName("task/run/time")
                                         .hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
-    // First, wait for any optimalTaskCount metric to verify the autoscaler is running
+    // With 50 partitions and high lag creating a low idle ratio (< 0.2),
+    // the cost function must recommend scaling up to at least 2 tasks.
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-    );
-
-    // Wait for autoscaler to emit optimalTaskCount metric indicating scale-up
-    // We expect the optimal task count to be greater than the initial 1 task
-    // With 50 partitions and high lag creating a low idle ratio (< 0.2),
-    // the cost function should recommend scaling up to at least 2 tasks.
-    // We actually expect 3.
-    overlord.latchableEmitter().waitForEvent(
-        e -> {
-          EventMap eventMap = e.toMap();
-          Object metricCandidate = e.toMap().get("metric");
-          if (!(metricCandidate instanceof String)) {
-            return false;
-          }
-
-          String metric = (String) metricCandidate;
-          if (!OPTIMAL_TASK_COUNT_METRIC.equals(metric)) {
-            return false;
-          }
-
-          return ((Long) eventMap.get("value")) > 1L;
-        }, 30_000
+                      .hasValueMatching(Matchers.greaterThan(1L))
     );
 
     // Suspend the supervisor

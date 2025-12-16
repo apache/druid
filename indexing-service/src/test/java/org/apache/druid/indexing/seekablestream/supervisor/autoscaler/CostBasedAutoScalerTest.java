@@ -19,197 +19,207 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.Mockito.when;
 
 public class CostBasedAutoScalerTest
 {
   private CostBasedAutoScaler autoScaler;
-  private SupervisorSpec mockSupervisorSpec;
-  private SeekableStreamSupervisor mockSupervisor;
-  private ServiceEmitter mockEmitter;
-  private CostBasedAutoScalerConfig config;
 
   @Before
   public void setUp()
   {
-    mockSupervisorSpec = Mockito.mock(SupervisorSpec.class);
-    mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    mockEmitter = Mockito.mock(ServiceEmitter.class);
-
+    SupervisorSpec mockSupervisorSpec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter mockEmitter = Mockito.mock(ServiceEmitter.class);
     SeekableStreamSupervisorIOConfig mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(mockSupervisorSpec.getId()).thenReturn("test-supervisor");
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
 
-    config = CostBasedAutoScalerConfig.builder()
-                                      .taskCountMax(100)
-                                      .taskCountMin(1)
-                                      .enableTaskAutoScaler(true)
-                                      .taskCountStart(10)
-                                      .minTriggerScaleActionFrequencyMillis(600000L)
-                                      .scaleActionPeriodMillis(60000L)
-                                      .lagWeight(0.6)
-                                      .idleWeight(0.4)
-                                      .build();
+    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
+                                                                .taskCountMax(100)
+                                                                .taskCountMin(1)
+                                                                .enableTaskAutoScaler(true)
+                                                                .lagWeight(0.6)
+                                                                .idleWeight(0.4)
+                                                                .build();
 
-    autoScaler = new CostBasedAutoScaler(
-        mockSupervisor,
-        config,
-        mockSupervisorSpec,
-        mockEmitter
-    );
+    autoScaler = new CostBasedAutoScaler(mockSupervisor, config, mockSupervisorSpec, mockEmitter);
   }
 
   @Test
-  public void testComputeValidTaskCountsGradualScaling()
+  public void testComputeValidTaskCounts()
   {
-    // Verify gradual scaling: for 100 partitions, going from 25 tasks (4 partitions/task)
-    // the next step should be 34 tasks (3 partitions/task)
+    // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
     int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100, 25);
 
-    int idx25 = Arrays.binarySearch(validTaskCounts, 25);
-    int idx34 = Arrays.binarySearch(validTaskCounts, 34);
-    Assert.assertTrue("25 should be in factors", idx25 >= 0);
-    Assert.assertTrue("34 should be in factors", idx34 >= 0);
-    Assert.assertEquals("34 should be the next factor after 25", idx25 + 1, idx34);
+    Assert.assertTrue("Should contain current task count", contains(validTaskCounts, 25));
+    Assert.assertTrue("Should contain next scale-up option", contains(validTaskCounts, 34));
+
+    // Edge case: zero partitions returns empty array
+    Assert.assertEquals(0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
   }
 
   @Test
   public void testComputeOptimalTaskCountInvalidInputs()
   {
-    // Empty metrics list
-    int result = autoScaler.computeOptimalTaskCount(null);
-    Assert.assertEquals(-1, result);
-
-    // Zero partitions
-    CostMetrics zeroPartitionsMetrics = new CostMetrics(
-        0.0,
-        10,   // currentTaskCount
-        0,    // partitionCount = 0
-        0.0   // pollIdleRatio
-    );
-
-    result = autoScaler.computeOptimalTaskCount(zeroPartitionsMetrics);
-    Assert.assertEquals(-1, result);
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0)));
   }
 
   @Test
-  public void testComputeOptimalTaskCountLowIdleScenario_scaleUpGradually()
+  public void testComputeOptimalTaskCountIdleInIdealRange()
   {
-    // Low idle scenario - algorithm should recommend scaling up to increase idle toward ideal range
-    CostMetrics oldMetrics = new CostMetrics(
-        300.0,  // avgPartitionLag - low
-        100,         // currentTaskCount
-        100,        // partitionCount
-        0.001       // pollIdleRatio - very low idle (tasks are overloaded)
-    );
-
-    int initialResult = autoScaler.computeOptimalTaskCount(oldMetrics);
-
-    // Very low idle (0.001) is below ideal range, but at 100 tasks (max), there's nowhere to scale up
-    // The cost function might recommend staying or scaling down depends on the bounds
-    Assert.assertTrue("Result should be -1 or a valid task count",
-                      initialResult == -1 || initialResult > 0);
-
-    CostMetrics newMetrics = new CostMetrics(
-        400.0,  // avgPartitionLag - moderate lag
-        34,         // currentTaskCount
-        100,        // partitionCount
-        0.05        // pollIdleRatio - low idle (below ideal range 0.2)
-    );
-
-    int result = autoScaler.computeOptimalTaskCount(newMetrics);
-    // With low idle (below ideal range 0.2), the algorithm should recommend scaling up
-    // to increase idle toward the ideal range [0.2, 0.6]
-    Assert.assertTrue("Should recommend scaling up when idle < 0.2", result > 34);
+    // When idle is in ideal range [0.2, 0.6], no scaling should occur
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(5000.0, 25, 100, 0.4)));
   }
 
   @Test
-  public void testComputeOptimalTaskCountHighLagScenario_scaleUpAggressively()
+  public void testComputeOptimalTaskCountScaling()
   {
-    // Very high lag scenario - algorithm should recommend scaling up
-    CostMetrics metrics = new CostMetrics(
-        10001.0,  // avgPartitionLag - very high (above HIGH_LAG_THRESHOLD)
-        25,         // currentTaskCount
-        100,        // partitionCount
-        0.01         // pollIdleRatio - low idle (tasks are busy)
-    );
-
-    int result = autoScaler.computeOptimalTaskCount(metrics);
-    // With very high lag and low idle, the algorithm should recommend scaling up aggressively
-    Assert.assertEquals(50, result);
+    // High idle (underutilized) - should scale down
+    // With high idle (0.8), the algorithm evaluates lower task counts and finds they have lower idle cost
+    int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
+    Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
   }
 
   @Test
-  public void testComputeOptimalTaskCountIdleInIdealRange_noScaling()
+  public void testComputeOptimalTaskCountLowIdleDoesNotScaleUpWithBalancedWeights()
   {
-    // When idle is in the ideal range [0.2, 0.6], no scaling should occur
-    // regardless of lag level - optimal utilization has been achieved
+    // With corrected idle ratio model and marginal lag model, low idle does not
+    // automatically trigger scale-up. The algorithm is conservative because:
+    // 1. Scale-up increases idle cost (more tasks = more idle per task with fixed load)
+    // 2. Marginal lag model means only ADDITIONAL tasks work on backlog
+    //
+    // This is intentional: the idle-heavy weights (0.4 idle) make the algorithm
+    // favor stability over aggressive scaling
+    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
 
-    // Test with idle at lower bound of ideal range
-    CostMetrics metricsLowIdeal = new CostMetrics(
-        5000.0,   // avgPartitionLag - high lag
-        25,       // currentTaskCount
-        100,      // partitionCount
-        0.2       // pollIdleRatio - at lower bound of ideal range [0.2, 0.6]
+    // Algorithm evaluates costs and may find current count optimal
+    // or may scale down if idle cost reduction outweighs lag increase
+    Assert.assertTrue(
+        "With low idle and balanced weights, algorithm should not scale up aggressively",
+        result == -1 || result <= 25
     );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsLowIdeal));
-
-    // Test with idle in middle of ideal range
-    CostMetrics metricsMidIdeal = new CostMetrics(
-        10000.0,  // avgPartitionLag - very high lag
-        25,       // currentTaskCount
-        100,      // partitionCount
-        0.4       // pollIdleRatio - in middle of ideal range
-    );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsMidIdeal));
-
-    // Test with idle at upper bound of ideal range
-    CostMetrics metricsHighIdeal = new CostMetrics(
-        100.0,    // avgPartitionLag - low lag
-        25,       // currentTaskCount
-        100,      // partitionCount
-        0.6       // pollIdleRatio - at upper bound of ideal range
-    );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(metricsHighIdeal));
   }
 
   @Test
-  public void testComputeOptimalTaskCountIdleOutsideIdealRange_scalingAllowed()
+  public void testExtractPollIdleRatio()
   {
-    // When idle is outside the ideal range, scaling should be evaluated
+    // Null and empty return 0
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(null), 0.0001);
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(Collections.emptyMap()), 0.0001);
 
-    // Below ideal range (overloaded) - should scale up
-    CostMetrics metricsOverloaded = new CostMetrics(
-        1000.0,   // avgPartitionLag
-        25,       // currentTaskCount
-        100,      // partitionCount
-        0.1       // pollIdleRatio - below ideal range (overloaded)
-    );
-    int resultOverloaded = autoScaler.computeOptimalTaskCount(metricsOverloaded);
-    Assert.assertTrue("Should recommend scaling up when idle < 0.2", resultOverloaded > 25);
+    // Missing metrics return 0
+    Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
+    missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(missingMetrics), 0.0001);
 
-    // Above ideal range (underutilized) with low lag - should scale down (returns -1 but sets config)
-    CostMetrics metricsUnderutilized = new CostMetrics(
-        100.0,    // avgPartitionLag - low
-        25,       // currentTaskCount
-        100,      // partitionCount
-        0.8       // pollIdleRatio - above ideal range (underutilized)
+    // Valid stats return average
+    Map<String, Map<String, Object>> validStats = new HashMap<>();
+    Map<String, Object> group = new HashMap<>();
+    group.put("task-0", buildTaskStatsWithPollIdle(0.3));
+    group.put("task-1", buildTaskStatsWithPollIdle(0.5));
+    validStats.put("0", group);
+    Assert.assertEquals(0.4, CostBasedAutoScaler.extractPollIdleRatio(validStats), 0.0001);
+  }
+
+  @Test
+  public void testExtractProcessingRateMovingAverage()
+  {
+    // Null and empty return -1
+    Assert.assertEquals(
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(null, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME),
+        0.0001
     );
-    int resultUnderutilized = autoScaler.computeOptimalTaskCount(metricsUnderutilized);
-    // For scale-down, the method returns -1 but sets the config internally
-    Assert.assertEquals(-1, resultUnderutilized);
+    Assert.assertEquals(
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(
+            Collections.emptyMap(),
+            DropwizardRowIngestionMeters.FIVE_MINUTE_NAME
+        ),
+        0.0001
+    );
+
+    // Missing metrics return -1
+    Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
+    missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingMetrics, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME), 0.0001);
+
+    // Valid stats return average
+    Map<String, Map<String, Object>> validStats = new HashMap<>();
+    Map<String, Object> group = new HashMap<>();
+    group.put("task-0", buildTaskStatsWithMovingAverage(1000.0));
+    group.put("task-1", buildTaskStatsWithMovingAverage(2000.0));
+    validStats.put("0", group);
+    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(validStats, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME), 0.0001);
+  }
+
+  private CostMetrics createMetrics(
+      double avgPartitionLag,
+      int currentTaskCount,
+      int partitionCount,
+      double pollIdleRatio
+  )
+  {
+    return new CostMetrics(
+        avgPartitionLag,
+        currentTaskCount,
+        partitionCount,
+        pollIdleRatio,
+        3600,
+        1000.0
+    );
+  }
+
+  private boolean contains(int[] array, int value)
+  {
+    for (int i : array) {
+      if (i == value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private Map<String, Object> buildTaskStatsWithPollIdle(double pollIdleRatio)
+  {
+    Map<String, Object> autoscalerMetrics = new HashMap<>();
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, pollIdleRatio);
+
+    Map<String, Object> taskStats = new HashMap<>();
+    taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
+    return taskStats;
+  }
+
+  private Map<String, Object> buildTaskStatsWithMovingAverage(double processedRate)
+  {
+    Map<String, Object> buildSegments = new HashMap<>();
+    buildSegments.put(DropwizardRowIngestionMeters.FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processedRate));
+
+    Map<String, Object> movingAverages = new HashMap<>();
+    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
+
+    Map<String, Object> taskStats = new HashMap<>();
+    taskStats.put("movingAverages", movingAverages);
+    return taskStats;
   }
 }

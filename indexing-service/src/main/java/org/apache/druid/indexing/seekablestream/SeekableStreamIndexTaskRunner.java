@@ -1649,15 +1649,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
   }
 
-  public Map<String, Object> doGetRowStats(boolean autoScalerStatsOnly)
+  public Map<String, Object> doGetRowStats()
   {
     Map<String, Object> returnMap = new HashMap<>();
-    if (this.recordSupplier != null) {
-      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
-    }
-    if (autoScalerStatsOnly) {
-      return returnMap;
-    }
     Map<String, Object> totalsMap = new HashMap<>();
     Map<String, Object> averagesMap = new HashMap<>();
 
@@ -1672,6 +1666,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+    }
     return returnMap;
   }
 
@@ -1683,7 +1680,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     payload.put("ingestionState", ingestionState);
     payload.put("unparseableEvents", events);
-    payload.put("rowStats", doGetRowStats(false));
+    payload.put("rowStats", doGetRowStats());
 
     ingestionStatsAndErrors.put("taskId", task.getId());
     ingestionStatsAndErrors.put("payload", payload);
@@ -1696,12 +1693,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRowStats(
-      @Context final HttpServletRequest req,
-      @QueryParam("autoScalerStatsOnly") boolean autoScalerStatsOnly
+      @Context final HttpServletRequest req
   )
   {
     authorizationCheck(req);
-    return Response.ok(doGetRowStats(autoScalerStatsOnly)).build();
+    return Response.ok(doGetRowStats()).build();
   }
 
   @GET

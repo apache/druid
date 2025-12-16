@@ -624,7 +624,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         break;
       }
     }
-    Map rowStats = runner.doGetRowStats(false);
+    Map rowStats = runner.doGetRowStats();
     Map totals = (Map) rowStats.get("totals");
     RowIngestionMetersTotals buildSegments = (RowIngestionMetersTotals) totals.get("buildSegments");
 
