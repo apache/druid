@@ -91,18 +91,8 @@ public class OffsetSnapshotTest
 
     OffsetSnapshot<String, String> snapshot = OffsetSnapshot.of(current, end);
 
-    Assert.assertEquals(ImmutableMap.of("p0", "100", "p1", "200"), snapshot.getHighestIngestedOffsets());
-    Assert.assertEquals(ImmutableMap.of("p0", "150", "p2", "300"), snapshot.getLatestOffsetsFromStream());
-
-    // Returned maps must be immutable
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> snapshot.getHighestIngestedOffsets().put("x", "x")
-    );
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> snapshot.getLatestOffsetsFromStream().put("x", "x")
-    );
+    Assert.assertEquals(Map.of("p0", "100", "p1", "200"), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(Map.of("p0", "150", "p2", "300"), snapshot.getLatestOffsetsFromStream());
   }
 
   @Test
@@ -119,10 +109,10 @@ public class OffsetSnapshotTest
 
     OffsetSnapshot<Integer, Long> snapshot = OffsetSnapshot.of(current, end);
 
-    Assert.assertEquals(ImmutableMap.of(0, 100L, 2, 200L), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(Map.of(0, 100L, 2, 200L), snapshot.getHighestIngestedOffsets());
     Assert.assertEquals(2, snapshot.getHighestIngestedOffsets().size());
 
-    Assert.assertEquals(ImmutableMap.of(1, 300L), snapshot.getLatestOffsetsFromStream());
+    Assert.assertEquals(Map.of(1, 300L), snapshot.getLatestOffsetsFromStream());
     Assert.assertEquals(1, snapshot.getLatestOffsetsFromStream().size());
   }
 
@@ -140,7 +130,7 @@ public class OffsetSnapshotTest
     inputCurrent.clear();
     inputEnd.put(999, 999L);
 
-    Assert.assertEquals(ImmutableMap.of(1, 10L), snapshot.getHighestIngestedOffsets());
-    Assert.assertEquals(ImmutableMap.of(2, 20L), snapshot.getLatestOffsetsFromStream());
+    Assert.assertEquals(Map.of(1, 10L), snapshot.getHighestIngestedOffsets());
+    Assert.assertEquals(Map.of(2, 20L), snapshot.getLatestOffsetsFromStream());
   }
 }

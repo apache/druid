@@ -556,8 +556,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       Map<KafkaTopicPartition, Long> latestOffsetsFromStream
   )
   {
-    offsetSnapshotRef.set(
-        OffsetSnapshot.of(highestIngestedOffsets, latestOffsetsFromStream));
+    offsetSnapshotRef.set(OffsetSnapshot.of(highestIngestedOffsets, latestOffsetsFromStream));
   }
 
   @Override
