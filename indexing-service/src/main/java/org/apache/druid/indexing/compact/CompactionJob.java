@@ -23,6 +23,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.timeline.CompactionState;
 
 /**
  * {@link BatchIndexingJob} to compact an interval of a datasource.
@@ -31,27 +32,37 @@ public class CompactionJob extends BatchIndexingJob
 {
   private final CompactionCandidate candidate;
   private final int maxRequiredTaskSlots;
+  private final String compactionStateFingerprint;
+  private final CompactionState compactionState;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
-      int maxRequiredTaskSlots
+      int maxRequiredTaskSlots,
+      String compactionStateFingerprint,
+      CompactionState compactionState
   )
   {
     super(task, null);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
+    this.compactionStateFingerprint = compactionStateFingerprint;
+    this.compactionState = compactionState;
   }
 
   public CompactionJob(
       ClientSqlQuery msqQuery,
       CompactionCandidate candidate,
-      int maxRequiredTaskSlots
+      int maxRequiredTaskSlots,
+      String compactionStateFingerprint,
+      CompactionState compactionState
   )
   {
     super(null, msqQuery);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
+    this.compactionStateFingerprint = compactionStateFingerprint;
+    this.compactionState = compactionState;
   }
 
   public String getDataSource()
@@ -69,6 +80,16 @@ public class CompactionJob extends BatchIndexingJob
     return maxRequiredTaskSlots;
   }
 
+  public String getCompactionStateFingerprint()
+  {
+    return compactionStateFingerprint;
+  }
+
+  public CompactionState getCompactionState()
+  {
+    return compactionState;
+  }
+
   @Override
   public String toString()
   {
@@ -76,6 +97,8 @@ public class CompactionJob extends BatchIndexingJob
            super.toString() +
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
+           ", compactionStateFingerprint='" + compactionStateFingerprint + '\'' +
+           ", compactionState=" + compactionState +
            '}';
   }
 }
