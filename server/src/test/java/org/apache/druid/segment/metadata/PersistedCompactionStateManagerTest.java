@@ -54,7 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CompactionStateManagerTest
+public class PersistedCompactionStateManagerTest
 {
   @RegisterExtension
   public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
@@ -65,7 +65,7 @@ public class CompactionStateManagerTest
 
   private static TestDerbyConnector derbyConnector;
   private static MetadataStorageTablesConfig tablesConfig;
-  private CompactionStateManager manager;
+  private PersistedCompactionStateManager manager;
 
   @BeforeAll
   public static void setUpClass()
@@ -85,7 +85,7 @@ public class CompactionStateManagerTest
       return null;
     });
 
-    manager = new CompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector, new CompactionStateManagerConfig());
+    manager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector, new CompactionStateManagerConfig());
   }
 
   @Test
@@ -291,7 +291,7 @@ public class CompactionStateManagerTest
     });
 
     // Create a NEW manager (not the shared one) - should prewarm cache in constructor
-    CompactionStateManager newManager = new CompactionStateManager(
+    PersistedCompactionStateManager newManager = new PersistedCompactionStateManager(
         tablesConfig,
         jsonMapper,
         deterministicMapper,

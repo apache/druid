@@ -24,7 +24,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionStateManagerConfigTest
+public class PersistedCompactionStateManagerConfigTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
 

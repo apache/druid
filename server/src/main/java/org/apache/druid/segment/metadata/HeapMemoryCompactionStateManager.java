@@ -19,11 +19,15 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
@@ -37,10 +41,12 @@ import java.util.concurrent.ConcurrentMap;
  * compaction state fingerprints in heap memory without requiring a database.
  * <p>
  * Useful for simulations and unit tests where database persistence is not needed.
+ * Database-specific operations (cleanup, unused marking) are no-ops in this implementation.
  */
-public class HeapMemoryCompactionStateManager extends CompactionStateManager
+public class HeapMemoryCompactionStateManager implements CompactionStateManager
 {
   private final ConcurrentMap<String, CompactionState> fingerprintToStateMap = new ConcurrentHashMap<>();
+  private final ObjectMapper deterministicMapper;
 
   /**
    * Creates an in-memory compaction state manager with a default deterministic mapper.
@@ -59,13 +65,7 @@ public class HeapMemoryCompactionStateManager extends CompactionStateManager
    */
   public HeapMemoryCompactionStateManager(ObjectMapper deterministicMapper)
   {
-    super(
-        new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null, null, null, null, null, null),
-        new DefaultObjectMapper(),
-        deterministicMapper,
-        null,
-        new CompactionStateManagerConfig()
-    );
+    this.deterministicMapper = deterministicMapper;
   }
 
   /**
@@ -78,6 +78,29 @@ public class HeapMemoryCompactionStateManager extends CompactionStateManager
     mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     return mapper;
+  }
+
+  @Override
+  @SuppressWarnings("UnstableApiUsage")
+  public String generateCompactionStateFingerprint(
+      final CompactionState compactionState,
+      final String dataSource
+  )
+  {
+    final Hasher hasher = Hashing.sha256().newHasher();
+
+    hasher.putBytes(StringUtils.toUtf8(dataSource));
+    hasher.putByte((byte) 0xff);
+
+    try {
+      hasher.putBytes(deterministicMapper.writeValueAsBytes(compactionState));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize CompactionState for fingerprinting", e);
+    }
+    hasher.putByte((byte) 0xff);
+
+    return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
 
   @Override

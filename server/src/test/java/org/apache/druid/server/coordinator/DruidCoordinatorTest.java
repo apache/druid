@@ -46,7 +46,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -113,7 +113,7 @@ public class DruidCoordinatorTest
   private OverlordClient overlordClient;
   private CompactionStatusTracker statusTracker;
   private LatchableServiceEmitter serviceEmitter;
-  private CompactionStateManager compactionStateManager;
+  private PersistedCompactionStateManager persistedCompactionStateManager;
 
   @Before
   public void setUp() throws Exception
@@ -124,7 +124,7 @@ public class DruidCoordinatorTest
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
     overlordClient = EasyMock.createMock(OverlordClient.class);
-    compactionStateManager = EasyMock.createMock(CompactionStateManager.class);
+    persistedCompactionStateManager = EasyMock.createMock(PersistedCompactionStateManager.class);
 
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -174,7 +174,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class),
-        compactionStateManager
+        persistedCompactionStateManager
     );
   }
 
@@ -189,7 +189,7 @@ public class DruidCoordinatorTest
         null,
         null,
         NoopSegmentMetadataCache.instance(),
-        compactionStateManager
+        persistedCompactionStateManager
     );
   }
 
@@ -488,7 +488,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class),
-        compactionStateManager
+        persistedCompactionStateManager
     );
     coordinator.start();
 
@@ -541,7 +541,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class),
-        compactionStateManager
+        persistedCompactionStateManager
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -572,7 +572,7 @@ public class DruidCoordinatorTest
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
-        ImmutableList.of(new CompactSegments(statusTracker, null, compactionStateManager))
+        ImmutableList.of(new CompactSegments(statusTracker, null, persistedCompactionStateManager))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
@@ -594,7 +594,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class),
-        compactionStateManager
+        persistedCompactionStateManager
     );
     coordinator.start();
 
@@ -705,7 +705,7 @@ public class DruidCoordinatorTest
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class),
-        compactionStateManager
+        persistedCompactionStateManager
     );
     coordinator.start();
 

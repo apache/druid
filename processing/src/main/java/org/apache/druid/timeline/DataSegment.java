@@ -34,7 +34,6 @@ import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
@@ -261,10 +260,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.binaryVersion = binaryVersion;
     Preconditions.checkArgument(size >= 0);
     this.size = size;
-    this.compactionStateFingerprint = Configs.valueOrDefault(
-        STRING_INTERNER.intern(compactionStateFingerprint),
-        null
-    );
+    this.compactionStateFingerprint = compactionStateFingerprint == null ?
+                                      null :
+                                      STRING_INTERNER.intern(compactionStateFingerprint);
   }
 
   /**

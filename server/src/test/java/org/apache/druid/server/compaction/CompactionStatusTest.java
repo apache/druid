@@ -30,6 +30,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -50,13 +51,13 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class CompactionStatusTest
 {
@@ -570,14 +571,23 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build(),
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
     );
+
+    final DataSourceCompactionConfig oldCompactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .build();
+    CompactionState wrongState = CompactSegments.createCompactionStateFromConfig(oldCompactionConfig);
+
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.HOUR));
-    EasyMock.replay(compactionStateManager);
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+
+    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", wrongState), DateTimes.nowUtc());
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
@@ -590,6 +600,13 @@ public class CompactionStatusTest
   @Test
   public void test_evaluate_needsCompactionWhenSomeSegmentsHaveUnexpectedCompactionStateFingerprint()
   {
+    final DataSourceCompactionConfig oldCompactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .build();
+    CompactionState wrongState = CompactSegments.createCompactionStateFromConfig(oldCompactionConfig);
+
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
@@ -605,8 +622,7 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
     );
 
-    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.HOUR));
-    EasyMock.replay(compactionStateManager);
+    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", wrongState), DateTimes.nowUtc());
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
@@ -625,11 +641,11 @@ public class CompactionStatusTest
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(TestDataSource.WIKI)
-        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .build();
 
-    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.DAY));
-    EasyMock.replay(compactionStateManager);
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", expectedState), DateTimes.nowUtc());
 
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
@@ -655,7 +671,7 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "At least one segment has a mismatched fingerprint and needs compaction",
-        null
+        compactionStateManager
     );
   }
 
