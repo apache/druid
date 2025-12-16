@@ -134,7 +134,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
 
     // Create a compaction config with MONTH granularity
-    InlineSchemaDataSourceCompactionConfig monthGranConfig =
+    InlineSchemaDataSourceCompactionConfig monthGranularityConfig =
         InlineSchemaDataSourceCompactionConfig
             .builder()
             .forDataSource(dataSource)
@@ -167,13 +167,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             )
             .build();
 
-    runCompactionWithSpec(monthGranConfig);
+    runCompactionWithSpec(monthGranularityConfig);
     waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
 
-    verifyCompactedSegmentsHaveFingerprints(monthGranConfig);
+    verifyCompactedSegmentsHaveFingerprints(monthGranularityConfig);
 
     InlineSchemaDataSourceCompactionConfig yearGranConfig =
         InlineSchemaDataSourceCompactionConfig
