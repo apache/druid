@@ -59,12 +59,12 @@ jobs:
         with:
           check_name: "Unit Test Report (JDK ${{ matrix.jdk }})"
           report_paths: '**/target/surefire-reports/TEST-*.xml'
-          detailed_summary: false
+          detailed_summary: true
           flaky_summary: true
           annotate_only: true
           fail_on_failure: true
           check_retries: true
-          truncate_stack_traces: true
+          truncate_stack_traces: false
 
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
