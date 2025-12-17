@@ -482,8 +482,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
         @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
         @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
-        @JsonProperty("longFieldBitmapIndex")@Nullable BitmapIndexType longFieldBitmapIndex,
-        @JsonProperty("doubleFieldBitmapIndex")@Nullable BitmapIndexType doubleFieldBitmapIndex
+        @JsonProperty("longFieldBitmapIndexType")@Nullable BitmapIndexType longFieldBitmapIndex,
+        @JsonProperty("doubleFieldBitmapIndexType")@Nullable BitmapIndexType doubleFieldBitmapIndex
     )
     {
       super(
