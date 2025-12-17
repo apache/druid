@@ -128,7 +128,6 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * returns the set of partitions under the given stream
    *
    * @param stream name of stream
-   *
    * @return set of partitions
    */
   Set<PartitionIdType> getPartitionIds(String stream);
@@ -139,6 +138,17 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return Map from Partition ID to the corresponding end offset
    */
   default Map<PartitionIdType, SequenceOffsetType> getLatestSequenceNumbers(Set<StreamPartition<PartitionIdType>> partitions)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Average poll-to-idle ratio as reported by the stream consumer.
+   * A value of 0 represents that the consumer is never idle, i.e. always consuming.
+   * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   * Used by the supervisor auto-scaler to find an optimal task count that minimizes idle time.
+   */
+  default double getPollIdleRatioMetric()
   {
     throw new UnsupportedOperationException();
   }
