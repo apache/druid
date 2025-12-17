@@ -74,7 +74,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final TaskLockType lockTypeToUse;
   protected final String supervisorId;
 
-  // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
+  // Lazily initialized to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?>> runnerSupplier;
