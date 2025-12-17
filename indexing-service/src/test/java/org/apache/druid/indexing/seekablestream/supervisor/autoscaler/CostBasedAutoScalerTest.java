@@ -80,15 +80,19 @@ public class CostBasedAutoScalerTest
   @Test
   public void testComputeOptimalTaskCountInvalidInputs()
   {
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null));
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null, CostBasedAutoScaler.CostComputeMode.NORMAL));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0),
+                                                               CostBasedAutoScaler.CostComputeMode.NORMAL
+    ));
   }
 
   @Test
   public void testComputeOptimalTaskCountIdleInIdealRange()
   {
     // When idle is in ideal range [0.2, 0.6], no scaling should occur
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(5000.0, 25, 100, 0.4)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(5000.0, 25, 100, 0.4),
+                                                               CostBasedAutoScaler.CostComputeMode.NORMAL
+    ));
   }
 
   @Test
@@ -96,7 +100,9 @@ public class CostBasedAutoScalerTest
   {
     // High idle (underutilized) - should scale down
     // With high idle (0.8), the algorithm evaluates lower task counts and finds they have lower idle cost
-    int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
+    int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8),
+                                                             CostBasedAutoScaler.CostComputeMode.NORMAL
+    );
     Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
   }
 
@@ -110,7 +116,9 @@ public class CostBasedAutoScalerTest
     //
     // This is intentional: the idle-heavy weights (0.4 idle) make the algorithm
     // favor stability over aggressive scaling
-    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
+    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1),
+                                                    CostBasedAutoScaler.CostComputeMode.NORMAL
+    );
 
     // Algorithm evaluates costs and may find current count optimal
     // or may scale down if idle cost reduction outweighs lag increase

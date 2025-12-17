@@ -62,6 +62,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String AVG_IDLE_METRIC = "task/autoScaler/costBased/pollIdleAvg";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
+  enum CostComputeMode
+  {
+    NORMAL,
+    TASK_ROLLOVER
+  }
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -98,7 +104,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public void start()
   {
-    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(this.collectMetrics());
+    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(this.collectMetrics(), CostComputeMode.NORMAL);
     Runnable onSuccessfulScale = () -> {
     };
 
@@ -129,6 +135,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     // No-op.
   }
 
+  @Override
+  public int computeTaskCountForRollover()
+  {
+    return computeOptimalTaskCount(collectMetrics(), CostComputeMode.TASK_ROLLOVER);
+  }
+
   private CostMetrics collectMetrics()
   {
     if (spec.isSuspended()) {
@@ -156,7 +168,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (movingAvgRate > 0) {
       avgProcessingRate = movingAvgRate;
     } else {
-      // Fallback: estimate processing rate based on idle ratio
+      // Fallback: estimate processing rate based on the idle ratio
       final double utilizationRatio = Math.max(0.01, 1.0 - pollIdleRatio);
       avgProcessingRate = config.getDefaultProcessingRate() * utilizationRatio;
     }
@@ -184,7 +196,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return optimal task count for scale-up, or -1 if no scaling action needed
    */
-  public int computeOptimalTaskCount(CostMetrics metrics)
+  public int computeOptimalTaskCount(CostMetrics metrics, CostComputeMode costComputeMode)
   {
     if (metrics == null) {
       log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
@@ -243,11 +255,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         metrics.getPollIdleRatio()
     );
 
+
     if (optimalTaskCount == currentTaskCount) {
       return -1;
     }
-    // Perform both scale-up and scale-down proactively
-    // Future versions may perform scale-down on task rollover only
+    // Perform scale down on task rollover only
+    if (optimalTaskCount < currentTaskCount) {
+      if (costComputeMode == CostComputeMode.TASK_ROLLOVER) {
+        return optimalTaskCount;
+      }
+      return -1;
+    }
+    // Scale up is performed eagerly.
     return optimalTaskCount;
   }
 

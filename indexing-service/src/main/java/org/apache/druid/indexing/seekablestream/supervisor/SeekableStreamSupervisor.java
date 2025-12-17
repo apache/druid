@@ -63,6 +63,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -468,15 +469,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
             return;
           }
-          log.debug("PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]", pendingCompletionTaskGroups,
-                    supervisorId,
-                    dataSource
+          log.debug(
+              "PendingCompletionTaskGroups is [%s] for supervisor[%s] for dataSource[%s]", pendingCompletionTaskGroups,
+              supervisorId,
+              dataSource
           );
           final Integer desiredTaskCount = computeDesiredTaskCount.call();
           ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
                                                                .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+                                                               .setDimension(
+                                                                   DruidMetrics.STREAM,
+                                                                   getIoConfig().getStream()
+                                                               );
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             if (!list.isEmpty()) {
               log.info(
@@ -596,7 +601,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                          AUTOSCALER_SCALING_TIME_METRIC,
                                          scaleActionStopwatch.millisElapsed()
                                      ));
-      log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
+      log.info(
+          "Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].",
+          desiredActiveTaskCount,
+          supervisorId,
+          dataSource
+      );
       return true;
     }
   }
@@ -610,11 +620,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         MetadataSupervisorManager metadataSupervisorManager = supervisorManager.get().getMetadataSupervisorManager();
         metadataSupervisorManager.insert(supervisorId, spec);
       } else {
-        log.error("supervisorManager is null in taskMaster, skipping scale action for supervisor[%s] for dataSource[%s].", supervisorId, dataSource);
+        log.error(
+            "supervisorManager is null in taskMaster, skipping scale action for supervisor[%s] for dataSource[%s].",
+            supervisorId,
+            dataSource
+        );
       }
     }
     catch (Exception e) {
-      log.error(e, "Failed to sync taskCount to MetaStorage for supervisor[%s] for dataSource[%s].", supervisorId, dataSource);
+      log.error(
+          e,
+          "Failed to sync taskCount to MetaStorage for supervisor[%s] for dataSource[%s].",
+          supervisorId,
+          dataSource
+      );
     }
   }
 
@@ -740,7 +759,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       for (Integer taskGroupId : taskGroupIds) {
         TaskGroup taskGroup = activelyReadingTaskGroups.getOrDefault(taskGroupId, null);
         if (taskGroup == null) {
-          log.info("Tried to stop task group [%d] for supervisor [%s] that wasn't actively reading.", taskGroupId, supervisorId);
+          log.info(
+              "Tried to stop task group [%d] for supervisor [%s] that wasn't actively reading.",
+              taskGroupId,
+              supervisorId
+          );
           continue;
         }
         log.info("Task group [%d] for supervisor [%s] will handoff early.", taskGroupId, supervisorId);
@@ -826,8 +849,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.warn("Ignoring checkpoint request because taskGroup[%d] is inactive", taskGroupId);
           return false;
         } else {
-          throw new ISE("Cannot find taskGroup [%s] among all activelyReadingTaskGroups [%s]", taskGroupId,
-                        activelyReadingTaskGroups
+          throw new ISE(
+              "Cannot find taskGroup [%s] among all activelyReadingTaskGroups [%s]", taskGroupId,
+              activelyReadingTaskGroups
           );
         }
       }
@@ -885,7 +909,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Tag for identifying this supervisor in thread-names, listeners, etc. tag = (type + supervisorId).
-  */
+   */
   private final String supervisorTag;
   private final TaskInfoProvider taskInfoProvider;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -925,6 +949,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
+
+  /**
+   * Reference to the autoscaler, used for rollover-based scale-down decisions.
+   * Wired by {@link SupervisorManager} after supervisor creation.
+   */
+  private volatile SupervisorTaskAutoScaler taskAutoScaler;
 
   // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
@@ -1200,6 +1230,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Reset offsets with provided dataSource metadata. Validates {@code resetDataSourceMetadata},
    * creates a {@code ResetOffsetsNotice} with the metadata and adds it to the notice queue. The resulting stored offsets
    * is a union of existing checkpointed offsets and provided offsets.
+   *
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
@@ -1306,14 +1337,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     if (log.isDebugEnabled()) {
                       log.debug(
                           "Handled notice[%s] from notices queue in [%d] ms, "
-                              + "current notices queue size [%d] for supervisor[%s] for datasource[%s].",
+                          + "current notices queue size [%d] for supervisor[%s] for datasource[%s].",
                           noticeType, noticeHandleTime.millisElapsed(), getNoticesQueueSize(), supervisorId, dataSource
                       );
                     }
                   }
                   catch (Throwable e) {
                     stateManager.recordThrowableEvent(e);
-                    log.makeAlert(e, "Supervisor[%s] for datasource[%s] failed to handle notice", supervisorId, dataSource)
+                    log.makeAlert(
+                           e,
+                           "Supervisor[%s] for datasource[%s] failed to handle notice",
+                           supervisorId,
+                           dataSource
+                       )
                        .addData("noticeClass", notice.getClass().getSimpleName())
                        .emit();
                   }
@@ -1783,10 +1819,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       stateManager.recordThrowableEvent(e);
       if (e instanceof StreamException) {
         // When a StreamException is thrown, the error message is more useful than the stack trace in telling what's wrong.
-        log.makeAlert("Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
-            supervisorId, dataSource, e.getMessage()).emit();
+        log.makeAlert(
+            "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
+            supervisorId, dataSource, e.getMessage()
+        ).emit();
       } else {
-        log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+        log.makeAlert(
+            e,
+            "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]",
+            supervisorId,
+            dataSource
+        ).emit();
       }
     }
     finally {
@@ -1858,7 +1901,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(supervisorId);
-      log.info("Reset supervisor[%s] for dataSource[%s] - dataSource metadata entry deleted? [%s]", supervisorId, dataSource, result);
+      log.info(
+          "Reset supervisor[%s] for dataSource[%s] - dataSource metadata entry deleted? [%s]",
+          supervisorId,
+          dataSource,
+          result
+      );
       activelyReadingTaskGroups.values()
                                .forEach(group -> killTasksInGroup(
                                    group,
@@ -1874,7 +1922,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             dataSourceMetadata.getClass()
         );
       }
-      log.info("Reset supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
+      log.info(
+          "Reset supervisor[%s] for dataSource[%s] with metadata[%s]",
+          supervisorId,
+          dataSource,
+          dataSourceMetadata
+      );
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
@@ -1931,7 +1984,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         } else {
           final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
           try {
-            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
+            metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(
+                supervisorId,
+                newMetadata
+            );
           }
           catch (IOException e) {
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
@@ -1972,11 +2028,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * existing checkpointed offsets and provided offsets; any checkpointed offsets not specified in the metadata will be
    * preserved as-is. If checkpoints don't exist, the provided reset datasource metdadata will be inserted into
    * the metadata storage. Once the offsets are reset, any active tasks serving the partition offsets will be restarted.
+   *
    * @param dataSourceMetadata Required reset data source metdata. Assumed that the metadata is validated.
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
   {
-    log.info("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
+    log.info(
+        "Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]",
+        supervisorId,
+        dataSource,
+        dataSourceMetadata
+    );
 
     @SuppressWarnings("unchecked")
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata =
@@ -1985,7 +2047,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final boolean metadataUpdateSuccess;
     final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(supervisorId);
     if (metadata == null) {
-      log.info("Checkpointed metadata in null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]", supervisorId, dataSource, resetMetadata);
+      log.info(
+          "Checkpointed metadata in null for supervisor[%s] for dataSource[%s] - inserting metadata[%s]",
+          supervisorId,
+          dataSource,
+          resetMetadata
+      );
       metadataUpdateSuccess = indexerMetadataStorageCoordinator.insertDataSourceMetadata(supervisorId, resetMetadata);
     } else {
       if (!checkSourceMetadataMatch(metadata)) {
@@ -1998,18 +2065,35 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata =
           (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
       final DataSourceMetadata newMetadata = currentMetadata.plus(resetMetadata);
-      log.info("Current checkpointed metadata[%s], new metadata[%s] for supervisor[%s] for dataSource[%s]", currentMetadata, newMetadata, supervisorId, dataSource);
+      log.info(
+          "Current checkpointed metadata[%s], new metadata[%s] for supervisor[%s] for dataSource[%s]",
+          currentMetadata,
+          newMetadata,
+          supervisorId,
+          dataSource
+      );
       try {
         metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
       }
       catch (IOException e) {
-        log.error("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s] failed [%s]", supervisorId, dataSource, newMetadata, e.getMessage());
+        log.error(
+            "Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s] failed [%s]",
+            supervisorId,
+            dataSource,
+            newMetadata,
+            e.getMessage()
+        );
         throw new RuntimeException(e);
       }
     }
 
     if (!metadataUpdateSuccess) {
-      throw new ISE("Unable to reset metadata[%s] for supervisor[%s] for dataSource[%s]", supervisorId, dataSource, dataSourceMetadata);
+      throw new ISE(
+          "Unable to reset metadata[%s] for supervisor[%s] for dataSource[%s]",
+          supervisorId,
+          dataSource,
+          dataSourceMetadata
+      );
     }
 
     resetMetadata.getSeekableStreamSequenceNumbers()
@@ -2319,7 +2403,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         stopFutures.add(stopTask(taskId, false));
       }
     }
-    log.debug("Found [%d] seekablestream indexing tasks for supervisor[%s] for datasource[%s]", taskCount, supervisorId, dataSource);
+    log.debug(
+        "Found [%d] seekablestream indexing tasks for supervisor[%s] for datasource[%s]",
+        taskCount,
+        supervisorId,
+        dataSource
+    );
 
     if (!stopFutures.isEmpty()) {
       coalesceAndAwait(stopFutures);
@@ -3428,6 +3517,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // remove this task group from the list of current task groups now that it has been handled
       activelyReadingTaskGroups.remove(groupId);
     }
+
+    if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
+      int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
+      if (rolloverTaskCount > 0 && rolloverTaskCount < ioConfig.getTaskCount()) {
+        log.info("Cost-based autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
+        changeTaskCountInIOConfig(rolloverTaskCount);
+        // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
+        // This seems the best way to inject task amount recalculation during the rollover.
+        partitionGroups.clear();
+        partitionOffsets.clear();
+        partitionIds.clear();
+      }
+    }
   }
 
   private DateTime computeEarliestTaskStartTime(TaskGroup group)
@@ -4330,6 +4432,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return ioConfig;
   }
 
+  /**
+   * Sets the autoscaler reference for rollover-based scale-down decisions.
+   * Called by {@link SupervisorManager} after supervisor creation.
+   */
+  public void setTaskAutoScaler(@Nullable SupervisorTaskAutoScaler taskAutoScaler)
+  {
+    this.taskAutoScaler = taskAutoScaler;
+  }
+
   @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
@@ -4688,9 +4799,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // Try emitting lag even with stale metrics provided that none of the partitions has negative lag
         final long staleMillis = sequenceLastUpdated == null
-            ? 0
-            : DateTimes.nowUtc().getMillis()
-              - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
+                                 ? 0
+                                 : DateTimes.nowUtc().getMillis()
+                                   - (tuningConfig.getOffsetFetchPeriod().getMillis()
+                                      + sequenceLastUpdated.getMillis());
         if (staleMillis > 0 && partitionLags.values().stream().anyMatch(x -> x < 0)) {
           // Log at most once every twenty supervisor runs to reduce noise in the logs
           if ((staleMillis / getIoConfig().getPeriod().getMillis()) % 20 == 0) {
