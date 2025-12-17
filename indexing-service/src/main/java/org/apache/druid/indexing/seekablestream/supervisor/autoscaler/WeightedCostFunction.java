@@ -69,7 +69,6 @@ public class WeightedCostFunction
     }
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
-    final int taskCountDiff = proposedTaskCount - metrics.getCurrentTaskCount();
     final double lagRecoveryTime;
     if (avgProcessingRate <= 0) {
       // Metrics are unavailable - favor maintaining the current task count.
