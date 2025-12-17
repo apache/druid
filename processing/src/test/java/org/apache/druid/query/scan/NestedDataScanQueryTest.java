@@ -91,8 +91,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     for (boolean auto : new boolean[]{true, false}) {
       for (ObjectStorageEncoding objectStorage : ObjectStorageEncoding.values()) {
         for (BitmapIndexType bitmapIndex : new BitmapIndexType[]{
-            BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE
-            // BitmapIndexType.NullValueIndex.INSTANCE is disabled as its failures were destabilizing surefire
+            BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE,
+            BitmapIndexType.NullValueIndex.INSTANCE
         }) {
           specs.add(
               new Object[]{

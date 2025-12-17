@@ -27,7 +27,7 @@ type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.UpgradeCalciteTestsToJunit5
 preconditions:
   - org.openrewrite.java.search.FindImplementations:
-       typeName: org.apache.druid.query.scan.InitializedNullHandlingTest1
+       typeName: org.apache.druid.sql.calcite.util.CalciteTestBase
 recipeList:
   - org.apache.druid.JUnit4to5Migration
   - org.openrewrite.staticanalysis.UnnecessaryThrows
