@@ -232,15 +232,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
-    boolean createdNewExecutorServiceToLoadSegmentCache = loadOnBootstrapExec == null;
-    ExecutorService executorService = createdNewExecutorServiceToLoadSegmentCache
-                                      ? MoreExecutors.newDirectExecutorService()
-                                      : loadOnBootstrapExec;
+    // If there is no dedicated bootstrap executor, perform the loading sequentially on the current thread.
+    boolean isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor = loadOnBootstrapExec == null;
+    final ExecutorService executorService = isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor
+                                            ? MoreExecutors.newDirectExecutorService()
+                                            : loadOnBootstrapExec;
 
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
 
     Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
+    log.info("Loading [%d] segments from disk to cache.", segmentsToLoad.length);
 
     for (File file : segmentsToLoad) {
       executorService.submit(() -> {
@@ -263,13 +264,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.error(e, "Interrupted when trying to retrieve cached segment metadata files");
+      log.noStackTrace().error(e, "Interrupted when trying to retrieve cached segment metadata files");
     }
 
     stopwatch.stop();
-    log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+    log.info("Loaded [%d/%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
 
-    if (createdNewExecutorServiceToLoadSegmentCache) {
+    if (isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor) {
       executorService.shutdown();
     }
 
@@ -279,7 +280,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
          .emit();
     }
 
-    return new ArrayList<>(cachedSegments);
+    return List.copyOf(cachedSegments);
   }
 
   private void addFilesToCachedSegments(
