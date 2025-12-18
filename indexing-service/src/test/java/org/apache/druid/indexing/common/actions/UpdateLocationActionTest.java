@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -81,5 +82,14 @@ public class UpdateLocationActionTest
     final String json = TestHelper.JSON_MAPPER.writeValueAsString(original);
     final TaskAction<?> deserialized = TestHelper.JSON_MAPPER.readValue(json, TaskAction.class);
     Assert.assertEquals(original, deserialized);
+  }
+
+  @Test
+  public void test_actionWithNullLocation_throwsException()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new UpdateLocationAction(null)
+    );
   }
 }
