@@ -292,7 +292,10 @@ ORDER BY
       processQuery: async ({ capabilities, visibleColumns }, signal) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, signal);
+          services = await queryDruidSql(
+            { query: ServicesView.SERVICE_SQL, context: { engine: 'native' } },
+            signal,
+          );
         } else if (capabilities.hasCoordinatorAccess()) {
           services = (await getApiArray('/druid/coordinator/v1/servers?simple', signal)).map(
             (s: any): ServiceResultRow => {
