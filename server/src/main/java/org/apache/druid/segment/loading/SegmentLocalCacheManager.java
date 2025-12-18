@@ -53,7 +53,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -230,10 +229,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
-    CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
+    final CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
     // If there is no dedicated bootstrap executor, perform the loading sequentially on the current thread.
-    boolean isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor = loadOnBootstrapExec == null;
+    final boolean isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor = loadOnBootstrapExec == null;
     final ExecutorService executorService = isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor
                                             ? MoreExecutors.newDirectExecutorService()
                                             : loadOnBootstrapExec;
