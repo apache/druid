@@ -437,7 +437,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
-    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, null);
+    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null);
     return taskStorage;
   }
 
