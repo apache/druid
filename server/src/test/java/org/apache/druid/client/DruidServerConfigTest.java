@@ -130,7 +130,8 @@ public class DruidServerConfigTest
                                                          .addValue(
                                                              SegmentLoaderConfig.class,
                                                              new SegmentLoaderConfig().withLocations(locations)
-                                                         ));
+                                                         )
+                                                         .addValue(RuntimeInfo.class, new RuntimeInfo()));
 
     DruidServerConfig serverConfigWithDefaultSize = mapper.readValue(
         mapper.writeValueAsString(
