@@ -228,9 +228,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
     final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
-    AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
+    final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
     boolean createdNewExecutorServiceToLoadSegmentCache = loadOnBootstrapExec == null;
@@ -238,13 +237,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                                       ? MoreExecutors.newDirectExecutorService()
                                       : loadOnBootstrapExec;
 
+    AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
+
     Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
 
     for (File file : segmentsToLoad) {
       executorService.submit(() -> {
         try {
-          loadToCachedSegmentsFromFile(cachedSegments, file, ignoredFilesCounter);
+          addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to load segment from segment cache file.")
@@ -281,10 +282,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return new ArrayList<>(cachedSegments);
   }
 
-  private void loadToCachedSegmentsFromFile(
-      ConcurrentLinkedQueue<DataSegment> cachedSegments,
+  private void addFilesToCachedSegments(
       File file,
-      AtomicInteger ignored
+      AtomicInteger ignored,
+      ConcurrentLinkedQueue<DataSegment> cachedSegments
   ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
