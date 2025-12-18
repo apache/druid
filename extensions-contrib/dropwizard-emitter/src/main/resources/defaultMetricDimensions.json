@@ -265,24 +265,6 @@
     ],
     "type": "counter"
   },
-  "segment/cost/raw": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalization": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalized": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
   "segment/loadQueue/size": {
     "dimensions": [
       "server"

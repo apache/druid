@@ -566,14 +566,16 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     Exception e = null;
     try {
-      AutoScalerConfig autoScalerError = mapper.convertValue(ImmutableMap.of(
-          "enableTaskAutoScaler",
-          "true",
-          "taskCountMax",
-          "1",
-          "taskCountMin",
-          "4"
-      ), AutoScalerConfig.class);
+      AutoScalerConfig autoScalerError = mapper.convertValue(
+          ImmutableMap.of(
+              "enableTaskAutoScaler",
+              "true",
+              "taskCountMax",
+              "1",
+              "taskCountMin",
+              "4"
+          ), AutoScalerConfig.class
+      );
     }
     catch (RuntimeException ex) {
       e = ex;
@@ -685,16 +687,18 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.replay(ingestionSchema);
 
     EasyMock.expect(seekableStreamSupervisorIOConfig.getAutoScalerConfig())
-            .andReturn(mapper.convertValue(ImmutableMap.of(
-                "lagCollectionIntervalMillis",
-                "1",
-                "enableTaskAutoScaler",
-                true,
-                "taskCountMax",
-                "4",
-                "taskCountMin",
-                "1"
-            ), AutoScalerConfig.class))
+            .andReturn(mapper.convertValue(
+                ImmutableMap.of(
+                    "lagCollectionIntervalMillis",
+                    "1",
+                    "enableTaskAutoScaler",
+                    true,
+                    "taskCountMax",
+                    "4",
+                    "taskCountMin",
+                    "1"
+                ), AutoScalerConfig.class
+            ))
             .anyTimes();
     EasyMock.expect(seekableStreamSupervisorIOConfig.getStream()).andReturn("stream").anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
@@ -775,6 +779,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
+
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
@@ -1003,9 +1008,11 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
+
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
+
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
@@ -1050,11 +1057,14 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
     Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
     supervisor.getIoConfig().setTaskCount(2);
+
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
+
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountBeforeScaleOut);
+
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
@@ -1102,15 +1112,18 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         emitter
     );
 
-    // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
+    // enable autoscaler so that taskcount config will be ignored and the init value of taskCount will use taskCountMin.
     Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
     supervisor.getIoConfig().setTaskCount(2);
+
+    // When
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
 
     Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
+    // Then
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
 
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
@@ -1578,6 +1591,97 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     // Happy path test
     originalSpec.validateSpecUpdateTo(proposedSpecSameSource);
+  }
+
+  @Test
+  public void testMergeSpecConfigs()
+  {
+    mockIngestionSchema();
+
+    // Given
+    // Create existing spec with autoscaler config and taskCount set to 5
+    HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
+    existingAutoScalerConfig.put("enableTaskAutoScaler", true);
+    existingAutoScalerConfig.put("taskCountMax", 8);
+    existingAutoScalerConfig.put("taskCountMin", 1);
+
+    SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(existingIoConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
+    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(5).anyTimes();
+    EasyMock.replay(existingIoConfig);
+
+    SeekableStreamSupervisorIngestionSpec existingIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
+    EasyMock.expect(existingIngestionSchema.getIOConfig()).andReturn(existingIoConfig).anyTimes();
+    EasyMock.expect(existingIngestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(existingIngestionSchema.getTuningConfig())
+            .andReturn(seekableStreamSupervisorTuningConfig)
+            .anyTimes();
+    EasyMock.replay(existingIngestionSchema);
+
+    TestSeekableStreamSupervisorSpec existingSpec = buildDefaultSupervisorSpecWithIngestionSchema(
+        "id123",
+        existingIngestionSchema
+    );
+
+    // Create new spec with autoscaler config that has taskCountStart not set (null) and no taskCount set
+    HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
+    newAutoScalerConfig.put("enableTaskAutoScaler", true);
+    newAutoScalerConfig.put("taskCountMax", 8);
+    newAutoScalerConfig.put("taskCountMin", 1);
+
+    SeekableStreamSupervisorIOConfig newIoConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(newIoConfig.getAutoScalerConfig())
+            .andReturn(mapper.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
+    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(null).anyTimes();
+    newIoConfig.setTaskCount(5);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(newIoConfig);
+
+    SeekableStreamSupervisorIngestionSpec newIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
+    EasyMock.expect(newIngestionSchema.getIOConfig()).andReturn(newIoConfig).anyTimes();
+    EasyMock.expect(newIngestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(newIngestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(newIngestionSchema);
+
+    TestSeekableStreamSupervisorSpec newSpec = buildDefaultSupervisorSpecWithIngestionSchema(
+        "id124",
+        newIngestionSchema
+    );
+
+    // Before merge, taskCountStart should be null
+    Assert.assertNull(newSpec.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+
+    // When - merge should copy taskCount from existing spec since new spec has no taskCount
+    newSpec.merge(existingSpec);
+
+    // Then - verify setTaskCount was called (EasyMock will verify the mock expectations)
+    EasyMock.verify(newIoConfig);
+  }
+
+  private TestSeekableStreamSupervisorSpec buildDefaultSupervisorSpecWithIngestionSchema(
+      String id,
+      SeekableStreamSupervisorIngestionSpec ingestionSchema
+  )
+  {
+    return new TestSeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        false,
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig,
+        supervisor4,
+        id
+    );
   }
 
   private void mockIngestionSchema()

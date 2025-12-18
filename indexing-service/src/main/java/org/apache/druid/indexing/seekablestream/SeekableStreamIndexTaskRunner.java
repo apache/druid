@@ -145,6 +145,9 @@ import java.util.stream.Collectors;
 public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
     implements ChatHandler
 {
+  public static final String AUTOSCALER_METRICS_KEY = "autoscalerMetrics";
+  public static final String POLL_IDLE_RATIO_KEY = "pollIdleRatio";
+
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   public enum Status
@@ -238,6 +241,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
+  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
 
   protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
@@ -318,7 +322,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Returns the supervisorId for the task this runner is executing.
    * Backwards compatibility: if task spec from metadata has a null supervisorId field, falls back to dataSource
-  */
+   */
   public String getSupervisorId()
   {
     return task.getSupervisorId();
@@ -454,6 +458,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
+      this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1208,7 +1213,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return metrics;
   }
 
-
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
@@ -1662,6 +1666,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+    }
     return returnMap;
   }
 

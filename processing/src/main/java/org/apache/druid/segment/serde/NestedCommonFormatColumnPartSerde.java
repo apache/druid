@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -346,7 +347,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           buffer,
           builder,
           columnConfig,
-          formatSpec != null ? formatSpec.getBitmapEncoding() : bitmapSerdeFactory,
+          formatSpec,
           byteOrder,
           parent == null ? null : (NestedDataColumnSupplier) parent.getColumnSupplier()
       );
@@ -464,7 +465,9 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           spec.getLongColumnEncoding(),
           spec.getLongColumnCompression(),
           spec.getDoubleColumnCompression(),
-          spec.getBitmapEncoding()
+          spec.getBitmapEncoding(),
+          spec.getLongFieldBitmapIndexType(),
+          spec.getDoubleFieldBitmapIndexType()
       );
     }
 
@@ -478,7 +481,9 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("longColumnEncoding")@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
         @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
         @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
-        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
+        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
+        @JsonProperty("longFieldBitmapIndexType")@Nullable BitmapIndexType longFieldBitmapIndex,
+        @JsonProperty("doubleFieldBitmapIndexType")@Nullable BitmapIndexType doubleFieldBitmapIndex
     )
     {
       super(
@@ -490,7 +495,9 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           longColumnEncoding,
           longColumnCompression,
           doubleColumnCompression,
-          bitmapEncoding
+          bitmapEncoding,
+          longFieldBitmapIndex,
+          doubleFieldBitmapIndex
       );
     }
 

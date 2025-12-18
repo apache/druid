@@ -29,9 +29,9 @@ import java.util.Map;
 
 public class DropwizardRowIngestionMeters implements RowIngestionMeters
 {
-  private static final String ONE_MINUTE_NAME = "1m";
-  private static final String FIVE_MINUTE_NAME = "5m";
-  private static final String FIFTEEN_MINUTE_NAME = "15m";
+  public static final String ONE_MINUTE_NAME = "1m";
+  public static final String FIVE_MINUTE_NAME = "5m";
+  public static final String FIFTEEN_MINUTE_NAME = "15m";
 
   private final Meter processed;
   private final Meter processedBytes;

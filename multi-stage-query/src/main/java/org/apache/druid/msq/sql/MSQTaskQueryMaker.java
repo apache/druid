@@ -545,7 +545,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getMaxRowsInMemory(sqlQueryContext);
     final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(sqlQueryContext);
     final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, plannerContext.getJsonMapper());
     MSQTuningConfig tuningConfig = new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec);
