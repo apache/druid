@@ -28,8 +28,10 @@ import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.utils.RuntimeInfo;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -83,8 +85,31 @@ public class DruidServerConfigTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(testSegmentCacheDir2, 20000000000L, null);
     locations.add(locationConfig1);
     locations.add(locationConfig2);
-    DruidServerConfig druidServerConfig = new DruidServerConfig(new SegmentLoaderConfig().withLocations(locations));
+    DruidServerConfig druidServerConfig = new DruidServerConfig(new RuntimeInfo(), new SegmentLoaderConfig().withLocations(locations));
     Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
+  }
+
+  @Test
+  public void testComputedVirtualSize()
+  {
+    RuntimeInfo runtimeInfo = new RuntimeInfo()
+    {
+      @Override
+      public long getMaxHeapSizeBytes()
+      {
+        return HumanReadableBytes.parse("3GiB");
+      }
+    };
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public boolean isVirtualStorage()
+      {
+        return true;
+      }
+    };
+    DruidServerConfig druidServerConfig = new DruidServerConfig(runtimeInfo, segmentLoaderConfig);
+    Assert.assertEquals(HumanReadableBytes.parse("45TiB"), druidServerConfig.getMaxSize());
   }
 
   @Test
