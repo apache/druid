@@ -156,15 +156,14 @@ public class TaskQueryTool
   {
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      // Serve active task statuses from memory
+      // Serve active task statuses from the TaskQueue memory
       final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
       final List<TaskInfo> activeTasks = taskQueue.get().getTaskInfos();
 
       for (TaskInfo taskInfo : activeTasks) {
         final Task task = taskInfo.getTask();
-        final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
-        if (statusOptional.isPresent() && statusOptional.get().isRunnable()) {
-          final TaskStatus status = statusOptional.get();
+        final TaskStatus status = taskInfo.getStatus();
+        if (status.isRunnable()) {
           taskStatusPlusList.add(
               new TaskStatusPlus(
                   task.getId(),

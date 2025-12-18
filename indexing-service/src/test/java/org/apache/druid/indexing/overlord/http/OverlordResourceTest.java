@@ -349,6 +349,26 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void test_getAllActiveTasks_withTaskQueryTool_returnsRunningTasksOnly()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.expect(taskQueue.getTaskInfos()).andReturn(
+        List.of(
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("s"), new NoopTask("s", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.failure("f", ""), new NoopTask("f", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r1"), new NoopTask("r1", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r2"), new NoopTask("r2", null, null, 1L, 0L, null))
+        )
+    );
+
+    replayAll();
+
+    final List<TaskStatusPlus> activeTasks = taskQueryTool.getAllActiveTasks();
+    Assert.assertEquals(2, activeTasks.size());
+    Assert.assertTrue(activeTasks.stream().allMatch(status -> status.getStatusCode().equals(TaskState.RUNNING)));
+  }
+
+  @Test
   public void testGetTasks()
   {
     expectAuthorizationTokenCheck();
