@@ -255,7 +255,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-
     if (!segment.getId().toString().equals(file.getName())) {
       log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
       ignored.incrementAndGet();
