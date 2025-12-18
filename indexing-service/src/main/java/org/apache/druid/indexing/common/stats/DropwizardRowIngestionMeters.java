@@ -23,7 +23,9 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.ThrownAwayReason;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,11 +35,14 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   public static final String FIVE_MINUTE_NAME = "5m";
   public static final String FIFTEEN_MINUTE_NAME = "15m";
 
+  private static final int NUM_THROWN_AWAY_REASONS = ThrownAwayReason.values().length;
+
   private final Meter processed;
   private final Meter processedBytes;
   private final Meter processedWithError;
   private final Meter unparseable;
   private final Meter thrownAway;
+  private final Meter[] thrownAwayByReason = new Meter[NUM_THROWN_AWAY_REASONS];
 
   public DropwizardRowIngestionMeters()
   {
@@ -47,6 +52,9 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     this.processedWithError = metricRegistry.meter(PROCESSED_WITH_ERROR);
     this.unparseable = metricRegistry.meter(UNPARSEABLE);
     this.thrownAway = metricRegistry.meter(THROWN_AWAY);
+    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+      this.thrownAwayByReason[reason.ordinal()] = metricRegistry.meter(THROWN_AWAY + "_" + reason.name());
+    }
   }
 
   @Override
@@ -104,9 +112,20 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
-  public void incrementThrownAway()
+  public void incrementThrownAway(ThrownAwayReason reason)
   {
     thrownAway.mark();
+    thrownAwayByReason[reason.ordinal()].mark();
+  }
+
+  @Override
+  public Map<ThrownAwayReason, Long> getThrownAwayByReason()
+  {
+    EnumMap<ThrownAwayReason, Long> result = new EnumMap<>(ThrownAwayReason.class);
+    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+      result.put(reason, thrownAwayByReason[reason.ordinal()].getCount());
+    }
+    return result;
   }
 
   @Override

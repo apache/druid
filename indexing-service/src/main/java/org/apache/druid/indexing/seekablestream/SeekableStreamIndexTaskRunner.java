@@ -66,6 +66,7 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
+import org.apache.druid.indexing.common.task.RowFilter;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -81,6 +82,7 @@ import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -419,7 +421,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && withinMinMaxRecordTime(row),
+        this::getRowRejectionReason,
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -2144,26 +2146,36 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
   }
 
-  public boolean withinMinMaxRecordTime(final InputRow row)
+  /**
+   * Returns the rejection reason for a row, or null if the row should be accepted.
+   * This method is used as a {@link RowFilter} for the {@link StreamChunkParser}.
+   */
+  @Nullable
+  ThrownAwayReason getRowRejectionReason(final InputRow row)
   {
-    final boolean beforeMinimumMessageTime = minMessageTime.isAfter(row.getTimestamp());
-    final boolean afterMaximumMessageTime = maxMessageTime.isBefore(row.getTimestamp());
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
+    if (row == null) {
+      return ThrownAwayReason.NULL;
+    }
+    if (minMessageTime.isAfter(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
             "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
             row.getTimestamp(),
             minMessageTime
         );
-      } else if (afterMaximumMessageTime) {
+      }
+      return ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
+    }
+    if (maxMessageTime.isBefore(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
             "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
             row.getTimestamp(),
             maxMessageTime
         );
       }
+      return ThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
     }
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+    return null;
   }
 }

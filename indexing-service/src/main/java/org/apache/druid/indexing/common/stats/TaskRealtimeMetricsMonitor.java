@@ -25,7 +25,11 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
  * Emits metrics from {@link SegmentGenerationMetrics} and {@link RowIngestionMeters}.
@@ -33,6 +37,7 @@ import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(TaskRealtimeMetricsMonitor.class);
+  private static final String REASON_DIMENSION = "reason";
 
   private final SegmentGenerationMetrics segmentGenerationMetrics;
   private final RowIngestionMeters rowIngestionMeters;
@@ -40,6 +45,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
   private SegmentGenerationMetrics previousSegmentGenerationMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
+  private Map<ThrownAwayReason, Long> previousThrownAwayByReason;
 
   public TaskRealtimeMetricsMonitor(
       SegmentGenerationMetrics segmentGenerationMetrics,
@@ -52,6 +58,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.builder = metricEventBuilder;
     previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
+    previousThrownAwayByReason = new EnumMap<>(ThrownAwayReason.class);
   }
 
   @Override
@@ -60,14 +67,28 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     SegmentGenerationMetrics metrics = segmentGenerationMetrics.snapshot();
     RowIngestionMetersTotals rowIngestionMetersTotals = rowIngestionMeters.getTotals();
 
-    final long thrownAway = rowIngestionMetersTotals.getThrownAway() - previousRowIngestionMetersTotals.getThrownAway();
-    if (thrownAway > 0) {
+    // Emit per-reason metrics with the reason dimension
+    final Map<ThrownAwayReason, Long> currentThrownAwayByReason = rowIngestionMeters.getThrownAwayByReason();
+    long totalThrownAway = 0;
+    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+      final long currentCount = currentThrownAwayByReason.getOrDefault(reason, 0L);
+      final long previousCount = previousThrownAwayByReason.getOrDefault(reason, 0L);
+      final long delta = currentCount - previousCount;
+      if (delta > 0) {
+        totalThrownAway += delta;
+        emitter.emit(
+            builder.setDimension(REASON_DIMENSION, reason.getMetricValue())
+                   .setMetric("ingest/events/thrownAway", delta)
+        );
+      }
+    }
+    previousThrownAwayByReason = currentThrownAwayByReason;
+    if (totalThrownAway > 0) {
       log.warn(
           "[%,d] events thrown away. Possible causes: null events, events filtered out by transformSpec, or events outside earlyMessageRejectionPeriod / lateMessageRejectionPeriod.",
-          thrownAway
+          totalThrownAway
       );
     }
-    emitter.emit(builder.setMetric("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()
                              - previousRowIngestionMetersTotals.getUnparseable();

@@ -73,7 +73,16 @@ public interface RowIngestionMeters extends InputStats
   void incrementUnparseable();
 
   long getThrownAway();
-  void incrementThrownAway();
+
+  /**
+   * Increments the thrown away counter for the specified reason.
+   */
+  void incrementThrownAway(ThrownAwayReason reason);
+
+  /**
+   * Returns the count of thrown away events for each reason.
+   */
+  Map<ThrownAwayReason, Long> getThrownAwayByReason();
 
   RowIngestionMetersTotals getTotals();
 

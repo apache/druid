@@ -230,7 +230,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     return new FilteringCloseableInputRowIterator(
         inputSourceReader.read(ingestionMeters),
-        rowFilter,
+        RowFilter.fromPredicate(rowFilter),
         ingestionMeters,
         parseExceptionHandler
     );

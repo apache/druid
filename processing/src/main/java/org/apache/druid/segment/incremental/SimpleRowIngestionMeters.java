@@ -19,15 +19,19 @@
 
 package org.apache.druid.segment.incremental;
 
+import java.util.EnumMap;
 import java.util.Map;
 
 public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
+  private static final int NUM_THROWN_AWAY_REASONS = ThrownAwayReason.values().length;
+
   private long processed;
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
   private long processedBytes;
+  private final long[] thrownAwayByReason = new long[NUM_THROWN_AWAY_REASONS];
 
   @Override
   public long getProcessed()
@@ -84,9 +88,20 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
-  public void incrementThrownAway()
+  public void incrementThrownAway(ThrownAwayReason reason)
   {
     thrownAway++;
+    thrownAwayByReason[reason.ordinal()]++;
+  }
+
+  @Override
+  public Map<ThrownAwayReason, Long> getThrownAwayByReason()
+  {
+    EnumMap<ThrownAwayReason, Long> result = new EnumMap<>(ThrownAwayReason.class);
+    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+      result.put(reason, thrownAwayByReason[reason.ordinal()]);
+    }
+    return result;
   }
 
   @Override

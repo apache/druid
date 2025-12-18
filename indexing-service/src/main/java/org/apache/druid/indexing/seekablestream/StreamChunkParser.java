@@ -28,11 +28,13 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.task.FilteringCloseableInputRowIterator;
+import org.apache.druid.indexing.common.task.RowFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
@@ -42,7 +44,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Predicate;
 
 /**
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
@@ -54,7 +55,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   private final InputRowParser<ByteBuffer> parser;
   @Nullable
   private final SettableByteEntityReader<RecordType> byteEntityReader;
-  private final Predicate<InputRow> rowFilter;
+  private final RowFilter rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
 
@@ -67,7 +68,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
       InputRowSchema inputRowSchema,
       TransformSpec transformSpec,
       File indexingTmpDir,
-      Predicate<InputRow> rowFilter,
+      RowFilter rowFilter,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
@@ -96,7 +97,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
   StreamChunkParser(
       @Nullable InputRowParser<ByteBuffer> parser,
       @Nullable SettableByteEntityReader<RecordType> byteEntityReader,
-      Predicate<InputRow> rowFilter,
+      RowFilter rowFilter,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
@@ -117,7 +118,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
       if (!isEndOfShard) {
         // We do not count end of shard record as thrown away event since this is a record created by Druid
         // Note that this only applies to Kinesis
-        rowIngestionMeters.incrementThrownAway();
+        rowIngestionMeters.incrementThrownAway(ThrownAwayReason.NULL);
       }
       return Collections.emptyList();
     } else {

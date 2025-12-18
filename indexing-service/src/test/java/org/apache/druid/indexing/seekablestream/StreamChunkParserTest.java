@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.task.RowFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
@@ -104,7 +105,7 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -121,7 +122,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -139,7 +140,7 @@ public class StreamChunkParserTest
         null,
         null,
         null,
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -169,7 +170,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -190,7 +191,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -213,7 +214,7 @@ public class StreamChunkParserTest
         new InputRowSchema(TIMESTAMP_SPEC, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
         temporaryFolder.newFolder(),
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -241,7 +242,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         mockedByteEntityReader,
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         new ParseExceptionHandler(
             rowIngestionMeters,
@@ -279,7 +280,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         mockedByteEntityReader,
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -318,7 +319,7 @@ public class StreamChunkParserTest
     final StreamChunkParser<ByteEntity> chunkParser = new StreamChunkParser<>(
         parser,
         mockedByteEntityReader,
-        row -> true,
+        RowFilter.allow(),
         rowIngestionMeters,
         new ParseExceptionHandler(
             rowIngestionMeters,
@@ -354,7 +355,7 @@ public class StreamChunkParserTest
         () -> new StreamChunkParser<>(
             null,
             null,
-            row -> true,
+            RowFilter.allow(),
             rowIngestionMeters,
             parseExceptionHandler
         )

@@ -22,6 +22,8 @@ package org.apache.druid.segment.incremental;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class SimpleRowIngestionMetersTest
 {
   @Test
@@ -32,7 +34,7 @@ public class SimpleRowIngestionMetersTest
     rowIngestionMeters.incrementProcessedBytes(5);
     rowIngestionMeters.incrementProcessedWithError();
     rowIngestionMeters.incrementUnparseable();
-    rowIngestionMeters.incrementThrownAway();
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.NULL);
     Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1));
   }
 
@@ -43,5 +45,40 @@ public class SimpleRowIngestionMetersTest
     RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
     rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     Assert.assertEquals(rowIngestionMeters.getTotals(), rowIngestionMetersTotals);
+  }
+
+  @Test
+  public void testIncrementThrownAwayWithReason()
+  {
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.NULL);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.NULL);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.AFTER_MAX_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+    rowIngestionMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+
+    Assert.assertEquals(7, rowIngestionMeters.getThrownAway());
+
+    Map<ThrownAwayReason, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(2), byReason.get(ThrownAwayReason.NULL));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(ThrownAwayReason.AFTER_MAX_MESSAGE_TIME));
+    Assert.assertEquals(Long.valueOf(3), byReason.get(ThrownAwayReason.FILTERED));
+  }
+
+  @Test
+  public void testGetThrownAwayByReasonReturnsAllReasons()
+  {
+    SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+
+    // Even with no increments, all reasons should be present with 0 counts
+    Map<ThrownAwayReason, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(ThrownAwayReason.values().length, byReason.size());
+    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+      Assert.assertEquals(Long.valueOf(0), byReason.get(reason));
+    }
   }
 }

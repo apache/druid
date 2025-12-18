@@ -24,20 +24,20 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.ThrownAwayReason;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
-import java.util.function.Predicate;
 
 /**
  * An {@link InputRow} iterator used by ingestion {@link Task}s. It can filter out rows which do not satisfy the given
- * {@link #filter} or throw {@link ParseException} while parsing them. The relevant metric should be counted whenever
+ * {@link RowFilter} or throw {@link ParseException} while parsing them. The relevant metric should be counted whenever
  * it filters out rows based on the filter. ParseException handling is delegatged to {@link ParseExceptionHandler}.
  */
 public class FilteringCloseableInputRowIterator implements CloseableIterator<InputRow>
 {
   private final CloseableIterator<InputRow> delegate;
-  private final Predicate<InputRow> filter;
+  private final RowFilter rowFilter;
   private final RowIngestionMeters rowIngestionMeters;
   private final ParseExceptionHandler parseExceptionHandler;
 
@@ -45,13 +45,13 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
 
   public FilteringCloseableInputRowIterator(
       CloseableIterator<InputRow> delegate,
-      Predicate<InputRow> filter,
+      RowFilter rowFilter,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
   {
     this.delegate = delegate;
-    this.filter = filter;
+    this.rowFilter = rowFilter;
     this.rowIngestionMeters = rowIngestionMeters;
     this.parseExceptionHandler = parseExceptionHandler;
   }
@@ -66,11 +66,12 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
         while (next == null && delegate.hasNext()) {
           // delegate.next() can throw ParseException
           final InputRow row = delegate.next();
-          // filter.test() can throw ParseException
-          if (filter.test(row)) {
+          // rowFilter.test() can throw ParseException, returns null if accepted, or reason if rejected
+          final ThrownAwayReason rejectionReason = rowFilter.test(row);
+          if (rejectionReason == null) {
             next = row;
           } else {
-            rowIngestionMeters.incrementThrownAway();
+            rowIngestionMeters.incrementThrownAway(rejectionReason);
           }
         }
         break;
