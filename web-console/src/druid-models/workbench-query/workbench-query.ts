@@ -552,6 +552,10 @@ export class WorkbenchQuery {
       ...queryContext,
     };
 
+    if (engine === 'sql-native') {
+      apiQuery.context.engine ??= 'native';
+    }
+
     let cancelQueryId: string | undefined;
     if (engine === 'sql-native' || engine === 'sql-msq-dart') {
       cancelQueryId = apiQuery.context.sqlQueryId;
