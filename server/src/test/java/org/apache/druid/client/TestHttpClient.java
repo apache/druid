@@ -67,10 +67,19 @@ public class TestHttpClient implements HttpClient
 
   private final Map<URL, SimpleServerManager> servers = new HashMap<>();
   private final ObjectMapper objectMapper;
+  @Nullable
+  private final ListenableFuture future;
 
   public TestHttpClient(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
+    this.future = null;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, ListenableFuture future)
+  {
+    this.objectMapper = objectMapper;
+    this.future = future;
   }
 
   public void addServerAndRunner(DruidServer server, SimpleServerManager serverManager)
@@ -139,7 +148,11 @@ public class TestHttpClient implements HttpClient
       );
       final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
-      return Futures.immediateFuture(finalClientResponse.getObj());
+      if (future != null) {
+        return future;
+      } else {
+        return Futures.immediateFuture(finalClientResponse.getObj());
+      }
     }
     catch (IOException e) {
       throw new RuntimeException(e);
