@@ -155,22 +155,19 @@ public class CostBasedAutoScalerTest
     // Null and empty return -1
     Assert.assertEquals(
         -1.,
-        CostBasedAutoScaler.extractMovingAverage(null, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME),
+        CostBasedAutoScaler.extractMovingAverage(null),
         0.0001
     );
     Assert.assertEquals(
         -1.,
-        CostBasedAutoScaler.extractMovingAverage(
-            Collections.emptyMap(),
-            DropwizardRowIngestionMeters.FIVE_MINUTE_NAME
-        ),
+        CostBasedAutoScaler.extractMovingAverage(Collections.emptyMap()),
         0.0001
     );
 
     // Missing metrics return -1
     Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
     missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingMetrics, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME), 0.0001);
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingMetrics), 0.0001);
 
     // Valid stats return average
     Map<String, Map<String, Object>> validStats = new HashMap<>();
@@ -178,7 +175,7 @@ public class CostBasedAutoScalerTest
     group.put("task-0", buildTaskStatsWithMovingAverage(1000.0));
     group.put("task-1", buildTaskStatsWithMovingAverage(2000.0));
     validStats.put("0", group);
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(validStats, DropwizardRowIngestionMeters.FIVE_MINUTE_NAME), 0.0001);
+    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(validStats), 0.0001);
   }
 
   private CostMetrics createMetrics(
