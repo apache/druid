@@ -27,9 +27,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
-import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.junit.Assert;
 import org.junit.Before;
@@ -135,16 +135,16 @@ public class TaskRealtimeMetricsMonitorTest
   public void testThrownAwayEmitsReasonDimension()
   {
     SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
-    realMeters.incrementThrownAway(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
-    realMeters.incrementThrownAway(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
-    realMeters.incrementThrownAway(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
-    realMeters.incrementThrownAway(ThrownAwayReason.AFTER_MAX_MESSAGE_TIME);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
 
     List<ServiceMetricEvent> allEmittedEvents = new ArrayList<>();
     ServiceEmitter captureEmitter = Mockito.mock(ServiceEmitter.class);
@@ -183,8 +183,8 @@ public class TaskRealtimeMetricsMonitorTest
   public void testThrownAwayReasonDimensionOnlyEmittedWhenNonZero()
   {
     SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
 
     List<ServiceMetricEvent> allEmittedEvents = new ArrayList<>();
     ServiceEmitter captureEmitter = Mockito.mock(ServiceEmitter.class);
@@ -243,8 +243,8 @@ public class TaskRealtimeMetricsMonitorTest
         createMetricEventBuilder()
     );
 
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
     monitor.doMonitor(captureEmitter);
 
     long firstCallNullCount = 0;
@@ -257,9 +257,9 @@ public class TaskRealtimeMetricsMonitorTest
     Assert.assertEquals(2, firstCallNullCount);
 
     allEmittedEvents.clear();
-    realMeters.incrementThrownAway(ThrownAwayReason.NULL);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
-    realMeters.incrementThrownAway(ThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    realMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
     monitor.doMonitor(captureEmitter);
 
     // Find counts from second call - should be deltas only

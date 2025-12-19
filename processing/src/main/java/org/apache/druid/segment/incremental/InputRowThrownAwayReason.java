@@ -19,46 +19,63 @@
 
 package org.apache.druid.segment.incremental;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 /**
  * Reasons why an input row may be thrown away during ingestion.
  */
-public enum ThrownAwayReason
+public enum InputRowThrownAwayReason
 {
   /**
    * The row was null or the input record was empty.
    */
-  NULL,
+  NULL_OR_EMPTY_RECORD("null"),
 
   /**
    * The row's timestamp is before the minimum message time (late message rejection).
    */
-  BEFORE_MIN_MESSAGE_TIME,
+  BEFORE_MIN_MESSAGE_TIME("beforeMinMessageTime"),
 
   /**
    * The row's timestamp is after the maximum message time (early message rejection).
    */
-  AFTER_MAX_MESSAGE_TIME,
+  AFTER_MAX_MESSAGE_TIME("afterMaxMessageTime"),
 
   /**
    * The row was filtered out by a transformSpec filter or other row filter.
    */
-  FILTERED;
+  FILTERED("filtered"),
 
   /**
-   * Pre-computed metric dimension values, indexed by ordinal.
+   * A backwards-compatible value for tracking filter reasons for ingestion tasks using older Druid versions without filter reason tracking.
    */
-  private static final String[] METRIC_VALUES = {
-      "null",
-      "beforeMinMessageTime",
-      "afterMaxMessageTime",
-      "filtered"
-  };
+  UNKNOWN("unknown");
 
-  /**
-   * Returns the value to be used as the dimension value in metrics.
-   */
-  public String getMetricValue()
+  private final String reason;
+
+  InputRowThrownAwayReason(String reason)
   {
-    return METRIC_VALUES[ordinal()];
+    this.reason = reason;
+  }
+
+  /**
+   * Returns string value representation of this {@link InputRowThrownAwayReason} for metric emission.
+   */
+  public String getReason()
+  {
+    return reason;
+  }
+
+  /**
+   * Public utility for building a mutable frequency map over the possible {@link InputRowThrownAwayReason} values.
+   */
+  public static Map<InputRowThrownAwayReason, Long> buildBaseCounterMap()
+  {
+    final EnumMap<InputRowThrownAwayReason, Long> result = new EnumMap<>(InputRowThrownAwayReason.class);
+    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
+      result.put(reason, 0L);
+    }
+    return result;
   }
 }

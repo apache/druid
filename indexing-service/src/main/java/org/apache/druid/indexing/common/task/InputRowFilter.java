@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.incremental.ThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 
 import javax.annotation.Nullable;
 import java.util.function.Predicate;
@@ -30,30 +30,30 @@ import java.util.function.Predicate;
  * This is similar to {@link Predicate} but returns the rejection reason instead of just a boolean.
  */
 @FunctionalInterface
-public interface RowFilter
+public interface InputRowFilter
 {
   /**
    * Tests whether the given row should be accepted.
    *
    * @param row the input row to test
-   * @return null if the row should be accepted, or the {@link ThrownAwayReason} if the row should be rejected
+   * @return null if the row should be accepted, or the {@link InputRowThrownAwayReason} if the row should be rejected
    */
   @Nullable
-  ThrownAwayReason test(InputRow row);
+  InputRowThrownAwayReason test(InputRow row);
 
   /**
-   * Creates a {@link RowFilter} from a Predicate. When the predicate returns false,
-   * the rejection reason will be {@link ThrownAwayReason#FILTERED}.
+   * Creates a {@link InputRowFilter} from a Predicate. When the predicate returns false,
+   * the rejection reason will be {@link InputRowThrownAwayReason#FILTERED}.
    */
-  static RowFilter fromPredicate(Predicate<InputRow> predicate)
+  static InputRowFilter fromPredicate(Predicate<InputRow> predicate)
   {
-    return row -> predicate.test(row) ? null : ThrownAwayReason.FILTERED;
+    return row -> predicate.test(row) ? null : InputRowThrownAwayReason.FILTERED;
   }
 
   /**
-   * Fully-permissive {@link RowFilter} used mainly for tests.
+   * Fully-permissive {@link InputRowFilter} used mainly for tests.
    */
-  static RowFilter allow()
+  static InputRowFilter allowAll()
   {
     return row -> null;
   }
@@ -62,10 +62,10 @@ public interface RowFilter
    * Combines this filter with another filter. A row is rejected if either filter rejects it.
    * The rejection reason from the first rejecting filter (this filter first) is returned.
    */
-  default RowFilter and(RowFilter other)
+  default InputRowFilter and(InputRowFilter other)
   {
     return row -> {
-      ThrownAwayReason reason = this.test(row);
+      InputRowThrownAwayReason reason = this.test(row);
       if (reason != null) {
         return reason;
       }

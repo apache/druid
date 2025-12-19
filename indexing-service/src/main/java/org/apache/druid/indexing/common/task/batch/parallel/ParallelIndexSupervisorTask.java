@@ -69,6 +69,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -112,6 +113,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1602,11 +1604,25 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       return (RowIngestionMetersTotals) buildSegmentsRowStats;
     } else if (buildSegmentsRowStats instanceof Map) {
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
+
+      // Convert the thrownAwayByReason map from String keys to InputRowThrownAwayReason enum keys
+      Map<InputRowThrownAwayReason, Long> thrownAwayByReason = null;
+      Object rawThrownAwayByReason = buildSegmentsRowStatsMap.get("thrownAwayByReason");
+      if (rawThrownAwayByReason instanceof Map) {
+        thrownAwayByReason = new EnumMap<>(InputRowThrownAwayReason.class);
+        Map<?, ?> rawMap = (Map<?, ?>) rawThrownAwayByReason;
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+          InputRowThrownAwayReason reason = InputRowThrownAwayReason.valueOf(entry.getKey().toString());
+          thrownAwayByReason.put(reason, ((Number) entry.getValue()).longValue());
+        }
+      }
+
       return new RowIngestionMetersTotals(
           ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
+          thrownAwayByReason,
           ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
       );
     } else {

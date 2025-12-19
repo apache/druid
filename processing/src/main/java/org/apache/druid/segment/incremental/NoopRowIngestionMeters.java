@@ -23,13 +23,13 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * This class is used only in {@code RealtimeIndexTask} which is deprecated now.
+ * This class is used only in {@code DartFrameContext}.
  *
  * Consider using {@link RowIngestionMetersFactory} instead.
  */
 public class NoopRowIngestionMeters implements RowIngestionMeters
 {
-  private static final RowIngestionMetersTotals EMPTY_TOTALS = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
+  private static final RowIngestionMetersTotals EMPTY_TOTALS = new RowIngestionMetersTotals(0, 0, 0, Map.of(), 0);
 
   @Override
   public long getProcessed()
@@ -74,13 +74,13 @@ public class NoopRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
-  public void incrementThrownAway(ThrownAwayReason reason)
+  public void incrementThrownAway(InputRowThrownAwayReason reason)
   {
 
   }
 
   @Override
-  public Map<ThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
   {
     return Map.of();
   }

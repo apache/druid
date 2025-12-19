@@ -22,30 +22,30 @@ package org.apache.druid.segment.incremental;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ThrownAwayReasonTest
+public class InputRowThrownAwayReasonTest
 {
   @Test
   public void testOrdinalValues()
   {
-    Assert.assertEquals(0, ThrownAwayReason.NULL.ordinal());
-    Assert.assertEquals(1, ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME.ordinal());
-    Assert.assertEquals(2, ThrownAwayReason.AFTER_MAX_MESSAGE_TIME.ordinal());
-    Assert.assertEquals(3, ThrownAwayReason.FILTERED.ordinal());
+    Assert.assertEquals(0, InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD.ordinal());
+    Assert.assertEquals(1, InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME.ordinal());
+    Assert.assertEquals(2, InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME.ordinal());
+    Assert.assertEquals(3, InputRowThrownAwayReason.FILTERED.ordinal());
   }
 
   @Test
   public void testMetricValues()
   {
-    Assert.assertEquals("null", ThrownAwayReason.NULL.getMetricValue());
-    Assert.assertEquals("beforeMinMessageTime", ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME.getMetricValue());
-    Assert.assertEquals("afterMaxMessageTime", ThrownAwayReason.AFTER_MAX_MESSAGE_TIME.getMetricValue());
-    Assert.assertEquals("filtered", ThrownAwayReason.FILTERED.getMetricValue());
+    Assert.assertEquals("null", InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD.getReason());
+    Assert.assertEquals("beforeMinMessageTime", InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME.getReason());
+    Assert.assertEquals("afterMaxMessageTime", InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME.getReason());
+    Assert.assertEquals("filtered", InputRowThrownAwayReason.FILTERED.getReason());
   }
 
   @Test
-  public void testEnumCount()
+  public void testEnumCardinality()
   {
-    Assert.assertEquals(4, ThrownAwayReason.values().length);
+    Assert.assertEquals(5, InputRowThrownAwayReason.values().length);
   }
 }
 

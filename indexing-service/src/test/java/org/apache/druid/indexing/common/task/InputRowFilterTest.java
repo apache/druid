@@ -24,20 +24,20 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.segment.incremental.ThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
 
-public class RowFilterTest
+public class InputRowFilterTest
 {
   private static final List<String> DIMENSIONS = ImmutableList.of("dim1");
 
   @Test
-  public void testFromPredicateAccept()
+  public void test_fromPredicate_whichAllowsAll()
   {
-    RowFilter filter = RowFilter.fromPredicate(row -> true);
+    InputRowFilter filter = InputRowFilter.fromPredicate(row -> true);
     InputRow row = newRow(100);
 
     Assert.assertNull(filter.test(row));
@@ -46,18 +46,18 @@ public class RowFilterTest
   @Test
   public void testFromPredicateReject()
   {
-    RowFilter filter = RowFilter.fromPredicate(row -> false);
+    InputRowFilter filter = InputRowFilter.fromPredicate(row -> false);
     InputRow row = newRow(100);
 
-    Assert.assertEquals(ThrownAwayReason.FILTERED, filter.test(row));
+    Assert.assertEquals(InputRowThrownAwayReason.FILTERED, filter.test(row));
   }
 
   @Test
   public void testAndBothAccept()
   {
-    RowFilter filter1 = row -> null;
-    RowFilter filter2 = row -> null;
-    RowFilter combined = filter1.and(filter2);
+    InputRowFilter filter1 = InputRowFilter.allowAll();
+    InputRowFilter filter2 = InputRowFilter.allowAll();
+    InputRowFilter combined = filter1.and(filter2);
 
     InputRow row = newRow(100);
     Assert.assertNull(combined.test(row));
@@ -66,48 +66,48 @@ public class RowFilterTest
   @Test
   public void testAndFirstRejects()
   {
-    RowFilter filter1 = row -> ThrownAwayReason.NULL;
-    RowFilter filter2 = row -> null;
-    RowFilter combined = filter1.and(filter2);
+    InputRowFilter filter1 = row -> InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD;
+    InputRowFilter filter2 = InputRowFilter.allowAll();
+    InputRowFilter combined = filter1.and(filter2);
 
     InputRow row = newRow(100);
-    Assert.assertEquals(ThrownAwayReason.NULL, combined.test(row));
+    Assert.assertEquals(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, combined.test(row));
   }
 
   @Test
   public void testAndSecondRejects()
   {
-    RowFilter filter1 = row -> null;
-    RowFilter filter2 = row -> ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
-    RowFilter combined = filter1.and(filter2);
+    InputRowFilter filter1 = InputRowFilter.allowAll();
+    InputRowFilter filter2 = row -> InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
+    InputRowFilter combined = filter1.and(filter2);
 
     InputRow row = newRow(100);
-    Assert.assertEquals(ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, combined.test(row));
+    Assert.assertEquals(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, combined.test(row));
   }
 
   @Test
   public void testAndBothRejectReturnsFirst()
   {
-    RowFilter filter1 = row -> ThrownAwayReason.NULL;
-    RowFilter filter2 = row -> ThrownAwayReason.FILTERED;
-    RowFilter combined = filter1.and(filter2);
+    InputRowFilter filter1 = row -> InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD;
+    InputRowFilter filter2 = row -> InputRowThrownAwayReason.FILTERED;
+    InputRowFilter combined = filter1.and(filter2);
 
     InputRow row = newRow(100);
     // Should return reason from first filter
-    Assert.assertEquals(ThrownAwayReason.NULL, combined.test(row));
+    Assert.assertEquals(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, combined.test(row));
   }
 
   @Test
   public void testChainedAnd()
   {
-    RowFilter filter1 = row -> null;
-    RowFilter filter2 = row -> null;
-    RowFilter filter3 = row -> ThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
+    InputRowFilter filter1 = InputRowFilter.allowAll();
+    InputRowFilter filter2 = InputRowFilter.allowAll();
+    InputRowFilter filter3 = row -> InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
 
-    RowFilter combined = filter1.and(filter2).and(filter3);
+    InputRowFilter combined = filter1.and(filter2).and(filter3);
 
     InputRow row = newRow(100);
-    Assert.assertEquals(ThrownAwayReason.AFTER_MAX_MESSAGE_TIME, combined.test(row));
+    Assert.assertEquals(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME, combined.test(row));
   }
 
   private static InputRow newRow(Object dim1Val)

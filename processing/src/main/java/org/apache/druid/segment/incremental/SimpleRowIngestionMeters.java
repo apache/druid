@@ -24,12 +24,11 @@ import java.util.Map;
 
 public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
-  private static final int NUM_THROWN_AWAY_REASONS = ThrownAwayReason.values().length;
+  private static final int NUM_THROWN_AWAY_REASONS = InputRowThrownAwayReason.values().length;
 
   private long processed;
   private long processedWithError;
   private long unparseable;
-  private long thrownAway;
   private long processedBytes;
   private final long[] thrownAwayByReason = new long[NUM_THROWN_AWAY_REASONS];
 
@@ -84,21 +83,20 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   @Override
   public long getThrownAway()
   {
-    return thrownAway;
+    return getThrownAwayByReason().values().stream().reduce(0L, Long::sum);
   }
 
   @Override
-  public void incrementThrownAway(ThrownAwayReason reason)
+  public void incrementThrownAway(InputRowThrownAwayReason reason)
   {
-    thrownAway++;
     thrownAwayByReason[reason.ordinal()]++;
   }
 
   @Override
-  public Map<ThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
   {
-    EnumMap<ThrownAwayReason, Long> result = new EnumMap<>(ThrownAwayReason.class);
-    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+    final EnumMap<InputRowThrownAwayReason, Long> result = new EnumMap<>(InputRowThrownAwayReason.class);
+    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
       result.put(reason, thrownAwayByReason[reason.ordinal()]);
     }
     return result;
@@ -111,7 +109,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
         processed,
         processedBytes,
         processedWithError,
-        thrownAway,
+        getThrownAwayByReason(),
         unparseable
     );
   }
@@ -127,7 +125,10 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
     this.processed += rowIngestionMetersTotals.getProcessed();
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
-    this.thrownAway += rowIngestionMetersTotals.getThrownAway();
     this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
+
+    for (Map.Entry<InputRowThrownAwayReason, Long> entry : rowIngestionMetersTotals.getThrownAwayByReason().entrySet()) {
+      this.thrownAwayByReason[entry.getKey().ordinal()] += entry.getValue();
+    }
   }
 }

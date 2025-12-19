@@ -23,12 +23,11 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
-import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 
-import java.util.EnumMap;
 import java.util.Map;
 
 /**
@@ -45,7 +44,6 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
   private SegmentGenerationMetrics previousSegmentGenerationMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
-  private Map<ThrownAwayReason, Long> previousThrownAwayByReason;
 
   public TaskRealtimeMetricsMonitor(
       SegmentGenerationMetrics segmentGenerationMetrics,
@@ -57,8 +55,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.rowIngestionMeters = rowIngestionMeters;
     this.builder = metricEventBuilder;
     previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
-    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
-    previousThrownAwayByReason = new EnumMap<>(ThrownAwayReason.class);
+    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, Map.of(), 0);
   }
 
   @Override
@@ -68,21 +65,21 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     RowIngestionMetersTotals rowIngestionMetersTotals = rowIngestionMeters.getTotals();
 
     // Emit per-reason metrics with the reason dimension
-    final Map<ThrownAwayReason, Long> currentThrownAwayByReason = rowIngestionMeters.getThrownAwayByReason();
+    final Map<InputRowThrownAwayReason, Long> currentThrownAwayByReason = rowIngestionMetersTotals.getThrownAwayByReason();
+    final Map<InputRowThrownAwayReason, Long> previousThrownAwayByReason = previousRowIngestionMetersTotals.getThrownAwayByReason();
     long totalThrownAway = 0;
-    for (ThrownAwayReason reason : ThrownAwayReason.values()) {
+    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
       final long currentCount = currentThrownAwayByReason.getOrDefault(reason, 0L);
       final long previousCount = previousThrownAwayByReason.getOrDefault(reason, 0L);
       final long delta = currentCount - previousCount;
       if (delta > 0) {
         totalThrownAway += delta;
         emitter.emit(
-            builder.setDimension(REASON_DIMENSION, reason.getMetricValue())
+            builder.setDimension(REASON_DIMENSION, reason.getReason())
                    .setMetric("ingest/events/thrownAway", delta)
         );
       }
     }
-    previousThrownAwayByReason = currentThrownAwayByReason;
     if (totalThrownAway > 0) {
       log.warn(
           "[%,d] events thrown away. Possible causes: null events, events filtered out by transformSpec, or events outside earlyMessageRejectionPeriod / lateMessageRejectionPeriod.",

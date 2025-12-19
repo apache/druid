@@ -66,7 +66,7 @@ import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.common.task.RowFilter;
+import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -79,10 +79,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.incremental.ThrownAwayReason;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -421,7 +421,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        this::getRowRejectionReason,
+        this::ensureRowIsNonNullAndWithinMessageTimeBounds,
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -2148,33 +2148,31 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * Returns the rejection reason for a row, or null if the row should be accepted.
-   * This method is used as a {@link RowFilter} for the {@link StreamChunkParser}.
+   * This method is used as a {@link InputRowFilter} for the {@link StreamChunkParser}.
    */
   @Nullable
-  ThrownAwayReason getRowRejectionReason(final InputRow row)
+  InputRowThrownAwayReason ensureRowIsNonNullAndWithinMessageTimeBounds(@Nullable InputRow row)
   {
     if (row == null) {
-      return ThrownAwayReason.NULL;
-    }
-    if (minMessageTime.isAfter(row.getTimestamp())) {
+      return InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD;
+    } else if (minMessageTime.isAfter(row.getTimestamp())) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is before minimumMessageTime[%s]",
             row.getTimestamp(),
             minMessageTime
         );
       }
-      return ThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
-    }
-    if (maxMessageTime.isBefore(row.getTimestamp())) {
+      return InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
+    } else if (maxMessageTime.isBefore(row.getTimestamp())) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is after maximumMessageTime[%s]",
             row.getTimestamp(),
             maxMessageTime
         );
       }
-      return ThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
+      return InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
     }
     return null;
   }

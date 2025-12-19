@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
+import java.util.Map;
+
 /**
  * Utility class to build {@link RowIngestionMetersTotals}, used in tests.
  */
@@ -27,7 +29,7 @@ public class RowMeters
   private long processedBytes;
   private long processedWithError;
   private long unparseable;
-  private long thrownAway;
+  private final Map<InputRowThrownAwayReason, Long> thrownAwayByReason = InputRowThrownAwayReason.buildBaseCounterMap();
 
   /**
    * Creates a new {@link RowMeters}, that can be used to build an instance of
@@ -56,14 +58,20 @@ public class RowMeters
     return this;
   }
 
+  public RowMeters thrownAwayByReason(InputRowThrownAwayReason thrownAwayByReason, long thrownAway)
+  {
+    this.thrownAwayByReason.put(thrownAwayByReason, this.thrownAwayByReason.get(thrownAwayByReason) + thrownAway);
+    return this;
+  }
+
   public RowMeters thrownAway(long thrownAway)
   {
-    this.thrownAway = thrownAway;
+    this.thrownAwayByReason.put(InputRowThrownAwayReason.UNKNOWN, this.thrownAwayByReason.get(InputRowThrownAwayReason.UNKNOWN) + thrownAway);
     return this;
   }
 
   public RowIngestionMetersTotals totalProcessed(long processed)
   {
-    return new RowIngestionMetersTotals(processed, processedBytes, processedWithError, thrownAway, unparseable);
+    return new RowIngestionMetersTotals(processed, processedBytes, processedWithError, thrownAwayByReason, unparseable);
   }
 }
