@@ -232,8 +232,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
     // If there is no dedicated bootstrap executor, perform the loading sequentially on the current thread.
-    final boolean isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor = loadOnBootstrapExec == null;
-    final ExecutorService executorService = isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor
+    final boolean isLoadingSegmentsSequentially = loadOnBootstrapExec == null;
+    final ExecutorService executorService = isLoadingSegmentsSequentially
                                             ? MoreExecutors.newDirectExecutorService()
                                             : loadOnBootstrapExec;
 
@@ -269,7 +269,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     stopwatch.stop();
     log.info("Loaded [%d/%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
 
-    if (isLoadingSegmentCacheFromDiskWithoutBootstrapExecutor) {
+    if (isLoadingSegmentsSequentially) {
+      // Shutdown the direct executor service we created previously in this method.
       executorService.shutdown();
     }
 
