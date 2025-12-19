@@ -258,7 +258,7 @@ public class MSQSelectTest extends MSQTestBase
                                                .add("cnt", ColumnType.LONG)
                                                .add("unique_dim1", HyperUniquesAggregatorFactory.TYPE)
                                                .build();
-    final Map<String, Object> contextToPut = new HashMap<>(defaultScanQueryContext(context, resultSignature));
+    final Map<String, Object> contextToPut = new HashMap<>(context);
     contextToPut.put("includeSegmentSource", "REALTIME");
 
     final Map<String, Object> queryContext = new HashMap<>(context);
