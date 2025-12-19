@@ -77,12 +77,12 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   readonly type: IngestionType;
+  readonly id?: string;
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
 
   // Added by the server
-  readonly id?: string;
   readonly groupId?: string;
   readonly resource?: any;
 }
@@ -523,7 +523,7 @@ export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> 
     spec = deleteKeys(spec, ['dataSource'] as any[]);
   }
 
-  return deleteKeys(spec, ['id', 'groupId', 'resource']);
+  return deleteKeys(spec, ['groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {

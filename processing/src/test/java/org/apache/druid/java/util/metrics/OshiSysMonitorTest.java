@@ -52,11 +52,6 @@ public class OshiSysMonitorTest
   private HardwareAbstractionLayer hal;
   private OperatingSystem os;
 
-  private enum STATS
-  {
-    MEM, SWAP, FS, DISK, NET, CPU, SYS, TCP
-  }
-
   @Before
   public void setUp()
   {
@@ -107,7 +102,7 @@ public class OshiSysMonitorTest
     m.start();
     m.monitorMemStats(emitter);
     m.stop();
-    Assert.assertEquals(3, emitter.getEvents().size());
+    Assert.assertEquals(3, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/mem/max", 1);
     emitter.verifyEmitted("sys/mem/used", 1);
     emitter.verifyEmitted("sys/mem/free", 1);
@@ -129,11 +124,28 @@ public class OshiSysMonitorTest
     m.start();
     m.doMonitor(emitter);
     m.stop();
-    Assert.assertEquals(3, emitter.getEvents().size());
+    Assert.assertEquals(3, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/mem/max", 1);
     emitter.verifyEmitted("sys/mem/used", 1);
     emitter.verifyEmitted("sys/mem/free", 1);
     emitter.verifyEmitted("sys/swap/pageIn", 0);
+    emitter.verifyEmitted("sys/fs/max", 0);
+  }
+
+  @Test
+  public void testJnaBindingsWithRealSystemInfo()
+  {
+    // Use a real SystemInfo instance rather than a mock to ensure all Oshi/JNA bindings are correctly wired
+    OshiSysMonitor m = createMonitor(new SystemInfo(), List.of("mem"));
+    StubServiceEmitter emitter = new StubServiceEmitter();
+
+    m.start();
+    m.doMonitor(emitter);
+    m.stop();
+
+    emitter.verifyEmitted("sys/mem/max", 1);
+    emitter.verifyEmitted("sys/mem/used", 1);
+    emitter.verifyEmitted("sys/mem/free", 1);
     emitter.verifyEmitted("sys/fs/max", 0);
   }
 
@@ -153,7 +165,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSwapStats(emitter);
-    Assert.assertEquals(4, emitter.getEvents().size());
+    Assert.assertEquals(4, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/swap/pageIn", 1);
     emitter.verifyEmitted("sys/swap/pageOut", 1);
     emitter.verifyEmitted("sys/swap/max", 1);
@@ -201,7 +213,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorFsStats(emitter);
-    Assert.assertEquals(8, emitter.getEvents().size());
+    Assert.assertEquals(8, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/fs/max", 2);
     emitter.verifyEmitted("sys/fs/used", 2);
     emitter.verifyEmitted("sys/fs/files/count", 2);
@@ -272,7 +284,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorDiskStats(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
 
     Mockito.when(disk1.getReadBytes()).thenReturn(400L);
     Mockito.when(disk1.getReads()).thenReturn(220L);
@@ -288,7 +300,7 @@ public class OshiSysMonitorTest
     Mockito.when(disk2.getTransferTime()).thenReturn(1100L);
 
     m.monitorDiskStats(emitter);
-    Assert.assertEquals(12, emitter.getEvents().size());
+    Assert.assertEquals(12, emitter.getNumEmittedEvents());
 
     Map<String, Object> userDims1 = ImmutableMap.of(
         "diskName",
@@ -362,7 +374,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorNetStats(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
 
     Mockito.when(net1.getBytesRecv()).thenReturn(400L);
     Mockito.when(net1.getPacketsRecv()).thenReturn(220L);
@@ -375,7 +387,7 @@ public class OshiSysMonitorTest
 
 
     m.monitorNetStats(emitter);
-    Assert.assertEquals(16, emitter.getEvents().size()); // 8 * 2 whitelisted ips
+    Assert.assertEquals(16, emitter.getNumEmittedEvents()); // 8 * 2 whitelisted ips
 
     Map<String, Object> userDims1 = ImmutableMap.of(
         "netName",
@@ -460,7 +472,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorCpuStats(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
 
     long[][] procTicks2 = new long[][]{
         {4L, 5L, 6L, 8L, 9L, 7L, 10L, 12L},     // Δtick1 {3,3,3,4,4,1,3,4} _total = 25, emitted percentage
@@ -470,7 +482,7 @@ public class OshiSysMonitorTest
 
     m.monitorCpuStats(emitter);
     m.stop();
-    Assert.assertEquals(16, emitter.getEvents().size()); // 8 ticktype * 2 processors
+    Assert.assertEquals(16, emitter.getNumEmittedEvents()); // 8 ticktype * 2 processors
 
     Map<String, Object> userDims = new HashMap<>();
     userDims.put("cpuName", "0");
@@ -557,7 +569,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSysStats(emitter);
-    Assert.assertEquals(4, emitter.getEvents().size());
+    Assert.assertEquals(4, emitter.getNumEmittedEvents());
     m.stop();
     emitter.verifyEmitted("sys/uptime", 1);
     emitter.verifyEmitted("sys/la/1", 1);
@@ -592,7 +604,7 @@ public class OshiSysMonitorTest
     m.start();
     m.monitorTcpStats(emitter);
 
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
     Mockito.when(tcpv4.getConnectionsActive()).thenReturn(20L);
     Mockito.when(tcpv4.getConnectionsPassive()).thenReturn(25L);
     Mockito.when(tcpv4.getConnectionFailures()).thenReturn(8L);
@@ -604,7 +616,7 @@ public class OshiSysMonitorTest
     Mockito.when(tcpv4.getSegmentsRetransmitted()).thenReturn(8L);
     m.monitorTcpStats(emitter);
     m.stop();
-    Assert.assertEquals(9, emitter.getEvents().size());
+    Assert.assertEquals(9, emitter.getNumEmittedEvents());
     emitter.verifyValue("sys/tcpv4/activeOpens", 10L);
     emitter.verifyValue("sys/tcpv4/passiveOpens", 5L);
     emitter.verifyValue("sys/tcpv4/attemptFails", 3L);

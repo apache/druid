@@ -72,7 +72,8 @@ druid.broker.cache.populateResultLevelCache=true
 See [Broker caching](../configuration/index.md#broker-caching) for a description of all available Broker cache configurations.
  
 ## Enabling caching in the query context
-As long as the service is set to populate the cache, you can set cache options for individual queries in the query [context](./query-context.md). For example, you can `POST` a Druid SQL request to the HTTP POST API and include the context as a JSON object:
+
+As long as the service is set to populate the cache, you can set cache options for individual queries in the [query context](./query-context-reference.md). For example, you can send a POST request to the Druid SQL API and include the context as a JSON object:
 
 ```
 {
@@ -83,12 +84,13 @@ As long as the service is set to populate the cache, you can set cache options f
   }
 }
 ```
+
 In this example the user has set `populateCache` to `false` to avoid filling the result cache with results for segments that are over a year old. For more information, see [Druid SQL client APIs](../api-reference/sql-api.md).
 
-
+You can also use the SET command to specify cache options directly within your SQL query string. For more information, see [SET](../querying/sql.md#set). 
 
 ## Learn more
 See the following topics for more information:
 - [Query caching](./caching.md) for an overview of caching.
-- [Query context](./query-context.md) for more details and usage for the query context.
+- [Query context reference](./query-context-reference.md) for more details about query context parameters.
 - [Cache configuration](../configuration/index.md#cache-configuration) for information about different cache types and additional configuration options.

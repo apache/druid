@@ -85,7 +85,7 @@ For more details on each of the specs in an auto-compaction configuration, see [
 
 ## Auto-compaction using Coordinator duties
 
-You can control how often the Coordinator checks to see if auto-compaction is needed. The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
+You can control how often the Coordinator checks to see if auto-compaction is needed. The Coordinator [indexing period](../configuration/index.md#data-management), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
 This time period also affects other Coordinator duties such as cleanup of unused segments and stale pending segments.
 To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#change-compaction-frequency).
@@ -307,7 +307,6 @@ To stop the automatic compaction task, suspend or terminate the supervisor throu
 
 The MSQ task engine is available as a compaction engine if you configure auto-compaction to use compaction supervisors. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
 
-* [Load the MSQ task engine extension](../multi-stage-query/index.md#load-the-extension).
 * In your Overlord runtime properties, set the following properties:
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task.
   *  Optionally, set `druid.supervisor.compaction.engine` to `msq` to specify the MSQ task engine as the default compaction engine. If you don't do this, you'll need to set `spec.engine` to `msq` for each compaction supervisor spec where you want to use the MSQ task engine.

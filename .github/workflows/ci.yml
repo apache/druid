@@ -24,29 +24,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
+        jdk: [ "17", "21" ]
+        pattern: [ "C*", "H*,U*,V*", "N*,Q*,S*", "B*,O*,R*", "G*,J*,K*", "F*,L*,M*", "A*,D*,I*,X*,Y*,Z*", "E*,P*,T*,W*"]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
-      jdk: 17
-      artifact_prefix: "unit-test-reports"
-      key: "test-jdk17-[${{ matrix.pattern }}]"
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
+      jdk: ${{ matrix.jdk }}
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+
+  validate-dist:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/validate-dist
+      key: "validate-dist"
 
   test-report:
     name: "test-report"
     needs: run-unit-tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "17", "21" ]
     steps:
       - name: Download reports for all unit test jobs
         uses: actions/download-artifact@v4
         with:
-          pattern: "unit-test-reports-*"
+          pattern: "unit-test-reports-jdk${{ matrix.jdk }}*"
           path: target/surefire-reports
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v5
         with:
-          check_name: "Unit Test Report"
+          check_name: "Unit Test Report (JDK ${{ matrix.jdk }})"
           report_paths: '**/target/surefire-reports/TEST-*.xml'
           detailed_summary: true
           flaky_summary: true
@@ -59,23 +70,20 @@ jobs:
     name: "coverage-jacoco"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
-    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
+    if: ${{ !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"
       key: "coverage-jacoco"
 
-  run-unit-tests-all-jdk:
-    needs: test-report
-    name: "unit tests(all jdk)"
-    if: ${{ !cancelled() && ( contains( github.event.pull_request.labels.*.name, 'tests:all-jdk') || github.event_name == 'push' ) }}
+  # this will be running in parallel with the ITs later; but until that migration happens - run them in parallel with normal tests
+  run-qtest:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ "11", "21.0.4" ]
-        pattern: [ "A*,G*,R*", "B*,O*,S*,X*,Y*,Z*", "C*,E*", "D*,J*,K*", "F*,H*,U*", "I*,N*,T*", "L*,Q*,W*", "M*,P*,V*"]
+        split: [ "0/4", "1/4", "2/4", "3/4" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.pattern }}' -fae
-      jdk: ${{ matrix.jdk }}
-      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+      script: .github/scripts/run_unit-tests -Dtest=QTest -Dquidem.split=${{ matrix.split }} -fae
+      key: QTest-${{ matrix.split }}
+      jdk: 21

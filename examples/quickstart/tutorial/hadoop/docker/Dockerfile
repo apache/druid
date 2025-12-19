@@ -52,16 +52,17 @@ RUN rpm --import http://repos.azulsystems.com/RPM-GPG-KEY-azulsystems && \
     rpm -ivh zulu-repo-${ZULU_REPO_VER}.noarch.rpm && \
     yum -q -y update && \
     yum -q -y upgrade && \
-    yum -q -y install zulu17-jdk && \
+    yum -q -y install zulu11-jdk && \
     yum -q -y install nano net-tools telnet less unzip wget && \
     yum clean all && \
     rm -rf /var/cache/yum zulu-repo_${ZULU_REPO_VER}.noarch.rpm
 
-ENV JAVA_HOME=/usr/lib/jvm/zulu17
+ENV JAVA_HOME=/usr/lib/jvm/zulu11
 ENV PATH=$PATH:$JAVA_HOME/bin
 
 # hadoop
-ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
+# Using archive.apache.org instead of downloads.apache.org to avoid build failures, see https://github.com/apache/druid/pull/18548
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org/dist
 RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./hadoop-3.3.6 hadoop
 
@@ -76,7 +77,7 @@ ENV YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
 # in hadoop 3 the example file is nearly empty so we can just append stuff
 RUN cat << EOT >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
-RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu17' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+RUN sed -i '$ a export JAVA_HOME=/usr/lib/jvm/zulu11' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_HOME=/usr/local/hadoop' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 RUN sed -i '$ a export HDFS_NAMENODE_USER=root' $HADOOP_HOME/etc/hadoop/hadoop-env.sh
@@ -111,7 +112,7 @@ RUN chown root:root /root/.ssh/config
 # ADD supervisord.conf /etc/supervisord.conf
 
 RUN wget -nv https://github.com/bitnami/wait-for-port/releases/download/v1.0/wait-for-port.zip && unzip wait-for-port.zip && mv wait-for-port /usr/bin && rm wait-for-port.zip
-RUN wget -nv https://github.com/apache/druid/raw/refs/heads/33.0.0/examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
+RUN wget -nv https://github.com/apache/druid/raw/refs/heads/34.0.0/examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
 
 ADD bootstrap.sh /etc/bootstrap.sh
 RUN chown root:root /etc/bootstrap.sh

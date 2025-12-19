@@ -1129,6 +1129,29 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
+   * Retrieves the versions of unused segments which are perfectly aligned with
+   * the given interval.
+   */
+  public Set<String> retrieveUnusedSegmentVersionsWithInterval(String dataSource, Interval interval)
+  {
+    final String sql = StringUtils.format(
+        "SELECT DISTINCT(version) FROM %1$s"
+        + " WHERE dataSource = :dataSource AND used = false"
+        + " AND %2$send%2$s = :end AND start = :start",
+        dbTables.getSegmentsTable(),
+        connector.getQuoteString()
+    );
+    return Set.copyOf(
+        handle.createQuery(sql)
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .mapTo(String.class)
+              .list()
+    );
+  }
+
+  /**
    * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
    */
   @Nullable

@@ -27,7 +27,12 @@ import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
 import type { TaskStatusWithCanceled } from '../../../druid-models';
-import { Execution, TASK_CANCELED_PREDICATE, WorkbenchQuery } from '../../../druid-models';
+import {
+  Execution,
+  getConsoleViewIcon,
+  TASK_CANCELED_PREDICATE,
+  WorkbenchQuery,
+} from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
@@ -85,7 +90,7 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqTaskVersion),
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       return await queryDruidSql<RecentQueryEntry>(
         {
           query: `SELECT
@@ -100,7 +105,7 @@ WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
         },
-        cancelToken,
+        signal,
       );
     },
   });
@@ -177,7 +182,7 @@ LIMIT 100`,
                 {w.taskStatus === 'SUCCESS' &&
                   w.datasource !== Execution.INLINE_DATASOURCE_MARKER && (
                     <MenuItem
-                      icon={IconNames.APPLICATION}
+                      icon={getConsoleViewIcon('workbench')}
                       text={`SELECT * FROM ${T(w.datasource)}`}
                       onClick={() => onChangeQuery(`SELECT * FROM ${T(w.datasource)}`)}
                     />

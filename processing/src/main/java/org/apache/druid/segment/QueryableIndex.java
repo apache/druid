@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
@@ -61,7 +62,7 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   List<String> getColumnNames();
 
   @Nullable
-  ColumnHolder getColumnHolder(String columnName);
+  BaseColumnHolder getColumnHolder(String columnName);
 
   @Override
   @Nullable

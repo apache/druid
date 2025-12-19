@@ -30,6 +30,8 @@ import { Api } from '../../singletons';
 import { filterMap, getApiArray, queryDruidSql, swapElements } from '../../utils';
 import { SnitchDialog } from '..';
 
+import { RETENTION_RULE_COMPLETIONS } from './retention-rule-completions';
+
 import './retention-dialog.scss';
 
 const CLUSTER_DEFAULT_FAKE_DATASOURCE = '_default';
@@ -52,7 +54,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
 
   const [tiersState] = useQueryManager<Capabilities, string[]>({
     initQuery: capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         const sqlResp = await queryDruidSql<{ tier: string }>(
           {
@@ -62,13 +64,13 @@ WHERE "server_type" = 'historical'
 GROUP BY 1
 ORDER BY 1`,
           },
-          cancelToken,
+          signal,
         );
 
         return sqlResp.map(d => d.tier);
       } else if (capabilities.hasCoordinatorAccess()) {
         return filterMap(
-          await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken),
+          await getApiArray('/druid/coordinator/v1/servers?simple', signal),
           (s: any) => (s.type === 'historical' ? s.tier : undefined),
         );
       } else {
@@ -81,10 +83,10 @@ ORDER BY 1`,
 
   const [historyQueryState] = useQueryManager<string, any[]>({
     initQuery: props.datasource,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       return await getApiArray(
         `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history?count=200`,
-        cancelToken,
+        signal,
       );
     },
   });
@@ -130,7 +132,7 @@ ORDER BY 1`,
         {currentTab === 'form' ? (
           defaultRules.map((rule, index) => <RuleEditor key={index} rule={rule} tiers={tiers} />)
         ) : (
-          <JsonInput value={defaultRules} />
+          <JsonInput value={defaultRules} jsonCompletions={RETENTION_RULE_COMPLETIONS} />
         )}
       </FormGroup>
     ) : undefined;
@@ -206,6 +208,7 @@ ORDER BY 1`,
             onChange={setCurrentRules}
             setError={setJsonError}
             height="100%"
+            jsonCompletions={RETENTION_RULE_COMPLETIONS}
           />
           {defaultRuleRender}
         </>

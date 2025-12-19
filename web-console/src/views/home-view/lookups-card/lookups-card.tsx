@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
@@ -33,10 +33,10 @@ export interface LookupsCardProps {
 export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardProps) {
   const [lookupsCountState] = useQueryManager<Capabilities, number>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasCoordinatorAccess()) {
         const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status', {
-          cancelToken,
+          signal,
         });
         const data = resp.data;
         return sum(Object.keys(data).map(k => Object.keys(data[k]).length));
@@ -50,7 +50,7 @@ export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardPro
     <HomeViewCard
       className="lookups-card"
       href="#lookups"
-      icon={IconNames.PROPERTIES}
+      icon={getConsoleViewIcon('lookups')}
       title="Lookups"
       loading={lookupsCountState.loading}
       error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}

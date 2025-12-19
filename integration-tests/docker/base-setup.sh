@@ -18,15 +18,17 @@ set -e
 set -u
 
 export DEBIAN_FRONTEND=noninteractive
-APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://downloads.apache.org}
+
+# Using archive.apache.org instead of downloads.apache.org to avoid build failures, see https://github.com/apache/druid/pull/18548
+APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://archive.apache.org/dist}
 
 apt-get update
 
 # wget
 apt-get install -y wget
 
-# MySQL (Metadata store)
-apt-get install -y default-mysql-server
+# MariaDB metadata store
+apt-get install -y mariadb-server
 
 # Supervisor
 apt-get install -y supervisor

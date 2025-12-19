@@ -61,6 +61,8 @@ export const LocalStorageKeys = {
 
   EXPLORE_STATE: 'explore-state' as const,
   EXPLORE_STICKY: 'explore-sticky' as const,
+
+  WEB_CONSOLE_CONFIGS: 'web-console-configs' as const,
 };
 export type LocalStorageKeys = (typeof LocalStorageKeys)[keyof typeof LocalStorageKeys];
 

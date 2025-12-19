@@ -22,11 +22,14 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.junit.Assert;
@@ -88,6 +91,7 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
 
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -181,6 +185,7 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
     TaskStatus taskStatus = TaskStatus.failure("myId", "failed");
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -201,6 +206,7 @@ public class AbstractTaskTest
   {
     TaskToolbox toolbox = mock(TaskToolbox.class);
     when(toolbox.getAttemptId()).thenReturn("1");
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
     DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
     when(toolbox.getTaskExecutorNode()).thenReturn(node);
@@ -305,4 +311,24 @@ public class AbstractTaskTest
     Assert.assertEquals(AbstractTask.IngestionMode.NONE, ingestionMode);
   }
 
+  @Test
+  public void test_getMetricBuilder_hasAllTaskDimensions()
+  {
+    final AbstractTask task = NoopTask.create();
+    final ServiceMetricEvent.Builder builder = task.getMetricBuilder();
+    Assert.assertEquals(task.getId(), builder.getDimension(DruidMetrics.TASK_ID));
+    Assert.assertEquals(task.getGroupId(), builder.getDimension(DruidMetrics.GROUP_ID));
+    Assert.assertEquals(task.getDataSource(), builder.getDimension(DruidMetrics.DATASOURCE));
+    Assert.assertEquals(task.getType(), builder.getDimension(DruidMetrics.TASK_TYPE));
+  }
+
+  @Test
+  public void test_getMetricBuilder_returnsFreshInstance()
+  {
+    final AbstractTask task = NoopTask.create();
+    final ServiceMetricEvent.Builder builder1 = task.getMetricBuilder();
+    final ServiceMetricEvent.Builder builder2 = task.getMetricBuilder();
+
+    Assert.assertNotSame(builder1, builder2);
+  }
 }

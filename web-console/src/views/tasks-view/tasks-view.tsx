@@ -18,7 +18,8 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { formatDistanceToNow } from 'date-fns';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import React, { type ReactNode } from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -36,8 +37,12 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
-import type { QueryWithContext } from '../../druid-models';
-import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
+import type { ConsoleViewId, QueryWithContext } from '../../druid-models';
+import {
+  getConsoleViewIcon,
+  TASK_CANCELED_ERROR_MESSAGES,
+  TASK_CANCELED_PREDICATE,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -46,6 +51,8 @@ import {
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
+  DATE_FORMAT,
+  formatDate,
   formatDuration,
   getApiArray,
   getDruidErrorMessage,
@@ -58,9 +65,12 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 import { ExecutionDetailsDialog } from '../workbench-view/execution-details-dialog/execution-details-dialog';
 
 import './tasks-view.scss';
+
+dayjs.extend(relativeTime);
 
 const taskTableColumns: string[] = [
   'Task ID',
@@ -87,10 +97,10 @@ interface TaskQueryResultRow {
 }
 
 export interface TasksViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openTaskDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToClassicBatchDataLoader(taskId?: string): void;
   capabilities: Capabilities;
@@ -173,16 +183,16 @@ ORDER BY
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async (capabilities, cancelToken) => {
+      processQuery: async (capabilities, signal) => {
         if (capabilities.hasSql()) {
           return await queryDruidSql(
             {
               query: TasksView.TASK_SQL,
             },
-            cancelToken,
+            signal,
           );
         } else if (capabilities.hasOverlordAccess()) {
-          return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
+          return (await getApiArray(`/druid/indexer/v1/tasks`, signal)).map(d => {
             return {
               task_id: d.id,
               group_id: d.groupId,
@@ -248,7 +258,7 @@ ORDER BY
     type: string,
     fromTable?: boolean,
   ): BasicAction[] {
-    const { goToDatasource, goToClassicBatchDataLoader } = this.props;
+    const { goToView, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (fromTable) {
@@ -270,7 +280,7 @@ ORDER BY
       actions.push({
         icon: IconNames.MULTI_SELECT,
         title: 'Go to datasource',
-        onAction: () => goToDatasource(datasource),
+        onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
       });
     }
     if (oneOf(type, 'index', 'index_parallel')) {
@@ -325,7 +335,8 @@ ORDER BY
   private renderTaskFilterableCell(
     field: string,
     enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
+    displayFn: (value: string) => ReactNode = String,
+    filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters, onFiltersChange } = this.props;
 
@@ -337,8 +348,9 @@ ORDER BY
           filters={filters}
           onFiltersChange={onFiltersChange}
           enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
         >
-          {valueFn(row.value)}
+          {displayFn(row.value)}
         </TableFilterableCell>
       );
     };
@@ -371,8 +383,8 @@ ORDER BY
         loading={tasksState.loading}
         noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
         filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
         defaultSorted={[{ id: 'status', desc: true }]}
         pivotBy={groupTasksBy ? [groupTasksBy] : []}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
@@ -490,19 +502,37 @@ ORDER BY
           {
             Header: 'Created time',
             accessor: 'created_time',
-            width: 190,
-            Cell: this.renderTaskFilterableCell('created_time', true, value => {
-              const valueAsDate = new Date(value);
-              return isNaN(valueAsDate.valueOf()) ? (
-                String(value)
-              ) : (
-                <span data-tooltip={formatDistanceToNow(valueAsDate, { addSuffix: true })}>
-                  {value}
-                </span>
-              );
-            }),
+            headerClassName: 'enable-comparisons',
+            width: 220,
+            Cell: this.renderTaskFilterableCell(
+              'created_time',
+              true,
+              value => {
+                const day = dayjs(value);
+                return day.isValid() ? (
+                  <span data-tooltip={day.fromNow()}>{formatDate(value)}</span>
+                ) : (
+                  String(value)
+                );
+              },
+              formatDate,
+            ),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
+            filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
+              const tableFilter = TableFilter.fromFilter(filter);
+              const parsedRowDate = formatDate(row.created_time);
+              if (tableFilter.mode === '~') {
+                return tableFilter.matches(parsedRowDate);
+              }
+              const parsedFilterDate = formatDate(tableFilter.value);
+              const updatedFilter = new TableFilter(
+                tableFilter.key,
+                tableFilter.mode,
+                parsedFilterDate,
+              );
+              return updatedFilter.matches(parsedRowDate);
+            },
           },
           {
             Header: 'Duration',
@@ -515,16 +545,12 @@ ORDER BY
               if (value > 0) {
                 const shownDuration = formatDuration(value);
 
-                const start = new Date(original.created_time);
-                if (isNaN(start.valueOf())) return shownDuration;
+                const start = dayjs(original.created_time);
+                if (!start.isValid()) return shownDuration;
 
-                const end = new Date(start.valueOf() + value);
+                const end = start.add(value, 'ms');
                 return (
-                  <span
-                    data-tooltip={`End time: ${end.toISOString()}\n(${formatDistanceToNow(end, {
-                      addSuffix: true,
-                    })})`}
-                  >
+                  <span data-tooltip={`End time: ${end.format(DATE_FORMAT)}\n(${end.fromNow()})`}>
                     {shownDuration}
                   </span>
                 );
@@ -580,7 +606,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: TasksView.TASK_SQL })}
           />
@@ -690,7 +716,7 @@ ORDER BY
           <ExecutionDetailsDialog
             id={executionDialogOpen}
             goToTask={taskId => {
-              onFiltersChange([{ id: 'task_id', value: `=${taskId}` }]);
+              onFiltersChange(TableFilters.eq({ task_id: taskId }));
               this.setState({ executionDialogOpen: undefined });
             }}
             onClose={() => this.setState({ executionDialogOpen: undefined })}

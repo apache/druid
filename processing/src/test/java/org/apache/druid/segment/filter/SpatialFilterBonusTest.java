@@ -103,7 +103,7 @@ public class SpatialFilterBonusTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
       IndexIO indexIO = TestHelper.getTestIndexIO();
-      final IndexSpec indexSpec = IndexSpec.DEFAULT;
+      final IndexSpec indexSpec = IndexSpec.getDefault();
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMerger, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMerger, indexIO);
@@ -114,7 +114,7 @@ public class SpatialFilterBonusTest
     return argumentArrays;
   }
 
-  private static IncrementalIndex makeIncrementalIndex() throws IOException
+  private static IncrementalIndex makeIncrementalIndex()
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(

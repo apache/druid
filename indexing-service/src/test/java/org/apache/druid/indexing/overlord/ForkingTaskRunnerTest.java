@@ -535,10 +535,65 @@ public class ForkingTaskRunnerTest
     Assert.assertTrue(forkingTaskRunner.restore().isEmpty());
   }
 
+  @Test
+  public void testTaskStatusWhenTaskLogUploadFails() throws Exception
+  {
+    class ExceptionTaskLogs extends NoopTaskLogs
+    {
+      @Override
+      public void pushTaskLog(String taskid, File logFile)
+      {
+        throw new RuntimeException("Exception occurred while pushing task logs");
+      }
+    }
+    TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    ExceptionTaskLogs exceptionTaskLogs = new ExceptionTaskLogs();
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Task task = NoopTask.create();
+    ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+            new ForkingTaskRunnerConfig(),
+            taskConfig,
+            workerConfig,
+            new Properties(),
+            exceptionTaskLogs,
+            mapper,
+            new DruidNode("middleManager", "host", false, 8091, null, true, false),
+            new StartupLoggingConfig(),
+            TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      {
+        for (String param : command) {
+          if (param.endsWith(task.getId())) {
+            final String basePath = getTracker().pickStorageSlot(task.getId()).getDirectory().getAbsolutePath();
+            File resultFile = Paths.get(basePath, task.getId(), "attempt", "1", "status.json").toFile();
+            mapper.writeValue(resultFile, TaskStatus.success(task.getId()));
+            break;
+          }
+        }
+        MockTestProcess mockTestProcess = new MockTestProcess()
+        {
+          @Override
+          public int waitFor()
+          {
+            return 0;
+          }
+        };
+        return new ForkingTaskRunner.ProcessHolder(mockTestProcess, logFile, taskLocation);
+      }
+    };
+    forkingTaskRunner.setNumProcessorsPerTask();
+    final TaskStatus status = forkingTaskRunner.run(task).get();
+    assertEquals(TaskState.SUCCESS, status.getStatusCode());
+  }
+
   public static TaskConfigBuilder makeDefaultTaskConfigBuilder()
   {
     return new TaskConfigBuilder()
-        .setDefaultHadoopCoordinates(ImmutableList.of())
         .setGracefulShutdownTimeout(new Period("PT0S"))
         .setDirectoryLockTimeout(new Period("PT10S"))
         .setShuffleDataLocations(ImmutableList.of());

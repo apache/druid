@@ -32,7 +32,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -62,7 +61,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testKeySizeEstimation()
   {
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = 0;
     Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
@@ -125,7 +124,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootString() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootString()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -178,7 +177,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootLong() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootLong()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -238,7 +237,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootDouble() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootDouble()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -299,7 +298,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootStringArray() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootStringArray()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -347,7 +346,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryRootVariant() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryRootVariant()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -391,7 +390,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryNested() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryNested()
   {
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = makeIncrementalIndex(minTimestamp);
@@ -431,7 +430,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion() throws IndexSizeExceededException
+  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion()
   {
     // coerce nested column to STRING type, throwing parse exceptions for nested data
     // and casting anything else to string
@@ -443,7 +442,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
                                   .withTimestampSpec(new TimestampSpec(TIME_COL, "millis", null))
                                   .withDimensionsSpec(
                                       DimensionsSpec.builder()
-                                                    .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING)))
+                                                    .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING, null)))
                                                     .useSchemaDiscovery(true)
                                                     .build()
                                   )
@@ -496,7 +495,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantNull()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
@@ -521,7 +520,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantString()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
@@ -545,7 +544,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantLong()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
@@ -569,7 +568,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantEmptyArray()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
@@ -593,7 +592,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantArray()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
@@ -617,7 +616,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testConstantEmptyObject()
   {
     int baseCardinality = 0;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);

@@ -69,10 +69,10 @@ public class CpuSet
     try {
       List<String> lines = Files.readAllLines(
           Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), file));
-      output = lines.stream().map(this::parseStringRangeToIntArray).findFirst().orElse(output);
+      output = lines.stream().map(CpuSet::parseStringRangeToIntArray).findFirst().orElse(output);
     }
     catch (RuntimeException | IOException ex) {
-      LOG.error(ex, "Unable to read %s", file);
+      LOG.noStackTrace().warn(ex, "Unable to read %s, these metrics will be skipped", file);
     }
     return output;
   }
@@ -85,24 +85,26 @@ public class CpuSet
    *              # outputs [0, 1, 2, 7, 12, 13, 14]
    *
    * This method also works fine for memory nodes.
+   * The format is identical in both cgroups v1 and v2, so this can be shared.
    *
    * @param line The list format cpu value
    * @return the list of CPU IDs
    */
-  private int[] parseStringRangeToIntArray(String line)
+  public static int[] parseStringRangeToIntArray(String line)
   {
     String[] cpuParts = line.split(",");
     return Arrays.stream(cpuParts)
        .flatMapToInt(cpuPart -> {
+         cpuPart = cpuPart.trim(); // Trim whitespace around each part
          String[] bits = cpuPart.split("-");
          if (bits.length == 2) {
-           Integer low = Ints.tryParse(bits[0]);
-           Integer high = Ints.tryParse(bits[1]);
+           Integer low = Ints.tryParse(bits[0].trim());
+           Integer high = Ints.tryParse(bits[1].trim());
            if (low != null && high != null) {
              return IntStream.rangeClosed(low, high);
            }
          } else if (bits.length == 1) {
-           Integer bit = Ints.tryParse(bits[0]);
+           Integer bit = Ints.tryParse(bits[0].trim());
            if (bit != null) {
              return IntStream.of(bit);
            }

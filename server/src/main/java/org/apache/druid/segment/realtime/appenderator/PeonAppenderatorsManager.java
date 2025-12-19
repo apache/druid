@@ -68,6 +68,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper jsonMapper,
@@ -84,7 +85,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     if (realtimeAppenderator != null) {
@@ -112,7 +114,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           policyEnforcer,
           rowIngestionMeters,
           parseExceptionHandler,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIntervalUnlocker
       );
     }
     return realtimeAppenderator;
@@ -123,6 +126,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,

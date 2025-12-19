@@ -31,7 +31,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.RemoteTaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -54,6 +54,8 @@ import java.util.Set;
 public class ClusterTestingModule implements DruidModule
 {
   private static final Logger log = new Logger(ClusterTestingModule.class);
+  private static final String PROPERTY_ENABLE = "druid.unsafe.cluster.testing";
+  private static final String PROPERTY_OVERLORD_CLIENT_CONFIG = "druid.unsafe.cluster.testing.overlordClient";
 
   private Set<NodeRole> roles;
   private boolean isClusterTestingEnabled = false;
@@ -65,7 +67,7 @@ public class ClusterTestingModule implements DruidModule
   )
   {
     this.isClusterTestingEnabled = Boolean.parseBoolean(
-        props.getProperty("druid.unsafe.cluster.testing", "false")
+        props.getProperty(PROPERTY_ENABLE, "false")
     );
     this.roles = roles;
   }
@@ -75,13 +77,14 @@ public class ClusterTestingModule implements DruidModule
   {
     if (isClusterTestingEnabled) {
       log.warn(
-          "Running service in cluster testing mode. This is an unsafe test-only"
+          "Running service with roles[%s] in cluster testing mode. This is an unsafe test-only"
           + " mode and must never be used in a production cluster."
-          + " Set property[druid.unsafe.cluster.testing=false] to disable testing mode."
+          + " Set property[%s=false] to disable testing mode.",
+          roles, PROPERTY_ENABLE
       );
       bindDependenciesForClusterTestingMode(binder);
     } else {
-      log.warn("Cluster testing is disabled. Set property[druid.unsafe.cluster.testing=true] to enable it.");
+      log.info("Cluster testing is disabled. Set property[%s=true] to enable it.", PROPERTY_ENABLE);
     }
   }
 
@@ -97,17 +100,21 @@ public class ClusterTestingModule implements DruidModule
       binder.bind(CoordinatorClient.class)
             .to(FaultyCoordinatorClient.class)
             .in(LazySingleton.class);
-      binder.bind(OverlordClient.class)
-            .to(FaultyOverlordClient.class)
-            .in(LazySingleton.class);
       binder.bind(RemoteTaskActionClientFactory.class)
             .to(FaultyRemoteTaskActionClientFactory.class)
             .in(LazySingleton.class);
     } else if (roles.contains(NodeRole.OVERLORD)) {
-      // If this is the Overlord, bind a faulty storage coordinator
-      log.warn("Running Overlord in cluster testing mode.");
-      binder.bind(TaskLockbox.class)
+      binder.bind(GlobalTaskLockbox.class)
             .to(FaultyTaskLockbox.class)
+            .in(LazySingleton.class);
+    } else if (roles.contains(NodeRole.INDEXER)) {
+      JsonConfigProvider.bind(
+          binder,
+          PROPERTY_OVERLORD_CLIENT_CONFIG,
+          ClusterTestingTaskConfig.OverlordClientConfig.class
+      );
+      binder.bind(OverlordClient.class)
+            .to(FaultyOverlordClient.class)
             .in(LazySingleton.class);
     }
   }

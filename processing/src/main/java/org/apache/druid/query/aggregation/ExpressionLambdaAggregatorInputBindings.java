@@ -53,7 +53,7 @@ public class ExpressionLambdaAggregatorInputBindings implements Expr.ObjectBindi
   public Object get(String name)
   {
     if (accumlatorIdentifier.equals(name)) {
-      return accumulator.valueOrDefault();
+      return accumulator.value();
     }
     return inputBindings.get(name);
   }

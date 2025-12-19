@@ -61,6 +61,7 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -94,7 +95,6 @@ public class SingleTaskBackgroundRunnerTest
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFile().toString())
-        .setDefaultRowFlushBoundary(50000)
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -141,7 +141,8 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         "1",
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        JvmUtils.getRuntimeInfo()
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -338,10 +339,9 @@ public class SingleTaskBackgroundRunnerTest
     runner.stop();
 
     Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
-    Assert.assertEquals(
-        "Canceled as task execution process stopped",
-        statusHolder.get().getErrorMsg()
-    );
+
+    // Do not verify the failure error message as there is a race condition
+    // where the error message may either originate from NoopTask or the runner
   }
 
   private static class RestorableTask extends AbstractTask

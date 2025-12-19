@@ -138,19 +138,29 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   }
 
   @Override
-  public List<VersionedSupervisorSpec> getAllForId(String id)
+  public List<VersionedSupervisorSpec> getAllForId(String id, @Nullable Integer limit) throws IllegalArgumentException
   {
+    if (limit != null && limit <= 0) {
+      throw new IllegalArgumentException("Limit must be greater than zero if set");
+    }
+
     return ImmutableList.copyOf(
         dbi.withHandle(
-            (HandleCallback<List<VersionedSupervisorSpec>>) handle -> handle.createQuery(
-                StringUtils.format(
-                    "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
-                    getSupervisorsTable()
-                )
-            )
-            .bind("spec_id", id)
-            .map((index, r, ctx) -> createVersionSupervisorSpecFromResponse(r))
-            .list()
+            (HandleCallback<List<VersionedSupervisorSpec>>) handle -> {
+              String query = StringUtils.format(
+                  "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
+                  getSupervisorsTable()
+              );
+              
+              if (limit != null) {
+                query += " " + connector.limitClause(limit);
+              }
+              
+              return handle.createQuery(query)
+                           .bind("spec_id", id)
+                           .map((index, r, ctx) -> createVersionSupervisorSpecFromResponse(r))
+                           .list();
+            }
         )
     );
   }

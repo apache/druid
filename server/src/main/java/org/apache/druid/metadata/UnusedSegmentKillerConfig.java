@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -32,20 +33,37 @@ import javax.annotation.Nullable;
  */
 public class UnusedSegmentKillerConfig
 {
+  private static final Logger log = new Logger(UnusedSegmentKillerConfig.class);
+
   @JsonProperty("enabled")
   private final boolean enabled;
 
   @JsonProperty("bufferPeriod")
   private final Period bufferPeriod;
 
+  @JsonProperty("dutyPeriod")
+  private final Period dutyPeriod;
+
   @JsonCreator
   public UnusedSegmentKillerConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled,
-      @JsonProperty("bufferPeriod") @Nullable Period bufferPeriod
+      @JsonProperty("bufferPeriod") @Nullable Period bufferPeriod,
+      @JsonProperty("dutyPeriod") @Nullable Period dutyPeriod
   )
   {
     this.enabled = Configs.valueOrDefault(enabled, false);
     this.bufferPeriod = Configs.valueOrDefault(bufferPeriod, Period.days(30));
+
+    if (dutyPeriod == null) {
+      this.dutyPeriod = Period.hours(1);
+    } else {
+      log.warn(
+          "The config 'druid.manager.segments.killUnused.dutyPeriod'"
+          + " is for testing only and should not be set in production clusters"
+          + " as it may have unintended side-effects."
+      );
+      this.dutyPeriod = dutyPeriod;
+    }
   }
 
   /**
@@ -54,6 +72,16 @@ public class UnusedSegmentKillerConfig
   public Period getBufferPeriod()
   {
     return bufferPeriod;
+  }
+
+  /**
+   * Period dictating the frequency at which the unused segment killer duty
+   * should be run. This config is for testing only and SHOULD NOT be used in
+   * production clusters.
+   */
+  public Period getDutyPeriod()
+  {
+    return dutyPeriod;
   }
 
   public boolean isEnabled()

@@ -22,11 +22,11 @@ package org.apache.druid.tests.indexer;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KinesisEventWriter;
+import org.apache.druid.testing.tools.StreamEventWriter;
 import org.apache.druid.testing.utils.KinesisAdminClient;
-import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
-import org.apache.druid.testing.utils.StreamEventWriter;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -58,6 +58,7 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
 
   @Override
   Function<String, String> generateStreamIngestionPropsTransform(
+      String supervisorId,
       String streamName,
       String fullDatasourceName,
       String parserType,
@@ -70,6 +71,11 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   {
     return spec -> {
       try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SUPERVISOR_ID%%",
+            supervisorId
+        );
         spec = StringUtils.replace(
             spec,
             "%%DATASOURCE%%",

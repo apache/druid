@@ -34,6 +34,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.nested.DictionaryIdLookup;
 import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataColumnSerializer;
 import org.apache.druid.segment.nested.NestedPathFinder;
@@ -77,7 +78,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
   private final String name;
   private final String outputName;
-  private final IndexSpec indexSpec;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final Closer closer;
   private NestedCommonFormatColumnSerializer serializer;
@@ -87,6 +87,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private final ColumnType castToType;
   private boolean isVariantType = false;
   private byte variantTypeByte = 0x00;
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
   private final File segmentBaseDir;
 
@@ -97,7 +98,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
    *                              projection name so that multiple projections can store the same column name at
    *                              different smoosh file "paths"
    * @param castToType            optional mechanism to enforce that all values are a specific type
-   * @param indexSpec             segment level storage options such as compression format and bitmap type
+   * @param columnFormatSpec      column level storage options such as compression format and bitmap type
    * @param segmentWriteOutMedium temporary storage location to stage segment outputs before finalizing into the segment
    * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
    *                              when the segment is finished writing
@@ -106,7 +107,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       String name,
       String outputName,
       @Nullable ColumnType castToType,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       File segmentBaseDir,
       Closer closer
@@ -116,7 +117,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     this.name = name;
     this.outputName = outputName;
     this.castToType = castToType;
-    this.indexSpec = indexSpec;
+    this.columnFormatSpec = columnFormatSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.segmentBaseDir = segmentBaseDir;
     this.closer = closer;
@@ -187,7 +188,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         logicalType = ColumnType.STRING;
         serializer = new ScalarStringColumnSerializer(
             outputName,
-            indexSpec,
+            columnFormatSpec,
             segmentWriteOutMedium,
             closer
         );
@@ -201,7 +202,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           case LONG:
             serializer = new ScalarLongColumnSerializer(
                 outputName,
-                indexSpec,
+                columnFormatSpec,
                 segmentWriteOutMedium,
                 closer
             );
@@ -209,7 +210,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           case DOUBLE:
             serializer = new ScalarDoubleColumnSerializer(
                 outputName,
-                indexSpec,
+                columnFormatSpec,
                 segmentWriteOutMedium,
                 closer
             );
@@ -217,7 +218,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           case STRING:
             serializer = new ScalarStringColumnSerializer(
                 outputName,
-                indexSpec,
+                columnFormatSpec,
                 segmentWriteOutMedium,
                 closer
             );
@@ -227,7 +228,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 outputName,
                 logicalType,
                 null,
-                indexSpec,
+                columnFormatSpec,
                 segmentWriteOutMedium,
                 closer
             );
@@ -253,7 +254,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             outputName,
             null,
             variantTypeByte,
-            indexSpec,
+            columnFormatSpec,
             segmentWriteOutMedium,
             closer
         );
@@ -262,7 +263,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         logicalType = ColumnType.NESTED_DATA;
         serializer = new NestedDataColumnSerializer(
             outputName,
-            indexSpec,
+            columnFormatSpec,
             segmentWriteOutMedium,
             closer
         );
@@ -378,7 +379,9 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                                          .isVariantType(isVariantType)
                                          .withEnforceLogicalType(castToType != null)
                                          .withByteOrder(ByteOrder.nativeOrder())
-                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                         .withColumnFormatSpec(columnFormatSpec)
+                                         // for backwards compatibility keep writing this for now
+                                         .withBitmapSerdeFactory(columnFormatSpec.getBitmapEncoding())
                                          .withSerializer(serializer)
                                          .build();
     descriptorBuilder.setValueType(ValueType.COMPLEX) // this doesn't really matter... you could say.. its complicated..
@@ -406,21 +409,21 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     if (autoParent.serializer instanceof ScalarStringColumnSerializer) {
       serializer = new ScalarStringColumnSerializer(
           outputName,
-          indexSpec,
+          columnFormatSpec,
           segmentWriteOutMedium,
           closer
       );
     } else if (autoParent.serializer instanceof ScalarLongColumnSerializer) {
       serializer = new ScalarLongColumnSerializer(
           outputName,
-          indexSpec,
+          columnFormatSpec,
           segmentWriteOutMedium,
           closer
       );
     } else if (autoParent.serializer instanceof ScalarDoubleColumnSerializer) {
       serializer = new ScalarDoubleColumnSerializer(
           outputName,
-          indexSpec,
+          columnFormatSpec,
           segmentWriteOutMedium,
           closer
       );
@@ -430,7 +433,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             outputName,
             null,
             variantTypeByte,
-            indexSpec,
+            columnFormatSpec,
             segmentWriteOutMedium,
             closer
         );
@@ -439,18 +442,22 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             outputName,
             logicalType,
             null,
-            indexSpec,
+            columnFormatSpec,
             segmentWriteOutMedium,
             closer
         );
       }
     } else {
-      serializer = new NestedDataColumnSerializer(
+      NestedDataColumnSerializer nestedSerializer = new NestedDataColumnSerializer(
           outputName,
-          indexSpec,
+          columnFormatSpec,
           segmentWriteOutMedium,
           closer
       );
+      // need to set dictionaries before can open field writers, it is harmless that it is set again later
+      nestedSerializer.setDictionaryIdLookup(autoParent.getIdLookup());
+      nestedSerializer.setFieldsAndOpenWriters((NestedDataColumnSerializer) autoParent.serializer);
+      serializer = nestedSerializer;
     }
 
     serializer.setDictionaryIdLookup(autoParent.getIdLookup());

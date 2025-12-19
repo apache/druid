@@ -38,8 +38,10 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
+import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -52,7 +54,9 @@ import {
   filterMap,
   formatBytes,
   formatBytesCompact,
+  formatDate,
   formatDurationWithMsIfNeeded,
+  formatInteger,
   getApiArray,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
@@ -60,13 +64,14 @@ import {
   lookupBy,
   oneOf,
   pluralIfNeeded,
-  prettyFormatIsoDateWithMsIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
   ResultWithAuxiliaryWork,
+  twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 
 import { FillIndicator } from './fill-indicator/fill-indicator';
 
@@ -83,6 +88,10 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Max size',
     'Usage',
     'Start time',
+    'Version',
+    'Available processors',
+    'Total memory',
+    'Labels',
     'Detail',
   ],
   'no-sql': [
@@ -106,6 +115,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Max size',
     'Usage',
     'Start time',
+    'Version',
   ],
 };
 
@@ -115,8 +125,8 @@ interface ServicesQuery {
 }
 
 export interface ServicesViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
@@ -142,6 +152,10 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
+  readonly version: string;
+  readonly labels: string | null;
+  readonly available_processors: number;
+  readonly total_memory: number;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -197,6 +211,11 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
   };
 }
 
+function defaultDisplayFn(value: any): string {
+  if (value === undefined || value === null) return '';
+  return String(value);
+}
+
 interface WorkerInfo {
   readonly availabilityGroups: string[];
   readonly blacklistedUntil: string | null;
@@ -237,7 +256,11 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "curr_size",
   "max_size",
   "is_leader",
-  "start_time"
+  "start_time",
+  "version",
+  "labels",
+  "available_processors",
+  "total_memory"
 FROM sys.servers
 ORDER BY
   (
@@ -266,12 +289,12 @@ ORDER BY
     };
 
     this.serviceQueryManager = new QueryManager({
-      processQuery: async ({ capabilities, visibleColumns }, cancelToken) => {
+      processQuery: async ({ capabilities, visibleColumns }, signal) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
+          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, signal);
         } else if (capabilities.hasCoordinatorAccess()) {
-          services = (await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken)).map(
+          services = (await getApiArray('/druid/coordinator/v1/servers?simple', signal)).map(
             (s: any): ServiceResultRow => {
               const hostParts = s.host.split(':');
               const port = parseInt(hostParts[1], 10);
@@ -286,6 +309,10 @@ ORDER BY
                 max_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
+                version: '',
+                labels: null,
+                available_processors: -1,
+                total_memory: -1,
               };
             },
           );
@@ -296,12 +323,12 @@ ORDER BY
         const auxiliaryQueries: AuxiliaryQueryFn<ServicesWithAuxiliaryInfo>[] = [];
 
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
               const loadQueueInfos = (
                 await Api.instance.get<Record<string, LoadQueueInfo>>(
                   '/druid/coordinator/v1/loadqueue?simple',
-                  { cancelToken },
+                  { signal },
                 )
               ).data;
               return {
@@ -320,11 +347,11 @@ ORDER BY
         }
 
         if (capabilities.hasOverlordAccess()) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
               const workerInfos = await getApiArray<WorkerInfo>(
                 '/druid/indexer/v1/workers',
-                cancelToken,
+                signal,
               );
 
               const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(
@@ -379,7 +406,10 @@ ORDER BY
     this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
   };
 
-  private renderFilterableCell(field: string) {
+  private renderFilterableCell(
+    field: string,
+    displayFn: (value: string) => string = defaultDisplayFn,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
     return function FilterableCell(row: { value: any }) {
@@ -389,7 +419,10 @@ ORDER BY
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-        />
+          displayValue={displayFn(row.value)}
+        >
+          {displayFn(row.value)}
+        </TableFilterableCell>
       );
     };
   }
@@ -413,8 +446,9 @@ ORDER BY
             servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
           }
           filterable
-          filtered={filters}
-          onFilteredChange={onFiltersChange}
+          filtered={filters.toFilters()}
+          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
+          onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
           pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -428,11 +462,12 @@ ORDER BY
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      _filters: Filter[],
-      _onFiltersChange: (filters: Filter[]) => void,
+      _filters: TableFilters,
+      _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
+
       return [
         {
           Header: 'Service',
@@ -611,8 +646,85 @@ ORDER BY
           Header: 'Start time',
           show: visibleColumns.shown('Start time'),
           accessor: 'start_time',
+          id: 'start_time',
+          width: 220,
+          Cell: this.renderFilterableCell('start_time', formatDate),
+          Aggregated: () => '',
+          filterMethod: (filter: Filter, row: ServiceResultRow) => {
+            const tableFilter = TableFilter.fromFilter(filter);
+            const parsedRowTime = formatDate(row.start_time);
+            if (tableFilter.mode === '~') {
+              return tableFilter.matches(parsedRowTime);
+            }
+            const parsedFilterTime = formatDate(tableFilter.value);
+            const updatedFilter = new TableFilter(
+              tableFilter.key,
+              tableFilter.mode,
+              parsedFilterTime,
+            );
+            return updatedFilter.matches(parsedRowTime);
+          },
+        },
+        {
+          Header: 'Version',
+          show: visibleColumns.shown('Version'),
+          accessor: 'version',
           width: 200,
-          Cell: this.renderFilterableCell('start_time'),
+          Cell: this.renderFilterableCell('version'),
+          Aggregated: () => '',
+        },
+        {
+          Header: twoLines('Available', 'processors'),
+          show: visibleColumns.shown('Available processors'),
+          accessor: 'available_processors',
+          className: 'padded',
+          filterable: false,
+          width: 100,
+          Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            return totalAvailableProcessors;
+          },
+        },
+        {
+          Header: 'Total memory',
+          show: visibleColumns.shown('Total memory'),
+          accessor: 'total_memory',
+          className: 'padded',
+          width: 120,
+          filterable: false,
+          Cell: ({ value }) => {
+            if (value === null) return '';
+            return formatBytes(value, true);
+          },
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalMemory = sum(originalRows, s => s.total_memory);
+            return formatBytes(totalMemory, true);
+          },
+        },
+        {
+          Header: 'Labels',
+          show: visibleColumns.shown('Labels'),
+          accessor: 'labels',
+          className: 'padded',
+          filterable: false,
+          width: 200,
+          Cell: ({ value }: { value: string | null }) => {
+            if (!value) return '';
+            return (
+              <ul className="labels-list">
+                {Object.entries(JSON.parse(value)).map(([key, val]) => {
+                  return (
+                    <li key={key}>
+                      {key}: {String(val)}
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          },
           Aggregated: () => '',
         },
         {
@@ -638,17 +750,11 @@ ORDER BY
                 const details: string[] = [];
                 if (workerInfo.lastCompletedTaskTime) {
                   details.push(
-                    `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.lastCompletedTaskTime,
-                    )}`,
+                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
                   );
                 }
                 if (workerInfo.blacklistedUntil) {
-                  details.push(
-                    `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.blacklistedUntil,
-                    )}`,
-                  );
+                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
                 }
                 return details.join(' ') || null;
               }
@@ -801,7 +907,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: ServicesView.SERVICE_SQL })}
           />

@@ -37,6 +37,8 @@ import { getLink } from '../../links';
 import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
+import { COMPACTION_CONFIG_COMPLETIONS } from './compaction-config-completions';
+
 import './compaction-config-dialog.scss';
 
 export interface CompactionConfigDialogProps {
@@ -82,7 +84,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       {compactionConfigHasLegacyInputSegmentSizeBytesSet(currentConfig) && (
         <Callout className="legacy-callout" intent={Intent.WARNING}>
           <p>
-            You current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
+            Your current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
             <Code>{formatBytesCompact(currentConfig.inputSegmentSizeBytes!)}</Code> it is
             recommended to unset this property.
           </p>
@@ -149,6 +151,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, COMPACTION_CONFIG_FIELDS)}
             height="100%"
+            jsonCompletions={COMPACTION_CONFIG_COMPLETIONS}
           />
         )}
       </div>

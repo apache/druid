@@ -63,9 +63,29 @@ export function arraysEqualByElement<T>(xs: T[], ys: T[]): boolean {
   return xs.length === ys.length && xs.every((x, i) => x === ys[i]);
 }
 
-export function wait(ms: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms);
+export function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('Aborted'));
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      cleanup();
+      reject(new Error('Aborted'));
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', onAbort);
+    };
+
+    signal?.addEventListener('abort', onAbort);
   });
 }
 
@@ -243,13 +263,14 @@ export function groupByAsMap<T, Q>(
   return mapRecord(buckets, aggregateFn);
 }
 
-export function uniq(array: readonly string[]): string[] {
+export function uniq<T>(array: readonly T[], by: (t: T) => string = String): T[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (Object.hasOwn(seen, s)) {
+    const key = by(s);
+    if (Object.hasOwn(seen, key)) {
       return false;
     } else {
-      seen[s] = true;
+      seen[key] = true;
       return true;
     }
   });
@@ -276,7 +297,7 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
 }
 
 export function formatNumberAbbreviated(n: NumberLike): string {
@@ -291,8 +312,8 @@ export function formatRate(n: NumberLike) {
   return numeral(n).format('0,0.0') + '/s';
 }
 
-export function formatBytes(n: NumberLike): string {
-  return numeral(n).format('0.00 b');
+export function formatBytes(n: NumberLike, useBinaryBytes = false): string {
+  return numeral(n).format(useBinaryBytes ? '0.00 ib' : '0.00 b');
 }
 
 export function formatByteRate(n: NumberLike): string {

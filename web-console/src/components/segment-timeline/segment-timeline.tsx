@@ -34,7 +34,6 @@ import { day, Duration, Timezone } from 'chronoshift';
 import { C, L, N, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { useEffect, useMemo, useState } from 'react';
 
-import { END_OF_TIME_DATE, START_OF_TIME_DATE } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import {
@@ -56,6 +55,7 @@ import { SegmentBarChart } from './segment-bar-chart';
 
 import './segment-timeline.scss';
 
+const FOUR_DIGIT_YEAR_LIKE = '____-%';
 const DEFAULT_SHOWN_DURATION = new Duration('P1Y');
 const SHOWN_DURATION_OPTIONS: Duration[] = ['P1D', 'P1W', 'P1M', 'P3M', 'P1Y', 'P5Y', 'P10Y'].map(
   d => new Duration(d),
@@ -97,33 +97,33 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
 
   const [datasourcesState] = useQueryManager<Capabilities, string[]>({
     initQuery: capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         const tables = await queryDruidSql<{ TABLE_NAME: string }>(
           {
             query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE'`,
           },
-          cancelToken,
+          signal,
         );
 
         return tables.map(d => d.TABLE_NAME);
       } else {
-        return await getApiArray(`/druid/coordinator/v1/datasources`, cancelToken);
+        return await getApiArray(`/druid/coordinator/v1/datasources`, signal);
       }
     },
   });
 
   const [initDatasourceDateRangeState] = useQueryManager<string | null, NonNullDateRange>({
     query: dateRange ? undefined : shownDatasource ?? null,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       let queriedStart: Date;
       let queriedEnd: Date;
       if (capabilities.hasSql()) {
         const baseQuery = SqlQuery.from(N('sys').table('segments'))
           .changeWhereExpression(
             SqlExpression.and(
-              C('start').unequal(START_OF_TIME_DATE),
-              C('end').unequal(END_OF_TIME_DATE),
+              C('start').like(FOUR_DIGIT_YEAR_LIKE),
+              C('end').like(FOUR_DIGIT_YEAR_LIKE),
               C('is_overshadowed').equal(0),
               datasource ? C('datasource').equal(L(datasource)) : undefined,
             ),
@@ -134,14 +134,19 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           .addSelect(C('end'), { addToOrderBy: 'end', direction: 'DESC' })
           .toString();
 
-        const endRes = await queryDruidSql<{ end: string }>({ query: endQuery }, cancelToken).catch(
+        const endRes = await queryDruidSql<{ end: string }>({ query: endQuery }, signal).catch(
           () => [],
         );
         if (endRes.length !== 1) {
           return getDateRange(DEFAULT_SHOWN_DURATION);
         }
 
-        queriedEnd = day.ceil(new Date(endRes[0].end), Timezone.UTC);
+        const endResDate = new Date(endRes[0].end); // Need to be protective against a date in the far future
+        if (isNaN(endResDate.valueOf())) {
+          return getDateRange(DEFAULT_SHOWN_DURATION);
+        }
+
+        queriedEnd = day.ceil(endResDate, Timezone.UTC);
 
         const startQuery = baseQuery
           .addSelect(C('start'), { addToOrderBy: 'end', direction: 'ASC' })
@@ -149,7 +154,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
 
         const startRes = await queryDruidSql<{ start: string }>(
           { query: startQuery },
-          cancelToken,
+          signal,
         ).catch(() => []);
         if (startRes.length !== 1) {
           return [DEFAULT_SHOWN_DURATION.shift(queriedEnd, Timezone.UTC, -1), queriedEnd]; // Should not really get here

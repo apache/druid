@@ -18,11 +18,12 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import dayjs from 'dayjs';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { ReactNode } from 'react';
 import React from 'react';
-import type { Filter, SortingRule } from 'react-table';
+import type { SortingRule } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -45,13 +46,10 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
-import { computeSegmentTimeSpan, getDatasourceColor } from '../../druid-models';
+import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
-  booleanCustomTableFilter,
   BooleanFilterInput,
-  parseFilterModeAndNeedle,
-  sqlQueryCustomTableFilter,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
@@ -65,6 +63,7 @@ import {
   filterMap,
   findMap,
   formatBytes,
+  formatDate,
   formatInteger,
   getApiArray,
   hasOverlayOpen,
@@ -80,6 +79,7 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 
 import './segments-view.scss';
 
@@ -155,38 +155,47 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
   return `${C(String(dimension))}=${L(String(value))}`;
 }
 
-function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
+function segmentFiltersToExpression(filters: TableFilters): SqlExpression {
   return SqlExpression.and(
-    ...filterMap(filters, filter => {
-      if (filter.id === 'shard_type') {
+    ...filterMap(filters.toArray(), filter => {
+      if (filter.key === 'start' || filter.key === 'end') {
+        // Dates need to be converted to ISO string for the SQL query
+        if (filter.mode === '~') {
+          return filter.toSqlExpression();
+        }
+        try {
+          const formattedDate = formatDate(filter.value);
+          const filterDate = dayjs(formattedDate).toISOString();
+          const internalFilter = new TableFilter(filter.key, filter.mode, filterDate);
+          return internalFilter.toSqlExpression();
+        } catch {
+          return filter.toSqlExpression();
+        }
+      }
+      if (filter.key === 'shard_type') {
         // Special handling for shard_type that needs to be searched for in the shard_spec
         // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
-        const modeAndNeedle = parseFilterModeAndNeedle(filter);
-        if (!modeAndNeedle) return;
         const shardSpecColumn = C('shard_spec');
-        switch (modeAndNeedle.mode) {
+        switch (filter.mode) {
           case '=':
-            return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
+            return SqlComparison.like(shardSpecColumn, `%"type":"${filter.value}"%`);
 
           case '!=':
-            return SqlComparison.notLike(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
+            return SqlComparison.notLike(shardSpecColumn, `%"type":"${filter.value}"%`);
 
           default:
-            return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
+            return SqlComparison.like(shardSpecColumn, `%"type":"${filter.value}%`);
         }
-      } else if (filter.id.startsWith('is_')) {
-        switch (filter.value) {
-          case '=false':
-            return C(filter.id).equal(0);
-
-          case '=true':
-            return C(filter.id).equal(1);
-
-          default:
-            return;
+      } else if (filter.key.startsWith('is_')) {
+        if (filter.mode === '=' && filter.value === 'false') {
+          return C(filter.key).equal(0);
+        } else if (filter.mode === '=' && filter.value === 'true') {
+          return C(filter.key).equal(1);
+        } else {
+          return;
         }
       } else {
-        return sqlQueryCustomTableFilter(filter);
+        return filter.toSqlExpression();
       }
     }),
   );
@@ -225,8 +234,8 @@ interface SegmentsWithAuxiliaryInfo {
 }
 
 export interface SegmentsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
@@ -299,7 +308,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, signal, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
@@ -373,10 +382,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          let result = await queryDruidSql(
-            { query: sqlQuery, context: sqlQueryContext },
-            cancelToken,
-          );
+          let result = await queryDruidSql({ query: sqlQuery, context: sqlQueryContext }, signal);
 
           if (visibleColumns.shown('Shard type', 'Shard spec')) {
             result = result.map(sr => ({
@@ -387,7 +393,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
           segments = result as SegmentQueryResultRow[];
 
-          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, signal) => {
             const sqlQuery = assemble(
               'SELECT COUNT(*) AS "cnt"',
               'FROM "sys"."segments"',
@@ -398,7 +404,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 {
                   query: sqlQuery,
                 },
-                cancelToken,
+                signal,
               )
             )[0].cnt;
             return {
@@ -408,13 +414,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           });
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = [];
-          const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
+          const datasourceFilter = filtered.toArray().find(({ key }) => key === 'datasource');
           if (datasourceFilter) {
             datasourceList = (
-              await getApiArray('/druid/coordinator/v1/metadata/datasources', cancelToken)
-            ).filter((datasource: string) =>
-              booleanCustomTableFilter(datasourceFilter, datasource),
-            );
+              await getApiArray('/druid/coordinator/v1/metadata/datasources', signal)
+            ).filter((datasource: string) => datasourceFilter.matches(datasource));
           }
 
           let results = (
@@ -422,7 +426,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments${datasourceList
                 .map(d => `&datasources=${Api.encodePath(d)}`)
                 .join('')}`,
-              cancelToken,
+              signal,
             )
           ).map((segment: any) => {
             const [start, end] = segment.interval.split('/');
@@ -448,13 +452,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             };
           });
 
-          if (filtered.length) {
+          if (filtered.toArray().length) {
             results = results.filter((d: SegmentQueryResultRow) => {
-              return filtered.every(filter => {
-                return booleanCustomTableFilter(
-                  filter,
-                  d[filter.id as keyof SegmentQueryResultRow],
-                );
+              return filtered.toArray().every(filter => {
+                return filter.matches(d[filter.key as keyof SegmentQueryResultRow]);
               });
             });
           }
@@ -534,7 +535,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
-  private readonly handleFilterChange = (filters: Filter[]) => {
+  private readonly handleFilterChange = (filters: TableFilters) => {
     this.goToFirstPage();
     this.props.onFiltersChange(filters);
   };
@@ -546,13 +547,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   private getSegmentActions(id: string, datasource: string): BasicAction[] {
+    const { capabilities } = this.props;
     const actions: BasicAction[] = [];
-    actions.push({
-      icon: IconNames.IMPORT,
-      title: 'Drop segment (disable)',
-      intent: Intent.DANGER,
-      onAction: () => this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
-    });
+
+    if (capabilities.hasOverlordAccess()) {
+      actions.push({
+        icon: IconNames.IMPORT,
+        title: 'Drop segment (disable)',
+        intent: Intent.DANGER,
+        onAction: () =>
+          this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
+      });
+    }
+
     return actions;
   }
 
@@ -567,7 +574,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   private renderFilterableCell(
     field: string,
     enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
+    displayFn: (value: string) => ReactNode = String,
+    filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters } = this.props;
     const { handleFilterChange } = this;
@@ -580,8 +588,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           filters={filters}
           onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
         >
-          {valueFn(row.value)}
+          {displayFn(row.value)}
         </TableFilterableCell>
       );
     };
@@ -615,9 +624,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     // Only allow filtering of columns other than datasource if in SQL mode, or if we are filtering on an exact datasource
     const allowGeneralFilter =
       hasSql ||
-      filters.some(
-        filter => filter.id === 'datasource' && parseFilterModeAndNeedle(filter)?.mode === '=',
-      );
+      filters.toArray().some(filter => filter.key === 'datasource' && filter.mode === '=');
 
     return (
       <ReactTable
@@ -626,13 +633,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         loading={segmentsState.loading}
         noDataText={
           segmentsState.isEmpty()
-            ? `No segments${filters.length ? ' matching filter' : ''}`
+            ? `No segments${filters.toArray().length ? ' matching filter' : ''}`
             : segmentsState.getErrorMessage() || ''
         }
         manual
         filterable
-        filtered={filters}
-        onFilteredChange={this.handleFilterChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => this.handleFilterChange(TableFilters.fromFilters(filters))}
         sorted={sorted}
         onSortedChange={sorted => this.setState({ sorted })}
         page={page}
@@ -692,20 +699,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Start'),
             accessor: 'start',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('start', true),
+            Cell: this.renderFilterableCell('start', true, formatDate, formatDate),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('end', true),
+            Cell: this.renderFilterableCell('end', true, formatDate, formatDate),
           },
           {
             Header: 'Version',
@@ -721,7 +728,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Time span'),
             id: 'time_span',
             className: 'padded',
-            accessor: ({ start, end }) => computeSegmentTimeSpan(start, end),
+            accessor: ({ start, end }) => {
+              try {
+                return computeSegmentTimeSpan(dayjs(start).toISOString(), dayjs(end).toISOString());
+              } catch {
+                return 'Invalid start or end';
+              }
+            },
             width: 100,
             sortable: false,
             filterable: false,
@@ -1017,7 +1030,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               terminateDatasourceId,
             )}/segments/${Api.encodePath(terminateSegmentId)}`,
             {},
@@ -1025,7 +1038,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           return resp.data;
         }}
         confirmButtonText="Drop segment"
-        successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+        successText="Segment drop request acknowledged, next time the overlord runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
         onClose={() => {
@@ -1051,7 +1064,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             disabled={typeof lastSegmentsQuery !== 'string'}
             onClick={() => {
@@ -1112,9 +1125,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                   ? undefined
                   : {
                       capabilities,
-                      datasource: findMap(filters, filter =>
-                        filter.id === 'datasource' && /^=[^=|]+$/.exec(String(filter.value))
-                          ? filter.value.slice(1)
+                      datasource: findMap(filters.toArray(), filter =>
+                        filter.key === 'datasource' && filter.mode === '='
+                          ? filter.value
                           : undefined,
                       ),
                     },
@@ -1152,21 +1165,33 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               getIntervalActionButton={(start, end, datasource, realtime) => {
                 return (
                   <Button
-                    text="Apply fitler to table"
+                    text="Apply filter to table"
                     small
                     rightIcon={IconNames.ARROW_DOWN}
-                    onClick={() =>
-                      this.handleFilterChange(
-                        compact([
-                          start && { id: 'start', value: `>=${start.toISOString()}` },
-                          end && { id: 'end', value: `<${end.toISOString()}` },
-                          datasource && { id: 'datasource', value: `=${datasource}` },
-                          typeof realtime === 'boolean'
-                            ? { id: 'is_realtime', value: `=${realtime}` }
-                            : undefined,
-                        ]),
-                      )
-                    }
+                    onClick={() => {
+                      let filters = TableFilters.empty();
+                      if (start) {
+                        filters = filters.addOrUpdate(
+                          new TableFilter('start', '>=', start.toISOString()),
+                        );
+                      }
+                      if (end) {
+                        filters = filters.addOrUpdate(
+                          new TableFilter('end', '<', end.toISOString()),
+                        );
+                      }
+                      if (datasource) {
+                        filters = filters.addOrUpdate(
+                          new TableFilter('datasource', '=', datasource),
+                        );
+                      }
+                      if (typeof realtime === 'boolean') {
+                        filters = filters.addOrUpdate(
+                          new TableFilter('is_realtime', '=', String(realtime)),
+                        );
+                      }
+                      this.handleFilterChange(filters);
+                    }}
                   />
                 );
               }}

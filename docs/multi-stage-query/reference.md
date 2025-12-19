@@ -23,12 +23,6 @@ sidebar_label: Reference
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
 ## SQL reference
 
 This topic is a reference guide for the multi-stage query architecture in Apache Druid. For examples of real-world
@@ -111,14 +105,16 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- Partitioning (PARTITIONED BY) and clustering (CLUSTERED BY) aren't supported with EXTERN statements.
 - You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
 When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
+The following statement shows the format of a SQL query using EXTERN to export rows:
 
 ```sql
+SET rowsPerPage=<number_of_rows>;
 INSERT INTO
   EXTERN(<destination function>)
 AS CSV
@@ -126,6 +122,9 @@ SELECT
   <column>
 FROM <table>
 ```
+
+For details on applying context parameters using SET, see [SET](../querying/sql.md#set).
+
 
 ##### S3 - Amazon S3
 
@@ -381,21 +380,11 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it.
+The multi-stage query task engine supports the [SQL context parameters](../querying/sql-query-context.md), as well as its own context parameters described in this section. Use these parameters to tailor how Druid executes your query.
 
-Use context parameters alongside your queries to customize the behavior of the query. If you're using the API, include the context parameters in the query context when you submit a query:
+You can specify the context parameters in SELECT, INSERT, or REPLACE statements.
 
-```json
-{
-  "query": "SELECT 1 + 1",
-  "context": {
-    "<key>": "<value>",
-    "maxNumTasks": 3
-  }
-}
-```
-
-If you're using the web console, you can specify the context parameters through various UI options.
+For detailed instructions on configuring query context parameters, refer to [Set query context](../querying/query-context.md).
 
 The following table lists the context parameters for the MSQ task engine:
 
@@ -406,9 +395,10 @@ The following table lists the context parameters for the MSQ task engine:
 | `finalizeAggregations` | SELECT, INSERT, REPLACE<br /><br />Determines the type of aggregation to return. If true, Druid finalizes the results of complex aggregations that directly appear in query results. If false, Druid returns the aggregation's intermediate type rather than finalized type. This parameter is useful during ingestion, where it enables storing sketches directly in Druid tables. For more information about aggregations, see [SQL aggregation functions](../querying/sql-aggregations.md). | `true` |
 | `arrayIngestMode` | INSERT, REPLACE<br /><br /> Controls how ARRAY type values are stored in Druid segments. When set to `array` (recommended for SQL compliance), Druid will store all ARRAY typed values in [ARRAY typed columns](../querying/arrays.md), and supports storing both VARCHAR and numeric typed arrays. When set to `mvd` (the default, for backwards compatibility), Druid only supports VARCHAR typed arrays, and will store them as [multi-value string columns](../querying/multi-value-dimensions.md). See [`arrayIngestMode`] in the [Arrays](../querying/arrays.md) page for more details. | `mvd` (for backwards compatibility, recommended to use `array` for SQL compliance)|
 | `sqlJoinAlgorithm` | SELECT, INSERT, REPLACE<br /><br />Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
-| `rowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
+| `maxRowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
+| `rowsInMemory` | INSERT or REPLACE<br /><br />Alternate spelling of `maxRowsInMemory`. Ignored if `maxRowsInMemory` is set. | 100,000 |
 | `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid uses the order from this context parameter instead. Provide the column list as comma-separated values or as a JSON array in string form.<br />< br/>For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
-| `forceSegmentSortByTime` | INSERT or REPLACE<br /><br />When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments. Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`. Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details. | `true` |
+| `forceSegmentSortByTime` | INSERT or REPLACE<br /><br />When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments. Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`. Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details. | `true` |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1. | 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
@@ -422,6 +412,11 @@ The following table lists the context parameters for the MSQ task engine:
 | `failOnEmptyInsert` | INSERT or REPLACE<br /><br /> When set to false (the default), an INSERT query generating no output rows will be no-op, and a REPLACE query generating no output rows will delete all data that matches the OVERWRITE clause.  When set to true, an ingest query generating no output rows will throw an `InsertCannotBeEmpty` fault. | `false` |
 | `storeCompactionState` | REPLACE<br /><br /> When set to true, a REPLACE query stores as part of each segment's metadata a `lastCompactionState` field that captures the various specs used to create the segment. Future compaction jobs skip segments whose `lastCompactionState` matches the desired compaction state. Works the same as [`storeCompactionState`](../ingestion/tasks.md#context-parameters) task context flag. | `false` |
 | `removeNullBytes` | SELECT, INSERT or REPLACE<br /><br /> The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
+| `includeAllCounters` | SELECT, INSERT or REPLACE<br /><br />Whether to include counters that were added in Druid 31 or later. This is a backwards compatibility option that must be set to `false` during a rolling update from versions prior to Druid 31. | `true` |
+| `maxFrameSize` | SELECT, INSERT or REPLACE<br /><br />Size of frames used for data transfer within the MSQ engine. You generally do not need to change this unless you have very large rows. | `1000000` (1 MB) |
+| `maxInputFilesPerWorker` | SELECT, INSERT, REPLACE<br /><br />Maximum number of input files or segments per worker. If a single worker would need to read more than this number of files, the query fails with a `TooManyInputFiles` error. In this case, you should either increase this limit if your tasks have enough memory to handle more files, add more workers by increasing `maxNumTasks`, or split your query into smaller queries that process fewer files. | 10,000 |
+| `maxPartitions` | SELECT, INSERT, REPLACE<br /><br />Maximum number of output partitions for any single stage. For INSERT or REPLACE queries, this controls the maximum number of segments that can be generated. If the query would exceed this limit, it fails with a `TooManyPartitions` error. You can increase this limit if needed, break your query into smaller queries, or use a larger target segment size (via `rowsPerSegment`). | 25,000 |
+| `maxThreads` | SELECT, INSERT or REPLACE<br /><br />Maximum number of threads to use for processing. This only has an effect if it is greater than zero and less than the default thread count based on system configuration. Otherwise, it is ignored, and workers use the default thread count. | Not set (use default thread count) |
 
 ## Joins
 
@@ -501,10 +496,15 @@ When using the sort-merge algorithm, keep the following in mind:
 
 - All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
 
-The following example  runs using a single sort-merge join stage that receives `eventstream`
-(partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
+The following query runs a single sort-merge join stage that takes the following inputs:
+* `eventstream` partitioned on `user_id`
+* `users` partitioned on `id`
+
+There is no limit on the size of either input.
+The SET command assigns the `sqlJoinAlgorithm` context parameter so that Druid uses the sort-merge join algorithm for the query.
 
 ```sql
+SET sqlJoinAlgorithm='sortMerge';
 REPLACE INTO eventstream_enriched
 OVERWRITE ALL
 SELECT
@@ -519,8 +519,6 @@ PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
 
-The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
-
 ## Durable storage
 
 SQL-based ingestion supports using durable storage to store intermediate files temporarily. Enabling it can improve reliability. For more information, see [Durable storage](../operations/durable-storage.md).
@@ -533,7 +531,7 @@ There are common configurations that control the behavior regardless of which st
 Common properties to configure the behavior of durable storage
 
 |Parameter          | Required | Description          | Default | 
-|--|--|--|
+|--|--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
 |`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data. If the property is not configured on the indexer or middle manager, it defaults to using the task temporary directory. | n/a |
@@ -575,10 +573,10 @@ The following table lists query limits:
 
 | Limit | Value | Error if exceeded |
 |---|---|---|
-| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | `RowTooLarge` |
+| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. Configurable with [`maxFrameSize`](#context). | 1 MB | `RowTooLarge` |
 | Number of segment-granular time chunks encountered during ingestion. | 5,000 | `TooManyBuckets`|
-| Number of input files/segments per worker. | 10,000 | `TooManyInputFiles`|
-| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | `TooManyPartitions`|
+| Number of input files/segments per worker. Configurable with [`maxInputFilesPerWorker`](#context). | 10,000 | `TooManyInputFiles`|
+| Number of output partitions for any one stage. Number of segments generated during ingestion. Configurable with [`maxPartitions`](#context). | 25,000 | `TooManyPartitions`|
 | Number of output columns for any one stage. | 2,000 | `TooManyColumns`|
 | Number of cluster by columns that can appear in a stage | 1,500 | `TooManyClusteredByColumns` |
 | Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | `TooManyWorkers`|

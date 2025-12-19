@@ -79,11 +79,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new StringDimensionSchema("bool_string"),
             new LongDimensionSchema("bool_long"),
-            new AutoTypeColumnSchema("bool_auto", null),
-            new AutoTypeColumnSchema("array_string", ColumnType.STRING_ARRAY),
-            new AutoTypeColumnSchema("array_double", ColumnType.DOUBLE_ARRAY),
-            new AutoTypeColumnSchema("array_long", ColumnType.LONG_ARRAY),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("bool_auto"),
+            new AutoTypeColumnSchema("array_string", ColumnType.STRING_ARRAY, null),
+            new AutoTypeColumnSchema("array_double", ColumnType.DOUBLE_ARRAY, null),
+            new AutoTypeColumnSchema("array_long", ColumnType.LONG_ARRAY, null),
+            AutoTypeColumnSchema.of("nested")
         )
     );
     AggregatorFactory[] metrics = {
@@ -114,7 +114,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateDimensions() throws IndexSizeExceededException
+  public void testDuplicateDimensions()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -134,7 +134,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
+  public void testDuplicateDimensionsFirstOccurrence()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -147,7 +147,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void controlTest() throws IndexSizeExceededException
+  public void controlTest()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -174,7 +174,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnparseableNumerics() throws IndexSizeExceededException
+  public void testUnparseableNumerics()
   {
     IncrementalIndex index = indexCreator.createIndex();
 
@@ -247,7 +247,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMultiValuedNumericDimensions() throws IndexSizeExceededException
+  public void testMultiValuedNumericDimensions()
   {
     IncrementalIndex index = indexCreator.createIndex();
 
@@ -320,7 +320,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void sameRow() throws IndexSizeExceededException
+  public void sameRow()
   {
     MapBasedInputRow row = new MapBasedInputRow(
         System.currentTimeMillis() - 1,
@@ -336,7 +336,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testTypeHandling() throws IndexSizeExceededException
+  public void testTypeHandling()
   {
     IncrementalIndex index = indexCreator.createIndex();
 

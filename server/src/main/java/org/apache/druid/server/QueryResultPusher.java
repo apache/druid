@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
@@ -38,7 +39,6 @@ import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 
 import javax.annotation.Nullable;
@@ -51,6 +51,7 @@ import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class QueryResultPusher
@@ -66,7 +67,8 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
-  private final HttpFields trailerFields;
+  private final Map<String, Object> queryContext;
+  private final Map<String, String> trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
@@ -80,7 +82,8 @@ public abstract class QueryResultPusher
       QueryResource.QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
-      Map<String, String> extraHeaders
+      Map<String, String> extraHeaders,
+      Map<String, Object> queryContext
   )
   {
     this.request = request;
@@ -91,7 +94,8 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
-    this.trailerFields = new HttpFields();
+    this.queryContext = queryContext;
+    this.trailerFields = new HashMap<>();
   }
 
   /**
@@ -150,16 +154,11 @@ public abstract class QueryResultPusher
         response.setHeader(entry.getKey(), entry.getValue());
       }
 
-      if (response instanceof org.eclipse.jetty.server.Response) {
-        org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+      response.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+      response.setTrailerFields(() -> trailerFields);
 
-        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
-        jettyResponse.setTrailers(() -> trailerFields);
-
-        // Start with complete status
-
-        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
-      }
+      // Start with complete status
+      trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
 
@@ -255,14 +254,29 @@ public abstract class QueryResultPusher
     incrementQueryCounterForException(e);
 
     if (resultsWriter != null) {
-      resultsWriter.recordFailure(e);
+      final long bytesWritten = accumulator != null ? accumulator.getNumBytesSent() : 0;
+      resultsWriter.recordFailure(e, bytesWritten);
 
       if (accumulator != null && accumulator.isInitialized()) {
-        // We already started sending a response when we got the error message.  In this case we just give up
-        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
-        // also throwing the exception body into the response to make it easier for the client to choke if it manages
-        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
-        // the future.
+        // We already started sending a response when we got the error message.  In this case we write the exception
+        // message as a row, assuming the caller (SqlResource, QueryResource or a custom endpoint) would be able to
+        // parse it and throw an exception on their side. It's assumed that if the caller is setting the
+        // WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW context value, they are able to handle this kind of response. If it's
+        // not set, caller will continue to see a json parsing exception.
+        if (queryContext != null
+            && Boolean.parseBoolean(String.valueOf(queryContext.get(QueryResource.WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW)))) {
+          try {
+            accumulator.writer.writeRow(e);
+            accumulator.writer.writeResponseEnd();
+          }
+          catch (IOException ioException) {
+            log.warn(
+                ioException,
+                "Suppressing IOException thrown writing error response for query [%s]",
+                queryId
+            );
+          }
+        }
         trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
         trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
         return null;
@@ -270,17 +284,14 @@ public abstract class QueryResultPusher
     }
 
     if (response == null) {
-      final Response.ResponseBuilder bob = Response
-          .status(e.getStatusCode())
-          .type(contentType)
-          .entity(new ErrorResponse(e));
-
-      bob.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
-      for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
-        bob.header(entry.getKey(), entry.getValue());
-      }
-
-      return bob.build();
+      return handleDruidExceptionBeforeResponseStarted(
+          e,
+          contentType,
+          ImmutableMap.<String, String>builder()
+                      .putAll(extraHeaders)
+                      .put(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId)
+                      .build()
+      );
     } else {
       if (response.isCommitted()) {
         QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
@@ -300,6 +311,27 @@ public abstract class QueryResultPusher
       }
       return null;
     }
+  }
+
+  /**
+   * Generates a response for a {@link DruidException} that occurs prior to any query results being sent out.
+   */
+  public static Response handleDruidExceptionBeforeResponseStarted(
+      final DruidException e,
+      final MediaType contentType,
+      final Map<String, String> extraHeaders
+  )
+  {
+    final Response.ResponseBuilder bob = Response
+        .status(e.getStatusCode())
+        .type(contentType)
+        .entity(new ErrorResponse(e));
+
+    for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
+      bob.header(entry.getKey(), entry.getValue());
+    }
+
+    return bob.build();
   }
 
   public interface ResultsWriter extends Closeable
@@ -330,7 +362,7 @@ public abstract class QueryResultPusher
 
     void recordSuccess(long numBytes);
 
-    void recordFailure(Exception e);
+    void recordFailure(Exception e, long bytesWritten);
   }
 
   public interface Writer extends Closeable
@@ -408,10 +440,7 @@ public abstract class QueryResultPusher
 
         response.setContentType(contentType.toString());
 
-        if (response instanceof org.eclipse.jetty.server.Response) {
-          org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
-          jettyResponse.setTrailers(() -> trailerFields);
-        }
+        response.setTrailerFields(() -> trailerFields);
 
         try {
           out = new CountingOutputStream(response.getOutputStream());

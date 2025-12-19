@@ -204,7 +204,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           return new ArrayContainsElementFilter(
               leftExpr.getSimpleExtraction().getColumn(),
               ExpressionType.toColumnType(exprEval.type()),
-              exprEval.valueOrDefault(),
+              exprEval.value(),
               null
           );
         }

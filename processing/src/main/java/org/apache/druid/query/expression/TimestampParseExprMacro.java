@@ -78,7 +78,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       {
         final String value = arg.eval(bindings).asString();
         if (value == null) {
-          return ExprEval.of(null);
+          return ExprEval.ofLong(null);
         }
 
         try {
@@ -87,7 +87,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps
           // are returned as nulls.
-          return ExprEval.of(null);
+          return ExprEval.ofLong(null);
         }
       }
 

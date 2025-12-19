@@ -38,6 +38,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
@@ -49,7 +50,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -94,17 +95,17 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    return createIntermediateResultsPool(config);
+    return createIntermediateResultsPool(config, runtimeInfo);
   }
 
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    return createMergeBufferPool(config);
+    return createMergeBufferPool(config, runtimeInfo);
   }
 
   @Provides
@@ -157,13 +158,17 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
+        config.getNumTimeoutThreads() > 0 ? ScheduledExecutors.fixed(config.getNumTimeoutThreads(), "PrioritizedExecutorService-Timeout-%d") : null,
         executorServiceMonitor
     );
   }
 
-  public static NonBlockingPool<ByteBuffer> createIntermediateResultsPool(final DruidProcessingConfig config)
+  public static NonBlockingPool<ByteBuffer> createIntermediateResultsPool(
+      final DruidProcessingConfig config,
+      final RuntimeInfo runtimeInfo
+  )
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
@@ -172,19 +177,22 @@ public class DruidProcessingModule implements Module
     );
   }
 
-  public static BlockingPool<ByteBuffer> createMergeBufferPool(final DruidProcessingConfig config)
+  public static BlockingPool<ByteBuffer> createMergeBufferPool(
+      final DruidProcessingConfig config,
+      final RuntimeInfo runtimeInfo
+  )
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
     );
   }
 
-  private static void verifyDirectMemory(DruidProcessingConfig config)
+  private static void verifyDirectMemory(final DruidProcessingConfig config, final RuntimeInfo runtimeInfo)
   {
     try {
-      final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      final long maxDirectMemory = runtimeInfo.getDirectMemorySizeBytes();
       final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
                                 (config.getNumMergeBuffers() + config.getNumThreads() + 1);
 

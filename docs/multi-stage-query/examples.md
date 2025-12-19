@@ -23,16 +23,13 @@ sidebar_label: Examples
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
+
+This page describes SQL-based batch ingestion using the [multi-stage query task engine](../multi-stage-query/index.md) (MSQ task engine). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 These example queries show you some of the things you can do when modifying queries for your use case. Copy the example queries into the **Query** view of the web console and run them to see what they do.
 
 :::tip
-When you insert or replace data with SQL-based ingestion, set the context parameter `finalizeAggregations` to `false`. This context parameter is automatically set for you if you use the Druid console. If you use the API, you must explicitly set it. For more information, see [Rollup](./concepts.md#rollup).
+When you insert or replace data with SQL-based ingestion, set the context parameter `finalizeAggregations` to `false`. This context parameter is automatically set for you if you use the Druid console. If you use the API, you must explicitly set it. For an example, see [SQL-based ingestion API](../api-reference/sql-ingestion-api#sample-request). For details on aggregations, see [Rollup](./concepts.md#rollup).
 :::
 
 ## INSERT with no rollup

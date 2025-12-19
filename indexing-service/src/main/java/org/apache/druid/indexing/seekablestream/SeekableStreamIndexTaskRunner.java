@@ -59,7 +59,6 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -146,6 +145,9 @@ import java.util.stream.Collectors;
 public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
     implements ChatHandler
 {
+  public static final String AUTOSCALER_METRICS_KEY = "autoscalerMetrics";
+  public static final String POLL_IDLE_RATIO_KEY = "pollIdleRatio";
+
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   public enum Status
@@ -239,6 +241,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
+  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
 
   protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
@@ -275,7 +278,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
     rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
 
-    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
+    // Schedule refresh of min and max message time only if the period is valid.
+    // The refreshRejectionPeriodsInMinutes is zero when taskDuration < 1 minute,
+    // but this can happen only in embedded tests, never in production.
+    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null
+        && ioConfig.getRefreshRejectionPeriodsInMinutes() > 0) {
       rejectionPeriodUpdaterExec.scheduleWithFixedDelay(this::refreshMinMaxMessageTime,
                                                         ioConfig.getRefreshRejectionPeriodsInMinutes(),
                                                         ioConfig.getRefreshRejectionPeriodsInMinutes(),
@@ -310,6 +317,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     } else {
       return isEndOffsetExclusive() ? Collections.emptySet() : sequenceStartOffsets.keySet();
     }
+  }
+
+  /**
+   * Returns the supervisorId for the task this runner is executing.
+   * Backwards compatibility: if task spec from metadata has a null supervisorId field, falls back to dataSource
+   */
+  public String getSupervisorId()
+  {
+    return task.getSupervisorId();
   }
 
   @VisibleForTesting
@@ -418,7 +434,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Set up SegmentGenerationMetrics
     this.segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(task, segmentGenerationMetrics, rowIngestionMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, task.getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(CTX_KEY_LOOKUP_TIER);
@@ -442,6 +458,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
+      this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -781,7 +798,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             requestPause();
             final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
-                task.getDataSource(),
+                getSupervisorId(),
                 ioConfig.getTaskGroupId(),
                 null,
                 createDataSourceMetadata(
@@ -801,7 +818,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       catch (Exception e) {
         // (1) catch all exceptions while reading from kafka
         caughtExceptionInner = e;
-        log.error(e, "Encountered exception in run() before persisting.");
+        if (Throwables.getRootCause(e) instanceof InterruptedException) {
+          // Suppress InterruptedException stack trace to avoid flooding the logs
+          log.error("Encounted InterrupedException in run() before persisting");
+        } else {
+          log.error(e, "Encountered exception in run() before persisting.");
+        }
         throw e;
       }
       finally {
@@ -1191,7 +1213,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return metrics;
   }
 
-
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
@@ -1418,6 +1439,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         .getTaskActionClient()
         .submit(
             new ResetDataSourceMetadataAction(
+                getSupervisorId(),
                 task.getDataSource(),
                 createDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(
@@ -1644,6 +1666,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+    }
     return returnMap;
   }
 
@@ -2112,11 +2137,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
     maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
 
-    log.info(StringUtils.format(
-        "Updated min and max messsage times to %s and %s respectively.",
+    log.info(
+        "Updated min and max messsage times to [%s] and [%s] respectively.",
         minMessageTime,
         maxMessageTime
-    ));
+    );
   }
 
   public boolean withinMinMaxRecordTime(final InputRow row)

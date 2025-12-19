@@ -18,7 +18,6 @@
 
 import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import type { QueryResult, RegexpFilterPattern, SqlQuery } from 'druid-query-toolkit';
 import { C, F, filterPatternToExpression, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo } from 'react';
@@ -43,7 +42,7 @@ export interface RegexpFilterControlProps {
   filter: SqlExpression;
   filterPattern: RegexpFilterPattern;
   setFilterPattern(filterPattern: RegexpFilterPattern): void;
-  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, signal?: AbortSignal): Promise<QueryResult>;
 }
 
 export const RegexpFilterControl = React.memo(function RegexpFilterControl(
@@ -74,8 +73,8 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
     query: previewQuery,
     debounceIdle: 100,
     debounceLoading: 500,
-    processQuery: async (query, cancelToken) => {
-      const vs = await runSqlQuery(query, cancelToken);
+    processQuery: async (query, signal) => {
+      const vs = await runSqlQuery(query, signal);
       return (vs.getColumnByName('c') || []).map(String);
     },
   });

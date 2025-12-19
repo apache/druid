@@ -138,7 +138,7 @@ public class TaskQueueScaleTest
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
-        new TaskLockbox(taskStorage, storageCoordinator),
+        new GlobalTaskLockbox(taskStorage, storageCoordinator),
         new NoopServiceEmitter(),
         jsonMapper,
         new NoopTaskContextEnricher()

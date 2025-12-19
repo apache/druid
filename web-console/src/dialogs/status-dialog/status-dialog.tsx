@@ -18,13 +18,13 @@
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import React, { useState } from 'react';
-import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import { Loader, TableFilterableCell } from '../../components';
 import { useQueryManager } from '../../hooks';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, UrlBaser } from '../../singletons';
+import { TableFilters } from '../../utils/table-filters';
 
 import './status-dialog.scss';
 
@@ -45,12 +45,12 @@ interface StatusDialogProps {
 
 export const StatusDialog = React.memo(function StatusDialog(props: StatusDialogProps) {
   const { onClose } = props;
-  const [moduleFilter, setModuleFilter] = useState<Filter[]>([]);
+  const [moduleFilter, setModuleFilter] = useState<TableFilters>(TableFilters.empty());
 
   const [responseState] = useQueryManager<null, StatusResponse>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      return (await Api.instance.get(`/status`, { cancelToken })).data;
+    processQuery: async (_, signal) => {
+      return (await Api.instance.get(`/status`, { signal })).data;
     },
   });
 
@@ -86,8 +86,8 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
           data={response.modules}
           loading={responseState.loading}
           filterable
-          filtered={moduleFilter}
-          onFilteredChange={setModuleFilter}
+          filtered={moduleFilter.toFilters()}
+          onFilteredChange={filters => setModuleFilter(TableFilters.fromFilters(filters))}
           defaultPageSize={SMALL_TABLE_PAGE_SIZE}
           pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
           showPagination={response.modules.length > SMALL_TABLE_PAGE_SIZE}

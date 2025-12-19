@@ -236,6 +236,11 @@ Servers table lists all discovered servers in the cluster.
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
+|version|VARCHAR|Druid version running on the server|
+|labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
+|available_processors|BIGINT|Total number of CPU processors available to the server|
+|total_memory|BIGINT|Total memory in bytes available to the server|
+
 To retrieve information about all servers, use the query:
 
 ```sql
@@ -299,6 +304,7 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|VARCHAR|Supervisor task identifier|
+|datasource|VARCHAR|Datasource the supervisor operates on|
 |state|VARCHAR|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md) for more information.|
 |detailed_state|VARCHAR|Supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md).|
 |healthy|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
@@ -311,4 +317,22 @@ For example, to retrieve supervisor tasks information filtered by health status,
 
 ```sql
 SELECT * FROM sys.supervisors WHERE healthy=0;
+```
+
+### SERVER_PROPERTIES table
+
+The `server_properties` table exposes the runtime properties configured on for each Druid server. Each row represents a single property key-value pair associated with a specific server.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|server|VARCHAR|Host and port of the server, in the form `host:port`|
+|service_name|VARCHAR|Service name of the server, as defined by `druid.service`|
+|node_roles|VARCHAR|Comma-separated list of roles that the server performs. For example, `[coordinator,overlord]` if the server functions as both a Coordinator and an Overlord.|
+|property|VARCHAR|Name of the property|
+|value|VARCHAR|Value of the property|
+
+For example, to retrieve properties for a specific server, use the query
+
+```sql
+SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```

@@ -22,7 +22,7 @@ import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
 import type { JSX } from 'react';
 import React, { createContext, useContext } from 'react';
-import type { Column, Filter, SortingRule } from 'react-table';
+import type { Column, SortingRule } from 'react-table';
 import ReactTable from 'react-table';
 
 import type { TableColumnSelectorColumn } from '../../components';
@@ -47,6 +47,7 @@ import {
   TaskGroupHandoffDialog,
 } from '../../dialogs';
 import type {
+  ConsoleViewId,
   IngestionSpec,
   QueryWithContext,
   RowStatsKey,
@@ -54,12 +55,11 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import { getTotalSupervisorStats } from '../../druid-models';
+import { getConsoleViewIcon, getTotalSupervisorStats } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
-  sqlQueryCustomTableFilters,
   suggestibleFilterInput,
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -90,11 +90,13 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilters } from '../../utils/table-filters';
 
 import './supervisors-view.scss';
 
 const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Supervisor ID',
+  'Datasource',
   'Type',
   'Topic/Stream',
   'Status',
@@ -124,6 +126,7 @@ interface SupervisorQuery extends TableState {
 
 interface SupervisorQueryResultRow {
   readonly supervisor_id: string;
+  readonly datasource: string;
   readonly type: string;
   readonly source: string;
   readonly detailed_state: string;
@@ -174,13 +177,12 @@ function HeaderStatsKeySelector({ changeStatsKey }: HeaderStatsKeySelectorProps)
 }
 
 export interface SupervisorsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openSupervisorDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToStreamingDataLoader(supervisorId: string): void;
-  goToTasks(supervisorId: string, type: string | undefined): void;
   capabilities: Capabilities;
 }
 
@@ -279,14 +281,14 @@ export class SupervisorsView extends React.PureComponent<
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (
         { capabilities, visibleColumns, filtered, sorted, page, pageSize },
-        cancelToken,
+        signal,
         setIntermediateQuery,
       ) => {
         let supervisors: SupervisorQueryResultRow[];
         let count = -1;
         const auxiliaryQueries: AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo>[] = [];
         if (capabilities.hasSql()) {
-          const whereExpression = sqlQueryCustomTableFilters(filtered);
+          const whereExpression = filtered.toSqlExpression();
 
           let filterClause = '';
           if (whereExpression.toString() !== 'TRUE') {
@@ -296,6 +298,7 @@ export class SupervisorsView extends React.PureComponent<
           const sqlQuery = assemble(
             'WITH s AS (SELECT',
             '  "supervisor_id",',
+            '  "datasource",',
             '  "type",',
             '  "source",',
             `  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",`,
@@ -315,7 +318,7 @@ export class SupervisorsView extends React.PureComponent<
               {
                 query: sqlQuery,
               },
-              cancelToken,
+              signal,
             )
           ).map(supervisor => {
             const spec: any = supervisor.spec;
@@ -323,7 +326,7 @@ export class SupervisorsView extends React.PureComponent<
             return { ...supervisor, spec: JSONBig.parse(spec) };
           });
 
-          auxiliaryQueries.push(async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (supervisorsWithAuxiliaryInfo, signal) => {
             const sqlQuery = assemble(
               'SELECT COUNT(*) AS "cnt"',
               'FROM "sys"."supervisors"',
@@ -334,7 +337,7 @@ export class SupervisorsView extends React.PureComponent<
                 {
                   query: sqlQuery,
                 },
-                cancelToken,
+                signal,
               )
             )[0].cnt;
             return {
@@ -343,10 +346,11 @@ export class SupervisorsView extends React.PureComponent<
             };
           });
         } else if (capabilities.hasOverlordAccess()) {
-          supervisors = (await getApiArray('/druid/indexer/v1/supervisor?full', cancelToken)).map(
+          supervisors = (await getApiArray('/druid/indexer/v1/supervisor?full', signal)).map(
             (sup: any) => {
               return {
                 supervisor_id: deepGet(sup, 'id'),
+                datasource: deepGet(sup, 'dataSource'),
                 type: deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
@@ -380,13 +384,13 @@ export class SupervisorsView extends React.PureComponent<
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
-                  async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+                  async (supervisorsWithAuxiliaryInfo, signal) => {
                     const status = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
                         )}/status`,
-                        { cancelToken, timeout: STATUS_API_TIMEOUT },
+                        { signal, timeout: STATUS_API_TIMEOUT },
                       )
                     ).data;
                     return {
@@ -407,13 +411,13 @@ export class SupervisorsView extends React.PureComponent<
                 supervisors,
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> | undefined => {
                   if (oneOf(supervisor.type, 'autocompact', 'scheduled_batch')) return; // These supervisors do not report stats
-                  return async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+                  return async (supervisorsWithAuxiliaryInfo, signal) => {
                     const stats = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
                         )}/stats`,
-                        { cancelToken, timeout: STATS_API_TIMEOUT },
+                        { signal, timeout: STATS_API_TIMEOUT },
                       )
                     ).data;
                     return {
@@ -458,7 +462,7 @@ export class SupervisorsView extends React.PureComponent<
     const { filters } = this.props;
     const { page, pageSize, sorted } = this.state;
     if (
-      !sqlQueryCustomTableFilters(filters).equals(sqlQueryCustomTableFilters(prevProps.filters)) ||
+      !filters.toSqlExpression().equals(prevProps.filters.toSqlExpression()) ||
       page !== prevState.page ||
       pageSize !== prevState.pageSize ||
       sortedToOrderByClause(sorted) !== sortedToOrderByClause(prevState.sorted)
@@ -480,7 +484,7 @@ export class SupervisorsView extends React.PureComponent<
     });
   };
 
-  private readonly handleFilterChange = (filters: Filter[]) => {
+  private readonly handleFilterChange = (filters: TableFilters) => {
     this.goToFirstPage();
     this.props.onFiltersChange(filters);
   };
@@ -516,8 +520,8 @@ export class SupervisorsView extends React.PureComponent<
   };
 
   private getSupervisorActions(supervisor: SupervisorQueryResultRow): BasicAction[] {
-    const { supervisor_id, suspended, type } = supervisor;
-    const { goToDatasource, goToStreamingDataLoader } = this.props;
+    const { supervisor_id, datasource, suspended, type } = supervisor;
+    const { goToView, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (oneOf(type, 'kafka', 'kinesis')) {
@@ -525,7 +529,7 @@ export class SupervisorsView extends React.PureComponent<
         {
           icon: IconNames.MULTI_SELECT,
           title: 'Go to datasource',
-          onAction: () => goToDatasource(supervisor_id),
+          onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
         },
         {
           icon: IconNames.CLOUD_UPLOAD,
@@ -545,7 +549,7 @@ export class SupervisorsView extends React.PureComponent<
             : this.setState({ suspendSupervisorId: supervisor_id }),
       },
       {
-        icon: IconNames.GANTT_CHART,
+        icon: getConsoleViewIcon('tasks'),
         title: 'Go to tasks',
         onAction: () => this.goToTasksForSupervisor(supervisor),
       },
@@ -774,26 +778,43 @@ export class SupervisorsView extends React.PureComponent<
   }
 
   private goToTasksForSupervisor(supervisor: SupervisorQueryResultRow) {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     switch (supervisor.type) {
       case 'kafka':
       case 'kinesis':
-        goToTasks(supervisor.supervisor_id, `index_${supervisor.type}`);
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            group_id: `index_${supervisor.type}_${supervisor.supervisor_id}`,
+            type: `index_${supervisor.type}`,
+          }),
+        );
         return;
 
       case 'autocompact':
-        goToTasks(supervisor.supervisor_id.replace(/^autocompact__/, ''), 'compact');
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id.replace(/^autocompact__/, ''),
+            type: 'compact',
+          }),
+        );
         return;
 
       case 'scheduled_batch':
-        goToTasks(
-          supervisor.supervisor_id.replace(/^scheduled_batch__/, '').replace(/__[0-9a-f-]+$/, ''),
-          'query_controller',
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id
+              .replace(/^scheduled_batch__/, '')
+              .replace(/__[0-9a-f-]+$/, ''),
+            type: 'query_controller',
+          }),
         );
         return;
 
       default:
-        goToTasks(supervisor.supervisor_id, undefined);
+        goToView('tasks', TableFilters.eq({ group_id: supervisor.supervisor_id }));
         return;
     }
   }
@@ -822,8 +843,8 @@ export class SupervisorsView extends React.PureComponent<
             }
             manual
             filterable
-            filtered={filters}
-            onFilteredChange={this.handleFilterChange}
+            filtered={filters.toFilters()}
+            onFilteredChange={filters => this.handleFilterChange(TableFilters.fromFilters(filters))}
             sorted={sorted}
             onSortedChange={sorted => this.setState({ sorted })}
             page={page}
@@ -844,11 +865,11 @@ export class SupervisorsView extends React.PureComponent<
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      filters: Filter[],
+      filters: TableFilters,
     ): Column<SupervisorQueryResultRow>[] => {
       return [
         {
-          Header: twoLines('Supervisor ID', <i>(datasource)</i>),
+          Header: 'Supervisor ID',
           id: 'supervisor_id',
           accessor: 'supervisor_id',
           width: 280,
@@ -862,6 +883,13 @@ export class SupervisorsView extends React.PureComponent<
               {value}
             </TableClickableCell>
           ),
+        },
+        {
+          Header: 'Datasource',
+          accessor: 'datasource',
+          width: 280,
+          Cell: this.renderSupervisorFilterableCell('datasource'),
+          show: visibleColumns.shown('Datasource'),
         },
         {
           Header: 'Type',
@@ -1123,7 +1151,7 @@ export class SupervisorsView extends React.PureComponent<
         <MoreButton>
           {capabilities.hasSql() && (
             <MenuItem
-              icon={IconNames.APPLICATION}
+              icon={getConsoleViewIcon('workbench')}
               text="View SQL query for table"
               disabled={typeof lastSupervisorQuery !== 'string'}
               onClick={() => {

@@ -24,11 +24,13 @@ import { useMemo } from 'react';
 
 import { Loader } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
+import { ColorAssigner } from '../../../../singletons';
 import {
   capitalizeFirst,
   FINE_GRANULARITY_OPTIONS,
   getAutoGranularity,
   getTimeSpanInExpression,
+  smartTimeFloor,
 } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
@@ -41,12 +43,19 @@ import type {
   Range,
   RangeDatum,
 } from './continuous-chart-render';
-import { ContinuousChartRender, OTHER_VALUE } from './continuous-chart-render';
+import { ContinuousChartRender } from './continuous-chart-render';
 
 const TIME_NAME = 't';
-const MEASURE_NAME = 'm';
+const MEASURE_NAME_PREFIX = 'm';
 const FACET_NAME = 'f';
 const MIN_SLICE_WIDTH = 8;
+
+function getMeasureName(index: number): string {
+  return `${MEASURE_NAME_PREFIX}${index}`;
+}
+
+const OTHER_VALUE = 'Other';
+const OTHER_COLOR = '#666666';
 
 function getRangeInExpression(
   expression: SqlExpression,
@@ -97,7 +106,7 @@ interface TimeChartParameterValues {
   facetColumn?: ExpressionMeta;
   maxFacets: number;
   showOthers: boolean;
-  measure: ExpressionMeta;
+  measures: ExpressionMeta[];
   curveType: ContinuousChartCurveType;
 }
 
@@ -124,14 +133,16 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             filterSpan = getTimeSpanInExpression(where, timeColumnName);
           }
         }
+        if (typeof filterSpan !== 'number') {
+          // If we have no span apply a default span
+          filterSpan = new Duration('P1M').getCanonicalLength();
+        }
         return [
           'auto',
-          ...(typeof filterSpan === 'number'
-            ? FINE_GRANULARITY_OPTIONS.filter(g => {
-                const len = new Duration(g).getCanonicalLength();
-                return filterSpan < len * 1000 && len <= filterSpan;
-              })
-            : FINE_GRANULARITY_OPTIONS),
+          ...FINE_GRANULARITY_OPTIONS.filter(g => {
+            const len = new Duration(g).getCanonicalLength();
+            return filterSpan < len * 1000 && len <= filterSpan;
+          }),
         ];
       },
       defaultValue: 'auto',
@@ -158,13 +169,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       defaultValue: true,
       visible: ({ parameterValues }) => Boolean(parameterValues.facetColumn),
     },
-    measure: {
-      type: 'measure',
-      label: 'Measure to show',
+    measures: {
+      type: 'measures',
       transferGroup: 'show-agg',
+      defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasureArray(),
+      nonEmpty: true,
       important: true,
-      defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasure(),
-      required: true,
     },
     curveType: {
       type: 'option',
@@ -196,7 +206,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           )
         : parameterValues.granularity;
 
-    const { facetColumn, maxFacets, showOthers, measure, markType } = parameterValues;
+    const { facetColumn, maxFacets, showOthers, measures, markType } = parameterValues;
 
     const dataQuery = useMemo(() => {
       return {
@@ -205,7 +215,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         where,
         moduleWhere,
         timeGranularity,
-        measure,
+        measures,
         facetExpression: facetColumn?.expression,
         maxFacets,
         showOthers,
@@ -217,7 +227,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       where,
       moduleWhere,
       timeGranularity,
-      measure,
+      measures,
       facetColumn,
       maxFacets,
       showOthers,
@@ -233,13 +243,13 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           where,
           moduleWhere,
           timeGranularity,
-          measure,
+          measures,
           facetExpression,
           maxFacets,
           showOthers,
           oneExtra,
         },
-        cancelToken,
+        signal,
       ) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
@@ -257,23 +267,23 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                     .addSelect(facetExpression.cast('VARCHAR').as(FACET_NAME), {
                       addToGroupBy: 'end',
                     })
-                    .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
+                    .changeOrderByExpression(measures[0].expression.toOrderByExpression('DESC'))
                     .changeLimitValue(maxFacets + (showOthers ? 1 : 0)), // If we want to show others add 1 to check if we need to query for them
                   timezone,
                 },
-                cancelToken,
+                signal,
               )
             ).getColumnByIndex(0)!
           : undefined;
 
-        cancelToken.throwIfRequested();
+        signal.throwIfAborted();
 
         if (detectedFacets?.length === 0) {
           // If detectedFacets is empty then there is no data at all and no need to do a larger query
           return {
             effectiveFacets: [],
             sourceData: [],
-            measure,
+            measures,
             granularity,
           };
         }
@@ -284,48 +294,58 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             : undefined;
         const effectiveFacets = facetsToQuery ? facetsToQuery.concat(OTHER_VALUE) : detectedFacets;
 
+        let query = querySource
+          .getInitQuery(overqueryWhere(effectiveWhere, timeColumnName, granularity, oneExtra))
+          .applyIf(facetExpression && detectedFacets && !facetsToQuery, q =>
+            q.addWhere(facetExpression!.cast('VARCHAR').in(detectedFacets!)),
+          )
+          .addSelect(
+            smartTimeFloor(C(timeColumnName), timeGranularity, timezone.isUTC()).as(TIME_NAME),
+            {
+              addToGroupBy: 'end',
+              addToOrderBy: 'end',
+              direction: 'DESC',
+            },
+          )
+          .applyIf(facetExpression, q => {
+            if (!facetExpression) return q; // Should never get here, doing this to make peace between eslint and TS
+            return q.addSelect(
+              (facetsToQuery
+                ? SqlCase.ifThenElse(
+                    facetExpression.in(facetsToQuery),
+                    facetExpression,
+                    L(OTHER_VALUE),
+                  )
+                : facetExpression
+              )
+                .cast('VARCHAR')
+                .as(FACET_NAME),
+              { addToGroupBy: 'end' },
+            );
+          });
+
+        // Add all measures to the query
+        for (let i = 0; i < measures.length; i++) {
+          query = query.addSelect(measures[i].expression.as(getMeasureName(i)));
+        }
+
+        query = query.changeLimitValue(
+          10000 * (effectiveFacets ? Math.min(effectiveFacets.length, 10) : 1),
+        );
+
         const result = await runSqlQuery(
           {
-            query: querySource
-              .getInitQuery(overqueryWhere(effectiveWhere, timeColumnName, granularity, oneExtra))
-              .applyIf(facetExpression && detectedFacets && !facetsToQuery, q =>
-                q.addWhere(facetExpression!.cast('VARCHAR').in(detectedFacets!)),
-              )
-              .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
-                addToGroupBy: 'end',
-                addToOrderBy: 'end',
-                direction: 'DESC',
-              })
-              .applyIf(facetExpression, q => {
-                if (!facetExpression) return q; // Should never get here, doing this to make peace between eslint and TS
-                return q.addSelect(
-                  (facetsToQuery
-                    ? SqlCase.ifThenElse(
-                        facetExpression.in(facetsToQuery),
-                        facetExpression,
-                        L(OTHER_VALUE),
-                      )
-                    : facetExpression
-                  )
-                    .cast('VARCHAR')
-                    .as(FACET_NAME),
-                  { addToGroupBy: 'end' },
-                );
-              })
-              .addSelect(measure.expression.as(MEASURE_NAME))
-              .changeLimitValue(
-                10000 * (effectiveFacets ? Math.min(effectiveFacets.length, 10) : 1),
-              ),
+            query,
             timezone,
           },
-          cancelToken,
+          signal,
         );
 
         const dataset = result.toObjectArray().map(
           (b): RangeDatum => ({
             start: b[TIME_NAME].valueOf(),
             end: granularity.shift(b[TIME_NAME], Timezone.UTC, 1).valueOf(),
-            measure: b[MEASURE_NAME],
+            measures: measures.map((_, i) => b[getMeasureName(i)]),
             facet: b[FACET_NAME],
           }),
         );
@@ -333,7 +353,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         return {
           effectiveFacets,
           sourceData: dataset,
-          measure,
+          measures,
           granularity,
           maxTime: result.resultContext?.maxTime,
         };
@@ -353,9 +373,15 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           <ContinuousChartRender
             data={sourceData.sourceData}
             facets={sourceData.effectiveFacets}
+            facetColorizer={v => {
+              if (!facetColumn) return '#000000';
+              if (v === OTHER_VALUE) return OTHER_COLOR;
+              return ColorAssigner.getColorForDimensionValue(facetColumn.name, v);
+            }}
             granularity={sourceData.granularity}
             markType={parameterValues.markType}
             curveType={parameterValues.curveType}
+            measures={measures}
             stage={stage}
             timezone={timezone}
             yAxisPosition="right"

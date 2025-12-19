@@ -28,6 +28,23 @@ com.google.common.io.Files#createTempDir() @ Use org.apache.druid.java.util.comm
 com.google.common.io.Files#write(java.lang.CharSequence, java.io.File, java.nio.charset.Charset) @ Use com.google.common.io.Files.asCharSink(to, charset).write(from) instead.
 java.io.File#mkdirs() @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
+java.lang.Boolean#<init>(boolean) @ Use primitive boolean, Boolean.valueOf(boolean), or either of Boolean.TRUE / Boolean.FALSE instead.
+java.lang.Boolean#<init>(java.lang.String) @ Use parseBoolean(String) to convert a string to a boolean primitive, or use valueOf(String) to convert a string to a Boolean object.
+java.lang.Byte#<init>(byte) @ Use primitive byte, or Byte.valueOf(byte) instead.
+java.lang.Byte#<init>(java.lang.String) @ Use parseByte(String) to convert a string to a byte primitive, or use valueOf(String) to convert a string to a Byte object.
+java.lang.Character#<init>(char) @ Use Character.valueOf(char) instead.
+java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
+java.lang.Double#<init>(double) @ Use primitive double, or Double.valueOf(double) instead.
+java.lang.Double#<init>(java.lang.String) @ Use parseDouble(String) to convert a string to a double primitive, or use valueOf(String) to convert a string to a Double object.
+java.lang.Float#<init>(double) @ Use primitive float, or Float.valueOf(float) instead.
+java.lang.Float#<init>(float) @ Use primitive float, or Float.valueOf(float) instead.
+java.lang.Float#<init>(java.lang.String) @ Use parseFloat(String) to convert a string to a float primitive, or use valueOf(String) to convert a string to a Float object.
+java.lang.Integer#<init>(int) @ Use primitive int, or Integer.valueOf(int) instead.
+java.lang.Integer#<init>(java.lang.String) @ Use parseInt(String) to convert a string to a int primitive, or use valueOf(String) to convert a string to an Integer object.
+java.lang.Long#<init>(java.lang.String) @ Use parseLong(String) to convert a string to a long primitive, or use valueOf(String) to convert a string to a Long object.
+java.lang.Long#<init>(long) @ Use primitive long, or Long.valueOf(long) instead.
+java.lang.Short#<init>(java.lang.String) @ Use parseShort(String) to convert a string to a short primitive, or use valueOf(String) to convert a string to a Short object.
+java.lang.Short#<init>(short) @ Use Short.valueOf(short) instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence) @ Use one of the appropriate methods in StringUtils instead
 java.lang.String#replaceAll(java.lang.String,java.lang.String) @ Use one of the appropriate methods in StringUtils instead, or compile and cache a Pattern explicitly
@@ -53,13 +70,16 @@ org.apache.calcite.sql.type.OperandTypes#POSITIVE_INTEGER_LITERAL @ Use org.apac
 org.apache.calcite.sql.type.OperandTypes#UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
 org.apache.calcite.sql.type.OperandTypes#NUMERIC_UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
 org.apache.calcite.sql.type.OperandTypes#NULLABLE_LITERAL @ Create an instance of org.apache.calcite.sql.type.CastedLiteralOperandTypeChecker that allows nulls and use that instead
+org.apache.commons.lang3.ObjectUtils#defaultIfNull(java.lang.Object, java.lang.Object) @ Use ObjectUtils#getIfNull(java.lang.Object, java.lang.Object) instead
 org.apache.commons.io.Charsets @ Use java.nio.charset.StandardCharsets instead
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
 org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils#deleteDirectory()
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 org.apache.curator.shaded.** @ Use regular classes, not shaded versions
 org.apache.datasketches.memory.Memory#wrap(byte[], int, int, java.nio.ByteOrder) @ The implementation isn't correct in datasketches-memory-2.2.0. Please refer to https://github.com/apache/datasketches-memory/issues/178. Use wrap(byte[]) and modify the offset by the callers instead
-java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
+org.apache.druid.testing.simulate.EmbeddedMiddleManager#<init>() @ Middle Managers should be used for local embedded tests only and not pushed as they are slower and launch tasks as child processes. Use EmbeddedIndexer instead.
+org.apache.hadoop.fs.FileSystem#isDirectory(org.apache.hadoop.fs.Path) @ Use fileSystem.getFileStatus(path)#isDirectory() instead.
+org.apache.hadoop.fs.FileSystem#isFile(org.apache.hadoop.fs.Path) @ Use fileSystem.getFileStatus(path)#isPath instead.
 java.util.concurrent.Executors#newFixedThreadPool(int) @ Executor is non-daemon and can prevent JVM shutdown, use org.apache.druid.java.util.common.concurrent.Execs#multiThreaded(int, java.lang.String) instead.
 
 @defaultMessage Use Locale.ENGLISH

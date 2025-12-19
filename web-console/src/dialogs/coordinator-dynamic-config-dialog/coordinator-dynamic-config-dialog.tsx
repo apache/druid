@@ -30,6 +30,8 @@ import { Api, AppToaster } from '../../singletons';
 import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
 
+import { COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS } from './coordinator-dynamic-config-completions';
+
 import './coordinator-dynamic-config-dialog.scss';
 
 export interface CoordinatorDynamicConfigDialogProps {
@@ -46,16 +48,16 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      return await getApiArray(`/druid/coordinator/v1/config/history?count=100`, cancelToken);
+    processQuery: async (_, signal) => {
+      return await getApiArray(`/druid/coordinator/v1/config/history?count=100`, signal);
     },
   });
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       try {
-        const configResp = await Api.instance.get('/druid/coordinator/v1/config', { cancelToken });
+        const configResp = await Api.instance.get('/druid/coordinator/v1/config', { signal });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -130,6 +132,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
               height="50vh"
               onChange={setDynamicConfig}
               setError={setJsonError}
+              jsonCompletions={COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS}
             />
           )}
         </>

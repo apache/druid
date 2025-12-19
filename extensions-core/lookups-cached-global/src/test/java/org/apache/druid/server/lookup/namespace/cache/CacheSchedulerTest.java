@@ -38,6 +38,7 @@ import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -152,7 +153,7 @@ public class CacheSchedulerTest
             UriExtractionNamespace.class,
             cacheGenerator,
             JdbcExtractionNamespace.class,
-            new JdbcCacheGenerator()
+            new JdbcCacheGenerator(JvmUtils.getRuntimeInfo())
         ),
         cacheManager
     );

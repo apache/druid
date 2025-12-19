@@ -97,16 +97,19 @@ import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFa
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -356,7 +359,7 @@ public class CompactionTaskTest
   @Before
   public void setup()
   {
-    final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
+    final TestIndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
     emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
@@ -573,20 +576,18 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    final List<AggregateProjectionSpec> projections = ImmutableList.of(
-        new AggregateProjectionSpec(
-            "test",
-            VirtualColumns.EMPTY,
-            ImmutableList.of(
-                new StringDimensionSchema("dim1"),
-                new StringDimensionSchema("dim2"),
-                new StringDimensionSchema("dim3")
-            ),
-            new AggregatorFactory[]{
-                new CountAggregatorFactory("count"),
-                new LongSumAggregatorFactory("sum_long_dim_1", "long_dim_1")
-            }
-        )
+    final List<AggregateProjectionSpec> projections = List.of(
+        AggregateProjectionSpec.builder("test")
+                               .groupingColumns(
+                                   new StringDimensionSchema("dim1"),
+                                   new StringDimensionSchema("dim2"),
+                                   new StringDimensionSchema("dim3")
+                               )
+                               .aggregators(
+                                   new CountAggregatorFactory("count"),
+                                   new LongSumAggregatorFactory("sum_long_dim_1", "long_dim_1")
+                               )
+                               .build()
     );
 
     final CompactionTask task = builder
@@ -1675,6 +1676,33 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testMSQRangePartitionOnAutoStringDoesNotNeedMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+
+    DimensionSchema stringDim = new AutoTypeColumnSchema("string_dim_1", ColumnType.STRING, null);
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    List.of(stringDim.getName()),
+                                                    false
+                                                )
+                                            )
+                                            .build());
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    CompactionTask compactionTask = builder.build();
+    Assert.assertFalse(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
   public void testChooseFinestGranularityWithNulls()
   {
     List<Granularity> input = Arrays.asList(
@@ -1928,20 +1956,28 @@ public class CompactionTaskTest
 
   private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
-      IndexIO indexIO,
+      TestIndexIO indexIO,
       Map<DataSegment, File> segments
   )
   {
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public File getSegmentFiles(DataSegment segment)
+      public void load(DataSegment segment)
       {
-        return Preconditions.checkNotNull(segments.get(segment));
+        // do nothing
       }
 
       @Override
-      public void cleanup(DataSegment segment)
+      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      {
+        return Optional.of(
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
+      }
+
+      @Override
+      public void drop(DataSegment segment)
       {
         // Do nothing.
       }
@@ -1954,7 +1990,7 @@ public class CompactionTaskTest
         .taskActionClient(taskActionClient)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .indexIO(indexIO)
-        .indexMergerV9(new IndexMergerV9(
+        .indexMerger(new IndexMergerV9(
             OBJECT_MAPPER,
             indexIO,
             OffHeapMemorySegmentWriteOutMediumFactory.instance(),
@@ -2012,22 +2048,22 @@ public class CompactionTaskTest
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Supplier<ColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
+        final Map<String, Supplier<BaseColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
           if (MIXED_TYPE_COLUMN.equals(columnName)) {
-            ColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
+            BaseColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
             columnMap.put(columnName, () -> columnHolder);
           } else if (DIMENSIONS.containsKey(columnName)) {
-            ColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
+            BaseColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
             columnMap.put(columnName, () -> columnHolder);
           } else {
             final Optional<AggregatorFactory> maybeMetric = AGGREGATORS.stream()
                                                                        .filter(agg -> agg.getName().equals(columnName))
                                                                        .findAny();
             if (maybeMetric.isPresent()) {
-              ColumnHolder columnHolder = createColumn(maybeMetric.get());
+              BaseColumnHolder columnHolder = createColumn(maybeMetric.get());
               columnMap.put(columnName, () -> columnHolder);
               aggregatorFactories.add(maybeMetric.get());
             }
@@ -2097,17 +2133,17 @@ public class CompactionTaskTest
     }
   }
 
-  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
+  private static BaseColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
     return new TestColumn(dimensionSchema.getColumnType());
   }
 
-  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
+  private static BaseColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
     return new TestColumn(aggregatorFactory.getIntermediateType());
   }
 
-  private static class TestColumn implements ColumnHolder
+  private static class TestColumn implements BaseColumnHolder
   {
     private final ColumnCapabilities columnCapabilities;
 

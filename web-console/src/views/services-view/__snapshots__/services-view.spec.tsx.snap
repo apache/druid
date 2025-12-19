@@ -58,6 +58,10 @@ exports[`ServicesView renders data 1`] = `
           "Max size",
           "Usage",
           "Start time",
+          "Version",
+          "Available processors",
+          "Total memory",
+          "Labels",
           "Detail",
         ]
       }
@@ -88,7 +92,7 @@ exports[`ServicesView renders data 1`] = `
       TrComponent={[Function]}
       TrGroupComponent={[Function]}
       aggregatedKey="_aggregated"
-      className=""
+      className="centered-table -striped -highlight padded-header"
       collapseOnDataChange={true}
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
@@ -205,6 +209,50 @@ exports[`ServicesView renders data 1`] = `
             "Cell": [Function],
             "Header": "Start time",
             "accessor": "start_time",
+            "filterMethod": [Function],
+            "id": "start_time",
+            "show": true,
+            "width": 220,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Version",
+            "accessor": "version",
+            "show": true,
+            "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": <React.Fragment>
+              Available
+              <br />
+              processors
+            </React.Fragment>,
+            "accessor": "available_processors",
+            "className": "padded",
+            "filterable": false,
+            "show": true,
+            "width": 100,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Total memory",
+            "accessor": "total_memory",
+            "className": "padded",
+            "filterable": false,
+            "show": true,
+            "width": 120,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Labels",
+            "accessor": "labels",
+            "className": "padded",
+            "filterable": false,
             "show": true,
             "width": 200,
           },

@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>34.0.0-SNAPSHOT</version>
+        <version>36.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -166,18 +166,9 @@
         </dependency>
         <dependency>
             <groupId>org.apache.ranger</groupId>
-            <artifactId>ranger-plugins-audit</artifactId>
+            <artifactId>ranger-audit-dest-es</artifactId>
             <version>${apache.ranger.version}</version>
             <exclusions>
-                <exclusion>
-                    <groupId>org.apache.hadoop</groupId>
-                    <artifactId>hadoop-common</artifactId>
-                </exclusion>
-                <!-- removing the complete bundle sdk to be replaced with only logs-sdk  -->
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-bundle</artifactId>
-                </exclusion>
                 <exclusion>
                     <groupId>org.elasticsearch</groupId>
                     <artifactId>*</artifactId>
@@ -189,6 +180,23 @@
                 <exclusion>
                     <groupId>org.elasticsearch.plugin</groupId>
                     <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.ranger</groupId>
+            <artifactId>ranger-audit-dest-hdfs</artifactId>
+            <version>${apache.ranger.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-common</artifactId>
+                </exclusion>
+                <!-- removing the complete bundle sdk to be replaced with only logs-sdk  -->
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
                 </exclusion>
             </exclusions>
             <scope>compile</scope>
@@ -259,7 +267,8 @@
                 <configuration>
                     <usedDependencies>
                         <!-- These are needed for scope: compile -->
-                        <dependency>org.apache.ranger:ranger-plugins-audit</dependency>
+                        <dependency>org.apache.ranger:ranger-audit-dest-es</dependency>
+                        <dependency>org.apache.ranger:ranger-audit-dest-hdfs</dependency>
                     </usedDependencies>
                     <!-- this is due to replacement of aws-bundle-sdk with aws-logs-sdk  -->
                     <ignoredDependencies>

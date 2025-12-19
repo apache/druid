@@ -28,7 +28,7 @@ DRUID_DEP_LIB_DIR=/shared/hadoop_xml:/shared/docker/lib/*:/usr/local/druid/lib/m
 
 # Druid configs
 # If you are making a change in load list below, make the necessary changes in github actions too
-druid_extensions_loadList=["mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service","druid-s3-extensions","druid-multi-stage-query"]
+druid_extensions_loadList=["mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches","druid-parquet-extensions","druid-avro-extensions","druid-protobuf-extensions","druid-orc-extensions","druid-kafka-indexing-service","druid-s3-extensions"]
 druid_startup_logging_logProperties=true
 druid_extensions_directory=/shared/docker/extensions
 druid_auth_authenticator_basic_authorizerName=basic
@@ -87,4 +87,5 @@ druid_indexer_task_ignoreTimestampSpecForDruidInputSource=true
 druid_unsafe_cluster_testing=true
 
 # Dart
-druid_msq_dart_enabled = true
+druid_msq_dart_enabled=true
+druid_query_default_context_debug=false

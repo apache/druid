@@ -23,9 +23,7 @@ import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -43,6 +41,8 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 import org.apache.druid.segment.nested.FieldTypeInfo;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.SortedValueDictionary;
@@ -85,6 +85,8 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   protected final ColumnType castToType;
   @Nullable
   protected final ExpressionType castToExpressionType;
+
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
 
   protected final StructuredDataProcessor indexerProcessor = new StructuredDataProcessor()
@@ -129,7 +131,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
   };
 
-  public AutoTypeColumnIndexer(String name, @Nullable ColumnType castToType)
+  public AutoTypeColumnIndexer(String name, @Nullable ColumnType castToType, NestedCommonFormatColumnFormatSpec columnFormatSpec)
   {
     this.columnName = name;
     if (castToType != null && (castToType.isPrimitive() || castToType.isPrimitiveArray())) {
@@ -139,6 +141,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       this.castToType = null;
       this.castToExpressionType = null;
     }
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Override
@@ -474,7 +477,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   @Override
   public ColumnFormat getFormat()
   {
-    return new Format(getLogicalType(), hasNulls, castToType != null);
+    return new IndexerFormat(getLogicalType(), hasNulls, castToType != null, columnFormatSpec);
   }
 
   @Override
@@ -641,7 +644,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         if (0 <= dimIndex && dimIndex < dims.length) {
           final StructuredData data = (StructuredData) dims[dimIndex];
           if (data != null) {
-            final Object o = ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            final Object o = ExprEval.bestEffortOf(data.getValue()).value();
             return o;
           }
         }
@@ -754,57 +757,16 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
   }
 
-  static class Format implements ColumnFormat
+  static class IndexerFormat extends NestedCommonFormatColumn.Format
   {
-    private final ColumnType logicalType;
-    private final boolean hasNulls;
-    private final boolean enforceLogicalType;
-
-    Format(ColumnType logicalType, boolean hasNulls, boolean enforceLogicalType)
+    public IndexerFormat(
+        ColumnType logicalType,
+        boolean hasNulls,
+        boolean enforceLogicalType,
+        NestedCommonFormatColumnFormatSpec columnFormatSpec
+    )
     {
-      this.logicalType = logicalType;
-      this.hasNulls = hasNulls;
-      this.enforceLogicalType = enforceLogicalType;
-    }
-
-    @Override
-    public ColumnType getLogicalType()
-    {
-      return logicalType;
-    }
-
-    @Override
-    public DimensionHandler getColumnHandler(String columnName)
-    {
-      return new NestedCommonFormatColumnHandler(columnName, enforceLogicalType ? logicalType : null);
-    }
-
-    @Override
-    public DimensionSchema getColumnSchema(String columnName)
-    {
-      return new AutoTypeColumnSchema(columnName, enforceLogicalType ? logicalType : null);
-    }
-
-    @Override
-    public ColumnFormat merge(@Nullable ColumnFormat otherFormat)
-    {
-      if (otherFormat == null) {
-        return this;
-      }
-      if (otherFormat instanceof Format) {
-        final Format other = (Format) otherFormat;
-        if (!getLogicalType().equals(other.getLogicalType())) {
-          return new Format(ColumnType.NESTED_DATA, hasNulls || other.hasNulls, false);
-        }
-        return new Format(logicalType, hasNulls || other.hasNulls, enforceLogicalType || other.enforceLogicalType);
-      }
-      throw new ISE(
-          "Cannot merge columns of type[%s] and format[%s] and with [%s] and [%s]",
-          logicalType,
-          this.getClass().getName(),
-          otherFormat.getLogicalType(),
-          otherFormat.getClass().getName()
-      );
+      super(logicalType, hasNulls, enforceLogicalType, columnFormatSpec);
     }
 
     @Override
@@ -814,11 +776,5 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                                    .setType(logicalType)
                                    .setHasNulls(hasNulls);
     }
-  }
-
-  @Nullable
-  private static Object getDefaultValueForType(@Nullable ColumnType columnType)
-  {
-    return null;
   }
 }

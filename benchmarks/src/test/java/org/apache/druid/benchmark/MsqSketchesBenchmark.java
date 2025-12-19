@@ -21,6 +21,7 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -132,7 +133,15 @@ public class MsqSketchesBenchmark extends InitializedNullHandlingTest
 
   private ClusterByStatisticsCollectorImpl makeCollector(final boolean aggregate)
   {
-    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
+    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
+        MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X,
+        SIGNATURE,
+        FrameType.latestRowBased(),
+        MAX_BYTES,
+        MAX_BUCKETS,
+        aggregate,
+        false
+    );
   }
 
   private static RowKey createKey(final long numBuckets, final long keyNo)
@@ -141,6 +150,13 @@ public class MsqSketchesBenchmark extends InitializedNullHandlingTest
     key[0] = keyNo % numBuckets;
     key[1] = keyNo % 5;
     key[2] = StringUtils.repeat("*", 67);
-    return KeyTestUtils.createKey(KeyTestUtils.createKeySignature(MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X.getColumns(), SIGNATURE), key);
+    return KeyTestUtils.createKey(
+        KeyTestUtils.createKeySignature(
+            MsqSketchesBenchmark.CLUSTER_BY_XYZ_BUCKET_BY_X.getColumns(),
+            SIGNATURE
+        ),
+        FrameType.latestRowBased(),
+        key
+    );
   }
 }

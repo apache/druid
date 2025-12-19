@@ -28,6 +28,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -40,6 +41,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.explain.ExplainAttributes;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -105,6 +107,12 @@ public class PlannerContext
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = false;
 
   /**
+   * Context key for {@link PlannerContext#isUseExtractionFns()}.
+   */
+  public static final String CTX_SQL_USE_EXTRACTION_FNS = "sqlUseExtractionFns";
+  public static final boolean DEFAULT_SQL_USE_EXTRACTION_FNS = false;
+
+  /**
    * Context key for {@link PlannerContext#isPullUpLookup()}.
    */
   public static final String CTX_SQL_PULL_UP_LOOKUP = "sqlPullUpLookup";
@@ -128,7 +136,9 @@ public class PlannerContext
   private final PlannerToolbox plannerToolbox;
   private final ExpressionParser expressionParser;
   private final String sql;
+  private final SqlNode sqlNode;
   private final SqlEngine engine;
+  private final Set<String> authContextKeys;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
@@ -138,6 +148,7 @@ public class PlannerContext
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
+  private boolean useExtractionFns;
   private boolean pullUpLookup;
   private boolean reverseLookup;
   private boolean useGranularity;
@@ -163,7 +174,9 @@ public class PlannerContext
   private PlannerContext(
       final PlannerToolbox plannerToolbox,
       final String sql,
+      final SqlNode sqlNode,
       final SqlEngine engine,
+      final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -171,7 +184,9 @@ public class PlannerContext
     this.plannerToolbox = plannerToolbox;
     this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
+    this.sqlNode = sqlNode;
     this.engine = engine;
+    this.authContextKeys = authContextKeys;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
     initializeContextFieldsAndPlannerConfig();
@@ -180,7 +195,9 @@ public class PlannerContext
   public static PlannerContext create(
       final PlannerToolbox plannerToolbox,
       final String sql,
+      final SqlNode sqlNode,
       final SqlEngine engine,
+      final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -188,7 +205,9 @@ public class PlannerContext
     return new PlannerContext(
         plannerToolbox,
         sql,
+        sqlNode,
         engine,
+        authContextKeys,
         queryContext,
         hook
     );
@@ -312,6 +331,14 @@ public class PlannerContext
   }
 
   /**
+   * Return an immutable set of context keys need to be authorization checked, this usually comes from user-provided query context, including SET parameters.
+   */
+  public Set<String> authContextKeys()
+  {
+    return authContextKeys;
+  }
+
+  /**
    * Return the query context as an immutable object. Use this form
    * when querying the context as it provides type-safe accessors.
    */
@@ -335,6 +362,14 @@ public class PlannerContext
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;
+  }
+
+  /**
+   * Whether we should use {@link ExtractionFn} in planning.
+   */
+  public boolean isUseExtractionFns()
+  {
+    return useExtractionFns;
   }
 
   /**
@@ -391,6 +426,11 @@ public class PlannerContext
   public String getSql()
   {
     return sql;
+  }
+
+  public SqlNode getSqlNode()
+  {
+    return sqlNode;
   }
 
   public PlannerHook getPlannerHook()
@@ -663,6 +703,13 @@ public class PlannerContext
       useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
     } else {
       useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    }
+
+    final Object useExtractionFnsParam = queryContext.get(CTX_SQL_USE_EXTRACTION_FNS);
+    if (useExtractionFnsParam != null) {
+      useExtractionFns = Numbers.parseBoolean(useExtractionFnsParam);
+    } else {
+      useExtractionFns = DEFAULT_SQL_USE_EXTRACTION_FNS;
     }
 
     final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);

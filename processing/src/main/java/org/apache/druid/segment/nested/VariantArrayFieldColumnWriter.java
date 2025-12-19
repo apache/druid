@@ -21,12 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * Nested field writer for array type columns of {@link NestedDataColumnSerializer}. This is currently only used
@@ -39,11 +34,11 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       DictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
   }
 
   @Override
@@ -68,7 +63,7 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
         Preconditions.checkArgument(globalIds[i] >= 0, "unknown global id [%s] for value [%s]", globalIds[i], array[i]);
         arrayElements.computeIfAbsent(
             globalIds[i],
-            (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
+            (id) -> columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap()
         ).add(row);
       }
       return globalIds;
@@ -84,12 +79,5 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   int lookupGlobalId(int[] value)
   {
     return globalDictionaryIdLookup.lookupArray(value);
-  }
-
-  @Override
-  void writeColumnTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    writeLongAndDoubleColumnLength(channel, 0, 0);
-    encodedValueSerializer.writeTo(channel, smoosher);
   }
 }

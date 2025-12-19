@@ -696,7 +696,10 @@ public class VectorMathProcessors
 
     public GetExponent()
     {
-      super(Math::getExponent, Math::getExponent);
+      super(
+          x -> Math.getExponent((double) x), // Need to cast to (double) otherwise we get the float form
+          Math::getExponent
+      );
     }
   }
 

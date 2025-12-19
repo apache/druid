@@ -32,7 +32,7 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -51,13 +51,13 @@ public class FieldReaderRACTest extends InitializedNullHandlingTest
   {
     final QueryableIndex index = TestIndex.getMMappedTestIndex();
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
-    final Frame frame = FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED);
+    final Frame frame = FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.latestRowBased());
 
     final RowSignature siggy = cursorFactory.getRowSignature();
     final RowBasedFrameRowsAndColumns rowBasedRAC = new RowBasedFrameRowsAndColumns(frame, siggy);
 
     for (String columnName : siggy.getColumnNames()) {
-      final ColumnHolder colHolder = index.getColumnHolder(columnName);
+      final BaseColumnHolder colHolder = index.getColumnHolder(columnName);
       final boolean multiValue = colHolder.getCapabilities().hasMultipleValues().isTrue();
 
       try (BaseColumn col = colHolder.getColumn()) {

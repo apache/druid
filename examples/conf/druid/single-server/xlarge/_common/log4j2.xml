@@ -45,44 +45,58 @@
       </DefaultRolloverStrategy>
     </RollingRandomAccessFile>
 
+    <Routing name="RoutingAppender">
+      <Routes pattern="$${ctx:task.log.id}">
+        <!-- Task logs on CliIndexer should go to dedicated file -->
+        <Route>
+          <File name="task-${ctx:task.log.id}" fileName="${ctx:task.log.file}">
+            <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
+          </File>
+        </Route>
+
+        <!-- Default route to send non-task logs to the usual FileAppender -->
+        <Route key="$${ctx:task.log.id}" ref="FileAppender"/>
+      </Routes>
+    </Routing>
+
   </Appenders>
 
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Root>
 
     <!-- Set level="debug" to see stack traces for query errors -->
     <Logger name="org.apache.druid.server.QueryResource" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
     <Logger name="org.apache.druid.server.QueryLifecycle" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
 
     <!-- Set level="debug" or "trace" to see more Coordinator details (segment balancing, load/drop rules, etc) -->
     <Logger name="org.apache.druid.server.coordinator" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
 
     <!-- Set level="debug" to see low-level details about segments and ingestion -->
     <Logger name="org.apache.druid.segment" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
 
     <!-- Set level="debug" to see more information about extension initialization -->
     <Logger name="org.apache.druid.initialization" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
 
     <!-- Quieter logging at startup -->
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
 
     <!-- Quieter KafkaSupervisors -->
     <Logger name="org.apache.kafka.clients.consumer.internals" level="warn" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
   </Loggers>
 </Configuration>

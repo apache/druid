@@ -174,7 +174,10 @@ public class SupervisorManager
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
-      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      if (existingSpec != null) {
+        spec.merge(existingSpec);
+      }
       createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;
     }
@@ -183,6 +186,7 @@ public class SupervisorManager
   /**
    * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
    * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
+   *
    * @param spec The spec submitted
    * @return boolean - true only if the spec has been modified, false otherwise
    */
@@ -221,7 +225,7 @@ public class SupervisorManager
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      return possiblyStopAndRemoveSupervisorInternal(id, true);
+      return possiblyStopAndRemoveSupervisorInternal(id, true) != null;
     }
   }
 
@@ -299,9 +303,10 @@ public class SupervisorManager
     log.info("SupervisorManager stopped.");
   }
 
-  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id)
+  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id, @Nullable Integer limit)
+      throws IllegalArgumentException
   {
-    return metadataSupervisorManager.getAllForId(id);
+    return metadataSupervisorManager.getAllForId(id, limit);
   }
 
   public Map<String, List<VersionedSupervisorSpec>> getSupervisorHistory()
@@ -429,13 +434,14 @@ public class SupervisorManager
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
    * starting, stopping, suspending and resuming supervisors.
    *
-   * @return true if a supervisor was stopped, false if there was no supervisor with this id
+   * @return reference to existing supervisor, if exists and was stopped, null if there was no supervisor with this id
    */
-  private boolean possiblyStopAndRemoveSupervisorInternal(String id, boolean writeTombstone)
+  @Nullable
+  private SupervisorSpec possiblyStopAndRemoveSupervisorInternal(String id, boolean writeTombstone)
   {
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
-    if (pair == null) {
-      return false;
+    if (pair == null || pair.rhs == null || pair.lhs == null) {
+      return null;
     }
 
     if (writeTombstone) {
@@ -447,13 +453,13 @@ public class SupervisorManager
     pair.lhs.stop(true);
     supervisors.remove(id);
 
-    SupervisorTaskAutoScaler autoscler = autoscalers.get(id);
-    if (autoscler != null) {
-      autoscler.stop();
+    SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+    if (autoscaler != null) {
+      autoscaler.stop();
       autoscalers.remove(id);
     }
 
-    return true;
+    return pair.rhs;
   }
 
   /**

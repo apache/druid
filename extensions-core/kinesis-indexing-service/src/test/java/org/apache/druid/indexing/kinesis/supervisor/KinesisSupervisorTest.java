@@ -58,6 +58,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
@@ -101,9 +102,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -476,6 +479,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -600,7 +604,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    KinesisIndexTask task1 = captured.getValues().get(0);
+    List<KinesisIndexTask> tasks = captured.getValues();
+    tasks.sort(Comparator.comparing(KinesisIndexTask::getId));
+    KinesisIndexTask task1 = tasks.get(0);
     Assert.assertEquals(1, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(1, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -612,7 +618,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
 
-    KinesisIndexTask task2 = captured.getValues().get(1);
+    KinesisIndexTask task2 = tasks.get(1);
     Assert.assertEquals(1, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -922,10 +928,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
-    Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
-        alert.getDescription()
-    );
+    Assert.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
   @Test
@@ -2180,8 +2183,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
       EasyMock.expect(taskClient.getStatusAsync(task.getId()))
               .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED));
       EasyMock.expect(taskClient.getStartTimeAsync(task.getId()))
-              .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-      taskQueue.shutdown(task.getId(), "Task [%s] failed to return start time, killing task", task.getId());
+              .andReturn(Futures.immediateFailedFuture(new RuntimeException("killed")));
+      taskQueue.shutdown(task.getId(), "Failed to return start time: %s", "killed");
     }
     EasyMock.replay(taskStorage, taskClient, taskQueue);
 
@@ -2778,7 +2781,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
   {
-    supervisor = getTestableSupervisor(1, 1, true, true, "PT1H", null, null, false);
+    supervisor = getTestableSupervisor(null, 1, 1, true, true, "PT1H", null, null, false);
 
     supervisorRecordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -2874,10 +2877,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
-    Assert.assertEquals(
-        "Exception in supervisor run loop for dataSource [testDS]",
-        alert.getDescription()
-    );
+    Assert.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
   @Test
@@ -3486,7 +3486,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     final AlertEvent alert = serviceEmitter.getAlerts().get(0);
     Assert.assertEquals(
-        "SeekableStreamSupervisor[testDS] failed to handle notice",
+        "Supervisor[testDS] for datasource[testDS] failed to handle notice",
         alert.getDescription()
     );
     Assert.assertEquals(
@@ -4192,6 +4192,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
         null,
+        null,
         dataSchema,
         null,
         new KinesisSupervisorIOConfig(
@@ -4423,6 +4424,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .times(1);
 
     List<Task> postSplitTasks = postSplitCaptured.getValues();
+    postSplitTasks.sort(Comparator.comparing(Task::getId));
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(postSplitTasks)).anyTimes();
     for (Task task : postSplitTasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
@@ -4610,6 +4612,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .times(1);
 
     List<Task> postSplitTasks = postSplitCaptured.getValues();
+    postSplitTasks.sort(Comparator.comparing(Task::getId));
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(postSplitTasks)).anyTimes();
     for (Task task : postSplitTasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
@@ -4696,6 +4699,29 @@ public class KinesisSupervisorTest extends EasyMockSupport
     List<Task> phaseOneTasks = testShardMergePhaseOne();
     List<Task> phaseTwoTasks = testShardMergePhaseTwo(phaseOneTasks);
     testShardMergePhaseThree(phaseTwoTasks);
+  }
+
+  @Test
+  public void test_doesTaskMatchSupervisor()
+  {
+    supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, "PT1H", null, null, false);
+    KinesisIndexTask kinesisTaskMatch = createMock(KinesisIndexTask.class);
+    EasyMock.expect(kinesisTaskMatch.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(kinesisTaskMatch);
+
+    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(kinesisTaskMatch));
+
+    KinesisIndexTask kinesisTaskNoMatch = createMock(KinesisIndexTask.class);
+    EasyMock.expect(kinesisTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
+    EasyMock.replay(kinesisTaskNoMatch);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(kinesisTaskNoMatch));
+
+    SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
+    EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
+    EasyMock.replay(differentTaskType);
+
+    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
   }
 
   private List<Task> testShardMergePhaseOne() throws Exception
@@ -5109,6 +5135,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   )
   {
     return getTestableSupervisor(
+        null,
         replicas,
         taskCount,
         useEarliestOffset,
@@ -5121,6 +5148,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(
+      @Nullable String id,
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -5217,6 +5245,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            id,
             null,
             dataSchema,
             tuningConfig,
@@ -5322,6 +5351,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
             null,
+            null,
             dataSchema,
             tuningConfig,
             kinesisSupervisorIOConfig,
@@ -5406,6 +5436,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             null,
             dataSchema,
             tuningConfig,
@@ -5493,6 +5524,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         taskClientFactory,
         OBJECT_MAPPER,
         new KinesisSupervisorSpec(
+            null,
             null,
             dataSchema,
             tuningConfig,
@@ -5593,6 +5625,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     return new KinesisIndexTask(
         id,
+        null,
         null,
         dataSchema,
         tuningConfig,

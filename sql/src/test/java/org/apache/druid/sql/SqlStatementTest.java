@@ -63,7 +63,6 @@ import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
-import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -281,28 +280,6 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testDirectSyntaxError()
-  {
-    SqlQueryPlus sqlReq = queryPlus(
-        "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
-    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    try {
-      stmt.execute();
-      fail();
-    }
-    catch (DruidException e) {
-      MatcherAssert.assertThat(
-          e,
-          DruidExceptionMatcher
-              .invalidSqlInput()
-              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
-      );
-    }
-  }
-
-  @Test
   public void testDirectValidationError()
   {
     SqlQueryPlus sqlReq = queryPlus(
@@ -344,17 +321,13 @@ public class SqlStatementTest
   //-----------------------------------------------------------------
   // HTTP statements: using a servlet request for verification.
 
-  private SqlQuery makeQuery(String sql)
+  /**
+   * Creates a {@link SqlQueryPlus} with auth result {@link CalciteTests#REGULAR_USER_AUTH_RESULT}, which matches
+   * the auth result used by {@link #request(boolean)}.
+   */
+  private SqlQueryPlus makeQuery(String sql)
   {
-    return new SqlQuery(
-        sql,
-        null,
-        false,
-        false,
-        false,
-        null,
-        null
-    );
+    return SqlQueryPlus.builder(sql).auth(CalciteTests.REGULAR_USER_AUTH_RESULT).build();
   }
 
   @Test
@@ -368,27 +341,6 @@ public class SqlStatementTest
     assertEquals(1, results.size());
     assertEquals(6L, results.get(0)[0]);
     assertEquals("foo", results.get(0)[1]);
-  }
-
-  @Test
-  public void testHttpSyntaxError()
-  {
-    HttpStatement stmt = sqlStatementFactory.httpStatement(
-        makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS"),
-        request(true)
-    );
-    try {
-      stmt.execute();
-      fail();
-    }
-    catch (DruidException e) {
-      MatcherAssert.assertThat(
-          e,
-          DruidExceptionMatcher
-              .invalidSqlInput()
-              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
-      );
-    }
   }
 
   @Test
@@ -495,28 +447,6 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testPrepareSyntaxError()
-  {
-    SqlQueryPlus sqlReq = queryPlus(
-        "SELECT COUNT(*) AS cnt, 'foo' AS",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
-    PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
-    try {
-      stmt.prepare();
-      fail();
-    }
-    catch (DruidException e) {
-      MatcherAssert.assertThat(
-          e,
-          DruidExceptionMatcher
-              .invalidSqlInput()
-              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
-      );
-    }
-  }
-
-  @Test
   public void testPrepareValidationError()
   {
     SqlQueryPlus sqlReq = queryPlus(
@@ -556,7 +486,7 @@ public class SqlStatementTest
   }
 
   @Test
-  public void testPreparePolicyEnforcerThrowsForNoPolicy() throws Exception
+  public void testPreparePolicyEnforcerThrowsForNoPolicy()
   {
     policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
     sqlStatementFactory = buildSqlStatementFactory();
@@ -596,31 +526,13 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
-        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .queryContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
-    Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
-  }
-
-  @Test
-  public void testDefaultQueryContextIsApplied()
-  {
-    SqlQueryPlus sqlReq = SqlQueryPlus
-        .builder("select 1 + ?")
-        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
-        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
-        .build();
-    DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
-    Map<String, Object> context = stmt.context();
-    Assert.assertEquals(2, context.size());
-    // Statement should contain default query context values
-    for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
-      Assert.assertTrue(context.containsKey(defaultContextKey));
-    }
+    Assert.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
   }
 
   private SqlStatementFactory buildSqlStatementFactory()
@@ -661,7 +573,6 @@ public class SqlStatementTest
             new NoopServiceEmitter(),
             testRequestLogger,
             QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            defaultQueryConfig,
             new SqlLifecycleManager()
         )
     );

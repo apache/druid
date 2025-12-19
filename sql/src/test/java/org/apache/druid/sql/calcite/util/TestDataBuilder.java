@@ -69,6 +69,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -591,7 +592,7 @@ public class TestDataBuilder
     try {
       final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
       final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
-      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.getDefault(), null);
       return TestIndex.INDEX_IO.loadIndex(directory);
     }
     catch (IOException e) {
@@ -857,7 +858,12 @@ public class TestDataBuilder
         forbiddenIndex
     ).add(
         TestDataSet.NUMFOO,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3")
+    ).add(
+        TestDataSet.LARRY,
+        TestHelper.JSON_MAPPER,
+        new File(tmpDir, "larry")
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE4)
@@ -896,9 +902,11 @@ public class TestDataBuilder
         someXDatasourceIndex
     ).add(
         TestDataSet.BROADCAST,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3a")
     ).add(
         TestDataSet.RESTRICTED_BROADCAST,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3a")
     ).add(
         DataSegment.builder()
@@ -1020,7 +1028,7 @@ public class TestDataBuilder
     List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
                                                     .getDimensions()
                                                     .stream()
-                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                     .collect(Collectors.toList());
     QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = segmentGenerator.generate(
         dataSegment,

@@ -33,6 +33,31 @@ Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it ha
 
 The K8s extension builds a pod spec for each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the Druid deployment, thus restarting pods or doing upgrades has no effect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
 
+## Kubernetes Client Mode
+
+### "Direct" K8s API Interaction per task *(Default)*
+
+Task lifecycle code in Druid talks directly to the Kubernetes API server for all operations that require interaction with the Kubernetes cluster.
+
+### `SharedInformer` "Caching" *(Experimental)*
+
+Enabled by setting `druid.indexer.runner.useK8sSharedInformers=true`, this mode uses `Fabric8` `SharedInformer` objects for monitoring state changes in the remote K8s cluster, reducing the number of direct API calls to the Kubernetes API server. This can greatly reduce load on the API server, especially in environments with a high volume of tasks.
+
+This mode is experimental and should be used with caution in production until it has been vetted more thoroughly by the community.
+
+The core idea is to use two `SharedInformers`, one for jobs and one for pods, to watch for changes in the remote K8s cluster. These informers maintain a local cache of jobs and pods that tasks can query. The informers can also notify listeners when changes occur, allowing tasks to react to state changes without polling the API server or creating per-task watches on the K8s cluster.
+
+#### Architecture: Direct vs. Caching Mode
+
+**Key Differences:**
+
+- `DirectKubernetesPeonClient` (Default): Every read operation makes a direct HTTP call to the K8s API server. With 100 concurrent tasks, this results in 100+ active API connections with continuous polling.
+
+- `CachingKubernetesPeonClient` (Experimental): All read operations query an in-memory cache maintained by `SharedInformers`. With 100 concurrent tasks, only 2 persistent watch connections are used (one for Jobs, one for Pods), achieving a large reduction in API calls.
+
+**Shared Operations**: 
+
+Both implementations share the same write (job creation, deletion) and log read operations code, which always use direct API calls.
 
 ## Configuration
 
@@ -48,9 +73,9 @@ Other configurations required are:
 Druid operators can dynamically tune certain features within this extension. You don't need to restart the Overlord
 service for these changes to take effect.
 
-Druid can dynamically tune [pod template selection](#pod-template-selection), which allows you to configure the pod 
-template based on the task to be run. To enable dynamic pod template selection, first configure the 
-[custom template pod adapter](#custom-template-pod-adapter).
+Druid can dynamically tune [pod template selection](#pod-template-selection) and [capacity](#properties). Where capacity refers to `druid.indexer.runner.capacity`.
+
+Pod template selection allows you to configure the pod template based on the task to be run. To enable dynamic pod template selection, first configure the [custom template pod adapter](#custom-template-pod-adapter).
 
 Use the following APIs to view and update the dynamic configuration for the Kubernetes task runner.
 
@@ -126,7 +151,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 12
 }
 ```
 </details>
@@ -134,6 +160,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Update dynamic configuration
 
 Updates the dynamic configuration for the Kubernetes Task Runner
+
+Note: Both `podTemplateSelectStrategy` and `capacity` are optional fields. A POST request may include either, both, or neither.
 
 ##### URL
 
@@ -193,7 +221,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconf
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }'
 ```
 
@@ -225,7 +254,8 @@ Content-Type: application/json
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }
 ```
 
@@ -309,7 +339,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"}",
+    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"},\"capacity\":6",
     "auditTime": "2024-06-13T20:59:51.622Z"
   }
 ]
@@ -372,10 +402,11 @@ The below runtime properties need to be passed to the Job's peon process.
 druid.port=8100 (what port the peon should run on)
 druid.peon.mode=remote
 druid.service=druid/peon (for metrics reporting)
-druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
 druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
+
+**Note**: Prior to Druid 35.0.0, you will need the `druid.indexer.task.baseTaskDir` runtime property, along with the `TASK_DIR` and `attemptId` arguments to `/peon.sh` to run your jobs. There is no need for that now as Druid will automatically configure the task directory. You can still choose to customize the target task directory by adjusting `druid.indexer.task.baseTaskDir` on the Overlord service.
 
 #### Example 1: Using a Pod Template that retrieves values from a ConfigMap 
 
@@ -398,7 +429,7 @@ template:
         - sh
         - -c
         - |
-          /peon.sh /druid/data 1
+          /peon.sh
       env:
       - name: CUSTOM_ENV_VARIABLE
         value: "hello"
@@ -492,7 +523,6 @@ data:
         druid.port=8100
         druid.service=druid/peon
         druid.server.http.numThreads=5
-        druid.indexer.task.baseTaskDir=/druid/data
         druid.indexer.runner.type=k8s
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
@@ -544,7 +574,7 @@ data:
             - sh
             - -c
             - |
-              /peon.sh /druid/data 1
+              /peon.sh
           env:
             - name: druid_port
               value: 8100
@@ -556,8 +586,6 @@ data:
               value: remote
             - name: druid_service
               value: "druid/peon"
-            - name: druid_indexer_task_baseTaskDir
-              value: /druid/data
             - name: druid_indexer_runner_type
               value: k8s
             - name: druid_indexer_task_encapsulatedTask
@@ -777,7 +805,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.namespace` | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
 | `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
 | `druid.indexer.runner.k8sTaskPodNamePrefix` | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
-| `druid.indexer.runner.debugJobs` | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
+| `druid.indexer.runner.debugJobs` | `boolean` | Boolean flag used to disable clean up of K8s jobs after tasks complete. | False | No |
 | `druid.indexer.runner.sidecarSupport` | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |
 | `druid.indexer.runner.primaryContainerName` | `String` | If running with sidecars, the `primaryContainerName` should be that of your druid container like `druid-overlord`. | First container in `podSpec` list | No |
 | `druid.indexer.runner.kubexitImage` | `String` | Used kubexit project to help shutdown sidecars when the main pod completes. Otherwise, jobs with sidecars never terminate. | karlkfi/kubexit:latest | No |
@@ -786,14 +814,17 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.taskCleanupDelay` | `Duration` | How long do jobs stay around before getting reaped from K8s. | `P2D` | No |
 | `druid.indexer.runner.taskCleanupInterval` | `Duration` | How often to check for jobs to be reaped. | `PT10M` | No |
 | `druid.indexer.runner.taskJoinTimeout` | `Duration` | Timeout for gathering metadata about existing tasks on startup. | `PT1M` | No |
-| `druid.indexer.runner.K8sjobLaunchTimeout` | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
+| `druid.indexer.runner.k8sjobLaunchTimeout` | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
 | `druid.indexer.runner.javaOptsArray` | `JsonArray` | java opts for the task. | `-Xmx1g` | No |
 | `druid.indexer.runner.labels` | `JsonObject` | Additional labels you want to add to peon pod. | `{}` | No |
 | `druid.indexer.runner.annotations` | `JsonObject` | Additional annotations you want to add to peon pod. | `{}` | No |
 | `druid.indexer.runner.peonMonitors` | `JsonArray` | Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord. | `[]` | No |
 | `druid.indexer.runner.graceTerminationPeriodSeconds` | `Long` | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete. Keep at a smaller value if you want tasks to hold locks for shorter periods. | `PT30S` (K8s default) | No |
-| `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
+| `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. Value will be overridden if a dynamic config value has been set. | `2147483647` | No |
 | `druid.indexer.runner.cpuCoreInMicro` | `Integer` | Number of CPU micro core for the task. | `1000` | No |
+| `druid.indexer.runner.logSaveTimeout` | `Duration` | The peon executing the ingestion task makes a best effort to persist the pod logs from `k8s` to persistent task log storage. The timeout ensures that `k8s` connection issues do not cause the pod to hang indefinitely thereby blocking Overlord operations. If the timeout occurs before the logs are saved, those logs will not be available in Druid. | `PT300S` | NO |
+| `druid.indexer.runner.useK8sSharedInformers` | `boolean` | Whether to use shared informers to watch for pod/job changes. This is more efficient on the Kubernetes API server, but may use more memory in the Overlord. | `false` | No |
+| `druid.indexer.runner.k8sSharedInformerResyncPeriod` | `Duration` | When using shared informers, controls how frequently the informers resync with the Kubernetes API server. This prevents change events from being missed, keeping the informer cache clean and accurate. | `PT300S` | No |
 
 ### Metrics added
 
@@ -818,7 +849,7 @@ rules:
     resources: ["jobs"]
     verbs: ["get", "watch", "list", "delete", "create"]
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
+    resources: ["events", "pods", "pods/log"]
     verbs: ["get", "watch", "list", "delete", "create"]
 ---
 kind: RoleBinding
@@ -856,3 +887,43 @@ To do this, set the following property.
 |`druid.indexer.runner.k8sAndWorker.runnerStrategy.taskType.default`| `String` (e.g., `k8s`, `worker`) | Specifies the default runner to use if no overrides apply. This setting ensures there is always a fallback runner available.|None|No|
 |`druid.indexer.runner.k8sAndWorker.runnerStrategy.taskType.overrides`| `JsonObject`(e.g., `{"index_kafka": "worker"}`)| Defines task-specific overrides for runner types. Each entry sets a task type to a specific runner, allowing fine control. |`{}`|No|
 
+### Experimental Fabric8 Http Client Configurations
+
+:::warning
+
+This section is experimental and subject to change. The Druid developer community intends on selecting a stable default HTTP client and configuration in the future, simplifying configuration and distribution packaging. This means that not all exposed HTTP clients and their configurations will be supported long term. If you opt in to using this experimental configuration, please provide feedback to the Druid developer community ([GitHub Issue](https://github.com/apache/druid/issues/18629) ... Apache mailing list: `dev@druid.apache.org`) on your experience to help guide our long term decisions.
+
+:::
+
+The extension uses [fabric8 KubernetesClient](https://github.com/fabric8io/kubernetes-client) to communicate with the Kubernetes API server. This client creates an
+underlying HTTP Client using a pluggable HTTP client library. By default, the client is [vert.x](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-vertx). The legacy default
+was [okhttp](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-okhttp).
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.httpClientType`|`String` (e.g., `okhttp`, `vertx`, `javaStandardHttp`)|Specifies the HTTP client library to be used by the worker task runner for communication with worker nodes.|`vertx`|No|
+
+#### vert.x HTTP Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.workerPoolSize`|`Integer`|...|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.eventLoopPoolSize`|`Integer`|...|`2 * number cores`|No|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.internalBlockingPoolSize`|`Integer`|...|20|No|
+
+#### OkHttp Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for okhttp http client request dispatcher|false|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle. Only applicable if `useCustomDispatcherExecutor` is true.|50|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher. Must be greater than or equal to `druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads` Only applicable if `useCustomDispatcherExecutor` is true.|`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool. Only applicable if `useCustomDispatcherExecutor` is true.|60|No|
+
+#### Native Java HTTP Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool.|60|No|

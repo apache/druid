@@ -139,8 +139,7 @@ public class DruidCoordinatorTest
         )
     ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    statusTracker = new CompactionStatusTracker(objectMapper);
+    statusTracker = new CompactionStatusTracker();
     druidCoordinatorConfig = new DruidCoordinatorConfig(
         new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
         new CoordinatorPeriodConfig(null, null),
@@ -169,7 +168,7 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
@@ -481,7 +480,7 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
@@ -533,7 +532,7 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
@@ -585,7 +584,7 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );
@@ -695,7 +694,7 @@ public class DruidCoordinatorTest
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
         EasyMock.niceMock(CloneStatusManager.class)
     );

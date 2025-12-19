@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 
@@ -58,6 +59,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   private final boolean populateResultCache;
   private Query<T> query;
   private final CacheStrategy<T, Object, Query<T>> strategy;
+  private final QueryToolChest queryToolChest;
+  private final ServiceEmitter emitter;
 
 
   public ResultLevelCachingQueryRunner(
@@ -66,7 +69,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       Query<T> query,
       ObjectMapper objectMapper,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      ServiceEmitter emitter
   )
   {
     this.baseRunner = baseRunner;
@@ -82,6 +86,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         CacheUtil.ServerType.BROKER
     );
     this.useResultCache = CacheUtil.isUseResultCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
+    this.queryToolChest = queryToolChest;
+    this.emitter = emitter;
   }
 
   @Override
@@ -104,8 +110,15 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       );
       String newResultSetId = responseContext.getEntityTag();
 
-      if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
-        log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
+      final boolean cacheHit = newResultSetId != null && newResultSetId.equals(existingResultSetId);
+      if (useResultCache) {
+        final QueryMetrics<?> queryMetrics = queryPlus.withQueryMetrics(queryToolChest).getQueryMetrics();
+        queryMetrics.reportResultCachePoll(cacheHit);
+        queryMetrics.emit(emitter);
+      }
+
+      if (useResultCache && cacheHit) {
+        log.debug("Return cached result set as there is no change in identifiers for query[%s].", query.getId());
         // Call accumulate on the sequence to ensure that all Wrapper/Closer/Baggage/etc. get called
         resultFromClient.accumulate(null, (accumulated, in) -> accumulated);
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);

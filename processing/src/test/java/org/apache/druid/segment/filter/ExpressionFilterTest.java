@@ -209,6 +209,17 @@ public class ExpressionFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testMvOverlap()
+  {
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '1')"), List.of("0"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '4')"), List.of("4", "5"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, array(1, 2, 3, 4))"), List.of("0", "3", "4", "5"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, dim3)"), List.of("5", "9"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, null)"), List.of("1", "6", "7", "8"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, [])"), List.of());
+  }
+
+  @Test
   public void testOneLongColumn()
   {
     // A long does not match empty string

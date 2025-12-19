@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
@@ -61,7 +62,8 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
     final String largeString = StringUtils.fromUtf8(largeUtf8);
     final Row largeRow = new MapBasedRow(0L, ImmutableMap.of("n", 3L, "s", largeString));
 
-    final FrameWriterFactory frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.latestRowBased(),
         new ArenaMemoryAllocatorFactory(1_000_000),
         signature,
         ImmutableList.of(),
@@ -96,16 +98,19 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
 
     final RowSignature signature = RowSignature.builder().add(colName, ColumnType.LONG).build();
 
+    RuntimeException realException = new RuntimeException(errorMsg);
+
     LongFieldWriter fieldWriter = EasyMock.mock(LongFieldWriter.class);
     EasyMock.expect(fieldWriter.writeTo(
         EasyMock.anyObject(),
         EasyMock.anyLong(),
         EasyMock.anyLong()
-    )).andThrow(new RuntimeException(errorMsg));
+    )).andThrow(realException);
 
     EasyMock.replay(fieldWriter);
 
     RowBasedFrameWriter rowBasedFrameWriter = new RowBasedFrameWriter(
+        FrameType.latestRowBased(),
         signature,
         Collections.emptyList(),
         ImmutableList.of(fieldWriter),
@@ -125,5 +130,6 @@ public class RowBasedFrameWriterTest extends InitializedNullHandlingTest
         rowBasedFrameWriter::addSelection
     );
     Assert.assertEquals(expectedException, actualException);
+    Assert.assertEquals(realException, actualException.getCause());
   }
 }

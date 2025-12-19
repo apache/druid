@@ -29,22 +29,22 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -99,9 +99,6 @@ public class SqlModuleTest
   private TimelineServerView timelineServerView;
 
   @Mock
-  private DruidLeaderClient druidLeaderClient;
-
-  @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   @Mock
@@ -125,6 +122,9 @@ public class SqlModuleTest
   @Mock
   private QueryRunnerFactoryConglomerate conglomerate;
 
+  @Mock
+  private HttpClient httpClient;
+
   private Injector injector;
 
   @Before
@@ -134,14 +134,14 @@ public class SqlModuleTest
         serviceEmitter,
         inventoryView,
         timelineServerView,
-        druidLeaderClient,
         druidNodeDiscoveryProvider,
         genericQueryMetricsFactory,
         querySegmentWalker,
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
-        segmentCacheManager
+        segmentCacheManager,
+        httpClient
     );
   }
 
@@ -189,6 +189,7 @@ public class SqlModuleTest
             new JacksonModule(),
             new PolicyModule(),
             new AuthenticatorMapperModule(),
+            new CatalogCoreModule(),
             binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
@@ -201,8 +202,6 @@ public class SqlModuleTest
               binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>(){}).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(null)));
               binder.bind(FilteredServerInventoryView.class).toInstance(inventoryView);
               binder.bind(TimelineServerView.class).toInstance(timelineServerView);
-              binder.bind(DruidLeaderClient.class).annotatedWith(Coordinator.class).toInstance(druidLeaderClient);
-              binder.bind(DruidLeaderClient.class).annotatedWith(IndexingService.class).toInstance(druidLeaderClient);
               binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
               binder.bind(GenericQueryMetricsFactory.class).toInstance(genericQueryMetricsFactory);
               binder.bind(QuerySegmentWalker.class).toInstance(querySegmentWalker);
@@ -221,6 +220,8 @@ public class SqlModuleTest
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
               binder.bind(CentralizedDatasourceSchemaConfig.class)
                     .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
+              binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
+              binder.bind(HttpClient.class).annotatedWith(EscalatedClient.class).toInstance(httpClient);
             },
             sqlModule,
             new TestViewManagerModule()

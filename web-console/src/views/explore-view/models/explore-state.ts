@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import { Timezone } from 'chronoshift';
 import type { Column } from 'druid-query-toolkit';
 import {
@@ -57,11 +59,28 @@ export type ExploreModuleLayout =
   | 'left-column-three-tiles'
   | 'right-column-three-tiles';
 
+export const LAYOUT_TO_ICON: Record<ExploreModuleLayout, IconName> = {
+  'single': IconNames.SYMBOL_RECTANGLE,
+  'two-by-two': IconNames.GRID_VIEW,
+  'two-rows': IconNames.LAYOUT_TWO_ROWS,
+  'two-columns': IconNames.LAYOUT_TWO_COLUMNS,
+  'three-rows': IconNames.LAYOUT_THREE_ROWS,
+  'three-columns': IconNames.LAYOUT_THREE_COLUMNS,
+  'top-row-two-tiles': IconNames.LAYOUT_TOP_ROW_TWO_TILES,
+  'bottom-row-two-tiles': IconNames.LAYOUT_BOTTOM_ROW_TWO_TILES,
+  'left-column-two-tiles': IconNames.LAYOUT_LEFT_COLUMN_TWO_TILES,
+  'right-column-two-tiles': IconNames.LAYOUT_RIGHT_COLUMN_TWO_TILES,
+  'top-row-three-tiles': IconNames.LAYOUT_TOP_ROW_THREE_TILES,
+  'bottom-row-three-tiles': IconNames.LAYOUT_BOTTOM_ROW_THREE_TILES,
+  'left-column-three-tiles': IconNames.LAYOUT_LEFT_COLUMN_THREE_TILES,
+  'right-column-three-tiles': IconNames.LAYOUT_RIGHT_COLUMN_THREE_TILES,
+};
+
 interface ExploreStateValue {
   source: string;
   showSourceQuery?: boolean;
   timezone?: Timezone;
-  where: SqlExpression;
+  where?: SqlExpression;
   moduleStates: Readonly<Record<string, ModuleState>>;
   layout?: ExploreModuleLayout;
   hideResources?: boolean;
@@ -124,7 +143,7 @@ export class ExploreState {
   public readonly source: string;
   public readonly showSourceQuery: boolean;
   public readonly timezone?: Timezone;
-  public readonly where: SqlExpression;
+  public readonly where?: SqlExpression;
   public readonly moduleStates: Readonly<Record<string, ModuleState>>;
   public readonly layout?: ExploreModuleLayout;
   public readonly hideResources: boolean;
@@ -161,9 +180,10 @@ export class ExploreState {
       source: this.source,
       where: this.where,
       moduleStates: this.moduleStates,
-      layout: this.layout,
     };
+    if (this.layout) value.layout = this.layout;
     if (this.showSourceQuery) value.showSourceQuery = true;
+    if (this.timezone) value.timezone = this.timezone;
     if (this.hideResources) value.hideResources = true;
     if (this.helpers.length) value.helpers = this.helpers;
     if (this.hideHelpers) value.hideHelpers = true;
@@ -183,7 +203,7 @@ export class ExploreState {
     };
 
     if (rename) {
-      toChange.where = renameColumnsInExpression(this.where, rename);
+      toChange.where = this.where ? renameColumnsInExpression(this.where, rename) : undefined;
       toChange.moduleStates = mapRecordOrReturn(this.moduleStates, moduleState =>
         moduleState.applyRename(rename),
       );
@@ -198,21 +218,21 @@ export class ExploreState {
   }
 
   public changeToTable(tableName: string): ExploreState {
-    return this.changeSource(SqlQuery.create(tableName), undefined);
+    return this.changeSource(SqlQuery.selectStarFrom(tableName), undefined);
   }
 
   public initToTable(tableName: string): ExploreState {
     const { moduleStates } = this;
     return this.change({
-      source: SqlQuery.create(tableName).toString(),
-      moduleStates: isEmpty(moduleStates) ? { '0': ModuleState.INIT_STATE } : moduleStates,
+      source: SqlQuery.selectStarFrom(tableName).toString(),
+      moduleStates: isEmpty(moduleStates) ? {} : moduleStates,
     });
   }
 
   public addInitTimeFilterIfNeeded(columns: readonly Column[]): ExploreState {
     if (!this.parsedSource) return this;
     if (!QuerySource.isSingleStarQuery(this.parsedSource)) return this; // Only trigger for `SELECT * FROM ...` queries
-    if (!this.where.equals(SqlLiteral.TRUE)) return this;
+    if (this.where) return this;
 
     // Either find the `__time::TIMESTAMP` column or use the first column if it is a TIMESTAMP
     const timeColumn =
@@ -235,9 +255,9 @@ export class ExploreState {
 
   public restrictToQuerySource(querySource: QuerySource): ExploreState {
     const { where, moduleStates, helpers } = this;
-    const newWhere = querySource.restrictWhere(where);
+    const newWhere = where ? querySource.restrictWhere(where) : undefined;
     const newModuleStates = mapRecordOrReturn(moduleStates, moduleState =>
-      moduleState.restrictToQuerySource(querySource, newWhere),
+      moduleState.restrictToQuerySource(querySource, newWhere || SqlLiteral.TRUE),
     );
     const newHelpers = filterOrReturn(helpers, helper =>
       querySource.validateExpressionMeta(helper),
@@ -270,6 +290,10 @@ export class ExploreState {
 
   public getEffectiveTimezone(): Timezone {
     return this.timezone || Timezone.UTC;
+  }
+
+  public getEffectiveWhere(): SqlExpression {
+    return this.where || SqlLiteral.TRUE;
   }
 
   public applyShowColumn(column: Column, k = 0): ExploreState {
@@ -325,6 +349,5 @@ export class ExploreState {
 
 ExploreState.DEFAULT_STATE = new ExploreState({
   source: '',
-  where: SqlLiteral.TRUE,
   moduleStates: {},
 });

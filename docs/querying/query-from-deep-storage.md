@@ -26,8 +26,6 @@ Druid can query segments that are only stored in deep storage. Running a query f
 
 ## Prerequisites
 
-Query from deep storage requires the Multi-stage query (MSQ) task engine. Load the extension for it if you don't already have it enabled before you begin. See [enable MSQ](../multi-stage-query/index.md#load-the-extension) for more information.
-
 To be queryable, your datasource must meet one of the following conditions:
 
 - At least one segment from the datasource is loaded onto a Historical service for Druid to plan the query. This segment can be any segment from the datasource. You can verify that a datasource has at least one segment on a Historical service if it's visible in the Druid console.
@@ -113,6 +111,12 @@ curl --location 'http://localhost:8888/druid/v2/sql/statements' \
 }'
 ```
 
+Note that you can also submit context parameters using [SET](../querying/sql.md#set). For example:
+
+```
+  "query": "SET executionMode = '\''ASYNC'\''; SET selectDestination = '\''durableStorage'\''; SELECT * FROM \"YOUR_DATASOURCE\" WHERE \"__time\" > TIMESTAMP '\''2017-09-01'\'' AND \"__time\" <= TIMESTAMP '\''2017-09-02'\''"
+```
+
 The response for submitting a query includes the query ID along with basic information, such as when you submitted the query and the schema of the results:
 
 ```json
@@ -131,7 +135,6 @@ The response for submitting a query includes the query ID along with basic infor
 "durationMs": DURATION_IN_MS,
 }
 ```
-
 
 ### Get query status
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -80,7 +81,6 @@ import java.util.Set;
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
-    @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
     @Type(name = NoopTask.TYPE, value = NoopTask.class),
     @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })
@@ -313,14 +313,13 @@ public interface Task
     return new TaskIdentifier(this.getId(), this.getGroupId(), this.getType());
   }
 
-  static TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(TaskInfo<Task, TaskStatus> taskInfo)
+  static TaskIdStatus toTaskIdentifierInfo(TaskInfo taskInfo)
   {
-    return new TaskInfo<>(
-        taskInfo.getId(),
-        taskInfo.getCreatedTime(),
+    return new TaskIdStatus(
+        taskInfo.getTask().getMetadata(),
         taskInfo.getStatus(),
         taskInfo.getDataSource(),
-        taskInfo.getTask().getMetadata()
+        taskInfo.getCreatedTime()
     );
   }
 

@@ -62,6 +62,7 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryToolChest;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
@@ -100,13 +101,13 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.rules.ExternalResource;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -187,18 +188,20 @@ public class QueryStackTests
         injector.getInstance(Cache.class),
         injector.getInstance(CacheConfig.class),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
-        new SubqueryCountStatsProvider()
+        new SubqueryCountStatsProvider(),
+        new DefaultGenericQueryMetricsFactory()
     );
   }
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines,
+      Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
+    return new TestClusterQuerySegmentWalker(timelines, referenceProviders, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -430,7 +433,12 @@ public class QueryStackTests
         )
         .put(GroupByQuery.class, groupByQueryRunnerFactory)
         .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
-        .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())
+        .put(
+            WindowOperatorQuery.class,
+            new WindowOperatorQueryQueryRunnerFactory(
+                new WindowOperatorQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance())
+            )
+        )
         .build();
   }
 

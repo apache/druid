@@ -27,6 +27,7 @@ import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.ResourceInputSource;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,15 +41,18 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -73,6 +77,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.query.QueryRunnerTestHelper.QUALITY_CARDINALITY;
 
 /**
  *
@@ -179,7 +185,26 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  public static final List<AggregateProjectionSpec> PROJECTIONS = List.of(
+      AggregateProjectionSpec.builder("daily_market_maxQuality")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("market")
+                             )
+                             .aggregators(new LongMaxAggregatorFactory("maxQuality", "qualityLong"))
+                             .build(),
+      AggregateProjectionSpec.builder("daily_countAndQualityCardinalityAndMaxLongNullable")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(
+                                 new CountAggregatorFactory("count"),
+                                 QUALITY_CARDINALITY,
+                                 new LongMaxAggregatorFactory("longNullableMax", "longNumericNull")
+                             )
+                             .build()
+  );
+  public static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
       JSONPathSpec.DEFAULT,
@@ -406,9 +431,14 @@ public class TestIndex
         new IncrementalIndexSchema.Builder()
             .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
             .withTimestampSpec(new TimestampSpec("ts", "iso", null))
-            .withDimensionsSpec(DimensionsSpec.builder().setDimensions(dimensionsSpec.getDimensions()).setDimensionExclusions(ImmutableList.of("index")).setIncludeAllDimensions(true).build())
+            .withDimensionsSpec(DimensionsSpec.builder()
+                                              .setDimensions(dimensionsSpec.getDimensions())
+                                              .setDimensionExclusions(ImmutableList.of("index"))
+                                              .setIncludeAllDimensions(true)
+                                              .build())
             .withVirtualColumns(VIRTUAL_COLUMNS)
             .withMetrics(METRIC_AGGS)
+            .withProjections(PROJECTIONS)
             .withRollup(rollup)
             .build(),
         DEFAULT_JSON_INPUT_FORMAT
@@ -492,16 +522,21 @@ public class TestIndex
   {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
-      someTmpFile.delete();
-      FileUtils.mkdirp(someTmpFile);
-      someTmpFile.deleteOnExit();
-
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
+      someTmpFile = persist(index, indexSpec, someTmpFile);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public static File persist(IncrementalIndex index, IndexSpec indexSpec, File path) throws IOException
+  {
+    path.delete();
+    FileUtils.mkdirp(path);
+    path.deleteOnExit();
+
+    return INDEX_MERGER.persist(index, path, indexSpec, null);
   }
 
 
@@ -523,6 +558,7 @@ public class TestIndex
         .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
+        .withProjections(PROJECTIONS)
         .withRollup(true)
         .build();
     final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
@@ -573,7 +609,7 @@ public class TestIndex
           int lineCount = 0;
 
           @Override
-          public boolean processLine(String line) throws IOException
+          public boolean processLine(String line)
           {
             if (!runOnce) {
               startTime.set(System.currentTimeMillis());

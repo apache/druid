@@ -19,10 +19,12 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import org.apache.druid.java.util.common.StringUtils;
+
 public class KubernetesResourceNotFoundException extends RuntimeException
 {
-  public KubernetesResourceNotFoundException(String message)
+  public KubernetesResourceNotFoundException(String formatText, Object... arguments)
   {
-    super(message);
+    super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 }

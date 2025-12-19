@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -50,8 +51,7 @@ import java.util.function.Supplier;
 /**
  * Processor that merges already-sorted inputChannels and writes a fully-sorted stream to a single outputChannel.
  *
- * Frames from input channels must be {@link org.apache.druid.frame.FrameType#ROW_BASED}. Output frames will
- * be row-based as well.
+ * Frames from input channels must be {@link FrameType#isRowBased()}. Output frames will be row-based as well.
  *
  * For unsorted output, use {@link FrameChannelMixer} instead.
  */

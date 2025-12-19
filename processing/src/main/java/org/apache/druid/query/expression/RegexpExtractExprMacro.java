@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -59,9 +58,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     }
 
     // Precompile the pattern.
-    final Pattern pattern = Pattern.compile(
-        StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
-    );
+    final Pattern pattern = RegexpExprUtils.compilePattern((String) patternExpr.getLiteralValue(), FN_NAME);
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
@@ -79,12 +76,12 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
         final String s = arg.eval(bindings).asString();
 
         if (s == null) {
-          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
-          return ExprEval.of(null);
+          // True nulls do not match anything.
+          return ExprEval.ofString(null);
         } else {
           final Matcher matcher = pattern.matcher(s);
           final String retVal = matcher.find() ? matcher.group(index) : null;
-          return ExprEval.of(retVal);
+          return ExprEval.ofString(retVal);
         }
       }
 

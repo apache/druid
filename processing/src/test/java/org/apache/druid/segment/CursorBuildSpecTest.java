@@ -63,6 +63,12 @@ public class CursorBuildSpecTest
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("x"))
         )
     );
+    // pass if the cursor ordering is exactly the reverse
+    Assert.assertTrue(
+        spec1.isCompatibleOrdering(
+            ImmutableList.of(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
+        )
+    );
     // pass if the cursor ordering includes additional ordering not specified by the spec preferred ordering
     Assert.assertTrue(
         spec1.isCompatibleOrdering(
@@ -81,6 +87,12 @@ public class CursorBuildSpecTest
                 OrderBy.descending("y"),
                 OrderBy.ascending("x")
             )
+        )
+    );
+    // fail if the cursor ordering is different
+    Assert.assertFalse(
+        spec1.isCompatibleOrdering(
+            ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
         )
     );
 

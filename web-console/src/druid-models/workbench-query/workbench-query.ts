@@ -230,7 +230,7 @@ export class WorkbenchQuery {
   public readonly unlimited?: boolean;
   public readonly prefixLines?: number;
 
-  public readonly parsedQuery?: SqlQuery;
+  public readonly parsedQuery?: SqlQuery; // Derived from query string
 
   constructor(value: WorkbenchQueryValue) {
     let queryString = value.queryString;
@@ -267,7 +267,9 @@ export class WorkbenchQuery {
       queryContext: this.queryContext,
       queryParameters: this.queryParameters,
       engine: this.engine,
+      lastExecution: this.lastExecution,
       unlimited: this.unlimited,
+      prefixLines: this.prefixLines,
     };
   }
 
@@ -279,6 +281,12 @@ export class WorkbenchQuery {
       `===== Context =====`,
       JSONBig.stringify(queryContext, undefined, 2),
     ].join('\n\n');
+  }
+
+  public formatLastExecution(): string | undefined {
+    const { lastExecution } = this;
+    if (!lastExecution) return;
+    return `Attached to: ${lastExecution.id} (${lastExecution.engine})`;
   }
 
   public changeQueryString(queryString: string): WorkbenchQuery {
@@ -454,11 +462,13 @@ export class WorkbenchQuery {
     return ret.changeQueryString(newQueryString);
   }
 
-  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
-    const { queryContext } = this;
-    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+  public getMaxNumTasks(): number | undefined {
+    return this.getQueryStringContext().maxNumTasks ?? this.queryContext.maxNumTasks;
+  }
 
-    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    if (!maxNumTasks || typeof this.getMaxNumTasks() === 'number') return this;
+    return this.changeQueryContext({ ...this.queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

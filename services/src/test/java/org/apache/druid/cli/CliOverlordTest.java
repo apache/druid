@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
@@ -27,6 +28,8 @@ import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Set;
 
 public class CliOverlordTest
 {
@@ -37,7 +40,7 @@ public class CliOverlordTest
     final CliOverlord overlord = new CliOverlord();
     injector.injectMembers(overlord);
 
-    final Injector overlordInjector = overlord.makeInjector();
+    final Injector overlordInjector = overlord.makeInjector(Set.of(NodeRole.OVERLORD));
 
     final SegmentMetadataCache segmentMetadataCache
         = overlordInjector.getInstance(SegmentMetadataCache.class);
@@ -46,5 +49,31 @@ public class CliOverlordTest
     final SegmentsMetadataManager segmentsMetadataManager
         = overlordInjector.getInstance(SegmentsMetadataManager.class);
     Assert.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
+  }
+
+
+  @Test
+  public void testGetDefaultMaxConcurrentActions()
+  {
+    // Small thread count where
+    Assert.assertEquals(8, CliOverlord.getDefaultMaxConcurrentActions(10));
+    
+    // Medium thread count where
+    Assert.assertEquals(21, CliOverlord.getDefaultMaxConcurrentActions(25));
+    Assert.assertEquals(26, CliOverlord.getDefaultMaxConcurrentActions(30));
+
+
+    // Large thread count
+    Assert.assertEquals(46, CliOverlord.getDefaultMaxConcurrentActions(50));
+    Assert.assertEquals(96, CliOverlord.getDefaultMaxConcurrentActions(100));
+    
+    // Test edge cases - return atleast 1 thread
+    Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(-1));
+    Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(0));
+
+    // Test small clustesr
+    Assert.assertEquals(2, CliOverlord.getDefaultMaxConcurrentActions(3));
+    Assert.assertEquals(3, CliOverlord.getDefaultMaxConcurrentActions(4));
+    Assert.assertEquals(4, CliOverlord.getDefaultMaxConcurrentActions(5));
   }
 }

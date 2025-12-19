@@ -61,14 +61,14 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
+import org.eclipse.jetty.client.BytesRequestContent;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.api.Response;
-import org.eclipse.jetty.client.api.Result;
-import org.eclipse.jetty.client.util.BytesContentProvider;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.client.Result;
+import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
 import javax.annotation.Nullable;
 import javax.servlet.ServletException;
@@ -107,6 +107,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
 
   private static final long CANCELLATION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
+  // Jetty-specific default (un-assigned) status code
+  private static final int UNASSIGNED_DEFAULT_STATUS_CODE = 0;
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
@@ -438,7 +440,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     byte[] avaticaQuery = (byte[]) clientRequest.getAttribute(AVATICA_QUERY_ATTRIBUTE);
     if (avaticaQuery != null) {
-      proxyRequest.content(new BytesContentProvider(avaticaQuery));
+      proxyRequest.body(new BytesRequestContent(avaticaQuery));
     }
 
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
@@ -483,9 +485,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
     try {
       byte[] bytes = objectMapper.writeValueAsBytes(content);
-      proxyRequest.content(new BytesContentProvider(bytes));
-      proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
-      proxyRequest.getHeaders().put(HttpHeader.CONTENT_TYPE, objectMapper.getFactory() instanceof SmileFactory ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON);
+      Request.Content requestContent = new BytesRequestContent(bytes);
+      proxyRequest.body(requestContent);
+      proxyRequest.headers(headers -> {
+        headers.put(HttpHeader.CONTENT_LENGTH, String.valueOf(requestContent.getLength()));
+        headers.put(HttpHeader.CONTENT_TYPE, objectMapper.getFactory() instanceof SmileFactory ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON);
+      });
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -757,13 +762,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      boolean success = result.isSucceeded();
+      final boolean success = result.isSucceeded() && result.getResponse().getStatus() == Status.OK.getStatusCode();
+      final int statusCode = determineStatusCode(success, result.getResponse().getStatus());
       if (success) {
         successfulQueryCount.incrementAndGet();
       } else {
         failedQueryCount.incrementAndGet();
       }
-      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream.
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode);
 
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
@@ -783,8 +793,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                             "query/time",
                             TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                             "success",
-                            success
-                            && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                            success,
                             "identity",
                             authenticationResult.getIdentity()
                         )
@@ -811,8 +820,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
-                        success
-                        && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                        success,
                         "identity",
                         authenticationResult.getIdentity()
                     )
@@ -850,7 +858,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       failedQueryCount.incrementAndGet();
-      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream. 
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
+      final int statusCode = determineStatusCode(false, response.getStatus());
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       //noinspection VariableNotUsedInsideIf
@@ -926,7 +939,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         long requestTimeNs,
         boolean success,
         @Nullable String sqlQueryId,
-        @Nullable String queryId
+        @Nullable String queryId,
+        int statusCode
     )
     {
       QueryMetrics queryMetrics;
@@ -947,7 +961,28 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         );
       }
       queryMetrics.success(success);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
+  }
+
+  /**
+   * Helper method to assign reasonable status codes in ambigious cases like client/broker connection errors.
+   *
+   * @param success Whether the query was successful
+   * @param statusCode Status code reported by the broker (or {@value UNASSIGNED_DEFAULT_STATUS_CODE})
+   */
+  private static int determineStatusCode(boolean success, int statusCode)
+  {
+    if (success) {
+      if (statusCode == UNASSIGNED_DEFAULT_STATUS_CODE) {
+        statusCode = Status.OK.getStatusCode();
+      }
+    } else {
+      if (statusCode == UNASSIGNED_DEFAULT_STATUS_CODE || statusCode == Status.OK.getStatusCode()) {
+        statusCode = Status.INTERNAL_SERVER_ERROR.getStatusCode();
+      }
+    }
+    return statusCode;
   }
 }

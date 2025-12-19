@@ -117,7 +117,7 @@ public class CursorBuildSpec
 
   /**
    * {@link Filter} to supply to the {@link CursorHolder}. Only rows which match will be available through the
-   * selectors created from the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor}
+   * selectors created from the {@link Cursor} or {@link VectorCursor}
    */
   @Nullable
   public Filter getFilter()
@@ -128,7 +128,7 @@ public class CursorBuildSpec
   /**
    * {@link Interval} filter to supply to the {@link CursorHolder}. Only rows whose timestamps fall within this range
    * will be available through the selectors created from the {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor}
+   * {@link VectorCursor}
    */
   public Interval getInterval()
   {
@@ -136,8 +136,8 @@ public class CursorBuildSpec
   }
 
   /**
-   * Set of physical columns required from a cursor. If null, and {@link #groupingColumns} is null or empty and
-   * {@link #aggregators} is null or empty, then a {@link CursorHolder} must assume that ALL columns are required.
+   * Set of physical columns required from a cursor. If null, then a {@link CursorHolder} must assume that ALL columns
+   * are required.
    */
   @Nullable
   public Set<String> getPhysicalColumns()
@@ -156,7 +156,7 @@ public class CursorBuildSpec
 
   /**
    * Any columns which will be used for grouping by a query engine for the {@link CursorHolder}, useful for
-   * specializing the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated
+   * specializing the {@link Cursor} or {@link VectorCursor} if any pre-aggregated
    * data is available.
    */
   @Nullable
@@ -168,7 +168,7 @@ public class CursorBuildSpec
   /**
    * Any {@link AggregatorFactory} which will be used by a query engine for the {@link CursorHolder}, useful
    * to assist in determining if {@link CursorHolder#canVectorize()}, as well as specializing the {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated data is available.
+   * {@link VectorCursor} if any pre-aggregated data is available.
    */
   @Nullable
   public List<AggregatorFactory> getAggregators()
@@ -179,7 +179,7 @@ public class CursorBuildSpec
   /**
    * List of all {@link OrderBy} columns which a query engine will use to sort its results to supply to the
    * {@link CursorHolder}, which can allow optimization of the provided {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor} if data matching the preferred ordering is available.
+   * {@link VectorCursor} if data matching the preferred ordering is available.
    * <p>
    * If not specified, the cursor will advance in the native order of the underlying data.
    */
@@ -190,7 +190,7 @@ public class CursorBuildSpec
 
   /**
    * {@link QueryContext} for the {@link CursorHolder} to provide a mechanism to push various data into
-   * {@link Cursor} and {@link org.apache.druid.segment.vector.VectorCursor} such as
+   * {@link Cursor} and {@link VectorCursor} such as
    * {@link org.apache.druid.query.QueryContexts#VECTORIZE_KEY} and
    * {@link org.apache.druid.query.QueryContexts#VECTOR_SIZE_KEY}
    */
@@ -201,7 +201,7 @@ public class CursorBuildSpec
 
   /**
    * {@link QueryMetrics} to use for measuring things involved with {@link Cursor} and
-   * {@link org.apache.druid.segment.vector.VectorCursor} creation.
+   * {@link VectorCursor} creation.
    */
   @Nullable
   public QueryMetrics<?> getQueryMetrics()
@@ -220,9 +220,12 @@ public class CursorBuildSpec
   }
 
   /**
-   * Returns true if the supplied ordering matches {@link #getPreferredOrdering()}, meaning that the supplied ordering
-   * has everything which is in the preferred ordering in the same direction and order. The supplied ordering may have
-   * additional columns beyond the preferred ordering and still satisify this method.
+   * Returns true if the given ordering is compatible with {@link #getPreferredOrdering()}. This means that, for every
+   * column in the preferred ordering, the supplied ordering must either:
+   * <li> use the same direction, or
+   * <li> use the exact opposite direction.
+   * <p>
+   * The supplied ordering may also include extra columns beyond those in the preferred ordering and still satisfy this condition.
    */
   public boolean isCompatibleOrdering(List<OrderBy> ordering)
   {
@@ -234,8 +237,18 @@ public class CursorBuildSpec
     if (ordering.size() < preferredOrdering.size()) {
       return false;
     }
-    for (int i = 0; i < preferredOrdering.size(); i++) {
-      if (!ordering.get(i).equals(preferredOrdering.get(i))) {
+
+    boolean exactMatch = ordering.get(0).equals(preferredOrdering.get(0));
+    if (!exactMatch && !ordering.get(0).isExactReverse(preferredOrdering.get(0))) {
+      // not exact match or reverse match on first column, fail fast
+      return false;
+    }
+    for (int i = 1; i < preferredOrdering.size(); i++) {
+      if (exactMatch && ordering.get(i).equals(preferredOrdering.get(i))) {
+        // exact match, continue
+      } else if (!exactMatch && ordering.get(i).isExactReverse(preferredOrdering.get(i))) {
+        // match in opposite direction, continue
+      } else {
         return false;
       }
     }
@@ -276,6 +289,22 @@ public class CursorBuildSpec
         physicalColumns,
         queryMetrics
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "CursorBuildSpec{" +
+           "filter=" + filter +
+           ", interval=" + interval +
+           ", groupingColumns=" + groupingColumns +
+           ", virtualColumns=" + virtualColumns +
+           ", aggregators=" + aggregators +
+           ", preferredOrdering=" + preferredOrdering +
+           ", queryContext=" + queryContext +
+           ", isAggregate=" + isAggregate +
+           ", physicalColumns=" + physicalColumns +
+           '}';
   }
 
   public static class CursorBuildSpecBuilder
@@ -365,8 +394,7 @@ public class CursorBuildSpec
      * @see CursorBuildSpec#getPhysicalColumns() for usage. The backing value is not automatically populated by calls to
      * {@link #setFilter(Filter)}, {@link #setVirtualColumns(VirtualColumns)}, {@link #setAggregators(List)}, or
      * {@link #setPreferredOrdering(List)}, so this must be explicitly set for all required physical columns. If set to
-     * null, and {@link #groupingColumns} is null or empty and {@link #aggregators} is null or empty, then a
-     * {@link CursorHolder} must assume that ALL columns are required
+     * null, then a {@link CursorHolder} must assume that ALL columns are required
      */
     public CursorBuildSpecBuilder setPhysicalColumns(@Nullable Set<String> physicalColumns)
     {
@@ -481,7 +509,6 @@ public class CursorBuildSpec
       this.queryMetrics = queryMetrics;
       return this;
     }
-
 
 
     /**

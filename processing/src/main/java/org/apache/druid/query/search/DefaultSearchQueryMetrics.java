@@ -146,6 +146,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void statusCode(int code)
+  {
+    delegateQueryMetrics.statusCode(code);
+  }
+
+  @Override
   public void segment(String segmentIdentifier)
   {
     delegateQueryMetrics.segment(segmentIdentifier);
@@ -215,6 +221,54 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportSegmentAndCacheTime(long timeNs)
   {
     return delegateQueryMetrics.reportSegmentAndCacheTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTimeAvg(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTimeAvg(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadWaitTimeMax(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadWaitTimeMax(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadWaitTimeAvg(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadWaitTimeAvg(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTimeMax(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTimeMax(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadBytes(long byteCount)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadBytes(byteCount);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadCount(long count)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadCount(count);
+  }
+
+  @Override
+  public QueryMetrics reportResultCachePoll(boolean hit)
+  {
+    return delegateQueryMetrics.reportResultCachePoll(hit);
   }
 
   @Override

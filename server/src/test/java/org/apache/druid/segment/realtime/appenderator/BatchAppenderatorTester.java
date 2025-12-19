@@ -168,13 +168,14 @@ public class BatchAppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         0,
         false,
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+        null
     );
     metrics = new SegmentGenerationMetrics();
 

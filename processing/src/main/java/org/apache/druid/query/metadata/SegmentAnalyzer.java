@@ -35,6 +35,7 @@ import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -140,7 +141,7 @@ public class SegmentAnalyzer
             analysis = analyzeArrayColumn(capabilities);
             break;
           case COMPLEX:
-            final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
+            final BaseColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
             analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
             break;
           default:
@@ -198,7 +199,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final ColumnHolder columnHolder
+      final BaseColumnHolder columnHolder
   )
   {
     Comparable min = null;
@@ -309,7 +310,7 @@ public class SegmentAnalyzer
   private ColumnAnalysis analyzeComplexColumn(
       final ColumnCapabilities capabilities,
       final int numCells,
-      @Nullable final ColumnHolder columnHolder
+      @Nullable final BaseColumnHolder columnHolder
   )
   {
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;

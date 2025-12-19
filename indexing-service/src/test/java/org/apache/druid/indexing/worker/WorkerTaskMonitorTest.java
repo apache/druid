@@ -65,6 +65,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -163,7 +164,6 @@ public class WorkerTaskMonitorTest
   {
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(FileUtils.createTempDir().toString())
-        .setDefaultRowFlushBoundary(0)
         .build();
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -216,7 +216,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 "1",
-                CentralizedDatasourceSchemaConfig.create()
+                CentralizedDatasourceSchemaConfig.create(),
+                JvmUtils.getRuntimeInfo()
             ),
             taskConfig,
             new NoopServiceEmitter(),

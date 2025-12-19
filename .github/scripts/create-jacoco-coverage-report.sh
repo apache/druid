@@ -20,11 +20,6 @@ set -x
 
 echo "GITHUB_BASE_REF: ${GITHUB_BASE_REF}"
 
-if [ "$GITHUB_BASE_REF" == "" ] ;then
-  echo "GITHUB_BASE_REF is not set; skipping this check!"
-  exit 0
-fi
-
 echo "Setting up git remote"
 git remote set-branches --add origin ${GITHUB_BASE_REF}
 git fetch
@@ -72,3 +67,6 @@ fi
 
 echo " * test balancing details"
 .github/scripts/test_balancing_calc
+
+echo " * validate junit4/junit5 usage"
+dev/validate-junit5-usage

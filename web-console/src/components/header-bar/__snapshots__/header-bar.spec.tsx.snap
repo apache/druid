@@ -181,6 +181,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
+            target="_blank"
             text="Explore"
           />
         </Blueprint5.Menu>
@@ -273,6 +274,16 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Compaction dynamic config"
           />
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
+            icon="console"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Web console config"
+          />
           <Blueprint5.MenuDivider />
           <Blueprint5.MenuItem
             active={false}
@@ -281,7 +292,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             multiline={false}
             popoverProps={{}}
             shouldDismissPopover={true}
-            text="Capabilty detection"
+            text="Capability detection"
           >
             <Blueprint5.MenuItem
               active={false}

@@ -24,24 +24,27 @@ import com.google.inject.Provider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 public class SubqueryGuardrailHelperProvider implements Provider<SubqueryGuardrailHelper>
 {
   private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
   private final ServerConfig serverConfig;
   private final QuerySchedulerConfig querySchedulerConfig;
+  private final RuntimeInfo runtimeInfo;
 
   @Inject
   public SubqueryGuardrailHelperProvider(
       LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider,
       ServerConfig serverConfig,
-      QuerySchedulerConfig querySchedulerConfig
+      QuerySchedulerConfig querySchedulerConfig,
+      RuntimeInfo runtimeInfo
   )
   {
     this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
     this.serverConfig = serverConfig;
     this.querySchedulerConfig = querySchedulerConfig;
+    this.runtimeInfo = runtimeInfo;
   }
 
   @Override
@@ -61,7 +64,7 @@ public class SubqueryGuardrailHelperProvider implements Provider<SubqueryGuardra
 
     return new SubqueryGuardrailHelper(
         lookupExtractorFactoryContainerProvider,
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+        runtimeInfo.getMaxHeapSizeBytes(),
         maxConcurrentQueries
     );
   }

@@ -41,6 +41,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -60,6 +61,11 @@ public class KafkaEmitter implements Emitter
   private final AtomicLong requestLost;
   private final AtomicLong segmentMetadataLost;
   private final AtomicLong invalidLost;
+  private final AtomicLong previousMetricLost;
+  private final AtomicLong previousAlertLost;
+  private final AtomicLong previousRequestLost;
+  private final AtomicLong previousSegmentMetadataLost;
+  private final AtomicLong previousInvalidLost;
 
   private final KafkaEmitterConfig config;
   private final Producer<String, String> producer;
@@ -92,6 +98,11 @@ public class KafkaEmitter implements Emitter
     this.requestLost = new AtomicLong(0L);
     this.segmentMetadataLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
+    this.previousMetricLost = new AtomicLong(0);
+    this.previousAlertLost = new AtomicLong(0);
+    this.previousRequestLost = new AtomicLong(0);
+    this.previousSegmentMetadataLost = new AtomicLong(0);
+    this.previousInvalidLost = new AtomicLong(0);
   }
 
   private Callback setProducerCallback(AtomicLong lostCounter)
@@ -142,16 +153,38 @@ public class KafkaEmitter implements Emitter
     if (eventTypes.contains(EventType.SEGMENT_METADATA)) {
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
-    scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
-          metricLost.get(),
-          alertLost.get(),
-          requestLost.get(),
-          segmentMetadataLost.get(),
-          invalidLost.get()
-      );
-    }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
+    scheduler.scheduleWithFixedDelay(
+        this::logLostMessagesStatus,
+        DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
+  }
+
+  @VisibleForTesting
+  protected void logLostMessagesStatus()
+  {
+    long currentMetricLost = metricLost.get();
+    long currentAlertLost = alertLost.get();
+    long currentRequestLost = requestLost.get();
+    long currentSegmentMetadataLost = segmentMetadataLost.get();
+    long currentInvalidLost = invalidLost.get();
+
+    long deltaMetricLost = currentMetricLost - previousMetricLost.getAndSet(currentMetricLost);
+    long deltaAlertLost = currentAlertLost - previousAlertLost.getAndSet(currentAlertLost);
+    long deltaRequestLost = currentRequestLost - previousRequestLost.getAndSet(currentRequestLost);
+    long deltaSegmentMetadataLost =
+        currentSegmentMetadataLost - previousSegmentMetadataLost.getAndSet(currentSegmentMetadataLost);
+    long deltaInvalidLost = currentInvalidLost - previousInvalidLost.getAndSet(currentInvalidLost);
+
+    // Refrain from clogging logs when there are no lost messages.
+    if (deltaMetricLost + deltaAlertLost + deltaRequestLost + deltaSegmentMetadataLost + deltaInvalidLost > 0) {
+      log.info(
+          "Messages lost for past %d minutes: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
+          DEFAULT_SEND_LOST_INTERVAL_MINUTES,
+          deltaMetricLost, deltaAlertLost, deltaRequestLost, deltaSegmentMetadataLost, deltaInvalidLost);
+      log.info(
+          "Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
+          currentMetricLost, currentAlertLost, currentRequestLost, currentSegmentMetadataLost, currentInvalidLost);
+    }
   }
 
   private void sendMetricToKafka()
@@ -261,7 +294,7 @@ public class KafkaEmitter implements Emitter
   public void close()
   {
     scheduler.shutdownNow();
-    producer.close();
+    producer.close(Duration.ofMillis(config.getShutdownTimeout()));
   }
 
   public long getMetricLostCount()
@@ -287,5 +320,35 @@ public class KafkaEmitter implements Emitter
   public long getSegmentMetadataLostCount()
   {
     return segmentMetadataLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousMetricLostCount()
+  {
+    return previousMetricLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousAlertLostCount()
+  {
+    return previousAlertLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousRequestLostCount()
+  {
+    return previousRequestLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousSegmentMetadataLostCount()
+  {
+    return previousSegmentMetadataLost.get();
+  }
+
+  @VisibleForTesting
+  protected long getPreviousInvalidLostCount()
+  {
+    return previousInvalidLost.get();
   }
 }

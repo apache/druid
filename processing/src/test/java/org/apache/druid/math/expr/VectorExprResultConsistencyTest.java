@@ -19,25 +19,30 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.expression.NestedDataExpressions;
-import org.apache.druid.query.expression.TimestampFloorExprMacro;
-import org.apache.druid.query.expression.TimestampShiftExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.TestMapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -62,7 +67,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  private static final int VECTOR_SIZE = 512;
+  private static final int VECTOR_SIZE = 4;
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -82,61 +87,74 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     }
   };
 
-  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
-      ImmutableList.of(
-          new TimestampFloorExprMacro(),
-          new TimestampShiftExprMacro(),
-          new NestedDataExpressions.JsonObjectExprMacro(),
-          new LookupExprMacro(
-              new LookupExtractorFactoryContainerProvider()
-              {
-                @Override
-                public Set<String> getAllLookupNames()
-                {
-                  return Set.of("test-lookup", "test-lookup-injective");
-                }
+  private static final ExprMacroTable MACRO_TABLE;
 
-                @Override
-                public Optional<LookupExtractorFactoryContainer> get(String lookupName)
-                {
-                  if ("test-lookup".equals(lookupName)) {
-                    return Optional.of(
-                        new LookupExtractorFactoryContainer(
-                            "v0",
-                            new TestMapLookupExtractorFactory(LOOKUP, false)
-                        )
-                    );
-                  } else if ("test-lookup-injective".equals(lookupName)) {
-                    return Optional.of(
-                        new LookupExtractorFactoryContainer(
-                            "v0",
-                            new TestMapLookupExtractorFactory(INJECTIVE_LOOKUP, true)
-                        )
-                    );
-                  }
-                  return Optional.empty();
-                }
+  static {
+    final Injector injector = Guice.createInjector(
+        new DruidGuiceExtensions(),
+        new ExpressionModule(),
+        binder -> {
+          final LookupExtractorFactoryContainerProvider lookupProvider = new LookupExtractorFactoryContainerProvider()
+          {
+            @Override
+            public Set<String> getAllLookupNames()
+            {
+              return Set.of("test-lookup", "test-lookup-injective");
+            }
 
-                @Override
-                public String getCanonicalLookupName(String lookupName)
-                {
-                  return "";
-                }
+            @Override
+            public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+            {
+              if ("test-lookup".equals(lookupName)) {
+                return Optional.of(
+                    new LookupExtractorFactoryContainer(
+                        "v0",
+                        new TestMapLookupExtractorFactory(LOOKUP, false)
+                    )
+                );
+              } else if ("test-lookup-injective".equals(lookupName)) {
+                return Optional.of(
+                    new LookupExtractorFactoryContainer(
+                        "v0",
+                        new TestMapLookupExtractorFactory(INJECTIVE_LOOKUP, true)
+                    )
+                );
               }
-          )
-      )
-  );
+              return Optional.empty();
+            }
 
-  final Map<String, ExpressionType> types = ImmutableMap.<String, ExpressionType>builder()
-      .put("l1", ExpressionType.LONG)
-      .put("l2", ExpressionType.LONG)
-      .put("d1", ExpressionType.DOUBLE)
-      .put("d2", ExpressionType.DOUBLE)
-      .put("s1", ExpressionType.STRING)
-      .put("s2", ExpressionType.STRING)
-      .put("boolString1", ExpressionType.STRING)
-      .put("boolString2", ExpressionType.STRING)
-      .build();
+            @Override
+            public String getCanonicalLookupName(String lookupName)
+            {
+              return "";
+            }
+          };
+
+          ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
+          binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(new DefaultObjectMapper());
+          binder.bind(LookupExtractorFactoryContainerProvider.class)
+                .toInstance(lookupProvider);
+        }
+    );
+
+    MACRO_TABLE = injector.getInstance(ExprMacroTable.class);
+  }
+
+  final Map<String, ExpressionType> types =
+      ImmutableMap.<String, ExpressionType>builder()
+                  .put("l1", ExpressionType.LONG)
+                  .put("l2", ExpressionType.LONG)
+                  .put("l3", ExpressionType.LONG)
+                  .put("d1", ExpressionType.DOUBLE)
+                  .put("d2", ExpressionType.DOUBLE)
+                  .put("d3", ExpressionType.DOUBLE)
+                  .put("s1", ExpressionType.STRING)
+                  .put("s2", ExpressionType.STRING)
+                  .put("s3", ExpressionType.STRING)
+                  .put("boolString1", ExpressionType.STRING)
+                  .put("boolString2", ExpressionType.STRING)
+                  .put("boolString3", ExpressionType.STRING)
+                  .build();
 
 
   @Test
@@ -166,7 +184,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testCast()
   {
     final Set<String> columns = Set.of("d1", "l1", "s1");
-    final Set<String> castTo = Set.of("'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'");
+    final Set<String> castTo = Set.of(
+        "'STRING'",
+        "'LONG'",
+        "'DOUBLE'",
+        "'ARRAY<STRING>'",
+        "'ARRAY<LONG>'",
+        "'ARRAY<DOUBLE>'"
+    );
     final Set<List<String>> args = Sets.cartesianProduct(columns, castTo);
     final List<String> templates = List.of("cast(%s, %s)");
     testFunctions(types, templates, args);
@@ -233,7 +258,12 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testBinaryLogicOperators()
   {
     final List<String> functions = List.of("&&", "||");
-    final List<String> templates = List.of("d1 %s d2", "l1 %s l2", "boolString1 %s boolString2", "(d1 == d2) %s (l1 == l2)");
+    final List<String> templates = List.of(
+        "d1 %s d2",
+        "l1 %s l2",
+        "boolString1 %s boolString2",
+        "(d1 == d2) %s (l1 == l2)"
+    );
     testFunctions(types, templates, functions);
   }
 
@@ -245,7 +275,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2, columns2);
     final List<String> templates = new ArrayList<>();
     for (List<String> template : templateInputs) {
-      templates.add(StringUtils.format("(%s %s %s) %s %s", template.get(0), "%s", template.get(1), "%s", template.get(2)));
+      templates.add(
+          StringUtils.format(
+              "(%s %s %s) %s %s",
+              template.get(0),
+              "%s",
+              template.get(1),
+              "%s",
+              template.get(2)
+          )
+      );
     }
     final Set<String> ops = Set.of("+", "-", "*", "/");
     final Set<List<String>> args = Sets.cartesianProduct(ops, ops);
@@ -258,6 +297,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final List<String> functions = List.of("parse_long", "isNull", "notNull");
     final List<String> templates = List.of("%s(s1)", "%s(l1)", "%s(d1)", "%s(nonexistent)", "%s(null)");
     testFunctions(types, templates, functions);
+  }
+
+  @Test
+  public void testLike()
+  {
+    testExpression("like(s1, '1%')", types);
+    testExpression("like(s1, '%1')", types);
+    testExpression("like(s1, '%1%')", types);
   }
 
   @Test
@@ -313,6 +360,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         "nextAfter",
         "scalb",
         "pow",
+        "safe_divide",
         "bitwiseAnd",
         "bitwiseOr",
         "bitwiseXor",
@@ -334,7 +382,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testSymmetricalBivariateFunctions()
   {
     final List<String> functions = List.of(
-        "nvl"
+        "nvl",
+        "coalesce"
     );
     final List<String> templates = List.of(
         "%s(d1, d2)",
@@ -349,12 +398,130 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIfFunction()
+  {
+    testExpression("if(l1, l1, l2)", types);
+    testExpression("if(l1, s1, s2)", types);
+    testExpression("if(l1, d1, d2)", types);
+    testExpression("if(d1, l1, l2)", types);
+    testExpression("if(d1, s1, s2)", types);
+    testExpression("if(d1, d1, d2)", types);
+    testExpression("if(boolString1, s1, s2)", types);
+    testExpression("if(boolString1, l1, l2)", types);
+    testExpression("if(boolString1, d1, d2)", types);
+    // make sure eval of else is lazy, else this would be divide by zero error
+    testExpression("if(l1 % 2 == 0, -1, l2 / (l1 % 2))", types);
+    // cannot vectorize mixed types
+    Assertions.assertFalse(
+        Parser.parse("if(s1, l1, d2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("if(s1, d1, s2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSearchedFunction()
+  {
+    testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, s1, boolString2, s2, boolString3, s3, s1)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, boolString3, l3, l2)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, boolString3, d3, d1)", types);
+    testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSimpleFunction()
+  {
+    testExpression("case_simple(s1, s2, s2, s1, s2)", types);
+    testExpression("case_simple(s1, s2, s2, s1, s2, s1)", types);
+    testExpression("case_simple(s1, s2, l1, s1, l2)", types);
+    testExpression("case_simple(s1, s2, d1, s1, d2, d1)", types);
+    testExpression("case_simple(s1, l1, d1, d1, d2, d1)", types);
+    Assertions.assertFalse(
+        Parser.parse("case_simple(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCoalesceFunction()
+  {
+    final List<String> functions = List.of(
+        "coalesce"
+    );
+    final List<String> templates = List.of(
+        "%s(nonexistent, d1, d2, d3)",
+        "%s(nonexistent, d1, nonexistent2, d2, nonexistent3, d3)",
+        "%s(nonexistent, nonexistent2, l1, l2, nonexistent, l3)",
+        "%s(nonexistent, s1, nonexistent2, s2)"
+    );
+    testFunctions(types, templates, functions);
+    // cannot vectorize mixed arg types
+    Assertions.assertFalse(
+        Parser.parse("coalesce(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
   public void testStringFns()
   {
     testExpression("s1 + s2", types);
     testExpression("s1 + '-' + s2", types);
     testExpression("concat(s1, s2)", types);
     testExpression("concat(s1,'-',s2,'-',l1,'-',d1)", types);
+  }
+
+  @Test
+  public void testStringFunctions()
+  {
+    testExpression("format('%s-%d-%.2f', s1, l1, d1)", types);
+    testExpression("format('%s %s', s1, s2)", types);
+    testExpression("regexp_extract(s1, '[0-9]+')", types);
+    testExpression("regexp_extract(s1, '([a-z]+)', 1)", types);
+    testExpression("regexp_like(s1, '[0-9]+')", types);
+    testExpression("regexp_like(s1, '^test.*')", types);
+    testExpression("regexp_replace(s1, '[0-9]+', 'NUM')", types);
+    testExpression("contains_string(s1, '1')", types);
+    testExpression("icontains_string(s1, '1')", types);
+    testExpression("replace(s1, 'test', 'TEST')", types);
+    testExpression("replace(s1, s2, s3)", types);
+    testExpression("substring(s1, 0, 3)", types);
+    testExpression("substring(s1, l1, l2)", types);
+    testExpression("right(s1, 3)", types);
+    testExpression("right(s1, l1)", types);
+    testExpression("left(s1, 3)", types);
+    testExpression("left(s1, l1)", types);
+    testExpression("strlen(s1)", types);
+    testExpression("strpos(s1, 'test')", types);
+    testExpression("strpos(s1, s2)", types);
+    testExpression("strpos(s1, s2, l1)", types);
+    testExpression("trim(s1)", types);
+    testExpression("trim(s1, 'abc')", types);
+    testExpression("ltrim(s1)", types);
+    testExpression("ltrim(s1, 'abc')", types);
+    testExpression("rtrim(s1)", types);
+    testExpression("rtrim(s1, 'abc')", types);
+    testExpression("lower(s1)", types);
+    testExpression("upper(s1)", types);
+    testExpression("reverse(s1)", types);
+    testExpression("repeat(s1, 3)", types);
+    testExpression("repeat(s1, l1 % 10)", types);
+    testExpression("lpad(s1, 10, 'x')", types);
+    testExpression("lpad(s1, l1 % 10, s2)", types);
+    testExpression("rpad(s1, 10, 'x')", types);
+    testExpression("rpad(s1, l1 % 10, s2)", types);
   }
 
   @Test
@@ -366,39 +533,175 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         "lookup(%s, 'test-lookup')",
         "lookup(%s, 'test-lookup', 'missing')",
         "lookup(%s, 'test-lookup-injective')",
-        "lookup(%s, 'test-lookup-injective', 'missing')"
+        "lookup(%s, 'test-lookup-injective', 'missing')",
+        "lookup(%s, 'nonexistent-lookup')",
+        "lookup(%s, 'nonexistent-lookup', 'missing')"
     );
     testFunctions(types, templates, columns);
   }
 
   @Test
-  public void testArrayFns()
+  public void testArrayFunctions()
   {
-    try {
-      ExpressionProcessing.initializeForFallback();
-      testExpression("array(s1, s2)", types);
-      testExpression("array(l1, l2)", types);
-      testExpression("array(d1, d2)", types);
-      testExpression("array(l1, d2)", types);
-      testExpression("array(s1, l2)", types);
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
+    testExpression("array(s1, s2)", types);
+    testExpression("array(l1, l2)", types);
+    testExpression("array(d1, d2)", types);
+    testExpression("array(l1, d2)", types);
+    testExpression("array(s1, l2)", types);
+    testExpression("array_length(array(s1, s2))", types);
+    testExpression("array_length(array(l1, l2, l3))", types);
+    testExpression("array_offset(array(s1, s2), 0)", types);
+    testExpression("array_offset(array(l1, l2), l1)", types);
+    testExpression("array_ordinal(array(s1, s2), 1)", types);
+    testExpression("array_ordinal(array(l1, l2), l1)", types);
+    testExpression("array_contains(array(s1, s2), s1)", types);
+    testExpression("array_contains(array(l1, l2), l1)", types);
+    testExpression("array_contains(array(s1, s2), array(s1))", types);
+    testExpression("array_overlap(array(s1, s2), array(s2, s3))", types);
+    testExpression("array_overlap(array(l1, l2), array(l2, l3))", types);
+    testExpression("scalar_in_array(s1, array(s1, s2))", types);
+    testExpression("scalar_in_array(s1, array('1', '2'))", types);
+    testExpression("scalar_in_array(s1, array(1, 2))", types);
+    testExpression("scalar_in_array(l1, array(l1, l2))", types);
+    testExpression("scalar_in_array(l1, array('1', '2'))", types);
+    testExpression("scalar_in_array(l1, array(1, 2))", types);
+    testExpression("array_offset_of(array(s1, s2), s1)", types);
+    testExpression("array_offset_of(array(l1, l2), l1)", types);
+    testExpression("array_ordinal_of(array(s1, s2), s1)", types);
+    testExpression("array_ordinal_of(array(l1, l2), l1)", types);
+    testExpression("array_prepend(s1, array(s2, s3))", types);
+    testExpression("array_prepend(l1, array(l2, l3))", types);
+    testExpression("array_append(array(s1, s2), s3)", types);
+    testExpression("array_append(array(l1, l2), l3)", types);
+    testExpression("array_concat(array(s1, s2), array(s2, s3))", types);
+    testExpression("array_concat(array(l1, l2), array(l2, l3))", types);
+    testExpression("array_set_add(array(s1, s2), s1)", types);
+    testExpression("array_set_add(array(l1, l2), l3)", types);
+    testExpression("array_set_add_all(array(s1, s2), array(s2, s3))", types);
+    testExpression("array_set_add_all(array(l1, l2), array(l2, l3))", types);
+    testExpression("array_slice(array(s1, s2, s3), 1, 2)", types);
+    testExpression("array_slice(array(l1, l2, l3), 1, 2)", types);
+    testExpression("array_to_string(array(s1, s2), ',')", types);
+    testExpression("array_to_string(array(l1, l2), s1)", types);
+    testExpression("string_to_array(s1, ',')", types);
+    testExpression("string_to_array(s1, s2)", types);
+  }
+
+  @Test
+  public void testArrayHigherOrderFunctions()
+  {
+    testExpression("map((x) -> x + 1, array(l1, l2))", types);
+    testExpression("map((x) -> x * 2.0, array(d1, d2))", types);
+    testExpression("map((x) -> concat(x, '_mapped'), array(s1, s2))", types);
+
+    testExpression("cartesian_map((x, y) -> x + y, array(l1, l2), array(d1, d2))", types);
+    testExpression("cartesian_map((x, y) -> concat(x, cast(y, 'STRING')), array(s1, s2), array(l1, l2))", types);
+
+    testExpression("fold((x, acc) -> x + acc, array(l1, l2), 0)", types);
+    testExpression("fold((x, acc) -> x + acc, array(d1, d2), 0.0)", types);
+    testExpression("fold((x, acc) -> concat(acc, x), array(s1, s2), '')", types);
+
+    testExpression("cartesian_fold((x, y, acc) -> acc + x + y, array(l1, l2), array(d1, d2), 0)", types);
+
+    testExpression("filter((x) -> x > 0, array(l1, l2))", types);
+    testExpression("filter((x) -> x > 0.0, array(d1, d2))", types);
+    testExpression("filter((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+    testExpression("any((x) -> x > 0, array(l1, l2))", types);
+    testExpression("any((x) -> x > 0.0, array(d1, d2))", types);
+    testExpression("any((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+    testExpression("all((x) -> x != null, array(l1, l2))", types);
+    testExpression("all((x) -> x != null, array(d1, d2))", types);
+    testExpression("all((x) -> x != null, array(s1, s2))", types);
+  }
+
+  @Test
+  public void testReduceFns()
+  {
+    testExpression("greatest(s1, s2)", types);
+    testExpression("greatest(l1, l2)", types);
+    testExpression("greatest(l1, nonexistent)", types);
+    testExpression("greatest(d1, d2)", types);
+    testExpression("greatest(l1, d2)", types);
+    testExpression("greatest(s1, l2)", types);
+
+    testExpression("least(s1, s2)", types);
+    testExpression("least(l1, l2)", types);
+    testExpression("least(l1, nonexistent)", types);
+    testExpression("least(d1, d2)", types);
+    testExpression("least(l1, d2)", types);
+    testExpression("least(s1, l2)", types);
   }
 
   @Test
   public void testJsonFns()
   {
-    Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
     testExpression("json_object('k1', s1, 'k2', l1)", types);
+    testExpression("json_value(json_object('k1', s1, 'k2', l1), '$.k2', 'STRING')", types);
+    testExpression("json_query(json_object('k1', s1, 'k2', l1), '$.k1')", types);
+    testExpression("json_query_array(json_object('arr', array(s1, s2)), '$.arr')", types);
+    testExpression("parse_json(s1)", types);
+    testExpression("try_parse_json(s1)", types);
+    testExpression("to_json_string(json_object('k1', s1))", types);
+    testExpression("json_keys(json_object('k1', s1, 'k2', l1), '$')", types);
+    testExpression("json_paths(json_object('k1', s1, 'k2', l1))", types);
+    testExpression("json_merge(json_object('k1', s1), json_object('k2', l1))", types);
   }
 
   @Test
   public void testTimeFunctions()
   {
+    testExpression("timestamp_ceil(l1, 'P1D')", types);
+    testExpression("timestamp_ceil(l1, 'PT1H')", types);
+    testExpression("timestamp_floor(l1, 'P1D')", types);
     testExpression("timestamp_floor(l1, 'PT1H')", types);
+    testExpression("timestamp_extract(l1, 'MILLENNIUM')", types);
+    testExpression("timestamp_extract(l1, 'CENTURY')", types);
+    testExpression("timestamp_extract(l1, 'YEAR')", types);
+    testExpression("timestamp_extract(l1, 'MONTH')", types);
+    testExpression("timestamp_extract(l1, 'DAY')", types);
+    testExpression("timestamp_extract(l1, 'HOUR')", types);
+    testExpression("timestamp_extract(l1, 'MINUTE')", types);
+    testExpression("timestamp_extract(l1, 'SECOND')", types);
+    testExpression("timestamp_extract(l1, 'MILLISECOND')", types);
+    testExpression("timestamp_extract(l1, 'EPOCH')", types);
     testExpression("timestamp_shift(l1, 'P1M', 1)", types);
+    testExpression("timestamp(s1)", types);
+    testExpression("timestamp(s1, 'yyyy-MM-dd')", types);
+    testExpression("unix_timestamp(s1)", types);
+    testExpression("unix_timestamp(s1, 'yyyy-MM-dd')", types);
+    testExpression("timestamp_parse(s1)", types);
+    testExpression("timestamp_parse(s1, 'yyyy-MM-dd')", types);
+    testExpression("timestamp_parse(s1, 'yyyy-MM-dd', 'UTC')", types);
+    testExpression("timestamp_format(l1)", types);
+    testExpression("timestamp_format(l1, 'yyyy-MM-dd')", types);
+    testExpression("timestamp_format(l1, 'yyyy-MM-dd', 'UTC')", types);
+  }
+
+  @Test
+  public void testIpAddressFunctions()
+  {
+    testExpression("ipv4_match('192.168.1.1', '192.168.0.0/16')", types);
+    testExpression("ipv4_match(s1, '192.168.0.0/16')", types);
+    testExpression("ipv4_parse('192.168.1.1')", types);
+    testExpression("ipv4_parse(s1)", types);
+    testExpression("ipv4_stringify(3232235777)", types);
+    testExpression("ipv4_stringify(l1)", types);
+    testExpression("ipv6_match('2001:db8::1', '2001:db8::/32')", types);
+    testExpression("ipv6_match(s1, '2001:db8::/32')", types);
+  }
+
+  @Test
+  public void testOtherFunctions()
+  {
+    testExpression("human_readable_binary_byte_format(l1)", types);
+    testExpression("human_readable_binary_byte_format(l1, 3)", types);
+    testExpression("human_readable_decimal_byte_format(l1)", types);
+    testExpression("human_readable_decimal_byte_format(l1, 3)", types);
+    testExpression("human_readable_decimal_format(l1)", types);
+    testExpression("human_readable_decimal_format(l1, 3)", types);
+    testExpression("pi()", types);
   }
 
   /**
@@ -455,100 +758,74 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
    * runs expressions against bindings generated by increasing a counter
    */
   public static void testExpressionSequentialBindings(
-      String expr,
-      Expr parsed,
-      Map<String, ExpressionType> types,
-      int numIterations
+      final String expr,
+      final Expr parsed,
+      final Map<String, ExpressionType> types,
+      final int numIterations
   )
   {
     for (int iter = 0; iter < numIterations; iter++) {
-      NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeSequentialBinding(
-          VECTOR_SIZE,
-          types,
-          1 + (iter * VECTOR_SIZE) // the plus 1 is because dividing by zero is sad
+      assertEvalsMatch(
+          expr,
+          parsed,
+          makeSequentialBinding(
+              VECTOR_SIZE,
+              types,
+              -2 + (iter * VECTOR_SIZE) // include negative numbers and zero
+          )
       );
-      Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(bindings.rhs));
-      ExpressionType outputType = parsed.getOutputType(bindings.rhs);
-      ExprEvalVector<?> vectorEval = parsed.asVectorProcessor(bindings.rhs).evalVector(bindings.rhs);
-      // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-      if (outputType != null) {
-        Assert.assertEquals(expr, outputType, vectorEval.getType());
-      }
-      final Object[] vectorVals = vectorEval.getObjectVector();
-      for (int i = 0; i < VECTOR_SIZE; i++) {
-        ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
-        // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-        if (outputType != null && !eval.isNumericNull()) {
-          Assert.assertEquals(eval.type(), outputType);
-        }
-        if (outputType != null && outputType.isArray()) {
-          Assert.assertArrayEquals(
-              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              (Object[]) eval.valueOrDefault(),
-              (Object[]) vectorVals[i]
-          );
-        } else {
-          Assert.assertEquals(
-              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              eval.valueOrDefault(),
-              vectorVals[i]
-          );
-        }
-      }
     }
   }
 
   public static void testExpressionRandomizedBindings(
-      String expr,
-      Expr parsed,
-      Map<String, ExpressionType> types,
-      int numIterations
+      final String expr,
+      final Expr parsed,
+      final Map<String, ExpressionType> types,
+      final int numIterations
   )
   {
-    Expr.InputBindingInspector inspector = InputBindings.inspectorFromTypeMap(types);
-    Expr.VectorInputBindingInspector vectorInputBindingInspector = new Expr.VectorInputBindingInspector()
-    {
-      @Override
-      public int getMaxVectorSize()
-      {
-        return VECTOR_SIZE;
-      }
-
-      @Nullable
-      @Override
-      public ExpressionType getType(String name)
-      {
-        return inspector.getType(name);
-      }
-    };
-    Assert.assertTrue(StringUtils.format("Cannot vectorize %s", expr), parsed.canVectorize(inspector));
-    ExpressionType outputType = parsed.getOutputType(inspector);
-    final ExprVectorProcessor processor = parsed.asVectorProcessor(vectorInputBindingInspector);
-    // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-    if (outputType != null) {
-      Assert.assertEquals(expr, outputType, processor.getOutputType());
-    }
     for (int iterations = 0; iterations < numIterations; iterations++) {
-      NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeRandomizedBindings(VECTOR_SIZE, types);
-      ExprEvalVector<?> vectorEval = processor.evalVector(bindings.rhs);
-      final Object[] vectorVals = vectorEval.getObjectVector();
+      assertEvalsMatch(expr, parsed, makeRandomizedBindings(VECTOR_SIZE, types));
+    }
+  }
+
+  public static void assertEvalsMatch(
+      String exprString,
+      Expr expr,
+      NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings
+  )
+  {
+    Assert.assertTrue(StringUtils.format("Cannot vectorize[%s]", expr), expr.canVectorize(bindings.rhs));
+
+    final ExpressionType outputType = expr.getOutputType(bindings.rhs);
+    final Either<String, Object[]> vectorEval = evalVector(expr, bindings.rhs, outputType);
+    final Either<String, Object[]> nonVectorEval = evalNonVector(expr, bindings.lhs, outputType);
+
+    Assert.assertEquals(
+        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, bindings.lhs),
+        nonVectorEval.isError() ? nonVectorEval.error() : "",
+        vectorEval.isError() ? vectorEval.error() : ""
+    );
+
+    if (vectorEval.isValue() && nonVectorEval.isValue()) {
       for (int i = 0; i < VECTOR_SIZE; i++) {
-        ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
-        // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-        if (outputType != null && !eval.isNumericNull()) {
-          Assert.assertEquals(eval.type(), outputType);
-        }
+        final String message = StringUtils.format(
+            "Values do not match for row[%s] for expression[%s], bindings[%s]",
+            i,
+            exprString,
+            bindings.lhs[i]
+        );
         if (outputType != null && outputType.isArray()) {
           Assert.assertArrayEquals(
-              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              (Object[]) eval.valueOrDefault(),
-              (Object[]) vectorVals[i]
+              message,
+              (Object[]) nonVectorEval.valueOrThrow()[i],
+              (Object[]) vectorEval.valueOrThrow()[i]
           );
         } else {
           Assert.assertEquals(
-              StringUtils.format("Values do not match for row %s for expression %s", i, expr),
-              eval.valueOrDefault(),
-              vectorVals[i]
+              message,
+              nonVectorEval.valueOrThrow()[i],
+              vectorEval.valueOrThrow()[i]
           );
         }
       }
@@ -569,8 +846,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     return populateBindings(
         vectorSize,
         types,
-        () -> r.nextLong(0, Integer.MAX_VALUE - 1),
-        r::nextDouble,
+        () -> r.nextLong(Integer.MIN_VALUE, Integer.MAX_VALUE),
+        () -> r.nextDouble() * (r.nextBoolean() ? 10 : -10),
         () -> r.nextDouble(0, 1.0) > 0.9,
         () -> String.valueOf(r.nextInt())
     );
@@ -637,6 +914,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   {
     SettableVectorInputBinding vectorBinding = new SettableVectorInputBinding(vectorSize);
     SettableObjectBinding[] objectBindings = new SettableObjectBinding[vectorSize];
+    Expr.InputBindingInspector inspector = InputBindings.inspectorFromTypeMap(types);
 
     for (Map.Entry<String, ExpressionType> entry : types.entrySet()) {
       boolean[] nulls = new boolean[vectorSize];
@@ -648,7 +926,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             longs[i] = nulls[i] ? 0L : longsFn.getAsLong();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : longs[i]);
           }
@@ -660,7 +938,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             doubles[i] = nulls[i] ? 0.0 : doublesFn.getAsDouble();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : doubles[i]);
           }
@@ -676,7 +954,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
               strings[i] = nulls[i] ? null : String.valueOf(stringFn.get());
             }
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : strings[i]);
           }
@@ -688,4 +966,61 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
 
+  private static Either<String, Object[]> evalVector(
+      Expr expr,
+      Expr.VectorInputBinding bindings,
+      @Nullable ExpressionType outputType
+  )
+  {
+    final ExprVectorProcessor<Object> processor = expr.asVectorProcessor(bindings);
+    final ExprEvalVector<?> vectorEval;
+    try {
+      vectorEval = processor.evalVector(bindings);
+    }
+    catch (ArithmeticException e) {
+      // After a few occasions, Java starts throwing ArithmeticException without a message for division by zero.
+      return Either.error(e.getClass().getName());
+    }
+    catch (Exception e) {
+      return Either.error(e.toString());
+    }
+
+    final Object[] vectorVals = vectorEval.getObjectVector();
+    // if outputType is known, verify the expr returns the correct type
+    if (outputType != null) {
+      Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
+    }
+
+    return Either.value(vectorVals);
+  }
+
+  private static Either<String, Object[]> evalNonVector(
+      Expr expr,
+      Expr.ObjectBinding[] bindings,
+      @Nullable ExpressionType outputType
+  )
+  {
+    final Object[] exprValues = new Object[VECTOR_SIZE];
+
+    for (int i = 0; i < VECTOR_SIZE; i++) {
+      ExprEval<?> eval;
+      try {
+        eval = expr.eval(bindings[i]);
+      }
+      catch (ArithmeticException e) {
+        // After a few occasions, Java starts throwing ArithmeticException without a message for division by zero.
+        return Either.error(e.getClass().getName());
+      }
+      catch (Exception e) {
+        return Either.error(e.toString());
+      }
+      // if outputType is known, verify the expr returns the correct type
+      if (outputType != null && eval.value() != null) {
+        Assert.assertEquals("nonvector eval type", eval.type(), outputType);
+      }
+      exprValues[i] = eval.value();
+    }
+
+    return Either.value(exprValues);
+  }
 }

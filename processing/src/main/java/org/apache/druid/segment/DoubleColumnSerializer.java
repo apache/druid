@@ -20,10 +20,10 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -91,9 +91,9 @@ public class DoubleColumnSerializer implements GenericColumnSerializer<Object>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
-    writer.writeTo(channel, smoosher);
+    writer.writeTo(channel, fileBuilder);
   }
 
 }

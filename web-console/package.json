@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "34.0.0",
+  "version": "36.0.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
@@ -60,8 +60,8 @@
     "@fontsource/open-sans": "^5.0.30",
     "@internationalized/date": "^3.5.6",
     "ace-builds": "~1.5.3",
-    "axios": "^1.7.7",
-    "chronoshift": "^1.2.0",
+    "axios": "^1.12.0",
+    "chronoshift": "^1.2.3",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.3.3",
     "d3-array": "^3.2.4",
@@ -72,7 +72,8 @@
     "d3-shape": "^3.2.0",
     "d3-time-format": "^4.1.0",
     "date-fns": "^2.28.0",
-    "druid-query-toolkit": "^1.1.4",
+    "dayjs": "^1.11.15",
+    "druid-query-toolkit": "^1.2.2",
     "echarts": "^5.5.1",
     "file-saver": "^2.0.5",
     "hjson": "^3.2.2",
@@ -95,7 +96,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@awesome-code-style/eslint-config": "^6.0.0",
+    "@awesome-code-style/eslint-config": "^6.0.2",
     "@awesome-code-style/prettier-config": "^4.0.0",
     "@awesome-code-style/stylelint-config": "^6.0.0",
     "@testing-library/dom": "^10.4.0",
@@ -127,7 +128,7 @@
     "browserslist": "^4.24.0",
     "codecov": "^3.8.2",
     "css-loader": "^5.2.1",
-    "eslint": "^9.12.0",
+    "eslint": "^9.31.0",
     "eslint-plugin-notice": "^1.0.0",
     "eslint-plugin-react": "^7.37.1",
     "eslint-plugin-react-hooks": "^5.0.0",
@@ -156,7 +157,7 @@
     "webpack": "^5.89.0",
     "webpack-bundle-analyzer": "^4.10.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^5.2.2"
   },
   "overrides": {
     "@types/react": "$@types/react"

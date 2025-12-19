@@ -22,7 +22,6 @@ package org.apache.druid.server.compaction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -86,16 +85,15 @@ public class CompactionRunSimulator
 
     // Add a read-only wrapper over the actual status tracker so that we can
     // account for the active tasks
-    final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(null)
+    final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker()
     {
       @Override
       public CompactionStatus computeCompactionStatus(
           CompactionCandidate candidate,
-          DataSourceCompactionConfig config,
           CompactionCandidateSearchPolicy searchPolicy
       )
       {
-        return statusTracker.computeCompactionStatus(candidate, config, searchPolicy);
+        return statusTracker.computeCompactionStatus(candidate, searchPolicy);
       }
 
       @Override
@@ -123,24 +121,29 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onTaskSubmitted(ClientCompactionTaskQuery taskPayload, CompactionCandidate candidateSegments)
+      public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
       {
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCurrentStatus();
         queuedIntervals.addRow(
-            createRow(candidateSegments, taskPayload.getTuningConfig(), status == null ? "" : status.getReason())
+            createRow(candidateSegments, null, status == null ? "" : status.getReason())
         );
       }
     };
 
     // Unlimited task slots to ensure that simulator does not skip any interval
-    final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+    final ClusterCompactionConfig clusterConfig = compactionConfig.clusterConfig();
+    final ClusterCompactionConfig configWithUnlimitedTaskSlots = new ClusterCompactionConfig(
+        1.0,
+        Integer.MAX_VALUE,
+        clusterConfig.getCompactionPolicy(),
+        clusterConfig.isUseSupervisors(),
+        clusterConfig.getEngine()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
-        configWithUnlimitedTaskSlots,
+        compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,
         defaultEngine,
         stats
@@ -171,12 +174,10 @@ public class CompactionRunSimulator
   {
     final List<Object> row = new ArrayList<>();
     row.add(candidate.getDataSource());
-    row.add(candidate.getUmbrellaInterval());
+    row.add(candidate.getCompactionInterval());
     row.add(candidate.numSegments());
     row.add(candidate.getTotalBytes());
-    if (tuningConfig != null) {
-      row.add(CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
-    }
+    row.add(CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     if (reason != null) {
       row.add(reason);
     }

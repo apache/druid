@@ -62,7 +62,7 @@ There are several main parts to a segment metadata query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|no|
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
-|context|See [Context](../querying/query-context.md)|no|
+|context|See [Context](../querying/query-context-reference.md)|no|
 |analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "interval", "minmax"], but can be overridden with using the [segment metadata query config](../configuration/index.md#segmentmetadata-query-config). See section [analysisTypes](#analysistypes) for more details.|no|
 |aggregatorMergeStrategy| The strategy Druid uses to merge aggregators across segments. If true and if the `aggregators` analysis type is enabled, `aggregatorMergeStrategy` defaults to `strict`. Possible values include `strict`, `lenient`, `earliest`, and `latest`. See [`aggregatorMergeStrategy`](#aggregatormergestrategy) for details.|no|
 |lenientAggregatorMerge|Deprecated. Use `aggregatorMergeStrategy` property instead. If true, and if the `aggregators` analysis type is enabled, Druid merges aggregators leniently.|no|
@@ -197,7 +197,12 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * `rollup` in the result is true/false/null.
 * When merging is enabled, if some are rollup, others are not, result is null.
 
-### aggregatorMergeStrategy
+### projections
+
+* `projections` in the result will contain the list of projections in segments. 
+* if any conflicting projections are identified, the conflicting one will be excluded, while the non-conflicting ones will be included.
+
+## aggregatorMergeStrategy
 
 Conflicts between aggregator metadata across segments can occur if some segments have unknown aggregators, or if
 two segments use incompatible aggregators for the same column, such as `longSum` changed to `doubleSum`.
@@ -213,6 +218,6 @@ Druid supports the following aggregator merge strategies:
    for that particular column.
 
 
-### lenientAggregatorMerge (deprecated)
+## lenientAggregatorMerge (deprecated)
 
 Deprecated. Use [`aggregatorMergeStrategy`](#aggregatormergestrategy) instead.

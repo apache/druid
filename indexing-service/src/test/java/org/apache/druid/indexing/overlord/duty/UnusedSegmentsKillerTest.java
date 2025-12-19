@@ -25,13 +25,14 @@ import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskMetrics;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.UnusedSegmentKillerConfig;
@@ -79,7 +80,7 @@ public class UnusedSegmentsKillerTest
     emitter = taskActionTestKit.getServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO);
+    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null);
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
@@ -113,13 +114,13 @@ public class UnusedSegmentsKillerTest
   {
     final DutySchedule schedule = killer.getSchedule();
     Assert.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
-    Assert.assertEquals(Duration.standardMinutes(1).getMillis(), schedule.getInitialDelayMillis());
+    Assert.assertEquals(Duration.standardMinutes(15).getMillis(), schedule.getInitialDelayMillis());
   }
 
   @Test
   public void test_getSchedule_returnsZeroPeriod_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
     initKiller();
 
     final DutySchedule schedule = killer.getSchedule();
@@ -140,7 +141,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_run_isNoop_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
     initKiller();
 
     Assert.assertFalse(killer.isEnabled());
@@ -328,8 +329,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
 
     // Verify that the kill intervals are sorted with the oldest interval first
-    final List<StubServiceEmitter.ServiceMetricEventSnapshot> events =
-        emitter.getMetricEvents().get(TaskMetrics.RUN_DURATION);
+    final List<ServiceMetricEvent> events = emitter.getMetricEvents(TaskMetrics.RUN_DURATION);
     final List<Interval> killIntervals = events.stream().map(event -> {
       final String taskId = (String) event.getUserDims().get(DruidMetrics.TASK_ID);
       String[] splits = taskId.split("_");
@@ -370,7 +370,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_run_doesNotKillSegment_ifUpdatedWithinBufferPeriod()
   {
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1));
+    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1), null);
     initKiller();
 
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
@@ -421,7 +421,7 @@ public class UnusedSegmentsKillerTest
     );
 
     final Task ingestionTask = new NoopTask(null, null, TestDataSource.WIKI, 0L, 0L, null);
-    final TaskLockbox taskLockbox = taskActionTestKit.getTaskLockbox();
+    final GlobalTaskLockbox taskLockbox = taskActionTestKit.getTaskLockbox();
 
     try {
       taskLockbox.add(ingestionTask);

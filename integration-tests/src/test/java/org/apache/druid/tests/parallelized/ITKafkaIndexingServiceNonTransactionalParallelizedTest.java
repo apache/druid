@@ -87,4 +87,17 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
   {
     doTestTerminatedSupervisorAutoCleanup(false);
   }
+
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * with supervisor(s) maintained and scoped within this test only
+   */
+  @Test
+  public void testKafkaIndexMultiSupervisorWithNoTransaction() throws Exception
+  {
+    doTestMultiSupervisorIndexDataStableState(
+        false,
+        2
+    );
+  }
 }

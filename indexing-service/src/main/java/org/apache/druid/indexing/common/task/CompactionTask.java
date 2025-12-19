@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Verify;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -79,13 +78,12 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -95,20 +93,20 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,7 +131,7 @@ import java.util.stream.IntStream;
  */
 public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
-  public static final String TYPE = "compact";
+  public static final String TYPE = CompactionSlotManager.COMPACTION_TASK_TYPE;
   private static final Logger log = new Logger(CompactionTask.class);
 
   /**
@@ -147,10 +145,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  static {
-    Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
-  }
 
   private final CompactionIOConfig ioConfig;
   @Nullable
@@ -471,13 +465,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
    * This method returns true only for MSQ engine when either of the following holds true:
    * <ul>
-   * <li> Range partitioning is done on a string dimension or an unknown dimension
+   * <li> Range partitioning is done on a possibly multi-valued string dimension or an unknown dimension
    * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
-   * <li> Rollup is done on a string dimension or an unknown dimension
+   * <li> Rollup is done on a multi-valued string dimension or an unknown dimension
    * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
    * </ul>
-   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a string
-   * or unknown dimension.
+   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a multi-valued
+   * string or unknown dimension.
    */
   boolean identifyMultiValuedDimensions()
   {
@@ -486,28 +480,31 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
     final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
-    boolean isRangePartitioned = tuningConfig != null
-                                 && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+    final DimensionRangePartitionsSpec rangeSpec;
+    if (tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      rangeSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
+    } else {
+      rangeSpec = null;
+    }
+    final boolean isRangePartitioned = rangeSpec != null;
 
     if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
       return isPossiblyRollup || isRangePartitioned;
     } else {
-      boolean isRollupOnStringDimension = isPossiblyRollup &&
-                                          dimensionsSpec.getDimensions()
-                                                        .stream()
-                                                        .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
+      boolean isRollupOnMultiValueStringDimension = isPossiblyRollup &&
+                                                    dimensionsSpec.getDimensions()
+                                                                  .stream()
+                                                                  .anyMatch(DimensionSchema::canBeMultiValued);
 
-      boolean isPartitionedOnStringDimension =
+      boolean isPartitionedOnMultiValueStringDimension =
           isRangePartitioned &&
           dimensionsSpec.getDimensions()
                         .stream()
                         .anyMatch(
-                            dim -> ColumnType.STRING.equals(dim.getColumnType())
-                                   && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
-                                       .getPartitionDimensions()
-                                       .contains(dim.getName())
+                            dim -> dim.canBeMultiValued()
+                                   && rangeSpec.getPartitionDimensions().contains(dim.getName())
                         );
-      return isRollupOnStringDimension || isPartitionedOnStringDimension;
+      return isRollupOnMultiValueStringDimension || isPartitionedOnMultiValueStringDimension;
     }
   }
 
@@ -615,7 +612,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricBuilder,
             segmentProvider.dataSource,
             interval,
-            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
+            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager()),
             dimensionsSpec,
             transformSpec,
             metricsSpec,
@@ -642,8 +639,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           ),
           lazyFetchSegments(
               timelineSegments,
-              toolbox.getSegmentCacheManager(),
-              toolbox.getIndexIO()
+              toolbox.getSegmentCacheManager()
           ),
           dimensionsSpec,
           transformSpec,
@@ -768,13 +764,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   private static Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> lazyFetchSegments(
       Iterable<DataSegment> dataSegments,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager)
     );
   }
 
@@ -783,8 +778,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   // an error. Creating a function keeps everyone happy.
   private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
       DataSegment dataSegment,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Pair.of(
@@ -792,26 +786,21 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
-            closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
+            segmentCacheManager.load(dataSegment);
+            closer.register(() -> segmentCacheManager.drop(dataSegment));
+            final Segment segment = closer.register(segmentCacheManager.acquireCachedSegment(dataSegment).orElseThrow());
             return new ResourceHolder<QueryableIndex>()
             {
               @Override
               public QueryableIndex get()
               {
-                return queryableIndex;
+                return segment.as(QueryableIndex.class);
               }
 
               @Override
               public void close()
               {
-                try {
-                  closer.close();
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                CloseableUtils.closeAndWrapExceptions(closer);
               }
             };
           }
@@ -1178,12 +1167,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           }
           projections.put(
               schema.getName(),
-              new AggregateProjectionSpec(
-                  schema.getName(),
-                  schema.getVirtualColumns(),
-                  columnSchemas,
-                  schema.getAggregators()
-              )
+              AggregateProjectionSpec.builder()
+                                     .name(schema.getName())
+                                     .virtualColumns(schema.getVirtualColumns())
+                                     .filter(schema.getFilter())
+                                     .groupingColumns(columnSchemas)
+                                     .aggregators(schema.getAggregators())
+                                     .build()
           );
         }
       }
@@ -1252,6 +1242,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final String dataSource;
     private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
+    @Nullable
+    private String id;
     private CompactionIOConfig ioConfig;
     @Nullable
     private DimensionsSpec dimensionsSpec;
@@ -1278,6 +1270,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     {
       this.dataSource = dataSource;
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+    }
+
+    public Builder id(String id)
+    {
+      this.id = id;
+      return this;
     }
 
     public Builder interval(Interval interval)
@@ -1365,7 +1363,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     public CompactionTask build()
     {
       return new CompactionTask(
-          null,
+          id,
           null,
           dataSource,
           null,

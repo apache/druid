@@ -291,8 +291,9 @@ export function ingestQueryPatternToQuery(
       SqlWithPart.simple(
         mainExternalName,
         sampleDataQuery ||
-          SqlQuery.create(externalConfigToTableExpression(mainExternalConfig)).applyIf(preview, q =>
-            q.changeLimitValue(10000),
+          SqlQuery.selectStarFrom(externalConfigToTableExpression(mainExternalConfig)).applyIf(
+            preview,
+            q => q.changeLimitValue(10000),
           ),
       ),
     ])

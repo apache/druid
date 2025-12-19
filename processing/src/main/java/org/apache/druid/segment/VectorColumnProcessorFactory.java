@@ -19,9 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -114,8 +112,6 @@ public interface VectorColumnProcessorFactory<T>
    */
   default boolean useDictionaryEncodedSelector(ColumnCapabilities capabilities)
   {
-    Preconditions.checkArgument(capabilities != null, "Capabilities must not be null");
-    Preconditions.checkArgument(capabilities.is(ValueType.STRING), "Must only be called on a STRING column");
-    return capabilities.isDictionaryEncoded().and(capabilities.areDictionaryValuesUnique()).isTrue();
+    return ColumnProcessors.useDictionaryEncodedSelector(capabilities);
   }
 }

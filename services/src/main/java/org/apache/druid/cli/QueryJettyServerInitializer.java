@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,14 +39,13 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.Collections;
 import java.util.List;
@@ -147,15 +145,12 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
         jsonMapper
     );
 
-    root.addFilter(GuiceFilter.class, "/*", null);
+    final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
+    root.addFilter(guiceFilterHolder, "/*", null);
 
-    final HandlerList handlerList = new HandlerList();
-    // Do not change the order of the handlers that have already been added
-    for (Handler handler : server.getHandlers()) {
-      handlerList.addHandler(handler);
-    }
-
-    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+    final Handler.Sequence handlerList = new Handler.Sequence(
+        server.getHandlers()
+    );
 
     // Add all extension handlers
     for (Handler handler : extensionHandlers) {

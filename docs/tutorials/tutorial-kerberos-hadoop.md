@@ -23,6 +23,12 @@ sidebar_label: Kerberized HDFS deep storage
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+:::
+
 
 ## Hadoop Setup
 

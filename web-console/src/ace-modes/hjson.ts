@@ -24,279 +24,281 @@
 
 import ace from 'ace-builds/src-noconflict/ace';
 
-ace.define(
-  'ace/mode/hjson_highlight_rules',
-  ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function (acequire: any, exports: any) {
-    'use strict';
+export function initAceHjsonMode() {
+  ace.define(
+    'ace/mode/hjson_highlight_rules',
+    ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
+    function (acequire: any, exports: any) {
+      'use strict';
 
-    const oop = acequire('../lib/oop');
-    const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
+      const oop = acequire('../lib/oop');
+      const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    const HjsonHighlightRules = function (this: any) {
-      this.$rules = {
-        'start': [
-          {
-            include: '#comments',
-          },
-          {
-            include: '#rootObject',
-          },
-          {
-            include: '#value',
-          },
-        ],
-        '#array': [
-          {
-            token: 'paren.lparen',
-            regex: /\[/,
-            push: [
-              {
-                token: 'paren.rparen',
-                regex: /\]/,
-                next: 'pop',
-              },
-              {
-                include: '#value',
-              },
-              {
-                include: '#comments',
-              },
-              {
-                token: 'text',
-                regex: /,|$/,
-              },
-              {
-                token: 'invalid.illegal',
-                regex: /[^\s\]]/,
-              },
-              {
-                defaultToken: 'array',
-              },
-            ],
-          },
-        ],
-        '#comments': [
-          {
-            token: ['comment.punctuation', 'comment.line'],
-            regex: /(#)(.*$)/,
-          },
-          {
-            token: 'comment.punctuation',
-            regex: /\/\*/,
-            push: [
-              {
-                token: 'comment.punctuation',
-                regex: /\*\//,
-                next: 'pop',
-              },
-              {
-                defaultToken: 'comment.block',
-              },
-            ],
-          },
-          {
-            token: ['comment.punctuation', 'comment.line'],
-            regex: /(\/\/)(.*$)/,
-          },
-        ],
-        '#constant': [
-          {
-            token: 'constant',
-            regex: /\b(?:true|false|null)\b/,
-          },
-        ],
-        '#keyname': [
-          {
-            token: 'keyword',
-            regex: /(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*(?=:)/,
-          },
-        ],
-        '#mstring': [
-          {
-            token: 'string',
-            regex: /'''/,
-            push: [
-              {
-                token: 'string',
-                regex: /'''/,
-                next: 'pop',
-              },
-              {
-                defaultToken: 'string',
-              },
-            ],
-          },
-        ],
-        '#number': [
-          {
-            token: 'constant.numeric',
-            regex: /-?(?:0|[1-9]\d*)(?:(?:\.\d+)?(?:[eE][+-]?\d+)?)?/,
-            comment: 'handles integer and decimal numbers',
-          },
-        ],
-        '#object': [
-          {
-            token: 'paren.lparen',
-            regex: /\{/,
-            push: [
-              {
-                token: 'paren.rparen',
-                regex: /\}/,
-                next: 'pop',
-              },
-              {
-                include: '#keyname',
-              },
-              {
-                include: '#value',
-              },
-              {
-                token: 'text',
-                regex: /:/,
-              },
-              {
-                token: 'text',
-                regex: /,/,
-              },
-              {
-                defaultToken: 'paren',
-              },
-            ],
-          },
-        ],
-        '#rootObject': [
-          {
-            token: 'paren',
-            regex: /(?=\s*(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*:)/,
-            push: [
-              {
-                token: 'paren.rparen',
-                regex: /---none---/,
-                next: 'pop',
-              },
-              {
-                include: '#keyname',
-              },
-              {
-                include: '#value',
-              },
-              {
-                token: 'text',
-                regex: /:/,
-              },
-              {
-                token: 'text',
-                regex: /,/,
-              },
-              {
-                defaultToken: 'paren',
-              },
-            ],
-          },
-        ],
-        '#string': [
-          {
-            token: 'string',
-            regex: /"/,
-            push: [
-              {
-                token: 'string',
-                regex: /"/,
-                next: 'pop',
-              },
-              {
-                token: 'constant.language.escape',
-                regex: /\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})/,
-              },
-              {
-                token: 'invalid.illegal',
-                regex: /\\./,
-              },
-              {
-                defaultToken: 'string',
-              },
-            ],
-          },
-        ],
-        '#ustring': [
-          {
-            token: 'string',
-            regex: /\b[^:,0-9\-{[}\]\s].*$/,
-          },
-        ],
-        '#value': [
-          {
-            include: '#constant',
-          },
-          {
-            include: '#number',
-          },
-          {
-            include: '#string',
-          },
-          {
-            include: '#array',
-          },
-          {
-            include: '#object',
-          },
-          {
-            include: '#comments',
-          },
-          {
-            include: '#mstring',
-          },
-          {
-            include: '#ustring',
-          },
-        ],
+      const HjsonHighlightRules = function (this: any) {
+        this.$rules = {
+          'start': [
+            {
+              include: '#comments',
+            },
+            {
+              include: '#rootObject',
+            },
+            {
+              include: '#value',
+            },
+          ],
+          '#array': [
+            {
+              token: 'paren.lparen',
+              regex: /\[/,
+              push: [
+                {
+                  token: 'paren.rparen',
+                  regex: /\]/,
+                  next: 'pop',
+                },
+                {
+                  include: '#value',
+                },
+                {
+                  include: '#comments',
+                },
+                {
+                  token: 'text',
+                  regex: /,|$/,
+                },
+                {
+                  token: 'invalid.illegal',
+                  regex: /[^\s\]]/,
+                },
+                {
+                  defaultToken: 'array',
+                },
+              ],
+            },
+          ],
+          '#comments': [
+            {
+              token: ['comment.punctuation', 'comment.line'],
+              regex: /(#)(.*$)/,
+            },
+            {
+              token: 'comment.punctuation',
+              regex: /\/\*/,
+              push: [
+                {
+                  token: 'comment.punctuation',
+                  regex: /\*\//,
+                  next: 'pop',
+                },
+                {
+                  defaultToken: 'comment.block',
+                },
+              ],
+            },
+            {
+              token: ['comment.punctuation', 'comment.line'],
+              regex: /(\/\/)(.*$)/,
+            },
+          ],
+          '#constant': [
+            {
+              token: 'constant',
+              regex: /\b(?:true|false|null)\b/,
+            },
+          ],
+          '#keyname': [
+            {
+              token: 'keyword',
+              regex: /(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*(?=:)/,
+            },
+          ],
+          '#mstring': [
+            {
+              token: 'string',
+              regex: /'''/,
+              push: [
+                {
+                  token: 'string',
+                  regex: /'''/,
+                  next: 'pop',
+                },
+                {
+                  defaultToken: 'string',
+                },
+              ],
+            },
+          ],
+          '#number': [
+            {
+              token: 'constant.numeric',
+              regex: /-?(?:0|[1-9]\d*)(?:(?:\.\d+)?(?:[eE][+-]?\d+)?)?/,
+              comment: 'handles integer and decimal numbers',
+            },
+          ],
+          '#object': [
+            {
+              token: 'paren.lparen',
+              regex: /\{/,
+              push: [
+                {
+                  token: 'paren.rparen',
+                  regex: /\}/,
+                  next: 'pop',
+                },
+                {
+                  include: '#keyname',
+                },
+                {
+                  include: '#value',
+                },
+                {
+                  token: 'text',
+                  regex: /:/,
+                },
+                {
+                  token: 'text',
+                  regex: /,/,
+                },
+                {
+                  defaultToken: 'paren',
+                },
+              ],
+            },
+          ],
+          '#rootObject': [
+            {
+              token: 'paren',
+              regex: /(?=\s*(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*:)/,
+              push: [
+                {
+                  token: 'paren.rparen',
+                  regex: /---none---/,
+                  next: 'pop',
+                },
+                {
+                  include: '#keyname',
+                },
+                {
+                  include: '#value',
+                },
+                {
+                  token: 'text',
+                  regex: /:/,
+                },
+                {
+                  token: 'text',
+                  regex: /,/,
+                },
+                {
+                  defaultToken: 'paren',
+                },
+              ],
+            },
+          ],
+          '#string': [
+            {
+              token: 'string',
+              regex: /"/,
+              push: [
+                {
+                  token: 'string',
+                  regex: /"/,
+                  next: 'pop',
+                },
+                {
+                  token: 'constant.language.escape',
+                  regex: /\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})/,
+                },
+                {
+                  token: 'invalid.illegal',
+                  regex: /\\./,
+                },
+                {
+                  defaultToken: 'string',
+                },
+              ],
+            },
+          ],
+          '#ustring': [
+            {
+              token: 'string',
+              regex: /\b[^:,0-9\-{[}\]\s].*$/,
+            },
+          ],
+          '#value': [
+            {
+              include: '#constant',
+            },
+            {
+              include: '#number',
+            },
+            {
+              include: '#string',
+            },
+            {
+              include: '#array',
+            },
+            {
+              include: '#object',
+            },
+            {
+              include: '#comments',
+            },
+            {
+              include: '#mstring',
+            },
+            {
+              include: '#ustring',
+            },
+          ],
+        };
+
+        this.normalizeRules();
       };
 
-      this.normalizeRules();
-    };
+      HjsonHighlightRules.metaData = {
+        fileTypes: ['hjson'],
+        keyEquivalent: '^~J',
+        name: 'Hjson',
+        scopeName: 'source.hjson',
+      };
 
-    HjsonHighlightRules.metaData = {
-      fileTypes: ['hjson'],
-      keyEquivalent: '^~J',
-      name: 'Hjson',
-      scopeName: 'source.hjson',
-    };
+      oop.inherits(HjsonHighlightRules, TextHighlightRules);
 
-    oop.inherits(HjsonHighlightRules, TextHighlightRules);
+      exports.HjsonHighlightRules = HjsonHighlightRules;
+    },
+  );
 
-    exports.HjsonHighlightRules = HjsonHighlightRules;
-  },
-);
+  ace.define(
+    'ace/mode/hjson',
+    [
+      'require',
+      'exports',
+      'module',
+      'ace/lib/oop',
+      'ace/mode/text',
+      'ace/mode/hjson_highlight_rules',
+    ],
+    function (acequire: any, exports: any) {
+      'use strict';
 
-ace.define(
-  'ace/mode/hjson',
-  [
-    'require',
-    'exports',
-    'module',
-    'ace/lib/oop',
-    'ace/mode/text',
-    'ace/mode/hjson_highlight_rules',
-  ],
-  function (acequire: any, exports: any) {
-    'use strict';
+      const oop = acequire('../lib/oop');
+      const TextMode = acequire('./text').Mode;
+      const HjsonHighlightRules = acequire('./hjson_highlight_rules').HjsonHighlightRules;
 
-    const oop = acequire('../lib/oop');
-    const TextMode = acequire('./text').Mode;
-    const HjsonHighlightRules = acequire('./hjson_highlight_rules').HjsonHighlightRules;
+      const Mode = function (this: any) {
+        this.HighlightRules = HjsonHighlightRules;
+      };
+      oop.inherits(Mode, TextMode);
 
-    const Mode = function (this: any) {
-      this.HighlightRules = HjsonHighlightRules;
-    };
-    oop.inherits(Mode, TextMode);
+      (function (this: any) {
+        this.lineCommentStart = '//';
+        this.blockComment = { start: '/*', end: '*/' };
+        this.$id = 'ace/mode/hjson';
+      }).call(Mode.prototype);
 
-    (function (this: any) {
-      this.lineCommentStart = '//';
-      this.blockComment = { start: '/*', end: '*/' };
-      this.$id = 'ace/mode/hjson';
-    }).call(Mode.prototype);
-
-    exports.Mode = Mode;
-  },
-);
+      exports.Mode = Mode;
+    },
+  );
+}

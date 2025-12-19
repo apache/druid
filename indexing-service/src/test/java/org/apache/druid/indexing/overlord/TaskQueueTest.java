@@ -38,6 +38,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -174,7 +175,45 @@ public class TaskQueueTest extends IngestionTestBase
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
     Assert.assertTrue(task2.isDone());
+
+    // Sleep to allow all metrics to be emitted
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/run/time", 2);
+    verifySuccessfulTaskCount(taskQueue, 2);
+    verifyFailedTaskCount(taskQueue, 0);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(2, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
+
+  @Test
+  public void testManageQueuedTasksDoesNothingWhenInactive() throws Exception
+  {
+    // Add a task to the queue while active
+    final TestTask task = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task);
+
+    // Now set the queue to inactive (simulating stop())
+    taskQueue.setActive(false);
+
+    // Call manageQueuedTasks - it should exit early without starting the task
+    taskQueue.manageQueuedTasks();
+
+    // Verify task was NOT started (it should still be incomplete)
+    Assert.assertFalse(task.isDone());
+
+    // Verify task is still in queue
+    final Optional<TaskInfo> taskInfo = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(taskInfo.isPresent());
+    Assert.assertEquals(TaskState.RUNNING, taskInfo.get().getStatus().getStatusCode());
+
+    // Verify no metrics were emitted since no tasks were processed
+    serviceEmitter.verifyNotEmitted("task/waiting/time");
+    serviceEmitter.verifyNotEmitted("task/run/time");
+  }
+
 
   @Test
   public void testShutdownReleasesTaskLock() throws Exception
@@ -388,6 +427,14 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(
         statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
+
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -444,9 +491,12 @@ public class TaskQueueTest extends IngestionTestBase
 
     // Verify that metrics are emitted on receiving announcement
     serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
-    CoordinatorRunStats stats = taskQueue.getQueueStats();
-    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
-    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    verifySuccessfulTaskCount(taskQueue, 0);
+    verifyFailedTaskCount(taskQueue, 1);
+
+    final CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(1, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+    Assert.assertEquals(0, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
   }
 
   @Test
@@ -545,7 +595,7 @@ public class TaskQueueTest extends IngestionTestBase
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
         createActionClientFactory(),
-        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
         new StubServiceEmitter("druid/overlord", "testHost"),
         mapper,
         new NoopTaskContextEnricher()
@@ -602,6 +652,117 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
   }
 
+  @Test
+  public void testTaskShutdownUpdatesTaskStatusInTaskQueue()
+  {
+    final String shutdownReason = "Test shutdown reason";
+    final TaskStatus shutdownStatus = TaskStatus.failure("shutdown-test-task", shutdownReason);
+    final TestTask task = new TestTask("shutdown-test-task", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(task);
+
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(TaskState.RUNNING, activeInfoOpt.get().getStatus().getStatusCode());
+
+    taskQueue.shutdown(task.getId(), shutdownReason);
+
+    final Optional<TaskInfo> afterShutdownInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(afterShutdownInfoOpt.isPresent());
+    Assert.assertEquals(shutdownStatus, afterShutdownInfoOpt.get().getStatus());
+    Assert.assertEquals(shutdownStatus, getTaskStorage().getStatus(task.getId()).get());
+  }
+
+  @Test
+  public void testTaskSuccessUpdatesTaskStatusInTaskQueue() throws Exception
+  {
+    final TaskStatus successStatus = TaskStatus.success("success-test-task");
+    final TestTask task = new TestTask("success-test-task", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(task);
+    taskQueue.manageQueuedTasks();
+
+    // ensure success callback has fired
+    Thread.sleep(100);
+    Assert.assertTrue(task.isDone());
+
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(successStatus, activeInfoOpt.get().getStatus());
+    Assert.assertEquals(successStatus, getTaskStorage().getStatus(task.getId()).get());
+  }
+
+  @Test
+  public void testTaskFailureUpdatesTaskStatusInTaskQueue() throws Exception
+  {
+    final TaskStatus failedStatus = TaskStatus.failure("failure-test-task", "error");
+    final TestTask task = new TestTask("failure-test-task", Intervals.of("2021-01-01/P1D"))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        super.done = true;
+        return failedStatus;
+      }
+    };
+
+    taskQueue.add(task);
+    taskQueue.manageQueuedTasks();
+
+    // ensure failed callback has fired
+    Thread.sleep(100);
+    Assert.assertTrue(task.isDone());
+
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(failedStatus, activeInfoOpt.get().getStatus());
+    Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
+  }
+
+  @Test
+  public void testTaskWaitingTimeMetricNotEmittedWhenTaskNotReady() throws Exception
+  {
+    // task1 acquires a lock that will block task2
+    final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    prepareTaskForLocking(task1);
+    Assert.assertTrue(task1.isReady(actionClientFactory.create(task1)));
+
+    // task2 will not be ready because of task1's lock
+    final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
+    taskQueue.add(task2);
+    taskQueue.manageQueuedTasks();
+
+    Thread.sleep(100);
+
+    // Verify that task/waiting/time was not emitted for task2 since it's not ready
+    serviceEmitter.verifyNotEmitted("task/waiting/time");
+
+    // Now release task1's lock
+    shutdownTask(task1);
+
+    // task2 should now be ready and run
+    taskQueue.manageQueuedTasks();
+    Thread.sleep(100);
+    serviceEmitter.verifyEmitted("task/waiting/time", 1);
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+  }
+
+  @Test
+  public void testTaskWaitingTimeMetricEmittedForMultipleTasks() throws Exception
+  {
+    final TestTask task1 = new TestTask("multi-wait-task-1", Intervals.of("2021-01-01/P1D"));
+    final TestTask task2 = new TestTask("multi-wait-task-2", Intervals.of("2021-01-02/P1D"));
+    final TestTask task3 = new TestTask("multi-wait-task-3", Intervals.of("2021-01-03/P1D"));
+
+    taskQueue.add(task1);
+    taskQueue.add(task2);
+    taskQueue.add(task3);
+    taskQueue.manageQueuedTasks();
+
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/waiting/time", 3);
+    serviceEmitter.verifyEmitted("task/run/time", 3);
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
@@ -621,6 +782,22 @@ public class TaskQueueTest extends IngestionTestBase
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
+    );
+  }
+
+  private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
+  {
+    Assert.assertEquals(
+        successCount,
+        taskQueue.getSuccessfulTaskCount().values().stream().mapToLong(Long::longValue).sum()
+    );
+  }
+
+  private static void verifyFailedTaskCount(final TaskQueue taskQueue, int failureCount)
+  {
+    Assert.assertEquals(
+        failureCount,
+        taskQueue.getFailedTaskCount().values().stream().mapToLong(Long::longValue).sum()
     );
   }
 

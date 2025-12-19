@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction]
+        testing_group: [kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, realtime-index, append-ingestion]
     uses: ./.github/workflows/reusable-standard-its.yml
     needs: build
     with:
@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [ input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format, append-ingestion, compaction ]
+        testing_group: [ input-source, kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format, append-ingestion ]
     uses: ./.github/workflows/reusable-standard-its.yml
     needs: build
     with:
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [ query, query-retry, query-error, security, high-availability ]
+        testing_group: [ query, security ]
     uses: ./.github/workflows/reusable-standard-its.yml
     needs: build
     with:
@@ -99,25 +99,9 @@ jobs:
       override_config_path: ./environment-configs/test-groups/prepopulated-data
       group: ${{ matrix.testing_group }}
 
-  integration-other-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        indexer: [ middleManager, indexer ]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    needs: build
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties
-      use_indexer: ${{ matrix.indexer }}
-      group: other
-
   security_vulnerabilities:
     if: github.repository == 'apache/druid'
     name: security vulnerabilities
-    strategy:
-      fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -130,7 +114,7 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
-      - name: maven build # needed to rebuild incase of maven snapshot resolution fails
+      - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check

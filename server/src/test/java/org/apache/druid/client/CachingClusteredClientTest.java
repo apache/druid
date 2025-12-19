@@ -1732,25 +1732,18 @@ public class CachingClusteredClientTest
       int partitions
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new HashBasedNumberedShardSpec(
-            partitionNum,
-            partitions,
-            partitionNum,
-            partitions,
-            partitionDimensions,
-            partitionFunction,
-            TestHelper.makeJsonMapper()
-        ),
-        null,
-        9,
-        0L
-    );
-
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new HashBasedNumberedShardSpec(
+                                               partitionNum,
+                                               partitions,
+                                               partitionNum,
+                                               partitions,
+                                               partitionDimensions,
+                                               partitionFunction,
+                                               TestHelper.makeJsonMapper()
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
     ServerSelector selector = new ServerSelector(
         segment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
@@ -1768,22 +1761,15 @@ public class CachingClusteredClientTest
       int partitionNum
   )
   {
-    final DataSegment segment = new DataSegment(
-        SegmentId.dummy(DATA_SOURCE),
-        null,
-        null,
-        null,
-        new SingleDimensionShardSpec(
-            dimension,
-            start,
-            end,
-            partitionNum,
-            SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
-        ),
-        null,
-        9,
-        0L
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.dummy(DATA_SOURCE))
+                                           .shardSpec(new SingleDimensionShardSpec(dimension,
+                                                                                   start,
+                                                                                   end,
+                                                                                   partitionNum,
+                                                                                   SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+                                           ))
+                                           .binaryVersion(9)
+                                           .build();
 
     ServerSelector selector = new ServerSelector(
         segment,
@@ -2457,13 +2443,13 @@ public class CachingClusteredClientTest
               (DateTime) objects[i],
               new TimeseriesResultValue(
                   ImmutableMap.<String, Object>builder()
-                      .put("rows", objects[i + 1])
-                      .put("imps", objects[i + 2])
-                      .put("impers", objects[i + 2])
-                      .put("avg_imps_per_row", avg_impr)
-                      .put("avg_imps_per_row_half", avg_impr / 2)
-                      .put("avg_imps_per_row_double", avg_impr * 2)
-                      .build()
+                              .put("rows", objects[i + 1])
+                              .put("imps", objects[i + 2])
+                              .put("impers", objects[i + 2])
+                              .put("avg_imps_per_row", avg_impr)
+                              .put("avg_imps_per_row_half", avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .build()
               )
           )
       );
@@ -2530,14 +2516,14 @@ public class CachingClusteredClientTest
         final double rows = ((Number) objects[index + 1]).doubleValue();
         values.add(
             ImmutableMap.<String, Object>builder()
-                .put(names.get(0), objects[index])
-                .put(names.get(1), rows)
-                .put(names.get(2), imps)
-                .put(names.get(3), imps)
-                .put(names.get(4), imps / rows)
-                .put(names.get(5), ((imps * 2) / rows))
-                .put(names.get(6), (imps / (rows * 2)))
-                .build()
+                        .put(names.get(0), objects[index])
+                        .put(names.get(1), rows)
+                        .put(names.get(2), imps)
+                        .put(names.get(3), imps)
+                        .put(names.get(4), imps / rows)
+                        .put(names.get(5), ((imps * 2) / rows))
+                        .put(names.get(6), (imps / (rows * 2)))
+                        .build()
         );
         index += 3;
       }
@@ -2643,7 +2629,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+          public void registerServerCallback(Executor exec, ServerCallback callback)
           {
 
           }
@@ -3111,6 +3097,56 @@ public class CachingClusteredClientTest
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
     final String etag2 = responseContext.getEntityTag();
     Assert.assertNotEquals(etag1, etag2);
+  }
+
+  @Test
+  public void testRealtimeSegmentsQueryContext()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
+    final DataSegment dataSegment = new DataSegment(
+            "dataSource",
+            interval,
+            "ver",
+            ImmutableMap.of(
+                    "type", "hdfs",
+                    "path", "/tmp"
+            ),
+            ImmutableList.of("product"),
+            ImmutableList.of("visited_sum"),
+            NoneShardSpec.instance(),
+            9,
+            12334
+    );
+    final ServerSelector selector = new ServerSelector(
+            dataSegment,
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+            HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of("realtimeSegmentsOnly", false))
+            .randomQueryId()
+            .build();
+
+    final TimeBoundaryQuery query2 = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of("realtimeSegmentsOnly", true))
+            .randomQueryId()
+            .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+
+    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
+    final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
+    Assert.assertEquals(1, remainingResponseMap.get(query.getId()).intValue());
+    Assert.assertEquals(0, remainingResponseMap.get(query2.getId()).intValue());
   }
 
   @SuppressWarnings("unchecked")

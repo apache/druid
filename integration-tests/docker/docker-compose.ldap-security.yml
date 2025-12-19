@@ -53,10 +53,14 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-openldap
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
-      - druid-overlord
+      druid-openldap:
+        condition: service_started
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
+      druid-overlord:
+        condition: service_started
 
   druid-overlord:
     extends:
@@ -68,9 +72,12 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-openldap
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
+      druid-openldap:
+        condition: service_started
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
 
   druid-historical:
     extends:

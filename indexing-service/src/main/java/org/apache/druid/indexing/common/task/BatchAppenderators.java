@@ -74,11 +74,12 @@ public final class BatchAppenderators
         taskId,
         dataSchema,
         appenderatorConfig.withBasePersistDirectory(toolbox.getPersistDir()),
+        toolbox.getConfig(),
         metrics,
         segmentPusher,
         toolbox.getJsonMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9(),
+        toolbox.getIndexMerger(),
         rowIngestionMeters,
         parseExceptionHandler,
         toolbox.getCentralizedTableSchemaConfig()

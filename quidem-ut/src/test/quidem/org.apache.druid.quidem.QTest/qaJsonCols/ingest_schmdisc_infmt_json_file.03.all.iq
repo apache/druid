@@ -1,18 +1,17 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_infmt_json_file
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_infmt_json_file
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_schmdisc_infmt_json_file TEST_ID: F27
 #-------------------------------------------------------------------------
 SELECT json_query(t_empty_array, '$.') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -26,7 +25,7 @@ WHERE t_str1 = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -41,7 +40,7 @@ WHERE t_num_int1 = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -56,7 +55,7 @@ WHERE t_num_float1 = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -71,7 +70,7 @@ WHERE t_bool1 = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -101,7 +100,7 @@ FROM test_json_cols;
 | t_empty_obj |
 +-------------+
 |             |
-|             |
+| {}          |
 +-------------+
 (2 rows)
 
@@ -116,7 +115,7 @@ FROM test_json_cols;
 | t_empty_array |
 +---------------+
 |               |
-|               |
+| []            |
 +---------------+
 (2 rows)
 
@@ -131,7 +130,7 @@ WHERE json_value(t_str2, '$.') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -146,7 +145,7 @@ WHERE json_value(t_num_int2, '$.') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -161,7 +160,7 @@ WHERE json_value(t_num_float2, '$.') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -176,7 +175,7 @@ WHERE json_value(t_bool2, '$.') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -206,7 +205,7 @@ WHERE t_str2 = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -221,7 +220,7 @@ WHERE t_num_int2 = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -236,7 +235,7 @@ WHERE t_num_float2 = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -251,7 +250,7 @@ WHERE t_bool2 = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -281,7 +280,7 @@ WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_str') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -296,7 +295,7 @@ WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_num_int') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -311,7 +310,7 @@ WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_num_float') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -326,7 +325,7 @@ WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_bool') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -352,12 +351,12 @@ WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_null') IS NULL;
 #-------------------------------------------------------------------------
 SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_obj') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -367,12 +366,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_array') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -382,12 +381,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_obj_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
 (2 rows)
 
 !ok
@@ -397,12 +396,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(t_new, '$.c1.a_obj.a_obj.a_empty_array_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
 (2 rows)
 
 !ok

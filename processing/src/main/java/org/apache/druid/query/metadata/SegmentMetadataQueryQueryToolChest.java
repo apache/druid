@@ -33,7 +33,6 @@ import com.google.inject.Inject;
 import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -57,6 +56,7 @@ import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
@@ -197,7 +197,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new CacheStrategy<>()
     {
       @Override
-      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         return true;
       }
@@ -281,7 +281,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
     // This is a defensive check since SegementMetadata query instantiation guarantees this
     if (CollectionUtils.isNullOrEmpty(dataSources)) {
-      throw InvalidInput.exception("SegementMetadata queries require at least one datasource.");
+      throw DruidException.defensive("SegementMetadata queries require at least one datasource.");
     }
 
     SegmentId mergedSegmentId = null;
@@ -437,6 +437,26 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       rollup = null;
     }
 
+    final Map<String, AggregateProjectionMetadata> projections;
+    if (arg1.getProjections() != null && arg2.getProjections() != null) {
+      projections = new HashMap<>();
+      // Merge two maps of AggregateProjectionMetadata, returning a new map with the same keys and merged metadata.
+      // If the schemas do not match, the metadata is not merged and the key is not included in the result.
+      for (String name : Sets.intersection(arg1.getProjections().keySet(), arg2.getProjections().keySet())) {
+        AggregateProjectionMetadata spec1 = arg1.getProjections().get(name);
+        AggregateProjectionMetadata spec2 = arg2.getProjections().get(name);
+        if (spec1.getSchema().equals(spec2.getSchema())) {
+          // If the schemas are equal, we can merge the metadata
+          projections.put(
+              name,
+              new AggregateProjectionMetadata(spec1.getSchema(), spec1.getNumRows() + spec2.getNumRows())
+          );
+        }
+      }
+    } else {
+      projections = null;
+    }
+
     return new SegmentAnalysis(
         mergedId,
         newIntervals,
@@ -444,6 +464,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         arg1.getSize() + arg2.getSize(),
         arg1.getNumRows() + arg2.getNumRows(),
         aggregators.isEmpty() ? null : aggregators,
+        (projections == null || projections.isEmpty()) ? null : projections,
         timestampSpec,
         queryGranularity,
         rollup
@@ -460,6 +481,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         analysis.getSize(),
         analysis.getNumRows(),
         analysis.getAggregators(),
+        analysis.getProjections(),
         analysis.getTimestampSpec(),
         analysis.getQueryGranularity(),
         analysis.isRollup()

@@ -27,9 +27,11 @@ import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -56,6 +58,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   private int deleteSegmentsCount = 0;
 
+  public SegmentsMetadataManager getManager()
+  {
+    return segmentsMetadataManager;
+  }
+
   @Override
   public Set<String> retrieveAllDatasourceNames()
   {
@@ -80,25 +87,25 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
+  public DataSourceMetadata retrieveDataSourceMetadata(String supervisorId)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean deleteDataSourceMetadata(String dataSource)
+  public boolean deleteDataSourceMetadata(String supervisorId)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
+  public boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
 
   @Override
-  public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
+  public boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
   {
     return false;
   }
@@ -106,9 +113,15 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return Set.copyOf(
-        segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
-    );
+    if (visibility == Segments.ONLY_VISIBLE) {
+      return segmentsMetadataManager
+          .getRecentDataSourcesSnapshot()
+          .getAllUsedNonOvershadowedSegments(dataSource, Intervals.ETERNITY);
+    } else {
+      return Set.copyOf(
+          segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
+      );
+    }
   }
 
   @Override
@@ -236,6 +249,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public SegmentPublishResult commitAppendSegmentsAndMetadata(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
@@ -248,6 +262,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
+      @Nullable final String supervisorId,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       SegmentSchemaMapping segmentSchemaMapping
@@ -259,6 +274,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentPublishResult commitMetadataOnly(
+      String supervisorId,
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata

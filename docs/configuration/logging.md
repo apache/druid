@@ -24,7 +24,7 @@ title: "Logging"
 
 
 Apache Druid services emit logs that to help you debug. 
-The same services also emit periodic [metrics](../configuration/index.md#enabling-metrics) about their state.
+The same services also emit periodic [metrics](../configuration/index.md#metrics-monitors) about their state.
 To disable metric info logs set the following runtime property: `-Ddruid.emitter.logging.logLevel=debug`.
 
 Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging.
@@ -73,30 +73,30 @@ The following example log4j2.xml is based upon the micro quickstart:
 
     <!-- Set level="debug" to see stack traces for query errors -->
     <Logger name="org.apache.druid.server.QueryResource" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
     <Logger name="org.apache.druid.server.QueryLifecycle" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
 
     <!-- Set level="debug" or "trace" to see more Coordinator details (segment balancing, load/drop rules, etc) -->
     <Logger name="org.apache.druid.server.coordinator" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
 
     <!-- Set level="debug" to see low-level details about segments and ingestion -->
     <Logger name="org.apache.druid.segment" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
 
     <!-- Set level="debug" to see more information about extension initialization -->
     <Logger name="org.apache.druid.initialization" level="info" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
 
     <!-- Quieter logging at startup -->
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
-      <Appender-ref ref="FileAppender"/>
+      <AppenderRef ref="FileAppender"/>
     </Logger>
   </Loggers>
 </Configuration>

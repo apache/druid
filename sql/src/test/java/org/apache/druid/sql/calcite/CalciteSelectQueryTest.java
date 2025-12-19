@@ -2232,7 +2232,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilter()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2275,7 +2274,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilterHaving()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(

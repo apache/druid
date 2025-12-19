@@ -49,7 +49,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -69,7 +69,6 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Interval;
 
@@ -118,7 +117,7 @@ public class TaskToolbox
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
   private final PolicyEnforcer policyEnforcer;
-  private final IndexMergerV9 indexMergerV9;
+  private final IndexMerger indexMerger;
   private final TaskReportFileWriter taskReportFileWriter;
 
   private final DruidNodeAnnouncer druidNodeAnnouncer;
@@ -141,6 +140,7 @@ public class TaskToolbox
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final RuntimeInfo runtimeInfo;
 
   public TaskToolbox(
       SegmentLoaderConfig segmentLoaderConfig,
@@ -168,7 +168,7 @@ public class TaskToolbox
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       PolicyEnforcer policyEnforcer,
-      IndexMergerV9 indexMergerV9,
+      IndexMerger indexMerger,
       DruidNodeAnnouncer druidNodeAnnouncer,
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
@@ -185,7 +185,8 @@ public class TaskToolbox
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       String attemptId,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      RuntimeInfo runtimeInfo
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -213,7 +214,7 @@ public class TaskToolbox
     this.cacheConfig = cacheConfig;
     this.cachePopulatorStats = cachePopulatorStats;
     this.policyEnforcer = policyEnforcer;
-    this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
@@ -232,6 +233,7 @@ public class TaskToolbox
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.runtimeInfo = runtimeInfo;
   }
 
   public SegmentLoaderConfig getSegmentLoaderConfig()
@@ -371,7 +373,12 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(
           SegmentTransactionalInsertAction.appendAction(
-              ImmutableSet.copyOf(segmentCollection), null, null, null
+              ImmutableSet.copyOf(segmentCollection),
+              null,
+              null,
+              null,
+              null,
+              null
           )
       );
     }
@@ -397,9 +404,9 @@ public class TaskToolbox
     return cachePopulatorStats;
   }
 
-  public IndexMergerV9 getIndexMergerV9()
+  public IndexMerger getIndexMerger()
   {
-    return indexMergerV9;
+    return indexMerger;
   }
 
   public File getIndexingTmpDir()
@@ -511,7 +518,7 @@ public class TaskToolbox
    */
   public RuntimeInfo getAdjustedRuntimeInfo()
   {
-    return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
+    return createAdjustedRuntimeInfo(runtimeInfo, appenderatorsManager);
   }
 
   public CentralizedDatasourceSchemaConfig getCentralizedTableSchemaConfig()
@@ -570,7 +577,7 @@ public class TaskToolbox
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
     private PolicyEnforcer policyEnforcer;
-    private IndexMergerV9 indexMergerV9;
+    private IndexMerger indexMerger;
     private DruidNodeAnnouncer druidNodeAnnouncer;
     private DruidNode druidNode;
     private LookupNodeService lookupNodeService;
@@ -588,6 +595,7 @@ public class TaskToolbox
     private TaskLogPusher taskLogPusher;
     private String attemptId;
     private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+    private RuntimeInfo runtimeInfo;
 
     public Builder()
     {
@@ -620,7 +628,7 @@ public class TaskToolbox
       this.cacheConfig = other.cacheConfig;
       this.cachePopulatorStats = other.cachePopulatorStats;
       this.policyEnforcer = other.policyEnforcer;
-      this.indexMergerV9 = other.indexMergerV9;
+      this.indexMerger = other.indexMerger;
       this.druidNodeAnnouncer = other.druidNodeAnnouncer;
       this.druidNode = other.druidNode;
       this.lookupNodeService = other.lookupNodeService;
@@ -636,6 +644,7 @@ public class TaskToolbox
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
       this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
+      this.runtimeInfo = other.runtimeInfo;
     }
 
     public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
@@ -788,9 +797,9 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder indexMergerV9(final IndexMergerV9 indexMergerV9)
+    public Builder indexMerger(final IndexMerger indexMerger)
     {
-      this.indexMergerV9 = indexMergerV9;
+      this.indexMerger = indexMerger;
       return this;
     }
 
@@ -896,6 +905,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder runtimeInfo(final RuntimeInfo runtimeInfo)
+    {
+      this.runtimeInfo = runtimeInfo;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -924,7 +939,7 @@ public class TaskToolbox
           cacheConfig,
           cachePopulatorStats,
           policyEnforcer,
-          indexMergerV9,
+          indexMerger,
           druidNodeAnnouncer,
           druidNode,
           lookupNodeService,
@@ -941,7 +956,8 @@ public class TaskToolbox
           shuffleClient,
           taskLogPusher,
           attemptId,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          runtimeInfo
       );
     }
   }

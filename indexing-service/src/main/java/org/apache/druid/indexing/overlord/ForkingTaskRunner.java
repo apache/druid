@@ -521,9 +521,21 @@ public class ForkingTaskRunner
     finally {
       Thread.currentThread().setName(priorThreadName);
         // Upload task logs
-      taskLogPusher.pushTaskLog(task.getId(), logFile);
+      try {
+        taskLogPusher.pushTaskLog(task.getId(), logFile);
+      }
+      catch (Exception e) {
+        LOGGER.error("Task[%s] failed to push task logs to [%s]: Exception[%s]",
+            task.getId(), logFile.getName(), e.getMessage());
+      }
       if (reportsFile.exists()) {
-        taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+        try {
+          taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+        }
+        catch (Exception e) {
+          LOGGER.error("Task[%s] failed to push task reports to [%s]: Exception[%s]",
+              task.getId(), reportsFile.getName(), e.getMessage());
+        }
       }
     }
   }

@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
@@ -33,7 +32,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.stream.Collectors;
 
 public class CgroupV2CpuMonitorTest
@@ -65,8 +63,7 @@ public class CgroupV2CpuMonitorTest
     final CgroupV2CpuMonitor monitor = new CgroupV2CpuMonitor(discoverer);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
-    final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(0, actualEvents.size());
+    Assert.assertEquals(2, emitter.getNumEmittedEvents());
 
     emitter.flush();
 

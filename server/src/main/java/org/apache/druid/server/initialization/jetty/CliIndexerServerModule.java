@@ -36,7 +36,7 @@ import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -47,7 +47,7 @@ import java.util.Properties;
  */
 public class CliIndexerServerModule implements Module
 {
-  private static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
+  public static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
   private final Properties properties;
 
   public CliIndexerServerModule(Properties properties)
@@ -109,10 +109,10 @@ public class CliIndexerServerModule implements Module
   @Provides
   @LazySingleton
   public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
-      final DataSourceTaskIdHolder taskIdHolder
+      final TaskHolder taskHolder
   )
   {
-    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskIdHolder.getTaskId());
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskHolder.getTaskId());
   }
 
   @Provides
@@ -166,7 +166,9 @@ public class CliIndexerServerModule implements Module
         oldConfig.isShowDetailedJettyErrors(),
         oldConfig.getErrorResponseTransformStrategy(),
         oldConfig.getContentSecurityPolicy(),
-        oldConfig.isEnableHSTS()
+        oldConfig.isEnableHSTS(),
+        oldConfig.getUriCompliance(),
+        oldConfig.isEnforceStrictSNIHostChecking()
     );
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.frame.segment.columnar;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
@@ -30,9 +29,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -40,6 +42,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
@@ -73,7 +76,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       final List<FrameColumnReader> columnReaders
   )
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
+    this.frame = frame.ensureColumnar();
     this.signature = signature;
     this.columnReaders = columnReaders;
   }
@@ -81,104 +84,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final Closer closer = Closer.create();
-
-    // Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
-    // the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
-    // at this point in the code. It could be plumbed in at some point. For now, use an empty list.
-    final List<OrderBy> ordering = Collections.emptyList();
-
-    return new CursorHolder()
-    {
-      @Override
-      public boolean canVectorize()
-      {
-        return (spec.getFilter() == null || spec.getFilter().canVectorizeMatcher(signature))
-               && spec.getVirtualColumns().canVectorize(signature);
-      }
-
-      @Override
-      public Cursor asCursor()
-      {
-        final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-        final ColumnCache columnCache = new ColumnCache(index, closer);
-        final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
-        final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
-
-        final QueryableIndexColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-            spec.getVirtualColumns(),
-            Order.NONE,
-            baseOffset,
-            columnCache
-        );
-
-        final SimpleSettableOffset offset;
-        if (filterToUse == null) {
-          offset = baseOffset;
-        } else {
-          offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
-        }
-
-        return new FrameCursor(offset, columnSelectorFactory);
-      }
-
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return ordering;
-      }
-
-      @Nullable
-      @Override
-      public VectorCursor asVectorCursor()
-      {
-        if (!canVectorize()) {
-          throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'asVectorCursor'.");
-        }
-
-        final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-        final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
-        final VectorOffset baseOffset = new NoFilterVectorOffset(
-            spec.getQueryContext().getVectorSize(),
-            0,
-            frame.numRows()
-        );
-        final ColumnCache columnCache = new ColumnCache(index, closer);
-
-        // baseSelectorFactory using baseOffset is the column selector for filtering.
-        final VectorColumnSelectorFactory baseSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-            index,
-            baseOffset,
-            columnCache,
-            spec.getVirtualColumns()
-        );
-
-        if (filterToUse == null) {
-          return new FrameVectorCursor(baseOffset, baseSelectorFactory);
-        } else {
-          final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseSelectorFactory);
-          final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
-              baseOffset,
-              matcher
-          );
-
-          final VectorColumnSelectorFactory filteredSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-              index,
-              filteredOffset,
-              columnCache,
-              spec.getVirtualColumns()
-          );
-
-          return new FrameVectorCursor(filteredOffset, filteredSelectorFactory);
-        }
-      }
-
-      @Override
-      public void close()
-      {
-        CloseableUtils.closeAndWrapExceptions(closer);
-      }
-    };
+    return new ColumnarFrameCursorHolder(spec);
   }
 
   @Override
@@ -199,6 +105,133 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
       // insight into what's actually going on with this column (nulls, multivalue, etc).
       return columnReaders.get(columnNumber).readColumn(frame).getCapabilities();
+    }
+  }
+
+  private class ColumnarFrameCursorHolder implements CursorHolder
+  {
+    private final CursorBuildSpec spec;
+    private final Closer closer = Closer.create();
+
+    private ColumnarFrameCursorHolder(CursorBuildSpec spec)
+    {
+      this.spec = spec;
+    }
+
+    /**
+     * Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
+     * the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
+     * at this point in the code. It could be plumbed in at some point. For now, use an empty list.
+     */
+    private final List<OrderBy> ordering = Collections.emptyList();
+
+    @Override
+    public boolean canVectorize()
+    {
+      final List<AggregatorFactory> aggregatorFactories = spec.getAggregators();
+      final VirtualColumns virtualColumns = spec.getVirtualColumns();
+      final Filter filter = spec.getFilter();
+      final QueryContext queryContext = spec.getQueryContext();
+      final ColumnInspector inspector = virtualColumns.wrapInspector(ColumnarFrameCursorFactory.this);
+
+      // Check that virtual columns are vectorizable.
+      if (!virtualColumns.isEmpty()) {
+        if (!queryContext.getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector))) {
+          return false;
+        }
+      }
+
+      // Check that aggregators are vectorizable.
+      if (aggregatorFactories != null) {
+        for (AggregatorFactory factory : aggregatorFactories) {
+          if (!factory.canVectorize(inspector)) {
+            return false;
+          }
+        }
+      }
+
+      // Check that filter is vectorizable.
+      return filter == null || filter.canVectorizeMatcher(inspector);
+    }
+
+    @Override
+    public Cursor asCursor()
+    {
+      final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
+      final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+      final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
+
+      final QueryableIndexColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
+          spec.getVirtualColumns(),
+          Order.NONE,
+          baseOffset,
+          columnCache
+      );
+
+      final SimpleSettableOffset offset;
+      if (filterToUse == null) {
+        offset = baseOffset;
+      } else {
+        offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
+      }
+
+      return new FrameCursor(offset, columnSelectorFactory);
+    }
+
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return ordering;
+    }
+
+    @Nullable
+    @Override
+    public VectorCursor asVectorCursor()
+    {
+      if (!canVectorize()) {
+        throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'asVectorCursor'.");
+      }
+
+      final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
+      final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+      final VectorOffset baseOffset = new NoFilterVectorOffset(
+          spec.getQueryContext().getVectorSize(),
+          0,
+          frame.numRows()
+      );
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
+
+      // baseSelectorFactory using baseOffset is the column selector for filtering.
+      final VectorColumnSelectorFactory baseSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
+          baseOffset,
+          columnCache,
+          spec.getVirtualColumns()
+      );
+
+      if (filterToUse == null) {
+        return new FrameVectorCursor(baseOffset, baseSelectorFactory);
+      } else {
+        final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseSelectorFactory);
+        final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
+            baseOffset,
+            matcher
+        );
+
+        final VectorColumnSelectorFactory filteredSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
+            filteredOffset,
+            columnCache,
+            spec.getVirtualColumns()
+        );
+
+        return new FrameVectorCursor(filteredOffset, filteredSelectorFactory);
+      }
+    }
+
+    @Override
+    public void close()
+    {
+      CloseableUtils.closeAndWrapExceptions(closer);
     }
   }
 }

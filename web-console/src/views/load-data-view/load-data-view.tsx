@@ -59,6 +59,7 @@ import {
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
   ArrayIngestMode,
+  ConsoleViewId,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -142,7 +143,7 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import { getSpecDatasourceName } from '../../helpers';
+import { getSpecSupervisorId } from '../../helpers';
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
@@ -186,6 +187,7 @@ import {
   sampleForTimestamp,
   sampleForTransform,
 } from '../../utils/sampler';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { EXAMPLE_SPECS } from './example-specs';
@@ -204,6 +206,7 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
+import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import {
   ParseTimeTable,
@@ -388,9 +391,8 @@ export interface LoadDataViewProps {
   mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
-  goToSupervisor: (supervisorId: string) => void;
+  goToView: (tab: ConsoleViewId, filters?: TableFilters) => void;
   openSupervisorSubmit: () => void;
-  goToTasks: (taskGroupId: string) => void;
   openTaskSubmit: () => void;
 }
 
@@ -1181,7 +1183,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           For more information please refer to the{' '}
-          <ExternalLink href={`${getLink('DOCS')}/operations/including-extensions`}>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/extensions#loading-extensions`}>
             documentation on loading extensions
           </ExternalLink>
           .
@@ -3385,6 +3387,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ),
               },
               {
+                name: 'id',
+                label: 'Supervisor ID',
+                type: 'string',
+                defined: isStreamingSpec,
+                placeholder: '(default to the datasource name if not set)',
+                info: (
+                  <p>
+                    The ID of the supervisor that will manage the ingestion. This should generally
+                    be set to the datasource name (the default if left unset) unless you are setting
+                    up multiple supervisors for the same datasource.
+                  </p>
+                ),
+              },
+              {
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
@@ -3566,7 +3582,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     let currentSupervisorSpec: Partial<IngestionSpec> | undefined;
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (isStreamingSpec(spec) && supervisorId) {
       try {
         currentSupervisorSpec = cleanSpec(
@@ -3598,6 +3614,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               this.updateSpec(s);
             }}
             height="100%"
+            jsonCompletions={INGESTION_SPEC_COMPLETIONS}
           />
         </div>
         <div className="control">
@@ -3702,7 +3719,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private readonly handleSubmitSupervisor = async () => {
-    const { goToSupervisor } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3723,16 +3740,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       intent: Intent.SUCCESS,
     });
 
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (supervisorId) {
       setTimeout(() => {
-        goToSupervisor(supervisorId);
+        goToView('supervisors', TableFilters.eq({ supervisor_id: supervisorId }));
       }, 1000);
     }
   };
 
   private readonly handleSubmitTask = async () => {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3755,7 +3772,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
 
     setTimeout(() => {
-      goToTasks(taskResp.data.task);
+      goToView('tasks', TableFilters.eq({ task_id: taskResp.data.task }));
     }, 1000);
   };
 }

@@ -145,15 +145,6 @@
   "segment/unneeded/count": [
     "tier"
   ],
-  "segment/cost/raw": [
-    "tier"
-  ],
-  "segment/cost/normalization": [
-    "tier"
-  ],
-  "segment/cost/normalized": [
-    "tier"
-  ],
   "segment/loadQueue/size": [
     "server"
   ],

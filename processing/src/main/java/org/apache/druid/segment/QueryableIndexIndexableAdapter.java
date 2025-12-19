@@ -27,6 +27,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -150,7 +151,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
-    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
+    final BaseColumnHolder columnHolder = input.getColumnHolder(dimension);
 
     if (columnHolder == null) {
       return null;
@@ -217,7 +218,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public NestedColumnMergable getNestedColumnMergeables(String columnName)
   {
-    final ColumnHolder columnHolder = input.getColumnHolder(columnName);
+    final BaseColumnHolder columnHolder = input.getColumnHolder(columnName);
 
     if (columnHolder == null) {
       return null;
@@ -312,7 +313,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     RowIteratorImpl()
     {
       this.closer = Closer.create();
-      this.columnCache = new ColumnCache(input, closer);
+      this.columnCache = new ColumnCache(input, VirtualColumns.EMPTY, closer);
 
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
           VirtualColumns.EMPTY,
@@ -463,7 +464,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public BitmapValues getBitmapValues(String dimension, int dictId)
   {
-    final ColumnHolder columnHolder = input.getColumnHolder(dimension);
+    final BaseColumnHolder columnHolder = input.getColumnHolder(dimension);
     if (columnHolder == null) {
       return BitmapValues.EMPTY;
     }

@@ -36,9 +36,9 @@ import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.IntegrationTestingCuratorConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfigProvider;
 
 /**
  */
@@ -56,7 +56,7 @@ public class DruidTestModule implements Module
 
     // Bind DruidNode instance to make Guice happy. This instance is currently unused.
     binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
-        new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false)
+        new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false, null)
     );
 
     // Required for MSQIndexingModule

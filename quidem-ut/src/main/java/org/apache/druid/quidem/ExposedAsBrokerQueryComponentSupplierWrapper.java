@@ -41,7 +41,7 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerServiceModule;
-import org.apache.druid.guice.CoordinatorDiscoveryModule;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
@@ -186,7 +186,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
-        new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),
         new JavaScriptModule(),
@@ -196,6 +195,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
+        new DefaultServerHolderModule(),
         ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of())
     );
   }

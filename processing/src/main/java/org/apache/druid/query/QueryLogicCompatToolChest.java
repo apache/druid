@@ -31,11 +31,13 @@ import java.util.Optional;
 
 public class QueryLogicCompatToolChest extends QueryToolChest<Object, Query<Object>>
 {
-  private RowSignature resultRowSignature;
+  private final RowSignature resultRowSignature;
+  private final GenericQueryMetricsFactory queryMetricsFactory;
 
-  public QueryLogicCompatToolChest(RowSignature resultRowSignature)
+  public QueryLogicCompatToolChest(RowSignature resultRowSignature, GenericQueryMetricsFactory queryMetricsFactory)
   {
     this.resultRowSignature = resultRowSignature;
+    this.queryMetricsFactory = queryMetricsFactory;
   }
 
   @Override
@@ -47,7 +49,7 @@ public class QueryLogicCompatToolChest extends QueryToolChest<Object, Query<Obje
   @Override
   public QueryMetrics<? super Query<Object>> makeMetrics(Query<Object> query)
   {
-    return new DefaultQueryMetrics<>();
+    return queryMetricsFactory.makeMetrics(query);
   }
 
   @Override

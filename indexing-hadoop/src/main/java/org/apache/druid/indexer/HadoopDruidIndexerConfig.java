@@ -29,19 +29,21 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,6 +56,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
@@ -106,8 +109,9 @@ public class HadoopDruidIndexerConfig
   public static final Properties PROPERTIES;
 
   static {
-    INJECTOR = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
+    INJECTOR = ServerInjectorBuilder.makeServerInjectorWithoutJettyModules(
+        new StartupInjectorBuilder().forServer().build(),
+        ImmutableSet.of(),
         ImmutableList.of(
             (Module) binder -> {
               JsonConfigProvider.bindInstance(
@@ -116,6 +120,9 @@ public class HadoopDruidIndexerConfig
                   new DruidNode("hadoop-indexer", null, false, null, null, true, false)
               );
               JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
+              binder.bind(LocalTmpStorageConfig.class)
+                    .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("hadoop-indexer"))
+                    .in(LazySingleton.class);
             },
             new IndexingHadoopModule()
         )

@@ -1,0 +1,835 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_int) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_float) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_str) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_null) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_empty) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_mixed) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   5 |
+|   5 |
+|   5 |
+|   5 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   5 |
+|   5 |
+|   5 |
+|   5 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   5 |
+|   5 |
+|   5 |
+|   5 |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_nested) AS col
+FROM test_array;
+Cannot apply 'MV_LENGTH' to arguments of type 'MV_LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_bool, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[0]' RETURNING boolean array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][0]' RETURNING boolean array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_int, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[1]' RETURNING bigint array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][1]' RETURNING bigint array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_float, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[2]' RETURNING decimal array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][2]' RETURNING decimal array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 0.1 |
+| 0.1 |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_str, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[3]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][3]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| S1  |
+| S1  |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_null, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[4]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][4]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_empty, 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[5]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][5]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_mixed, 0) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[6]' RETURNING varchar array), 0) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][6]' RETURNING varchar array), 0) AS col
+FROM test_array;
++------+
+| col  |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(a_nested, 0) AS col
+FROM test_array;
+Cannot apply 'MV_OFFSET' to arguments of type 'MV_OFFSET(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B4_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_offset(json_value(a_nested, '$[7][7]' RETURNING varchar array), 0) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(a_bool, 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B5_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_ordinal(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
