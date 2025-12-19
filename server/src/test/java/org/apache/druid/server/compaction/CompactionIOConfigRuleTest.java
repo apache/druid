@@ -1,0 +1,172 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.compaction;
+
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class CompactionIOConfigRuleTest
+{
+  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final Period PERIOD_60_DAYS = Period.days(60);
+
+  private final CompactionIOConfigRule rule = new CompactionIOConfigRule(
+      "test-ioconfig-rule",
+      "Custom IO config",
+      PERIOD_60_DAYS,
+      new UserCompactionTaskIOConfig(null)
+  );
+
+  @Test
+  public void test_isAdditive_returnsFalse()
+  {
+    // IO config rules are not additive - only one IO config can apply
+    Assert.assertFalse(rule.isAdditive());
+  }
+
+  @Test
+  public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
+  {
+    // Threshold is 2025-10-20T12:00:00Z (60 days before reference time)
+    // Interval ends at 2025-10-15, which is fully before threshold
+    Interval interval = new Interval("2025-10-14T00:00:00Z/2025-10-15T00:00:00Z");
+
+    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+
+    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+  }
+
+  @Test
+  public void test_appliesTo_intervalEndsAtThreshold_returnsFull()
+  {
+    // Threshold is 2025-10-20T12:00:00Z (60 days before reference time)
+    // Interval ends exactly at threshold - should be FULL (boundary case)
+    Interval interval = new Interval("2025-10-19T12:00:00Z/2025-10-20T12:00:00Z");
+
+    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+
+    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+  }
+
+  @Test
+  public void test_appliesTo_intervalSpansThreshold_returnsPartial()
+  {
+    // Threshold is 2025-10-20T12:00:00Z (60 days before reference time)
+    // Interval starts before threshold and ends after - PARTIAL
+    Interval interval = new Interval("2025-10-19T00:00:00Z/2025-10-21T00:00:00Z");
+
+    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+
+    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+  }
+
+  @Test
+  public void test_appliesTo_intervalStartsAfterThreshold_returnsNone()
+  {
+    // Threshold is 2025-10-20T12:00:00Z (60 days before reference time)
+    // Interval starts after threshold - NONE
+    Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
+
+    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+
+    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+  }
+
+  @Test
+  public void test_getIoConfig_returnsConfiguredValue()
+  {
+    UserCompactionTaskIOConfig config = rule.getIoConfig();
+
+    Assert.assertNotNull(config);
+  }
+
+  @Test
+  public void test_getId_returnsConfiguredId()
+  {
+    Assert.assertEquals("test-ioconfig-rule", rule.getId());
+  }
+
+  @Test
+  public void test_getDescription_returnsConfiguredDescription()
+  {
+    Assert.assertEquals("Custom IO config", rule.getDescription());
+  }
+
+  @Test
+  public void test_getPeriod_returnsConfiguredPeriod()
+  {
+    Assert.assertEquals(PERIOD_60_DAYS, rule.getPeriod());
+  }
+
+  @Test
+  public void test_constructor_nullId_throwsNullPointerException()
+  {
+    UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> new CompactionIOConfigRule(null, "description", PERIOD_60_DAYS, config)
+    );
+  }
+
+  @Test
+  public void test_constructor_nullPeriod_throwsNullPointerException()
+  {
+    UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> new CompactionIOConfigRule("test-id", "description", null, config)
+    );
+  }
+
+  @Test
+  public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
+  {
+    UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
+    Period zeroPeriod = Period.days(0);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new CompactionIOConfigRule("test-id", "description", zeroPeriod, config)
+    );
+  }
+
+  @Test
+  public void test_constructor_negativePeriod_throwsIllegalArgumentException()
+  {
+    UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
+    Period negativePeriod = Period.days(-60);
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new CompactionIOConfigRule("test-id", "description", negativePeriod, config)
+    );
+  }
+
+  @Test
+  public void test_constructor_nullIOConfig_throwsNullPointerException()
+  {
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> new CompactionIOConfigRule("test-id", "description", PERIOD_60_DAYS, null)
+    );
+  }
+}
