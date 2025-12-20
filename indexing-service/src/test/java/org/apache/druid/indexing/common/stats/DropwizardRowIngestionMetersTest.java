@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.common.stats;
 
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class DropwizardRowIngestionMetersTest
     meters.incrementProcessedBytes(100);
     meters.incrementProcessedWithError();
     meters.incrementUnparseable();
-    meters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+    meters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
 
     Assert.assertEquals(1, meters.getProcessed());
     Assert.assertEquals(100, meters.getProcessedBytes());
@@ -57,23 +57,23 @@ public class DropwizardRowIngestionMetersTest
   {
     DropwizardRowIngestionMeters meters = new DropwizardRowIngestionMeters();
 
-    meters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
-    meters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
-    meters.incrementThrownAway(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
-    meters.incrementThrownAway(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME);
-    meters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
-    meters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
-    meters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    meters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    meters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    meters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
+    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
 
     // Total thrownAway should be sum of all reasons
     Assert.assertEquals(7, meters.getThrownAway());
 
     // Check per-reason counts
-    Map<InputRowThrownAwayReason, Long> byReason = meters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME));
-    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowThrownAwayReason.FILTERED));
+    Map<String, Long> byReason = meters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.FILTERED.getReason()));
   }
 
   @Test
@@ -82,10 +82,10 @@ public class DropwizardRowIngestionMetersTest
     DropwizardRowIngestionMeters meters = new DropwizardRowIngestionMeters();
 
     // Even with no increments, all reasons should be present with 0 counts
-    Map<InputRowThrownAwayReason, Long> byReason = meters.getThrownAwayByReason();
-    Assert.assertEquals(InputRowThrownAwayReason.values().length, byReason.size());
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
-      Assert.assertEquals(Long.valueOf(0), byReason.get(reason));
+    Map<String, Long> byReason = meters.getThrownAwayByReason();
+    Assert.assertEquals(InputRowFilterResult.rejectedValues().length, byReason.size());
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      Assert.assertEquals(Long.valueOf(0), byReason.get(reason.getReason()));
     }
   }
 
@@ -95,7 +95,7 @@ public class DropwizardRowIngestionMetersTest
     DropwizardRowIngestionMeters meters = new DropwizardRowIngestionMeters();
 
     meters.incrementProcessed();
-    meters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
 
     Map<String, Object> movingAverages = meters.getMovingAverages();
     Assert.assertNotNull(movingAverages);

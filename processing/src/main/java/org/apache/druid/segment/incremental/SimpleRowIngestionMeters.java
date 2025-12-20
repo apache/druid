@@ -19,18 +19,15 @@
 
 package org.apache.druid.segment.incremental;
 
-import java.util.EnumMap;
 import java.util.Map;
 
 public class SimpleRowIngestionMeters implements RowIngestionMeters
 {
-  private static final int NUM_THROWN_AWAY_REASONS = InputRowThrownAwayReason.values().length;
-
   private long processed;
   private long processedWithError;
   private long unparseable;
   private long processedBytes;
-  private final long[] thrownAwayByReason = new long[NUM_THROWN_AWAY_REASONS];
+  private final long[] thrownAwayByReason = new long[InputRowFilterResult.NUM_FILTER_RESULT];
 
   @Override
   public long getProcessed()
@@ -83,21 +80,25 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   @Override
   public long getThrownAway()
   {
-    return getThrownAwayByReason().values().stream().reduce(0L, Long::sum);
+    long total = 0;
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      total += thrownAwayByReason[reason.ordinal()];
+    }
+    return total;
   }
 
   @Override
-  public void incrementThrownAway(InputRowThrownAwayReason reason)
+  public void incrementThrownAway(InputRowFilterResult reason)
   {
-    thrownAwayByReason[reason.ordinal()]++;
+    ++thrownAwayByReason[reason.ordinal()];
   }
 
   @Override
-  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<String, Long> getThrownAwayByReason()
   {
-    final EnumMap<InputRowThrownAwayReason, Long> result = new EnumMap<>(InputRowThrownAwayReason.class);
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
-      result.put(reason, thrownAwayByReason[reason.ordinal()]);
+    final Map<String, Long> result = InputRowFilterResult.buildRejectedCounterMap();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      result.put(reason.getReason(), thrownAwayByReason[reason.ordinal()]);
     }
     return result;
   }
@@ -127,8 +128,9 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
     this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
 
-    for (Map.Entry<InputRowThrownAwayReason, Long> entry : rowIngestionMetersTotals.getThrownAwayByReason().entrySet()) {
-      this.thrownAwayByReason[entry.getKey().ordinal()] += entry.getValue();
+    final Map<String, Long> thrownAwayByReason = rowIngestionMetersTotals.getThrownAwayByReason();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      this.thrownAwayByReason[reason.ordinal()] += thrownAwayByReason.getOrDefault(reason.getReason(), 0L);
     }
   }
 }

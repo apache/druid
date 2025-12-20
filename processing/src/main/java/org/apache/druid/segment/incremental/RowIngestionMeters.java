@@ -40,6 +40,7 @@ public interface RowIngestionMeters extends InputStats
   String PROCESSED_WITH_ERROR = "processedWithError";
   String UNPARSEABLE = "unparseable";
   String THROWN_AWAY = "thrownAway";
+  String THROWN_AWAY_BY_REASON = "thrownAwayByReason";
 
   /**
    * Number of bytes read by an ingestion task.
@@ -75,14 +76,15 @@ public interface RowIngestionMeters extends InputStats
   long getThrownAway();
 
   /**
-   * Increments the thrown away counter for the specified reason.
+   * Increments the thrown away counter for the specified {@link InputRowFilterResult} reason.
    */
-  void incrementThrownAway(InputRowThrownAwayReason reason);
+  void incrementThrownAway(InputRowFilterResult reason);
 
   /**
    * Returns the count of thrown away events for each reason.
+   * Keyed by {@link InputRowFilterResult#getReason()}.
    */
-  Map<InputRowThrownAwayReason, Long> getThrownAwayByReason();
+  Map<String, Long> getThrownAwayByReason();
 
   RowIngestionMetersTotals getTotals();
 

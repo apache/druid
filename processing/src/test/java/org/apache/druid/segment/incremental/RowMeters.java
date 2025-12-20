@@ -29,7 +29,7 @@ public class RowMeters
   private long processedBytes;
   private long processedWithError;
   private long unparseable;
-  private final Map<InputRowThrownAwayReason, Long> thrownAwayByReason = InputRowThrownAwayReason.buildBaseCounterMap();
+  private final Map<String, Long> thrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
 
   /**
    * Creates a new {@link RowMeters}, that can be used to build an instance of
@@ -58,15 +58,15 @@ public class RowMeters
     return this;
   }
 
-  public RowMeters thrownAwayByReason(InputRowThrownAwayReason thrownAwayByReason, long thrownAway)
+  public RowMeters thrownAwayByReason(InputRowFilterResult thrownAwayByReason, long thrownAway)
   {
-    this.thrownAwayByReason.put(thrownAwayByReason, this.thrownAwayByReason.get(thrownAwayByReason) + thrownAway);
+    this.thrownAwayByReason.put(thrownAwayByReason.getReason(), thrownAway);
     return this;
   }
 
   public RowMeters thrownAway(long thrownAway)
   {
-    this.thrownAwayByReason.put(InputRowThrownAwayReason.UNKNOWN, this.thrownAwayByReason.get(InputRowThrownAwayReason.UNKNOWN) + thrownAway);
+    this.thrownAwayByReason.put(InputRowFilterResult.UNKNOWN.getReason(), thrownAway);
     return this;
   }
 

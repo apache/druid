@@ -21,12 +21,11 @@ package org.apache.druid.indexing.common.stats;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,13 +35,11 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   public static final String FIVE_MINUTE_NAME = "5m";
   public static final String FIFTEEN_MINUTE_NAME = "15m";
 
-  private static final int NUM_THROWN_AWAY_REASONS = InputRowThrownAwayReason.values().length;
-
   private final Meter processed;
   private final Meter processedBytes;
   private final Meter processedWithError;
   private final Meter unparseable;
-  private final Meter[] thrownAwayByReason = new Meter[NUM_THROWN_AWAY_REASONS];
+  private final Meter[] thrownAwayByReason = new Meter[InputRowFilterResult.NUM_FILTER_RESULT];
 
   public DropwizardRowIngestionMeters()
   {
@@ -51,7 +48,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     this.processedBytes = metricRegistry.meter(PROCESSED_BYTES);
     this.processedWithError = metricRegistry.meter(PROCESSED_WITH_ERROR);
     this.unparseable = metricRegistry.meter(UNPARSEABLE);
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
+    for (InputRowFilterResult reason : InputRowFilterResult.values()) {
       this.thrownAwayByReason[reason.ordinal()] = metricRegistry.meter(THROWN_AWAY + "_" + reason.name());
     }
   }
@@ -108,24 +105,24 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   public long getThrownAway()
   {
     long totalThrownAway = 0;
-    for (Meter meter : thrownAwayByReason) {
-      totalThrownAway += meter.getCount();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      totalThrownAway += thrownAwayByReason[reason.ordinal()].getCount();
     }
     return totalThrownAway;
   }
 
   @Override
-  public void incrementThrownAway(InputRowThrownAwayReason reason)
+  public void incrementThrownAway(InputRowFilterResult reason)
   {
     thrownAwayByReason[reason.ordinal()].mark();
   }
 
   @Override
-  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<String, Long> getThrownAwayByReason()
   {
-    EnumMap<InputRowThrownAwayReason, Long> result = new EnumMap<>(InputRowThrownAwayReason.class);
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
-      result.put(reason, thrownAwayByReason[reason.ordinal()].getCount());
+    Map<String, Long> result = InputRowFilterResult.buildRejectedCounterMap();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      result.put(reason.getReason(), thrownAwayByReason[reason.ordinal()].getCount());
     }
     return result;
   }
@@ -152,21 +149,21 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     oneMinute.put(PROCESSED_BYTES, processedBytes.getOneMinuteRate());
     oneMinute.put(PROCESSED_WITH_ERROR, processedWithError.getOneMinuteRate());
     oneMinute.put(UNPARSEABLE, unparseable.getOneMinuteRate());
-    oneMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).map(Meter::getOneMinuteRate).reduce(0.0, Double::sum));
+    oneMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getOneMinuteRate).sum());
 
     Map<String, Object> fiveMinute = new HashMap<>();
     fiveMinute.put(PROCESSED, processed.getFiveMinuteRate());
     fiveMinute.put(PROCESSED_BYTES, processedBytes.getFiveMinuteRate());
     fiveMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFiveMinuteRate());
     fiveMinute.put(UNPARSEABLE, unparseable.getFiveMinuteRate());
-    fiveMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).map(Meter::getFiveMinuteRate).reduce(0.0, Double::sum));
+    fiveMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getFiveMinuteRate).sum());
 
     Map<String, Object> fifteenMinute = new HashMap<>();
     fifteenMinute.put(PROCESSED, processed.getFifteenMinuteRate());
     fifteenMinute.put(PROCESSED_BYTES, processedBytes.getFifteenMinuteRate());
     fifteenMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFifteenMinuteRate());
     fifteenMinute.put(UNPARSEABLE, unparseable.getFifteenMinuteRate());
-    fifteenMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).map(Meter::getFifteenMinuteRate).reduce(0.0, Double::sum));
+    fifteenMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getFifteenMinuteRate).sum());
 
     movingAverages.put(ONE_MINUTE_NAME, oneMinute);
     movingAverages.put(FIVE_MINUTE_NAME, fiveMinute);

@@ -32,7 +32,7 @@ import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -118,7 +118,7 @@ class StreamChunkParser<RecordType extends ByteEntity>
       if (!isEndOfShard) {
         // We do not count end of shard record as thrown away event since this is a record created by Druid
         // Note that this only applies to Kinesis
-        rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
+        rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
       }
       return Collections.emptyList();
     } else {

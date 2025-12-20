@@ -19,14 +19,19 @@
 
 package org.apache.druid.segment.incremental;
 
-import java.util.EnumMap;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Reasons why an input row may be thrown away during ingestion.
+ * Result of filtering an input row during ingestion.
  */
-public enum InputRowThrownAwayReason
+public enum InputRowFilterResult
 {
+  /**
+   * The row passed the filter and should be processed.
+   */
+  ACCEPTED("accepted"),
   /**
    * The row was null or the input record was empty.
    */
@@ -52,15 +57,20 @@ public enum InputRowThrownAwayReason
    */
   UNKNOWN("unknown");
 
+  private static final InputRowFilterResult[] REJECTED_VALUES = Arrays.stream(InputRowFilterResult.values())
+                                                                      .filter(InputRowFilterResult::isRejected)
+                                                                      .toArray(InputRowFilterResult[]::new);
+  public static final int NUM_FILTER_RESULT = InputRowFilterResult.values().length;
+
   private final String reason;
 
-  InputRowThrownAwayReason(String reason)
+  InputRowFilterResult(String reason)
   {
     this.reason = reason;
   }
 
   /**
-   * Returns string value representation of this {@link InputRowThrownAwayReason} for metric emission.
+   * Returns string value representation of this {@link InputRowFilterResult} for metric emission.
    */
   public String getReason()
   {
@@ -68,14 +78,33 @@ public enum InputRowThrownAwayReason
   }
 
   /**
-   * Public utility for building a mutable frequency map over the possible {@link InputRowThrownAwayReason} values.
+   * Returns true if this result indicates the row was rejected (thrown away).
+   * Returns false for {@link #ACCEPTED}.
    */
-  public static Map<InputRowThrownAwayReason, Long> buildBaseCounterMap()
+  public boolean isRejected()
   {
-    final EnumMap<InputRowThrownAwayReason, Long> result = new EnumMap<>(InputRowThrownAwayReason.class);
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
-      result.put(reason, 0L);
+    return this != ACCEPTED;
+  }
+
+  /**
+   * Public utility for building a mutable frequency map over the possible rejection {@link InputRowFilterResult} values.
+   * Keys on {@link InputRowFilterResult#getReason()} rather than the enum name as the latter is more likely to change longer-term.
+   * It is also easier to have stats payload keys match what is being emitted in metrics.
+   */
+  public static Map<String, Long> buildRejectedCounterMap()
+  {
+    final Map<String, Long> result = new HashMap<>();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      result.put(reason.getReason(), 0L);
     }
     return result;
+  }
+
+  /**
+   * Returns {@link InputRowFilterResult} that are not rejection states.
+   */
+  public static InputRowFilterResult[] rejectedValues()
+  {
+    return REJECTED_VALUES;
   }
 }

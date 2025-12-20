@@ -79,7 +79,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -2147,14 +2147,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   /**
-   * Returns the rejection reason for a row, or null if the row should be accepted.
+   * Returns the filter result for a row.
+   * Returns {@link InputRowFilterResult#ACCEPTED} if the row should be accepted,
+   * or a rejection reason otherwise.
    * This method is used as a {@link InputRowFilter} for the {@link StreamChunkParser}.
    */
-  @Nullable
-  InputRowThrownAwayReason ensureRowIsNonNullAndWithinMessageTimeBounds(@Nullable InputRow row)
+  InputRowFilterResult ensureRowIsNonNullAndWithinMessageTimeBounds(@Nullable InputRow row)
   {
     if (row == null) {
-      return InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD;
+      return InputRowFilterResult.NULL_OR_EMPTY_RECORD;
     } else if (minMessageTime.isAfter(row.getTimestamp())) {
       if (log.isDebugEnabled()) {
         log.debug(
@@ -2163,7 +2164,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             minMessageTime
         );
       }
-      return InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME;
+      return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
     } else if (maxMessageTime.isBefore(row.getTimestamp())) {
       if (log.isDebugEnabled()) {
         log.debug(
@@ -2172,8 +2173,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             maxMessageTime
         );
       }
-      return InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME;
+      return InputRowFilterResult.AFTER_MAX_MESSAGE_TIME;
     }
-    return null;
+    return InputRowFilterResult.ACCEPTED;
   }
 }

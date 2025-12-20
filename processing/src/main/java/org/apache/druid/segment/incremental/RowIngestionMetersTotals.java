@@ -33,7 +33,7 @@ public class RowIngestionMetersTotals
   private final long processedBytes;
   private final long processedWithError;
   private final long thrownAway;
-  private final Map<InputRowThrownAwayReason, Long> thrownAwayByReason;
+  private final Map<String, Long> thrownAwayByReason;
   private final long unparseable;
 
   @JsonCreator
@@ -42,7 +42,7 @@ public class RowIngestionMetersTotals
       @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
       @JsonProperty("thrownAway") long thrownAway,
-      @JsonProperty("thrownAwayByReason") @Nullable Map<InputRowThrownAwayReason, Long> thrownAwayByReason,
+      @JsonProperty("thrownAwayByReason") @Nullable Map<String, Long> thrownAwayByReason,
       @JsonProperty("unparseable") long unparseable
   )
   {
@@ -59,7 +59,24 @@ public class RowIngestionMetersTotals
       @JsonProperty("processed") long processed,
       @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
-      @JsonProperty("thrownAwayByReason") Map<InputRowThrownAwayReason, Long> thrownAwayByReason,
+      @JsonProperty("thrownAway") long thrownAway,
+      @JsonProperty("unparseable") long unparseable
+  )
+  {
+    this(
+        processed,
+        processedBytes,
+        processedWithError,
+        getBackwardsCompatibleThrownAwayByReason(thrownAway),
+        unparseable
+    );
+  }
+
+  public RowIngestionMetersTotals(
+      @JsonProperty("processed") long processed,
+      @JsonProperty("processedBytes") long processedBytes,
+      @JsonProperty("processedWithError") long processedWithError,
+      @JsonProperty("thrownAwayByReason") Map<String, Long> thrownAwayByReason,
       @JsonProperty("unparseable") long unparseable
   )
   {
@@ -96,7 +113,7 @@ public class RowIngestionMetersTotals
   }
 
   @JsonProperty
-  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<String, Long> getThrownAwayByReason()
   {
     return thrownAwayByReason;
   }
@@ -145,13 +162,13 @@ public class RowIngestionMetersTotals
   }
 
   /**
-   * For backwards compatibility, key by {@link InputRowThrownAwayReason} in case of lack of thrownAwayByReason input during rolling Druid upgrades.
+   * For backwards compatibility, key by {@link InputRowFilterResult} in case of lack of thrownAwayByReason input during rolling Druid upgrades.
    * This can occur when tasks running on older Druid versions return ingest statistic payloads to an overlord running on a newer Druid version.
    */
-  private static Map<InputRowThrownAwayReason, Long> getBackwardsCompatibleThrownAwayByReason(long thrownAway)
+  private static Map<String, Long> getBackwardsCompatibleThrownAwayByReason(long thrownAway)
   {
-    Map<InputRowThrownAwayReason, Long> results = InputRowThrownAwayReason.buildBaseCounterMap();
-    results.put(InputRowThrownAwayReason.UNKNOWN, thrownAway);
+    Map<String, Long> results = InputRowFilterResult.buildRejectedCounterMap();
+    results.put(InputRowFilterResult.UNKNOWN.getReason(), thrownAway);
     return results;
   }
 }

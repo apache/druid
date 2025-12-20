@@ -74,13 +74,13 @@ public class NoopRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
-  public void incrementThrownAway(InputRowThrownAwayReason reason)
+  public void incrementThrownAway(InputRowFilterResult reason)
   {
 
   }
 
   @Override
-  public Map<InputRowThrownAwayReason, Long> getThrownAwayByReason()
+  public Map<String, Long> getThrownAwayByReason()
   {
     return Map.of();
   }

@@ -34,18 +34,19 @@ public class SimpleRowIngestionMetersTest
     rowIngestionMeters.incrementProcessedBytes(5);
     rowIngestionMeters.incrementProcessedWithError();
     rowIngestionMeters.incrementUnparseable();
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
-    Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, Map.of(
-        InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, 1L), 1));
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    final Map<String, Long> expected = InputRowFilterResult.buildRejectedCounterMap();
+    expected.put(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1L);
+    Assert.assertEquals(new RowIngestionMetersTotals(1, 5, 1, expected, 1), rowIngestionMeters.getTotals());
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, Map.of(), 1);
+    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
     rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
-    Assert.assertEquals(rowIngestionMeters.getTotals(), rowIngestionMetersTotals);
+    Assert.assertEquals(rowIngestionMetersTotals, rowIngestionMeters.getTotals());
   }
 
   @Test
@@ -53,21 +54,21 @@ public class SimpleRowIngestionMetersTest
   {
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
 
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
-    rowIngestionMeters.incrementThrownAway(InputRowThrownAwayReason.FILTERED);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    rowIngestionMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
 
     Assert.assertEquals(7, rowIngestionMeters.getThrownAway());
 
-    Map<InputRowThrownAwayReason, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME));
-    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowThrownAwayReason.FILTERED));
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.FILTERED.getReason()));
   }
 
   @Test
@@ -76,10 +77,10 @@ public class SimpleRowIngestionMetersTest
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
 
     // Even with no increments, all reasons should be present with 0 counts
-    Map<InputRowThrownAwayReason, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
-    Assert.assertEquals(InputRowThrownAwayReason.values().length, byReason.size());
-    for (InputRowThrownAwayReason reason : InputRowThrownAwayReason.values()) {
-      Assert.assertEquals(Long.valueOf(0), byReason.get(reason));
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(InputRowFilterResult.rejectedValues().length, byReason.size());
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      Assert.assertEquals(Long.valueOf(0), byReason.get(reason.getReason()));
     }
   }
 }

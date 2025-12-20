@@ -85,6 +85,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.handoff.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -109,6 +110,7 @@ import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -1508,6 +1510,12 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(
+        InputRowFilterResult.buildRejectedCounterMap(),
+        Long::intValue
+    );
+    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1515,7 +1523,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 4,
             RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1523,7 +1532,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 1,
             RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1680,6 +1690,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = CollectionUtils.mapValues(
+        InputRowFilterResult.buildRejectedCounterMap(),
+        Long::intValue
+    );
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = CollectionUtils.mapValues(
+        InputRowFilterResult.buildRejectedCounterMap(),
+        Long::intValue
+    );
+    expectedBuildSegmentsThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1687,7 +1707,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 0,
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedDeterminePartitionsThrownAwayByReason
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1695,7 +1716,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 1,
             RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedBuildSegmentsThrownAwayByReason
         )
     );
 
@@ -1790,6 +1812,15 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = CollectionUtils.mapValues(
+        InputRowFilterResult.buildRejectedCounterMap(),
+        Long::intValue
+    );
+    expectedDeterminePartitionsThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = CollectionUtils.mapValues(
+        InputRowFilterResult.buildRejectedCounterMap(),
+        Long::intValue
+    );
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1797,7 +1828,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 1,
             RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedDeterminePartitionsThrownAwayByReason
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1805,7 +1837,8 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED, 0,
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedBuildSegmentsThrownAwayByReason
         )
     );
 
@@ -2738,7 +2771,10 @@ public class IndexTaskTest extends IngestionTestBase
       Map<String, AggregatorFactory> aggregatorFactoryMap
   )
   {
-    Assert.assertEquals(segmentWithSchemas.getSegments().size(), segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assert.assertEquals(
+        segmentWithSchemas.getSegments().size(),
+        segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size()
+    );
     Assert.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
     Assert.assertEquals(
         actualRowSignature,

@@ -48,7 +48,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -493,6 +493,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList()
     );
     TaskReport.ReportMap actualReports = task.doGetLiveReports(true);
+    Map<String, Long> expectedThrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
+    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1L);
     TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
@@ -509,7 +511,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(10, 335, 1, Map.of(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, 0L, InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, 0L, InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME, 0L, InputRowThrownAwayReason.FILTERED, 1L, InputRowThrownAwayReason.UNKNOWN, 0L), 1)
+        new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1)
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -544,7 +546,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
     TaskReport.ReportMap actualReports = executedTask.doGetLiveReports(true);
 
-    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 335, 1, Map.of(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, 0L, InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, 0L, InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME, 0L, InputRowThrownAwayReason.FILTERED, 1L, InputRowThrownAwayReason.UNKNOWN, 0L), 1);
+    Map<String, Long> expectedThrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
+    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1L);
+    final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(
             "{ts=2017unparseable}",
@@ -565,7 +569,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),
           expectedUnparseableEvents,
-          new RowIngestionMetersTotals(0, 0, 0, Map.of(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, 0L, InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, 0L, InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME, 0L, InputRowThrownAwayReason.FILTERED, 0L, InputRowThrownAwayReason.UNKNOWN, 0L), 0),
+          new RowIngestionMetersTotals(0, 0, 0, 0, 0),
           expectedTotals
       );
     } else {

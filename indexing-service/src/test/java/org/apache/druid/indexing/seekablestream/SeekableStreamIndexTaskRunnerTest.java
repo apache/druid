@@ -36,7 +36,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -106,13 +106,13 @@ public class SeekableStreamIndexTaskRunnerTest
                                                                                                LockGranularity.TIME_CHUNK);
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
-    Assert.assertNull(runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.minusHours(2).minusMinutes(1));
-    Assert.assertEquals(InputRowThrownAwayReason.BEFORE_MIN_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.plusHours(2).plusMinutes(1));
-    Assert.assertEquals(InputRowThrownAwayReason.AFTER_MAX_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
   }
 
   @Test
@@ -159,13 +159,13 @@ public class SeekableStreamIndexTaskRunnerTest
                                                                                                LockGranularity.TIME_CHUNK);
 
     Mockito.when(row.getTimestamp()).thenReturn(now);
-    Assert.assertNull(runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.minusHours(2).minusMinutes(1));
-    Assert.assertNull(runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
 
     Mockito.when(row.getTimestamp()).thenReturn(now.plusHours(2).plusMinutes(1));
-    Assert.assertNull(runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
+    Assert.assertEquals(InputRowFilterResult.ACCEPTED, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(row));
   }
 
   @Test
@@ -209,7 +209,7 @@ public class SeekableStreamIndexTaskRunnerTest
     TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
                                                                                                LockGranularity.TIME_CHUNK);
 
-    Assert.assertEquals(InputRowThrownAwayReason.NULL_OR_EMPTY_RECORD, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(null));
+    Assert.assertEquals(InputRowFilterResult.NULL_OR_EMPTY_RECORD, runner.ensureRowIsNonNullAndWithinMessageTimeBounds(null));
   }
 
   @Test

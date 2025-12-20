@@ -20,14 +20,13 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 
-import javax.annotation.Nullable;
 import java.util.function.Predicate;
 
 /**
- * A filter for input rows during ingestion that can report the reason for rejection or null for acceptance.
- * This is similar to {@link Predicate} but returns the rejection reason instead of just a boolean.
+ * A filter for input rows during ingestion that returns a {@link InputRowFilterResult} per row.
+ * This is similar to {@link Predicate} but returns an {@link InputRowFilterResult} instead of a boolean.
  */
 @FunctionalInterface
 public interface InputRowFilter
@@ -35,19 +34,17 @@ public interface InputRowFilter
   /**
    * Tests whether the given row should be accepted.
    *
-   * @param row the input row to test
-   * @return null if the row should be accepted, or the {@link InputRowThrownAwayReason} if the row should be rejected
+   * @return {@link InputRowFilterResult#ACCEPTED} if the row should be accepted, or another {@link InputRowFilterResult} value if the row should be rejected
    */
-  @Nullable
-  InputRowThrownAwayReason test(InputRow row);
+  InputRowFilterResult test(InputRow row);
 
   /**
-   * Creates a {@link InputRowFilter} from a Predicate. When the predicate returns false,
-   * the rejection reason will be {@link InputRowThrownAwayReason#FILTERED}.
+   * Creates a {@link InputRowFilter} from a {@link Predicate}.
+   * Callers wishing to return custom rejection reason logic should implement their own {@link InputRowFilter} directly.
    */
   static InputRowFilter fromPredicate(Predicate<InputRow> predicate)
   {
-    return row -> predicate.test(row) ? null : InputRowThrownAwayReason.FILTERED;
+    return row -> predicate.test(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.FILTERED;
   }
 
   /**
@@ -55,7 +52,7 @@ public interface InputRowFilter
    */
   static InputRowFilter allowAll()
   {
-    return row -> null;
+    return row -> InputRowFilterResult.ACCEPTED;
   }
 
   /**
@@ -65,9 +62,9 @@ public interface InputRowFilter
   default InputRowFilter and(InputRowFilter other)
   {
     return row -> {
-      InputRowThrownAwayReason reason = this.test(row);
-      if (reason != null) {
-        return reason;
+      InputRowFilterResult result = this.test(row);
+      if (result.isRejected()) {
+        return result;
       }
       return other.test(row);
     };

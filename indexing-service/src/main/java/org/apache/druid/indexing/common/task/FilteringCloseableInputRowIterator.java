@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.segment.incremental.InputRowThrownAwayReason;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 
@@ -66,12 +66,12 @@ public class FilteringCloseableInputRowIterator implements CloseableIterator<Inp
         while (next == null && delegate.hasNext()) {
           // delegate.next() can throw ParseException
           final InputRow row = delegate.next();
-          // rowFilter.test() can throw ParseException, returns null if accepted, or reason if rejected
-          final InputRowThrownAwayReason rejectionReason = rowFilter.test(row);
-          if (rejectionReason == null) {
+          // rowFilter.test() can throw ParseException
+          final InputRowFilterResult filterResult = rowFilter.test(row);
+          if (!filterResult.isRejected()) {
             next = row;
           } else {
-            rowIngestionMeters.incrementThrownAway(rejectionReason);
+            rowIngestionMeters.incrementThrownAway(filterResult);
           }
         }
         break;
