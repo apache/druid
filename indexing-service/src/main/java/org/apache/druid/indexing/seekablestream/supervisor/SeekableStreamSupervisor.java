@@ -3443,9 +3443,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         changeTaskCountInIOConfig(rolloverTaskCount);
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
-        partitionGroups.clear();
-        partitionOffsets.clear();
-        partitionIds.clear();
+        clearAllocationInfo();
       }
     }
   }
