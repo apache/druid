@@ -52,6 +52,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -63,7 +65,7 @@ public class BrokerServerView implements TimelineServerView
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
-  private final Object lock = new Object();
+  private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
   private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
   private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
@@ -262,7 +264,8 @@ public class BrokerServerView implements TimelineServerView
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     final SegmentId segmentId = segment.getId();
-    synchronized (lock) {
+    lock.writeLock().lock();
+    try {
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
       // loop...
@@ -302,6 +305,9 @@ public class BrokerServerView implements TimelineServerView
       // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
       runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
     }
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
@@ -309,7 +315,8 @@ public class BrokerServerView implements TimelineServerView
     final SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 
-    synchronized (lock) {
+    lock.writeLock().lock();
+    try {
       log.debug("Removing segment[%s] from server[%s].", segmentId, server);
 
       // we don't store broker segments here, but still run the callbacks for the segment being removed from the server
@@ -361,13 +368,20 @@ public class BrokerServerView implements TimelineServerView
         }
       }
     }
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
   @Override
   public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final TableDataSource dataSource)
   {
-    synchronized (lock) {
+    lock.readLock().lock();
+    try {
       return Optional.ofNullable(timelines.get(dataSource.getName()));
+    }
+    finally {
+      lock.readLock().unlock();
     }
   }
 
@@ -381,13 +395,17 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {
-    synchronized (lock) {
+    lock.readLock().lock();
+    try {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
         log.error("No QueryRunner found for server name[%s].", server.getName());
         return null;
       }
       return (QueryRunner<T>) queryableDruidServer.getQueryRunner();
+    }
+    finally {
+      lock.readLock().unlock();
     }
   }
 
