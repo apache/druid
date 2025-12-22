@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -46,6 +45,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -81,6 +81,7 @@ import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -682,6 +683,7 @@ public class StreamAppenderator implements Appenderator
           @Override
           public Object call() throws IOException
           {
+            final long startPersistCpuNanos = JvmUtils.safeGetThreadCpuTime();
             try {
               setTaskThreadContext();
               for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
@@ -748,14 +750,15 @@ public class StreamAppenderator implements Appenderator
             }
             finally {
               metrics.incrementNumPersists();
-              metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
+              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
+              metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
               persistStopwatch.stop();
             }
           }
         }
     );
 
-    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    final long startDelay = runExecStopwatch.millisElapsed();
     metrics.incrementPersistBackPressureMillis(startDelay);
     if (startDelay > WARN_DELAY) {
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
@@ -935,8 +938,9 @@ public class StreamAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final long mergeFinishTime;
-      final long startTime = System.nanoTime();
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+      final long mergeTimeMillis;
+      final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
       try {
@@ -961,9 +965,11 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getMaxColumnsToMerge()
         );
 
-        mergeFinishTime = System.nanoTime();
-
-        log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
+        mergeTimeMillis = stopwatch.millisElapsed();
+        stopwatch.restart();
+        metrics.setMergeTime(mergeTimeMillis);
+        metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -979,8 +985,7 @@ public class StreamAppenderator implements Appenderator
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
-      final long pushFinishTime = System.nanoTime();
-
+      final long pushTimeMillis = stopwatch.millisElapsed();
       objectMapper.writeValue(descriptorFile, segment);
 
       log.info(
@@ -991,8 +996,8 @@ public class StreamAppenderator implements Appenderator
           identifier,
           segment.getSize(),
           indexes.size(),
-          (mergeFinishTime - startTime) / 1000000,
-          (pushFinishTime - mergeFinishTime) / 1000000,
+          mergeTimeMillis,
+          pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 

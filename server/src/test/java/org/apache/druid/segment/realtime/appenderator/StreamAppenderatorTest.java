@@ -56,6 +56,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -102,8 +103,10 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                   .segmentGenerationMetrics(segmentGenerationMetrics)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -183,6 +186,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
 
+      Assert.assertEquals(2, segmentGenerationMetrics.numPersists());
+      Assert.assertEquals(3, segmentGenerationMetrics.rowOutput());
+      Assert.assertTrue(segmentGenerationMetrics.persistTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.persistCpuTime() > 0);
+
+      Assert.assertTrue(segmentGenerationMetrics.mergeTimeMillis() > 0);
+      Assert.assertTrue(segmentGenerationMetrics.mergeCpuTime() > 0);
+
       // clear
       appenderator.clear();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
@@ -192,10 +203,12 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testPushFailure() throws Exception
   {
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .enablePushFailure(true)
+                                                   .segmentGenerationMetrics(segmentGenerationMetrics)
                                                    .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
@@ -269,6 +282,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               CoreMatchers.startsWith("Push failure test"))))
       );
     }
+
+    Assert.assertEquals(1, segmentGenerationMetrics.failedHandoffs());
   }
 
   @Test
