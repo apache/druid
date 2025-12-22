@@ -317,6 +317,7 @@ export class SupervisorsView extends React.PureComponent<
             await queryDruidSql<SupervisorQueryResultRow>(
               {
                 query: sqlQuery,
+                context: { engine: 'native' },
               },
               signal,
             )
@@ -336,6 +337,7 @@ export class SupervisorsView extends React.PureComponent<
               await queryDruidSql<{ cnt: number }>(
                 {
                   query: sqlQuery,
+                  context: { engine: 'native' },
                 },
                 signal,
               )

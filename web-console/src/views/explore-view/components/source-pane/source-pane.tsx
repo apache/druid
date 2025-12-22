@@ -58,6 +58,7 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
     processQuery: async () => {
       const tables = await queryDruidSql<{ TABLE_NAME: string }>({
         query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE'`,
+        context: { engine: 'native' },
       });
 
       return tables.map(d => d.TABLE_NAME);
