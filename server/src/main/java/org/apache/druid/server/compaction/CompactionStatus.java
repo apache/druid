@@ -261,11 +261,19 @@ public class CompactionStatus
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
-      CompactionStateManager compactionStateManager
+      @Nullable CompactionStateManager compactionStateManager
   )
   {
     final CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(config);
-    final String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, config.getDataSource());
+    String expectedFingerprint;
+    if (compactionStateManager == null) {
+      expectedFingerprint = null;
+    } else {
+      expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(
+          expectedState,
+          config.getDataSource()
+      );
+    }
     return new Evaluator(candidateSegments, config, expectedFingerprint, compactionStateManager).evaluate();
   }
 
@@ -357,7 +365,7 @@ public class CompactionStatus
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         @Nullable String targetFingerprint,
-        CompactionStateManager compactionStateManager
+        @Nullable CompactionStateManager compactionStateManager
     )
     {
       this.candidateSegments = candidateSegments;
@@ -381,14 +389,16 @@ public class CompactionStatus
         reasonsForCompaction.add(compactedOnceCheck.getReason());
       }
 
-      // First try fingerprint-based evaluation (fast path)
-      CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
-                                                             .map(f -> f.apply(this))
-                                                             .filter(status -> !status.isComplete())
-                                                             .findFirst().orElse(COMPLETE);
+      if (compactionStateManager != null && targetFingerprint != null) {
+        // First try fingerprint-based evaluation (fast path)
+        CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
+                                                               .map(f -> f.apply(this))
+                                                               .filter(status -> !status.isComplete())
+                                                               .findFirst().orElse(COMPLETE);
 
-      if (!fingerprintStatus.isComplete()) {
-        reasonsForCompaction.add(fingerprintStatus.getReason());
+        if (!fingerprintStatus.isComplete()) {
+          reasonsForCompaction.add(fingerprintStatus.getReason());
+        }
       }
 
       reasonsForCompaction.addAll(

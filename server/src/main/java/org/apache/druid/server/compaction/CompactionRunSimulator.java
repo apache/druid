@@ -147,7 +147,7 @@ public class CompactionRunSimulator
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     // Use an in-memory PersistedCompactionStateManager for simulations
     final CompactionStateManager inMemoryStateManager = new HeapMemoryCompactionStateManager();
-    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient, inMemoryStateManager).run(
+    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,
         defaultEngine,

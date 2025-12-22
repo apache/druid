@@ -39,14 +39,12 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -105,18 +103,14 @@ public class CompactSegments implements CoordinatorCustomDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
-  private final CompactionStateManager compactionStateManager;
-
   @JsonCreator
   public CompactSegments(
       @JacksonInject CompactionStatusTracker statusTracker,
-      @JacksonInject OverlordClient overlordClient,
-      @JacksonInject CompactionStateManager compactionStateManager
+      @JacksonInject OverlordClient overlordClient
   )
   {
     this.overlordClient = overlordClient;
     this.statusTracker = statusTracker;
-    this.compactionStateManager = compactionStateManager;
     resetCompactionSnapshot();
   }
 
@@ -197,7 +191,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         compactionConfigs,
         dataSources.getUsedSegmentsTimelinesPerDataSource(),
         slotManager.getDatasourceIntervalsToSkipCompaction(),
-        compactionStateManager
+        null
         );
 
     final CompactionSnapshotBuilder compactionSnapshotBuilder = new CompactionSnapshotBuilder(stats);
@@ -207,8 +201,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         slotManager,
         iterator,
         policy,
-        defaultEngine,
-        dynamicConfig.clusterConfig().isLegacyPersistLastCompactionStateInSegments()
+        defaultEngine
     );
 
     stats.add(Stats.Compaction.SUBMITTED_TASKS, numSubmittedCompactionTasks);
@@ -244,8 +237,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       CompactionSlotManager slotManager,
       CompactionSegmentIterator iterator,
       CompactionCandidateSearchPolicy policy,
-      CompactionEngine defaultEngine,
-      boolean persistLastCompactionStateInSegments
+      CompactionEngine defaultEngine
   )
   {
     if (slotManager.getNumAvailableTaskSlots() <= 0) {
@@ -276,28 +268,12 @@ public class CompactSegments implements CoordinatorCustomDuty
         snapshotBuilder.addToComplete(entry);
       }
 
-      CompactionState compactionState =
-          createCompactionStateFromConfig(config);
-
-      String compactionStateFingerprint = compactionStateManager.generateCompactionStateFingerprint(
-          compactionState,
-          config.getDataSource()
-      );
-
-      // If we are going to create compaction jobs for this compaction state, we need to persist the fingerprint -> state
-      // mapping so compacted segments from these jobs can reference a valid compaction state.
-      compactionStateManager.persistCompactionState(
-          config.getDataSource(),
-          Map.of(compactionStateFingerprint, compactionState),
-          DateTimes.nowUtc()
-      );
-
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
           entry,
           config,
           defaultEngine,
-          compactionStateFingerprint,
-          persistLastCompactionStateInSegments
+          null,
+          true
       );
 
       final String taskId = taskPayload.getId();

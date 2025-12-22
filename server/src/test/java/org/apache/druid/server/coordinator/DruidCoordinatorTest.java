@@ -572,7 +572,7 @@ public class DruidCoordinatorTest
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
-        ImmutableList.of(new CompactSegments(statusTracker, null, persistedCompactionStateManager))
+        ImmutableList.of(new CompactSegments(statusTracker, null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
