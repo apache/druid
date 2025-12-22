@@ -160,9 +160,9 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
    *
    * <p>Test flow:</p>
    * <ol>
-   *   <li>Start supervisor with 20 tasks and 50 partitions, minimal data (500 records)</li>
+   *   <li>Start supervisor with 10 tasks and 50 partitions, minimal data (500 records)</li>
    *   <li>Wait for initial tasks to start running</li>
-   *   <li>Wait for the first task rollover to complete (task duration is 10 seconds)</li>
+   *   <li>Wait for the first task rollover to complete (task duration is 8 seconds)</li>
    *   <li>Verify that after rollover, fewer tasks are running due to cost-based autoscaler (no ingestion at all)</li>
    * </ol>
    *
