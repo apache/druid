@@ -45,7 +45,6 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
       return await queryDruidSql<LookupRow>(
         {
           query: `SELECT "k", "v" FROM ${N('lookup').table(lookupId)} LIMIT 5000`,
-          context: { engine: 'native' },
         },
         signal,
       );
