@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import io.vavr.Tuple3;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -143,46 +142,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     return computeOptimalTaskCount(collectMetrics(), CostComputeMode.TASK_ROLLOVER);
   }
 
-  private CostMetrics collectMetrics()
+  public CostBasedAutoScalerConfig getConfig()
   {
-    if (spec.isSuspended()) {
-      log.debug("Supervisor [%s] is suspended, skipping a metrics collection", supervisorId);
-      return null;
-    }
-
-    final LagStats lagStats = supervisor.computeLagStats();
-    if (lagStats == null) {
-      log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
-      return null;
-    }
-
-    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
-    final int partitionCount = supervisor.getPartitionCount();
-
-    final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
-    final double movingAvgRate = extractMovingAverage(taskStats);
-    final double pollIdleRatio = extractPollIdleRatio(taskStats);
-
-    final double avgPartitionLag = lagStats.getAvgLag();
-
-    // Use an actual 15-minute moving average processing rate if available
-    final double avgProcessingRate;
-    if (movingAvgRate > 0) {
-      avgProcessingRate = movingAvgRate;
-    } else {
-      // Fallback: estimate processing rate based on the idle ratio
-      final double utilizationRatio = Math.max(0.01, 1.0 - pollIdleRatio);
-      avgProcessingRate = config.getDefaultProcessingRate() * utilizationRatio;
-    }
-
-    return new CostMetrics(
-        avgPartitionLag,
-        currentTaskCount,
-        partitionCount,
-        pollIdleRatio,
-        supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
-        avgProcessingRate
-    );
+    return config;
   }
 
   /**
@@ -198,7 +160,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return optimal task count for scale-up, or -1 if no scaling action needed
    */
-  public int computeOptimalTaskCount(CostMetrics metrics, CostComputeMode costComputeMode)
+  int computeOptimalTaskCount(CostMetrics metrics, CostComputeMode costComputeMode)
   {
     if (metrics == null) {
       log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
@@ -219,29 +181,31 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     int optimalTaskCount = -1;
-    Tuple3<Double, Double, Double> optimalCost = new Tuple3<>(Double.POSITIVE_INFINITY,
-                                                              Double.POSITIVE_INFINITY,
-                                                              Double.POSITIVE_INFINITY);
+    CostResult optimalCost = new CostResult(
+        Double.POSITIVE_INFINITY,
+        Double.POSITIVE_INFINITY,
+        Double.POSITIVE_INFINITY
+    );
 
     for (int taskCount : validTaskCounts) {
-      Tuple3<Double, Double, Double> costResult = costFunction.computeCost(metrics, taskCount, config);
-      double cost = costResult._1();
+      CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
+      double cost = costResult.totalCost();
       log.debug(
           "Proposed task count: %d, Cost: %.4f (lag: %.4f, idle: %.4f)",
           taskCount,
           cost,
-          costResult._2(),
-          costResult._3()
+          costResult.lagCost(),
+          costResult.idleCost()
       );
-      if (cost < optimalCost._1()) {
+      if (cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
         optimalCost = costResult;
       }
     }
 
     emitter.emit(metricBuilder.setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
-    emitter.emit(metricBuilder.setMetric(LAG_COST_METRIC, optimalCost._2()));
-    emitter.emit(metricBuilder.setMetric(IDLE_COST_METRIC, optimalCost._3()));
+    emitter.emit(metricBuilder.setMetric(LAG_COST_METRIC, optimalCost.lagCost()));
+    emitter.emit(metricBuilder.setMetric(IDLE_COST_METRIC, optimalCost.idleCost()));
 
     log.debug(
         "Cost-based scaling evaluation for supervisorId [%s]: current=%d, optimal=%d, cost=%.4f, "
@@ -249,7 +213,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         supervisorId,
         metrics.getCurrentTaskCount(),
         optimalTaskCount,
-        optimalCost._1(),
+        optimalCost.totalCost(),
         metrics.getAvgPartitionLag(),
         metrics.getPollIdleRatio()
     );
@@ -296,11 +260,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       result.add(taskCount);
     }
     return result.stream().mapToInt(Integer::intValue).toArray();
-  }
-
-  public CostBasedAutoScalerConfig getConfig()
-  {
-    return config;
   }
 
   /**
@@ -382,4 +341,47 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     return count > 0 ? sum / count : -1;
   }
+
+  private CostMetrics collectMetrics()
+  {
+    if (spec.isSuspended()) {
+      log.debug("Supervisor [%s] is suspended, skipping a metrics collection", supervisorId);
+      return null;
+    }
+
+    final LagStats lagStats = supervisor.computeLagStats();
+    if (lagStats == null) {
+      log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
+      return null;
+    }
+
+    final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
+    final int partitionCount = supervisor.getPartitionCount();
+
+    final Map<String, Map<String, Object>> taskStats = supervisor.getStats();
+    final double movingAvgRate = extractMovingAverage(taskStats);
+    final double pollIdleRatio = extractPollIdleRatio(taskStats);
+
+    final double avgPartitionLag = lagStats.getAvgLag();
+
+    // Use an actual 15-minute moving average processing rate if available
+    final double avgProcessingRate;
+    if (movingAvgRate > 0) {
+      avgProcessingRate = movingAvgRate;
+    } else {
+      // Fallback: estimate processing rate based on the idle ratio
+      final double utilizationRatio = Math.max(0.01, 1.0 - pollIdleRatio);
+      avgProcessingRate = config.getDefaultProcessingRate() * utilizationRatio;
+    }
+
+    return new CostMetrics(
+        avgPartitionLag,
+        currentTaskCount,
+        partitionCount,
+        pollIdleRatio,
+        supervisor.getIoConfig().getTaskDuration().getStandardSeconds(),
+        avgProcessingRate
+    );
+  }
+
 }

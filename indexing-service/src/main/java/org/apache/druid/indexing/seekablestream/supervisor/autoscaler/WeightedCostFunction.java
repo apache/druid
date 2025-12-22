@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import io.vavr.Tuple3;
 import org.apache.druid.java.util.common.logger.Logger;
 
 /**
@@ -61,13 +60,13 @@ public class WeightedCostFunction
    * Formula: {@code lagWeight * lagRecoveryTime + idleWeight * idlenessCost}.
    * This approach directly connects costs to operational metrics.
    *
-   * @return Tuple3 containing (totalCost, lagCost, idleCost),
-   * or tuple with {@link Double#POSITIVE_INFINITY} for invalid inputs
+   * @return CostResult containing totalCost, lagCost, and idleCost,
+   * or result with {@link Double#POSITIVE_INFINITY} for invalid inputs
    */
-  public Tuple3<Double, Double, Double> computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
+  public CostResult computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
-      return new Tuple3<>(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+      return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
     }
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
@@ -76,9 +75,9 @@ public class WeightedCostFunction
       // Metrics are unavailable - favor maintaining the current task count.
       // We're conservative about scale up, but won't let an unlikey scale down to happen.
       if (proposedTaskCount == metrics.getCurrentTaskCount()) {
-        return new Tuple3<>(0.01d, 0.0, 0.0);
+        return new CostResult(0.01d, 0.0, 0.0);
       } else {
-        return new Tuple3<>(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+        return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
       }
     } else {
       // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
@@ -102,7 +101,7 @@ public class WeightedCostFunction
         cost
     );
 
-    return new Tuple3<>(cost, lagCost, weightedIdleCost);
+    return new CostResult(cost, lagCost, weightedIdleCost);
   }
 
 

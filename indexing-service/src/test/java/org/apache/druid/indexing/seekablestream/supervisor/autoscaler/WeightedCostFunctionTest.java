@@ -47,11 +47,11 @@ public class WeightedCostFunctionTest
   {
     CostMetrics validMetrics = createMetrics(100000.0, 10, 100, 0.3);
 
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(null, 10, config)._1(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 10, null)._1(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 0, config)._1(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, -5, config)._1(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(createMetrics(0.0, 10, 0, 0.3), 10, config)._1(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(null, 10, config).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 10, null).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 0, config).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, -5, config).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(createMetrics(0.0, 10, 0, 0.3), 10, config).totalCost(), 0.0);
   }
 
   @Test
@@ -68,8 +68,8 @@ public class WeightedCostFunctionTest
 
     CostMetrics metrics = createMetrics(200000.0, 10, 200, 0.3);
 
-    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig)._1();
-    double costScaleDown = costFunction.computeCost(metrics, 5, lagOnlyConfig)._1();
+    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
+    double costScaleDown = costFunction.computeCost(metrics, 5, lagOnlyConfig).totalCost();
 
     // Scale down uses absolute model: lag / (5 * rate) = higher recovery time
     // Current uses absolute model: lag / (10 * rate) = lower recovery time
@@ -97,15 +97,15 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
 
     // Current (10 tasks): uses absolute model = 10M / (10 * 1000) = 1000s
-    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig)._1();
+    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost at current tasks", 1000., costCurrent, 0.1);
 
     // Scale up by 5 (to 15): marginal model = 10M / (15 * 1000) = 666
-    double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig)._1();
+    double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost when scaling up by 5", 666.7, costUp5, 0.1);
 
     // Scale up by 10 (to 20): marginal model = 10M / (20 * 1000) = 500s
-    double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig)._1();
+    double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost when scaling up by 10", 500.0, costUp10, 0.01);
 
     // Adding more tasks reduces lag recovery time
@@ -120,8 +120,8 @@ public class WeightedCostFunctionTest
     // This is intentional behavior: the algorithm is conservative about scale-up.
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
 
-    double costCurrent = costFunction.computeCost(metrics, 10, config)._1();
-    double costScaleUp = costFunction.computeCost(metrics, 20, config)._1();
+    double costCurrent = costFunction.computeCost(metrics, 10, config).totalCost();
+    double costScaleUp = costFunction.computeCost(metrics, 20, config).totalCost();
 
     // With balanced weights (0.3 lag, 0.7 idle), the idle cost increase from
     // scaling up dominates the lag recovery benefit
@@ -154,8 +154,8 @@ public class WeightedCostFunctionTest
 
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
 
-    double costLag = costFunction.computeCost(metrics, 10, lagOnly)._1();
-    double costIdle = costFunction.computeCost(metrics, 10, idleOnly)._1();
+    double costLag = costFunction.computeCost(metrics, 10, lagOnly).totalCost();
+    double costIdle = costFunction.computeCost(metrics, 10, idleOnly).totalCost();
 
     Assert.assertNotEquals("Different weights should produce different costs", costLag, costIdle, 0.0001);
     Assert.assertTrue("Lag-only cost should be positive", costLag > 0.0);
@@ -170,9 +170,9 @@ public class WeightedCostFunctionTest
     int currentTaskCount = 10;
     CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.3, 0.0);
 
-    double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config)._1();
-    double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config)._1();
-    double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config)._1();
+    double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config).totalCost();
+    double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config).totalCost();
+    double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config).totalCost();
 
     Assert.assertTrue(
         "Cost at current should be less than cost for scale up",
@@ -201,8 +201,8 @@ public class WeightedCostFunctionTest
         .defaultProcessingRate(1000.0)
         .build();
 
-    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig)._1();
-    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig)._1();
+    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
+    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig).totalCost();
 
     Assert.assertEquals(
         "Lag cost for +5 and -5 deviation should be equal",
@@ -229,10 +229,10 @@ public class WeightedCostFunctionTest
     // Current: 10 tasks with 40% idle (60% busy)
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
 
-    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig)._1();
-    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig)._1();
-    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig)._1();
-    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig)._1();
+    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig).totalCost();
+    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
 
     // Monotonically increasing idle cost as tasks increase
     Assert.assertTrue("cost(5) < cost(10)", costAt5 < costAt10);
@@ -256,7 +256,7 @@ public class WeightedCostFunctionTest
     // busyFraction = 0.6, taskRatio = 0.2
     // predictedIdle = 1 - 0.6/0.2 = 1 - 3 = -2 → clamped to 0
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
-    double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig)._1();
+    double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
     // idlenessCost = taskCount * taskDuration * 0.0 (clamped) = 0
     Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
@@ -266,7 +266,7 @@ public class WeightedCostFunctionTest
     // busyFraction = 0.9, taskRatio = 10
     // predictedIdle = 1 - 0.9/10 = 1 - 0.09 = 0.91 (within bounds)
     CostMetrics lowIdle = createMetrics(0.0, 10, 100, 0.1);
-    double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig)._1();
+    double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig).totalCost();
     // idlenessCost = 100 * 3600 * 0.91 = 327600
     Assert.assertTrue("Cost should be finite and positive", Double.isFinite(costAt100) && costAt100 > 0);
   }
@@ -286,8 +286,8 @@ public class WeightedCostFunctionTest
     // Negative idle ratio indicates missing data → should default to 0.5
     CostMetrics missingIdleData = createMetrics(0.0, 10, 100, -1.0);
 
-    double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig)._1();
-    double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig)._1();
+    double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig).totalCost();
+    double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
     // With missing data, predicted idle = 0.5 for all task counts
     // idlenessCost at 10 = 10 * 3600 * 0.5 = 18000
