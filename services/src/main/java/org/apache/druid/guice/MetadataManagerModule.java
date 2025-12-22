@@ -106,11 +106,6 @@ public class MetadataManagerModule implements Module
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
 
-    JsonConfigProvider.bind(binder, "druid.manager.compactionState", CompactionStateManagerConfig.class);
-    binder.bind(CompactionStateManager.class)
-          .to(PersistedCompactionStateManager.class)
-          .in(ManageLifecycle.class);
-
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {
       JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
@@ -137,6 +132,11 @@ public class MetadataManagerModule implements Module
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
+
+      JsonConfigProvider.bind(binder, "druid.manager.compactionState", CompactionStateManagerConfig.class);
+      binder.bind(CompactionStateManager.class)
+            .to(PersistedCompactionStateManager.class)
+            .in(ManageLifecycle.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)
