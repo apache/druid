@@ -1044,7 +1044,6 @@ public class TaskQueue
   }
 
   /**
-   * Returns the list of currently active tasks for the given datasource.
    * List of all active and completed task infos currently being managed by this TaskQueue.
    */
   public List<TaskInfo> getTaskInfos()
