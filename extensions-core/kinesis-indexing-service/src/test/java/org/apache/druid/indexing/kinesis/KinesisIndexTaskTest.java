@@ -350,7 +350,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 120_000L)
@@ -754,7 +754,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(6, observedSegmentGenerationMetrics.handOffCount());
     Assert.assertEquals(5, observedSegmentGenerationMetrics.numPersists());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
@@ -1039,7 +1039,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 

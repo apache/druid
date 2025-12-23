@@ -391,7 +391,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
     Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -445,7 +445,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
     Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -741,7 +741,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(8, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(7, observedSegmentGenerationMetrics.handOffCount());
     Assert.assertEquals(4, observedSegmentGenerationMetrics.numPersists());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -1705,7 +1705,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
     Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(4, observedSegmentGenerationMetrics.handOffCount());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -3477,7 +3477,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
     Assert.assertEquals(1, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(1, observedSegmentGenerationMetrics.handOffCount());
-    verifySegmentGenerationTimeMetricsArePositive(observedSegmentGenerationMetrics);
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   public static class TestKafkaInputFormat implements InputFormat

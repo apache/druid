@@ -429,7 +429,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     return new SegmentDescriptor(interval, "fakeVersion", partitionNum);
   }
 
-  protected void verifySegmentGenerationTimeMetricsArePositive(SegmentGenerationMetrics observedSegmentGenerationMetrics)
+  protected void verifyPersistAndMergeTimeMetricsArePositive(SegmentGenerationMetrics observedSegmentGenerationMetrics)
   {
     Assert.assertNotNull(observedSegmentGenerationMetrics);
     Assert.assertTrue(observedSegmentGenerationMetrics.persistTimeMillis() > 0);
