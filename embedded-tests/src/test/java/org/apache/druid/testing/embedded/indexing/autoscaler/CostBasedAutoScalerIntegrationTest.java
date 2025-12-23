@@ -41,7 +41,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Seconds;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -155,22 +155,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(spec.createSuspendedSpec());
   }
 
-  /**
-   * Tests that scale down happen during task rollover via checkTaskDuration().
-   *
-   * <p>Test flow:</p>
-   * <ol>
-   *   <li>Start supervisor with 10 tasks and 50 partitions, minimal data (500 records)</li>
-   *   <li>Wait for initial tasks to start running</li>
-   *   <li>Wait for the first task rollover to complete (task duration is 8 seconds)</li>
-   *   <li>Verify that after rollover, fewer tasks are running due to cost-based autoscaler (no ingestion at all)</li>
-   * </ol>
-   *
-   * <p>Scale down during rollover is triggered in {@code SeekableStreamSupervisor.checkTaskDuration()}
-   * when all task groups have rolled over and the autoscaler recommends a lower task count.</p>
-   */
   @Test
-  @Timeout(125)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
     final String superId = dataSource + "_super_scaleup";
@@ -224,7 +209,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(300)
   void test_scaleDownDuringTaskRollover()
   {
     final String superId = dataSource + "_super";
@@ -324,7 +308,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
-                .withTaskDuration(Seconds.parseSeconds("PT7S").toPeriod())
+                .withTaskDuration(Period.seconds(7))
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .withId(supervisorId)

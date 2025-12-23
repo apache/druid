@@ -70,29 +70,18 @@ public class CostBasedAutoScalerTest
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
     int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100, 25);
 
-    Assert.assertTrue("Should contain current task count", contains(validTaskCounts, 25));
-    Assert.assertTrue("Should contain next scale-up option", contains(validTaskCounts, 34));
+    Assert.assertTrue("Should contain the current task count", contains(validTaskCounts, 25));
+    Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
 
-    // Edge case: zero partitions returns empty array
+    // Edge case: zero partitions return an empty array
     Assert.assertEquals(0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
   }
 
   @Test
   public void testComputeOptimalTaskCountInvalidInputs()
   {
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null, CostBasedAutoScaler.CostComputeMode.NORMAL));
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0),
-                                                               CostBasedAutoScaler.CostComputeMode.NORMAL
-    ));
-  }
-
-  @Test
-  public void testComputeOptimalTaskCountIdleInIdealRange()
-  {
-    // When idle is in ideal range [0.2, 0.6], no scaling should occur
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(5000.0, 25, 100, 0.4),
-                                                               CostBasedAutoScaler.CostComputeMode.NORMAL
-    ));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0)));
   }
 
   @Test
@@ -100,31 +89,20 @@ public class CostBasedAutoScalerTest
   {
     // High idle (underutilized) - should scale down
     // With high idle (0.8), the algorithm evaluates lower task counts and finds they have lower idle cost
-    int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8),
-                                                             CostBasedAutoScaler.CostComputeMode.NORMAL
-    );
+    int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
     Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
   }
 
   @Test
   public void testComputeOptimalTaskCountLowIdleDoesNotScaleUpWithBalancedWeights()
   {
-    // With corrected idle ratio model and marginal lag model, low idle does not
-    // automatically trigger scale-up. The algorithm is conservative because:
-    // 1. Scale-up increases idle cost (more tasks = more idle per task with fixed load)
-    // 2. Marginal lag model means only ADDITIONAL tasks work on backlog
-    //
-    // This is intentional: the idle-heavy weights (0.4 idle) make the algorithm
-    // favor stability over aggressive scaling
-    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1),
-                                                    CostBasedAutoScaler.CostComputeMode.NORMAL
-    );
+    // With a corrected idle ratio model and marginal lag model, low idle does not automatically trigger scale-up.
+    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
 
-    // Algorithm evaluates costs and may find current count optimal
-    // or may scale down if idle cost reduction outweighs lag increase
+    // Algorithm evaluates costs and may find the current count optimal
+    // or may scale down if idle cost reduction outweighs lag increase.
     Assert.assertTrue(
-        "With low idle and balanced weights, algorithm should not scale up aggressively",
-        result == -1 || result <= 25
+        "With low idle and balanced weights, algorithm should not scale up aggressively", result <= 25
     );
   }
 

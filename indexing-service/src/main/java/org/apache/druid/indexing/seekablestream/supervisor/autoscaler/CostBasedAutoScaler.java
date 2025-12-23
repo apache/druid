@@ -36,7 +36,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -61,12 +60,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
-
-  enum CostComputeMode
-  {
-    NORMAL,
-    TASK_ROLLOVER
-  }
 
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
@@ -105,12 +98,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public void start()
   {
-    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(this.collectMetrics(), CostComputeMode.NORMAL);
-    Runnable onSuccessfulScale = () -> {
-    };
-
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
+        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
@@ -139,7 +128,17 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public int computeTaskCountForRollover()
   {
-    return computeOptimalTaskCount(collectMetrics(), CostComputeMode.TASK_ROLLOVER);
+    return computeOptimalTaskCount(collectMetrics());
+  }
+
+  public int computeTaskCountForScaleAction()
+  {
+    CostMetrics costMetrics = collectMetrics();
+    final int optimalTaskCount = computeOptimalTaskCount(costMetrics);
+    final int currentTaskCount = costMetrics.getCurrentTaskCount();
+
+    // Perform only scale-up actions
+    return optimalTaskCount >= currentTaskCount ? optimalTaskCount : -1;
   }
 
   public CostBasedAutoScalerConfig getConfig()
@@ -160,7 +159,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return optimal task count for scale-up, or -1 if no scaling action needed
    */
-  int computeOptimalTaskCount(CostMetrics metrics, CostComputeMode costComputeMode)
+  int computeOptimalTaskCount(CostMetrics metrics)
   {
     if (metrics == null) {
       log.debug("No metrics available yet for supervisorId [%s]", supervisorId);
@@ -181,11 +180,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     int optimalTaskCount = -1;
-    CostResult optimalCost = new CostResult(
-        Double.POSITIVE_INFINITY,
-        Double.POSITIVE_INFINITY,
-        Double.POSITIVE_INFINITY
-    );
+    CostResult optimalCost = new CostResult();
 
     for (int taskCount : validTaskCounts) {
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
@@ -222,13 +217,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     if (optimalTaskCount == currentTaskCount) {
       return -1;
     }
-    // Perform scale down on task rollover only
-    if (optimalTaskCount < currentTaskCount) {
-      if (costComputeMode == CostComputeMode.TASK_ROLLOVER) {
-        return optimalTaskCount;
-      }
-      return -1;
-    }
+
     // Scale up is performed eagerly.
     return optimalTaskCount;
   }

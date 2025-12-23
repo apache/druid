@@ -25,9 +25,15 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
  */
 public class CostResult
 {
+
   private final double totalCost;
   private final double lagCost;
   private final double idleCost;
+
+  public CostResult()
+  {
+    this(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+  }
 
   /**
    * @param totalCost the weighted sum of lagCost and idleCost

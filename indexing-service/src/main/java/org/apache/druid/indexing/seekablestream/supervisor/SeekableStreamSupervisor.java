@@ -1684,6 +1684,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return limitedParseErrors;
   }
 
+  @Override
+  public SupervisorTaskAutoScaler createAutoscaler()
+  {
+    this.taskAutoScaler = spec.createAutoscaler(this);
+    return this.taskAutoScaler;
+  }
+
   @VisibleForTesting
   public TaskGroup addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,

@@ -502,12 +502,7 @@ public class SupervisorManager
     SupervisorTaskAutoScaler autoscaler;
     try {
       supervisor = spec.createSupervisor();
-      autoscaler = spec.createAutoscaler(supervisor);
-
-      // Wire autoscaler back to supervisor for rollover-based scale-down
-      if (supervisor instanceof SeekableStreamSupervisor && autoscaler != null) {
-        ((SeekableStreamSupervisor<?, ?, ?>) supervisor).setTaskAutoScaler(autoscaler);
-      }
+      autoscaler = supervisor.createAutoscaler();
 
       supervisor.start();
       if (autoscaler != null) {
