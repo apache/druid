@@ -3354,17 +3354,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
     activelyReadingTaskGroups.entrySet().stream().sorted(
-              Comparator.comparingLong(
-                  taskGroupEntry -> computeEarliestTaskStartTime(taskGroupEntry.getValue()).getMillis()
-              )
-      )
-        .forEach(entry -> {
-          Integer groupId = entry.getKey();
-          TaskGroup group = entry.getValue();
+                Comparator.comparingLong(
+                    taskGroupEntry -> computeEarliestTaskStartTime(taskGroupEntry.getValue()).getMillis()
+                )
+        )
+          .forEach(entry -> {
+            Integer groupId = entry.getKey();
+            TaskGroup group = entry.getValue();
 
-          final DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
-          final Duration runDuration = Duration.millis(DateTimes.nowUtc().getMillis() - earliestTaskStart.getMillis());
-          if (stopTasksEarly || group.getHandoffEarly()) {
+            final DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
+            final Duration runDuration = Duration.millis(DateTimes.nowUtc().getMillis() - earliestTaskStart.getMillis());
+            if (stopTasksEarly || group.getHandoffEarly()) {
               // If handoffEarly has been set, stop tasks irrespective of stopTaskCount
               log.info(
                   "Stopping taskGroup[%d] early after running for duration[%s].",
