@@ -39,7 +39,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   private final Meter processedBytes;
   private final Meter processedWithError;
   private final Meter unparseable;
-  private final Meter[] thrownAwayByReason = new Meter[InputRowFilterResult.NUM_FILTER_RESULT];
+  private final Meter[] thrownAwayByReason = new Meter[InputRowFilterResult.numValues()];
 
   public DropwizardRowIngestionMeters()
   {
@@ -120,9 +120,12 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   @Override
   public Map<String, Long> getThrownAwayByReason()
   {
-    Map<String, Long> result = InputRowFilterResult.buildRejectedCounterMap();
+    Map<String, Long> result = new HashMap<>();
     for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
-      result.put(reason.getReason(), thrownAwayByReason[reason.ordinal()].getCount());
+      long count = thrownAwayByReason[reason.ordinal()].getCount();
+      if (count > 0) {
+        result.put(reason.getReason(), count);
+      }
     }
     return result;
   }

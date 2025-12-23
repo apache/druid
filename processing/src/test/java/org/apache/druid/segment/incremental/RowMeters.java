@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -29,7 +30,7 @@ public class RowMeters
   private long processedBytes;
   private long processedWithError;
   private long unparseable;
-  private final Map<String, Long> thrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
+  private final Map<String, Long> thrownAwayByReason = new HashMap<>();
 
   /**
    * Creates a new {@link RowMeters}, that can be used to build an instance of

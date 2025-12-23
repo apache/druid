@@ -493,8 +493,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Collections.emptyList()
     );
     TaskReport.ReportMap actualReports = task.doGetLiveReports(true);
-    Map<String, Long> expectedThrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
-    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1L);
+    Map<String, Long> expectedThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1L);
     TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(
@@ -546,8 +545,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask executedTask = (ParallelIndexSupervisorTask) taskContainer.getTask();
     TaskReport.ReportMap actualReports = executedTask.doGetLiveReports(true);
 
-    Map<String, Long> expectedThrownAwayByReason = InputRowFilterResult.buildRejectedCounterMap();
-    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1L);
+    Map<String, Long> expectedThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1L);
     final RowIngestionMetersTotals expectedTotals = new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1);
     List<ParseExceptionReport> expectedUnparseableEvents = ImmutableList.of(
         new ParseExceptionReport(

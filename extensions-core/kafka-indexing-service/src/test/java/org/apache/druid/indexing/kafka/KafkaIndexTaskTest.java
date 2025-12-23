@@ -129,7 +129,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
@@ -1663,8 +1662,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(InputRowFilterResult.buildRejectedCounterMap(), Long::intValue);
-    expectedThrownAwayByReason.put(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1);
+    Map<String, Integer> expectedThrownAwayByReason = Map.of(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1752,7 +1750,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNotNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(InputRowFilterResult.buildRejectedCounterMap(), Long::intValue);
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(

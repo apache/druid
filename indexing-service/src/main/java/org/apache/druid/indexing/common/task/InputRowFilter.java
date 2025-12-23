@@ -34,7 +34,7 @@ public interface InputRowFilter
   /**
    * Tests whether the given row should be accepted.
    *
-   * @return {@link InputRowFilterResult#ACCEPTED} if the row should be accepted, or another {@link InputRowFilterResult} value if the row should be rejected
+   * @return {@link InputRowFilterResult#ACCEPTED} only if the row should be accepted, otherwise another {@link InputRowFilterResult} value.
    */
   InputRowFilterResult test(InputRow row);
 
@@ -44,7 +44,7 @@ public interface InputRowFilter
    */
   static InputRowFilter fromPredicate(Predicate<InputRow> predicate)
   {
-    return row -> predicate.test(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.FILTERED;
+    return row -> predicate.test(row) ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
   }
 
   /**

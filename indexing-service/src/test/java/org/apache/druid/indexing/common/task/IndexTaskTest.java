@@ -110,7 +110,6 @@ import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -1511,11 +1510,7 @@ public class IndexTaskTest extends IngestionTestBase
     IngestionStatsAndErrors reportData = getTaskReportData();
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(
-        InputRowFilterResult.buildRejectedCounterMap(),
-        Long::intValue
-    );
-    expectedThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
+    Map<String, Integer> expectedThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1691,15 +1686,8 @@ public class IndexTaskTest extends IngestionTestBase
     IngestionStatsAndErrors reportData = getTaskReportData();
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = CollectionUtils.mapValues(
-        InputRowFilterResult.buildRejectedCounterMap(),
-        Long::intValue
-    );
-    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = CollectionUtils.mapValues(
-        InputRowFilterResult.buildRejectedCounterMap(),
-        Long::intValue
-    );
-    expectedBuildSegmentsThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = Map.of();
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1812,15 +1800,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
-    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = CollectionUtils.mapValues(
-        InputRowFilterResult.buildRejectedCounterMap(),
-        Long::intValue
-    );
-    expectedDeterminePartitionsThrownAwayByReason.put(InputRowFilterResult.FILTERED.getReason(), 1);
-    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = CollectionUtils.mapValues(
-        InputRowFilterResult.buildRejectedCounterMap(),
-        Long::intValue
-    );
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(

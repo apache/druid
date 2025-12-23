@@ -363,7 +363,7 @@ public class FilteringCloseableInputRowIteratorTest
       } else if (dim1 == 20) {
         return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
       } else {
-        return InputRowFilterResult.FILTERED;
+        return InputRowFilterResult.CUSTOM_FILTER;
       }
     };
 
@@ -388,10 +388,9 @@ public class FilteringCloseableInputRowIteratorTest
 
     // Check per-reason counts
     Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(0), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assert.assertEquals(2, byReason.size());
     Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason())); // dim1=20
-    Assert.assertEquals(Long.valueOf(0), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.FILTERED.getReason())); // dim1=30
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason())); // dim1=30
   }
 
   @Test
@@ -416,10 +415,8 @@ public class FilteringCloseableInputRowIteratorTest
 
     // All thrown away should have FILTERED reason when using fromPredicate
     Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.FILTERED.getReason()));
-    Assert.assertEquals(Long.valueOf(0), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
-    Assert.assertEquals(Long.valueOf(0), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
-    Assert.assertEquals(Long.valueOf(0), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assert.assertEquals(1, byReason.size());
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
   }
 
   @Test
@@ -429,7 +426,7 @@ public class FilteringCloseableInputRowIteratorTest
     final InputRowFilter nullFilter = row -> row == null ? InputRowFilterResult.NULL_OR_EMPTY_RECORD : InputRowFilterResult.ACCEPTED;
 
     // Second filter: reject if dim1 != 10
-    final InputRowFilter valueFilter = row -> (Integer) row.getRaw("dim1") == 10 ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.FILTERED;
+    final InputRowFilter valueFilter = row -> (Integer) row.getRaw("dim1") == 10 ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
 
     // Combine filters
     final InputRowFilter combinedFilter = nullFilter.and(valueFilter);
@@ -449,7 +446,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     // All rejected rows should have FILTERED reason (from second filter)
     Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.FILTERED.getReason()));
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
   }
 
   private static InputRow newRow(DateTime timestamp, Object dim1Val, Object dim2Val)

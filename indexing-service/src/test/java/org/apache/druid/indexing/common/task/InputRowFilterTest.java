@@ -49,7 +49,7 @@ public class InputRowFilterTest
     InputRowFilter filter = InputRowFilter.fromPredicate(row -> false);
     InputRow row = newRow(100);
 
-    Assert.assertEquals(InputRowFilterResult.FILTERED, filter.test(row));
+    Assert.assertEquals(InputRowFilterResult.CUSTOM_FILTER, filter.test(row));
   }
 
   @Test
@@ -89,7 +89,7 @@ public class InputRowFilterTest
   public void testAndBothRejectReturnsFirst()
   {
     InputRowFilter filter1 = row -> InputRowFilterResult.NULL_OR_EMPTY_RECORD;
-    InputRowFilter filter2 = row -> InputRowFilterResult.FILTERED;
+    InputRowFilter filter2 = row -> InputRowFilterResult.CUSTOM_FILTER;
     InputRowFilter combined = filter1.and(filter2);
 
     InputRow row = newRow(100);

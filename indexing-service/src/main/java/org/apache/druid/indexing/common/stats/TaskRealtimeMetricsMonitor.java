@@ -23,6 +23,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -37,7 +38,6 @@ import java.util.Map;
 public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(TaskRealtimeMetricsMonitor.class);
-  private static final String REASON_DIMENSION = "reason";
 
   private final SegmentGenerationMetrics segmentGenerationMetrics;
   private final RowIngestionMeters rowIngestionMeters;
@@ -76,7 +76,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
       if (delta > 0) {
         deltaThrownAwayByReason.put(reason.getReason(), delta);
         emitter.emit(
-            builder.setDimension(REASON_DIMENSION, reason.getReason())
+            builder.setDimension(DruidMetrics.REASON, reason.getReason())
                    .setMetric("ingest/events/thrownAway", delta)
         );
       }

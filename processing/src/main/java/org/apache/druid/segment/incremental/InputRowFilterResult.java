@@ -20,8 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Result of filtering an input row during ingestion.
@@ -40,17 +38,17 @@ public enum InputRowFilterResult
   /**
    * The row's timestamp is before the minimum message time (late message rejection).
    */
-  BEFORE_MIN_MESSAGE_TIME("beforeMinMessageTime"),
+  BEFORE_MIN_MESSAGE_TIME("beforeMinimumMessageTime"),
 
   /**
    * The row's timestamp is after the maximum message time (early message rejection).
    */
-  AFTER_MAX_MESSAGE_TIME("afterMaxMessageTime"),
+  AFTER_MAX_MESSAGE_TIME("afterMaximumMessageTime"),
 
   /**
    * The row was filtered out by a transformSpec filter or other row filter.
    */
-  FILTERED("filtered"),
+  CUSTOM_FILTER("filtered"),
 
   /**
    * A backwards-compatible value for tracking filter reasons for ingestion tasks using older Druid versions without filter reason tracking.
@@ -60,7 +58,6 @@ public enum InputRowFilterResult
   private static final InputRowFilterResult[] REJECTED_VALUES = Arrays.stream(InputRowFilterResult.values())
                                                                       .filter(InputRowFilterResult::isRejected)
                                                                       .toArray(InputRowFilterResult[]::new);
-  public static final int NUM_FILTER_RESULT = InputRowFilterResult.values().length;
 
   private final String reason;
 
@@ -87,24 +84,18 @@ public enum InputRowFilterResult
   }
 
   /**
-   * Public utility for building a mutable frequency map over the possible rejection {@link InputRowFilterResult} values.
-   * Keys on {@link InputRowFilterResult#getReason()} rather than the enum name as the latter is more likely to change longer-term.
-   * It is also easier to have stats payload keys match what is being emitted in metrics.
-   */
-  public static Map<String, Long> buildRejectedCounterMap()
-  {
-    final Map<String, Long> result = new HashMap<>();
-    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
-      result.put(reason.getReason(), 0L);
-    }
-    return result;
-  }
-
-  /**
-   * Returns {@link InputRowFilterResult} that are not rejection states.
+   * Returns {@link InputRowFilterResult} that are rejection states.
    */
   public static InputRowFilterResult[] rejectedValues()
   {
     return REJECTED_VALUES;
+  }
+
+  /**
+   * Returns total number of {@link InputRowFilterResult} values.
+   */
+  public static int numValues()
+  {
+    return values().length;
   }
 }

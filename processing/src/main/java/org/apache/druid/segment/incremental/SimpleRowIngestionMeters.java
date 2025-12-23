@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class SimpleRowIngestionMeters implements RowIngestionMeters
@@ -27,7 +28,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   private long processedWithError;
   private long unparseable;
   private long processedBytes;
-  private final long[] thrownAwayByReason = new long[InputRowFilterResult.NUM_FILTER_RESULT];
+  private final long[] thrownAwayByReason = new long[InputRowFilterResult.numValues()];
 
   @Override
   public long getProcessed()
@@ -96,9 +97,12 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   @Override
   public Map<String, Long> getThrownAwayByReason()
   {
-    final Map<String, Long> result = InputRowFilterResult.buildRejectedCounterMap();
+    final Map<String, Long> result = new HashMap<>();
     for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
-      result.put(reason.getReason(), thrownAwayByReason[reason.ordinal()]);
+      long count = thrownAwayByReason[reason.ordinal()];
+      if (count > 0) {
+        result.put(reason.getReason(), count);
+      }
     }
     return result;
   }

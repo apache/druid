@@ -125,10 +125,10 @@ public class TaskRealtimeMetricsMonitorTest
     realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
     realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
     realMeters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
         segmentGenerationMetrics,
@@ -145,8 +145,8 @@ public class TaskRealtimeMetricsMonitorTest
     }
 
     Assert.assertEquals(Long.valueOf(2), thrownAwayByReason.get("null"));
-    Assert.assertEquals(Long.valueOf(3), thrownAwayByReason.get("beforeMinMessageTime"));
-    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get("afterMaxMessageTime"));
+    Assert.assertEquals(Long.valueOf(3), thrownAwayByReason.get("beforeMinimumMessageTime"));
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get("afterMaximumMessageTime"));
     Assert.assertEquals(Long.valueOf(4), thrownAwayByReason.get("filtered"));
   }
 
@@ -155,7 +155,7 @@ public class TaskRealtimeMetricsMonitorTest
   {
     SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
     realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
         segmentGenerationMetrics,
@@ -175,8 +175,8 @@ public class TaskRealtimeMetricsMonitorTest
     Assert.assertEquals(2, thrownAwayByReason.size());
     Assert.assertTrue(thrownAwayByReason.containsKey("null"));
     Assert.assertTrue(thrownAwayByReason.containsKey("filtered"));
-    Assert.assertFalse(thrownAwayByReason.containsKey("beforeMinMessageTime"));
-    Assert.assertFalse(thrownAwayByReason.containsKey("afterMaxMessageTime"));
+    Assert.assertFalse(thrownAwayByReason.containsKey("beforeMinimumMessageTime"));
+    Assert.assertFalse(thrownAwayByReason.containsKey("afterMaximumMessageTime"));
   }
 
   @Test
@@ -204,8 +204,8 @@ public class TaskRealtimeMetricsMonitorTest
 
     emitter.flush();
     realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    realMeters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
     monitor.doMonitor(emitter);
 
     // Find counts from second call - should be deltas only

@@ -31,7 +31,7 @@ public class InputRowFilterResultTest
     Assert.assertEquals(1, InputRowFilterResult.NULL_OR_EMPTY_RECORD.ordinal());
     Assert.assertEquals(2, InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.ordinal());
     Assert.assertEquals(3, InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.ordinal());
-    Assert.assertEquals(4, InputRowFilterResult.FILTERED.ordinal());
+    Assert.assertEquals(4, InputRowFilterResult.CUSTOM_FILTER.ordinal());
   }
 
   @Test
@@ -39,9 +39,9 @@ public class InputRowFilterResultTest
   {
     Assert.assertEquals("accepted", InputRowFilterResult.ACCEPTED.getReason());
     Assert.assertEquals("null", InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason());
-    Assert.assertEquals("beforeMinMessageTime", InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason());
-    Assert.assertEquals("afterMaxMessageTime", InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason());
-    Assert.assertEquals("filtered", InputRowFilterResult.FILTERED.getReason());
+    Assert.assertEquals("beforeMinimumMessageTime", InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason());
+    Assert.assertEquals("afterMaximumMessageTime", InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason());
+    Assert.assertEquals("filtered", InputRowFilterResult.CUSTOM_FILTER.getReason());
   }
 
   @Test
@@ -57,20 +57,8 @@ public class InputRowFilterResultTest
     Assert.assertTrue(InputRowFilterResult.NULL_OR_EMPTY_RECORD.isRejected());
     Assert.assertTrue(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.isRejected());
     Assert.assertTrue(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.isRejected());
-    Assert.assertTrue(InputRowFilterResult.FILTERED.isRejected());
+    Assert.assertTrue(InputRowFilterResult.CUSTOM_FILTER.isRejected());
     Assert.assertTrue(InputRowFilterResult.UNKNOWN.isRejected());
-  }
-
-  @Test
-  public void testBuildRejectedCounterMapExcludesAccepted()
-  {
-    var counterMap = InputRowFilterResult.buildRejectedCounterMap();
-    Assert.assertFalse(counterMap.containsKey(InputRowFilterResult.ACCEPTED.getReason()));
-    Assert.assertTrue(counterMap.containsKey(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
-    Assert.assertTrue(counterMap.containsKey(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
-    Assert.assertTrue(counterMap.containsKey(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
-    Assert.assertTrue(counterMap.containsKey(InputRowFilterResult.FILTERED.getReason()));
-    Assert.assertTrue(counterMap.containsKey(InputRowFilterResult.UNKNOWN.getReason()));
   }
 }
 

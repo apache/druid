@@ -61,9 +61,9 @@ public class DropwizardRowIngestionMetersTest
     meters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
     meters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
     meters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
-    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
-    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     // Total thrownAway should be sum of all reasons
     Assert.assertEquals(7, meters.getThrownAway());
@@ -73,7 +73,7 @@ public class DropwizardRowIngestionMetersTest
     Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
     Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
     Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
-    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.FILTERED.getReason()));
+    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
   }
 
   @Test
@@ -81,12 +81,9 @@ public class DropwizardRowIngestionMetersTest
   {
     DropwizardRowIngestionMeters meters = new DropwizardRowIngestionMeters();
 
-    // Even with no increments, all reasons should be present with 0 counts
+    // With no increments, all reasons should be present with 0 counts
     Map<String, Long> byReason = meters.getThrownAwayByReason();
-    Assert.assertEquals(InputRowFilterResult.rejectedValues().length, byReason.size());
-    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
-      Assert.assertEquals(Long.valueOf(0), byReason.get(reason.getReason()));
-    }
+    Assert.assertTrue(byReason.isEmpty());
   }
 
   @Test
@@ -95,7 +92,7 @@ public class DropwizardRowIngestionMetersTest
     DropwizardRowIngestionMeters meters = new DropwizardRowIngestionMeters();
 
     meters.incrementProcessed();
-    meters.incrementThrownAway(InputRowFilterResult.FILTERED);
+    meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     Map<String, Object> movingAverages = meters.getMovingAverages();
     Assert.assertNotNull(movingAverages);

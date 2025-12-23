@@ -89,7 +89,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -1197,7 +1196,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(InputRowFilterResult.buildRejectedCounterMap(), Long::intValue);
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1290,7 +1289,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNotNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
-    Map<String, Integer> expectedThrownAwayByReason = CollectionUtils.mapValues(InputRowFilterResult.buildRejectedCounterMap(), Long::intValue);
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(

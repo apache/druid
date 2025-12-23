@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -56,11 +57,11 @@ public class RowIngestionMetersTotals
   }
 
   public RowIngestionMetersTotals(
-      @JsonProperty("processed") long processed,
-      @JsonProperty("processedBytes") long processedBytes,
-      @JsonProperty("processedWithError") long processedWithError,
-      @JsonProperty("thrownAway") long thrownAway,
-      @JsonProperty("unparseable") long unparseable
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      long thrownAway,
+      long unparseable
   )
   {
     this(
@@ -73,11 +74,11 @@ public class RowIngestionMetersTotals
   }
 
   public RowIngestionMetersTotals(
-      @JsonProperty("processed") long processed,
-      @JsonProperty("processedBytes") long processedBytes,
-      @JsonProperty("processedWithError") long processedWithError,
-      @JsonProperty("thrownAwayByReason") Map<String, Long> thrownAwayByReason,
-      @JsonProperty("unparseable") long unparseable
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      Map<String, Long> thrownAwayByReason,
+      long unparseable
   )
   {
     this.processed = processed;
@@ -167,8 +168,10 @@ public class RowIngestionMetersTotals
    */
   private static Map<String, Long> getBackwardsCompatibleThrownAwayByReason(long thrownAway)
   {
-    Map<String, Long> results = InputRowFilterResult.buildRejectedCounterMap();
-    results.put(InputRowFilterResult.UNKNOWN.getReason(), thrownAway);
+    Map<String, Long> results = new HashMap<>();
+    if (thrownAway > 0) {
+      results.put(InputRowFilterResult.UNKNOWN.getReason(), thrownAway);
+    }
     return results;
   }
 }
