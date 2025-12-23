@@ -3358,39 +3358,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     taskGroupEntry -> computeEarliestTaskStartTime(taskGroupEntry.getValue()).getMillis()
                 )
         )
-          .forEach(entry -> {
-            Integer groupId = entry.getKey();
-            TaskGroup group = entry.getValue();
+            .forEach(entry -> {
+              Integer groupId = entry.getKey();
+              TaskGroup group = entry.getValue();
 
-            final DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
-            final Duration runDuration = Duration.millis(DateTimes.nowUtc().getMillis() - earliestTaskStart.getMillis());
-            if (stopTasksEarly || group.getHandoffEarly()) {
-              // If handoffEarly has been set, stop tasks irrespective of stopTaskCount
-              log.info(
-                  "Stopping taskGroup[%d] early after running for duration[%s].",
-                  groupId, runDuration
-              );
-              futureGroupIds.add(groupId);
-              futures.add(checkpointTaskGroup(group, true));
-              if (group.getHandoffEarly()) {
-                numStoppedTasks.getAndIncrement();
-              }
-            } else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
-              // Stop this task group if it has run longer than the configured duration
-              // and the pending task groups are less than the configured stop task count.
-              int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
-                                                                              .mapToInt(List::size).sum();
-              if (numPendingCompletionTaskGroups + numStoppedTasks.get() < ioConfig.getMaxAllowedStops()) {
+              final DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
+              final Duration runDuration = Duration.millis(DateTimes.nowUtc().getMillis() - earliestTaskStart.getMillis());
+              if (stopTasksEarly || group.getHandoffEarly()) {
+                // If handoffEarly has been set, stop tasks irrespective of stopTaskCount
                 log.info(
-                    "Stopping taskGroup[%d] as it has already run for duration[%s], configured task duration[%s].",
-                    groupId, runDuration, ioConfig.getTaskDuration()
+                    "Stopping taskGroup[%d] early after running for duration[%s].",
+                    groupId, runDuration
                 );
                 futureGroupIds.add(groupId);
                 futures.add(checkpointTaskGroup(group, true));
-                numStoppedTasks.getAndIncrement();
+                if (group.getHandoffEarly()) {
+                  numStoppedTasks.getAndIncrement();
+                }
+              } else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+                // Stop this task group if it has run longer than the configured duration
+                // and the pending task groups are less than the configured stop task count.
+                int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
+                                                                                .mapToInt(List::size).sum();
+                if (numPendingCompletionTaskGroups + numStoppedTasks.get() < ioConfig.getMaxAllowedStops()) {
+                  log.info(
+                      "Stopping taskGroup[%d] as it has already run for duration[%s], configured task duration[%s].",
+                      groupId, runDuration, ioConfig.getTaskDuration()
+                  );
+                  futureGroupIds.add(groupId);
+                  futures.add(checkpointTaskGroup(group, true));
+                  numStoppedTasks.getAndIncrement();
+                }
               }
-            }
-          });
+            });
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
