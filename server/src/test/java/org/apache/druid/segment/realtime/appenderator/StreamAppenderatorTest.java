@@ -103,10 +103,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testSimpleIngestion() throws Exception
   {
-    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
-                                                   .segmentGenerationMetrics(segmentGenerationMetrics)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .build()) {
       final Appenderator appenderator = tester.getAppenderator();
@@ -186,6 +184,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
 
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
       Assert.assertEquals(2, segmentGenerationMetrics.numPersists());
       Assert.assertEquals(3, segmentGenerationMetrics.rowOutput());
       Assert.assertTrue(segmentGenerationMetrics.persistTimeMillis() > 0);
@@ -203,12 +202,10 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testPushFailure() throws Exception
   {
-    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     try (final StreamAppenderatorTester tester =
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
                                                    .enablePushFailure(true)
-                                                   .segmentGenerationMetrics(segmentGenerationMetrics)
                                                    .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       boolean thrown;
@@ -281,9 +278,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ThrowableCauseMatcher.hasCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(
               CoreMatchers.startsWith("Push failure test"))))
       );
+      SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
+      Assert.assertEquals(1, segmentGenerationMetrics.failedHandoffs());
     }
-
-    Assert.assertEquals(1, segmentGenerationMetrics.failedHandoffs());
   }
 
   @Test

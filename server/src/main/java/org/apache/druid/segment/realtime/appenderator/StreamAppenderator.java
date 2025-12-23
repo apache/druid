@@ -969,6 +969,7 @@ public class StreamAppenderator implements Appenderator
         stopwatch.restart();
         metrics.setMergeTime(mergeTimeMillis);
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
       }
       catch (Throwable t) {
@@ -986,6 +987,7 @@ public class StreamAppenderator implements Appenderator
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       final long pushTimeMillis = stopwatch.millisElapsed();
+      stopwatch.stop();
       objectMapper.writeValue(descriptorFile, segment);
 
       log.info(
