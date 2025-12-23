@@ -111,10 +111,13 @@ class StreamChunkParser<RecordType extends ByteEntity>
     this.parseExceptionHandler = parseExceptionHandler;
   }
 
-  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered) throws IOException
   {
     if (streamChunk == null || streamChunk.isEmpty()) {
-      if (!isEndOfShard) {
+      if (isFiltered) {
+        // This is a filtered record - track as filtered, not thrownAway
+        rowIngestionMeters.incrementFiltered();
+      } else if (!isEndOfShard) {
         // We do not count end of shard record as thrown away event since this is a record created by Druid
         // Note that this only applies to Kinesis
         rowIngestionMeters.incrementThrownAway();
@@ -127,6 +130,11 @@ class StreamChunkParser<RecordType extends ByteEntity>
         return parseWithParser(parser, streamChunk);
       }
     }
+  }
+
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
+  {
+    return parse(streamChunk, isEndOfShard, false);
   }
 
   private List<InputRow> parseWithParser(InputRowParser<ByteBuffer> parser, List<? extends ByteEntity> valueBytes)
