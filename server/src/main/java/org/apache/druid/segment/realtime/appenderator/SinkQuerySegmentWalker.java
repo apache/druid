@@ -44,6 +44,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -365,8 +366,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
       // 1) Populate resource id to the query
       // 2) Merge results using the toolChest, finalize if necessary.
-      // 3) Measure CPU time of that operation.
-      // 4) Release all sink segment references.
+      // 3) Emit metrics if necessary.
+      // 4) Measure CPU time of that operation.
+      // 5) Release all sink segment references.
       return new ResourceIdPopulatingQueryRunner<>(
           QueryRunnerHelper.makeClosingQueryRunner(
               CPUTimeMetricQueryRunner.safeBuild(
@@ -468,7 +470,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
    * This class operates in two distinct modes based on whether {@link SinkMetricsEmittingQueryRunner#segmentId} is null or non-null.
    * When segmentId is non-null, it accumulates the metrics. When segmentId is null, it emits the accumulated metrics.
    * <p>
-   * This class is derived from {@link org.apache.druid.query.MetricsEmittingQueryRunner}.
+   * This class is derived from {@link MetricsEmittingQueryRunner}.
    */
   private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T>
   {

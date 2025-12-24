@@ -398,8 +398,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         mapper,
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        statsProvider
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
@@ -3551,10 +3550,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "market", "upfront", "first", 1447L, "last", 780L)
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
 
-    verifyGroupByMetricsForSmallBufferConfig();
+    verifyGroupByMetricsForSmallBufferConfig(emitter);
   }
 
   @Test
@@ -6148,10 +6148,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-aggs");
 
-    verifyGroupByMetricsForSmallBufferConfig();
+    verifyGroupByMetricsForSmallBufferConfig(emitter);
   }
 
   @Test
@@ -6195,10 +6196,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-02", "idx", 2505.0)
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-filter");
 
-    verifyGroupByMetricsForSmallBufferConfig();
+    verifyGroupByMetricsForSmallBufferConfig(emitter);
   }
 
   @Test
@@ -6920,10 +6922,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     // Subqueries are handled by the ToolChest
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
 
-    verifyGroupByMetricsForSmallBufferConfig();
+    verifyGroupByMetricsForSmallBufferConfig(emitter);
   }
 
   @Test
@@ -12433,10 +12436,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "nullable", 50.0, "rows", 6L)
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
 
-    verifyGroupByMetricsForSmallBufferConfig(true);
+    verifyGroupByMetricsForSmallBufferConfig(emitter, true);
   }
 
   @Test
@@ -12504,10 +12508,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "v", 19600000L, "rows", 6L, "twosum", 18L)
     );
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQueryWithEmitter(factory, runner, query, emitter);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
 
-    verifyGroupByMetricsForSmallBufferConfig(true);
+    verifyGroupByMetricsForSmallBufferConfig(emitter, true);
   }
 
   @Test
@@ -13728,7 +13733,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     }
   }
 
-  private void verifyGroupByMetricsForSmallBufferConfig(boolean skipMergeDictionaryMetric)
+  private void verifyGroupByMetricsForSmallBufferConfig(StubServiceEmitter emitter, boolean skipMergeDictionaryMetric)
   {
     if (!config.toString().equals(V2_SMALL_BUFFER_CONFIG.toString())) {
       return;
@@ -13738,14 +13743,23 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Assert.assertTrue(aggregateStats.getSpilledBytes() > 0);
     Assert.assertEquals(1, aggregateStats.getMergeBufferQueries());
     Assert.assertTrue(aggregateStats.getMergeBufferAcquisitionTimeNs() > 0);
+    
     if (!skipMergeDictionaryMetric) {
       Assert.assertTrue(aggregateStats.getMergeDictionarySize() > 0);
+      if (emitter != null) {
+        emitter.verifyEmitted("mergeDictionarySize", 1);
+      }
+    }
+
+    if (emitter != null) {
+      emitter.verifyEmitted("query/wait/time", 1);
+      emitter.verifyEmitted("bytesSpilledToStorage", 1);
+      emitter.verifyEmitted("mergeBufferAcquisitionTime", 1);
     }
   }
 
-  private void verifyGroupByMetricsForSmallBufferConfig()
+  private void verifyGroupByMetricsForSmallBufferConfig(StubServiceEmitter emitter)
   {
-    verifyGroupByMetricsForSmallBufferConfig(false);
+    verifyGroupByMetricsForSmallBufferConfig(emitter, false);
   }
 }
-
