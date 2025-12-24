@@ -649,7 +649,7 @@ public class TaskQueueTest extends IngestionTestBase
     final String taskInQueueAsString = mapper.writeValueAsString(taskInQueue.get());
     Assert.assertFalse(taskInQueueAsString.contains(password));
 
-    Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
+    Assert.assertEquals(mapper.readTree(taskInStorageAsString), mapper.readTree(taskInQueueAsString));
   }
 
   @Test
