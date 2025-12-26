@@ -327,7 +327,7 @@ All duties in the same group will have the same run period configured by `druid.
 Currently, there is a single thread running the duties sequentially for each group.
 
 For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `KillSupervisorsCustomDutyTest`
-which tests the behaviour of the `KillSupervisorsCustomDuty`.
+for sample properties that may be used to configure the `KillSupervisorsCustomDuty`.
 
 ### Routing data through a HTTP proxy for your extension
 
