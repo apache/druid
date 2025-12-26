@@ -114,8 +114,4 @@ public class TestNGGroup
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 
   public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
-
-  public static final String CDS_TASK_SCHEMA_PUBLISH_DISABLED = "cds-task-schema-publish-disabled";
-
-  public static final String CDS_COORDINATOR_METADATA_QUERY_DISABLED = "cds-coordinator-metadata-query-disabled";
 }

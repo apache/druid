@@ -327,17 +327,7 @@ All duties in the same group will have the same run period configured by `druid.
 Currently, there is a single thread running the duties sequentially for each group.
 
 For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `KillSupervisorsCustomDutyTest`
-integration test which loads `KillSupervisorsCustomDuty` using the configs below.
-
-```properties
-druid.coordinator.dutyGroups=["cleanupMetadata"]
-druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
-druid.coordinator.cleanupMetadata.duty.killSupervisors.durationToRetain=PT0M
-druid.coordinator.cleanupMetadata.period=PT10S
-```
-
-These configurations create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
-The custom coordinator duty `killSupervisors` also has a config called `durationToRetain` which is set to 0 minute.
+which tests the behaviour of the `KillSupervisorsCustomDuty`.
 
 ### Routing data through a HTTP proxy for your extension
 

@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, realtime-index, cds-task-schema-publish-disabled, cds-coordinator-metadata-query-disabled]
+        testing_group: [kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, realtime-index]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
