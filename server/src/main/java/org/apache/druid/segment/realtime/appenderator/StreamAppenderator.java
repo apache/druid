@@ -749,9 +749,9 @@ public class StreamAppenderator implements Appenderator
               throw e;
             }
             finally {
-              metrics.incrementNumPersists();
-              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
               metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
+              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
+              metrics.incrementNumPersists();
               persistStopwatch.stop();
             }
           }
@@ -938,7 +938,7 @@ public class StreamAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final Stopwatch stopwatch = Stopwatch.createStarted();
+      final Stopwatch mergeStopwatch = Stopwatch.createStarted();
       final long mergeTimeMillis;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
@@ -965,10 +965,9 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getMaxColumnsToMerge()
         );
 
-        mergeTimeMillis = stopwatch.millisElapsed();
-        stopwatch.restart();
-        metrics.setMergeTime(mergeTimeMillis);
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        mergeTimeMillis = mergeStopwatch.millisElapsed();
+        metrics.setMergeTime(mergeTimeMillis);
 
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
       }
@@ -979,6 +978,8 @@ public class StreamAppenderator implements Appenderator
         closer.close();
       }
 
+      final Stopwatch pushStopwatch = Stopwatch.createStarted();
+
       final DataSegment segmentToPush = sink.getSegment().withDimensions(
           IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
       );
@@ -986,8 +987,7 @@ public class StreamAppenderator implements Appenderator
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
-      final long pushTimeMillis = stopwatch.millisElapsed();
-      stopwatch.stop();
+      final long pushTimeMillis = pushStopwatch.millisElapsed();
       objectMapper.writeValue(descriptorFile, segment);
 
       log.info(

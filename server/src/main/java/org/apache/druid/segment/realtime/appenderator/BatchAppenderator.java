@@ -617,11 +617,11 @@ public class BatchAppenderator implements Appenderator
             throw e;
           }
           finally {
-            metrics.incrementNumPersists();
-            final long persistMillis = persistStopwatch.millisElapsed();
-            persistStopwatch.stop();
-            metrics.incrementPersistTimeMillis(persistMillis);
             metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
+            final long persistMillis = persistStopwatch.millisElapsed();
+            metrics.incrementPersistTimeMillis(persistMillis);
+            metrics.incrementNumPersists();
+            persistStopwatch.stop();
             // make sure no push can start while persisting:
             log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
                      numPersistedRows, bytesPersisted, persistMillis
@@ -797,7 +797,7 @@ public class BatchAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final Stopwatch stopwatch = Stopwatch.createStarted();
+      final Stopwatch mergeStopwatch = Stopwatch.createStarted();
       final long mergeTimeMillis;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
@@ -830,10 +830,9 @@ public class BatchAppenderator implements Appenderator
 
         metrics.incrementMergedRows(rowsinMergedSegment);
 
-        mergeTimeMillis = stopwatch.millisElapsed();
-        stopwatch.restart();
-        metrics.setMergeTime(mergeTimeMillis);
         metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        mergeTimeMillis = mergeStopwatch.millisElapsed();
+        metrics.setMergeTime(mergeTimeMillis);
 
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
       }
@@ -843,6 +842,8 @@ public class BatchAppenderator implements Appenderator
       finally {
         closer.close();
       }
+
+      final Stopwatch pushStopwatch = Stopwatch.createStarted();
 
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(
@@ -872,8 +873,7 @@ public class BatchAppenderator implements Appenderator
       // cleanup, sink no longer needed
       removeDirectory(computePersistDir(identifier));
 
-      final long pushTimeMillis = stopwatch.millisElapsed();
-      stopwatch.stop();
+      final long pushTimeMillis = pushStopwatch.millisElapsed();
       metrics.incrementPushedRows(rowsinMergedSegment);
 
       log.info(
