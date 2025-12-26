@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -158,7 +159,13 @@ public class FileSmoosher implements SegmentFileBuilder
   public SmooshedWriter addWithSmooshedWriter(final String name, final long size) throws IOException
   {
     if (size > maxChunkSize) {
-      throw new IAE("Asked to add buffers[%,d] larger than configured max[%,d]", size, maxChunkSize);
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Serialized buffer size[%,d] for column[%s] exceeds the maximum[%,d]. "
+                                  + "Consider adjusting the tuningConfig - for example, reduce maxRowsPerSegment, "
+                                  + "or partition your data further.",
+                                  size, name, maxChunkSize
+                          );
     }
 
     // If current writer is in use then create a new SmooshedWriter which
