@@ -42,7 +42,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class CustomSupervisorCleanupDutyTest extends EmbeddedClusterTestBase
+public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.coordinator.kill.supervisor.on", "false")
