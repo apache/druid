@@ -129,30 +129,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   {
     final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
 
-    final TaskBuilder.IndexParallel indexTask =
-        TaskBuilder.ofTypeIndexParallel()
-                   .dataSource(dataSource)
-                   .timestampColumn("timestamp")
-                   .jsonInputFormat()
-                   .localInputSourceWithFiles(
-                       Resources.DataFile.tinyWiki1Json(),
-                       Resources.DataFile.tinyWiki2Json(),
-                       Resources.DataFile.tinyWiki3Json()
-                   )
-                   .segmentGranularity("DAY")
-                   .dimensions("namespace", "page", "language")
-                   .metricAggregates(
-                       new DoubleSumAggregatorFactory("added", "added"),
-                       new DoubleSumAggregatorFactory("deleted", "deleted"),
-                       new DoubleSumAggregatorFactory("delta", "delta"),
-                       new CountAggregatorFactory("count")
-                   )
-                   .tuningConfig(
-                       t -> t.withPartitionsSpec(partitionsSpec)
-                             .withForceGuaranteedRollup(isRollup)
-                             .withMaxNumConcurrentSubTasks(10)
-                             .withSplitHintSpec(new MaxSizeSplitHintSpec(1, null))
-                   );
+    final TaskBuilder.IndexParallel indexTask = buildIndexParallelTask(partitionsSpec, false);
 
     runTask(indexTask, dataSource);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -209,6 +186,55 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
     runTask(reindexTaskSplitByFile, dataSource3);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator, broker);
     runQueries(dataSource3);
+  }
+
+  @MethodSource("getTestParamPartitionsSpec")
+  @ParameterizedTest(name = "partitionsSpec={0}")
+  public void test_runIndexTask_andAppendData(PartitionsSpec partitionsSpec)
+  {
+    final TaskBuilder.IndexParallel initialTask = buildIndexParallelTask(partitionsSpec, false);
+    runTask(initialTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "10");
+
+    final TaskBuilder.IndexParallel appendTask
+        = buildIndexParallelTask(new DynamicPartitionsSpec(null, null), true);
+    runTask(appendTask, dataSource);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "20");
+  }
+
+  private TaskBuilder.IndexParallel buildIndexParallelTask(
+      PartitionsSpec partitionsSpec,
+      boolean appendToExisting
+  )
+  {
+    final boolean isRollup = partitionsSpec.isForceGuaranteedRollupCompatible();
+
+    return TaskBuilder.ofTypeIndexParallel()
+                      .dataSource(dataSource)
+                      .timestampColumn("timestamp")
+                      .jsonInputFormat()
+                      .localInputSourceWithFiles(
+                          Resources.DataFile.tinyWiki1Json(),
+                          Resources.DataFile.tinyWiki2Json(),
+                          Resources.DataFile.tinyWiki3Json()
+                      )
+                      .segmentGranularity("DAY")
+                      .dimensions("namespace", "page", "language")
+                      .metricAggregates(
+                          new DoubleSumAggregatorFactory("added", "added"),
+                          new DoubleSumAggregatorFactory("deleted", "deleted"),
+                          new DoubleSumAggregatorFactory("delta", "delta"),
+                          new CountAggregatorFactory("count")
+                      )
+                      .appendToExisting(appendToExisting)
+                      .tuningConfig(
+                          t -> t.withPartitionsSpec(partitionsSpec)
+                                .withForceGuaranteedRollup(isRollup)
+                                .withMaxNumConcurrentSubTasks(10)
+                                .withSplitHintSpec(new MaxSizeSplitHintSpec(1, null))
+                      );
   }
 
   private String runTask(TaskBuilder.IndexParallel taskBuilder, String dataSource)

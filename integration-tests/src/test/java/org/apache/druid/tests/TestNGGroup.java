@@ -33,8 +33,6 @@ public class TestNGGroup
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
 
-  public static final String APPEND_INGESTION = "append-ingestion";
-
   /**
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
    */
