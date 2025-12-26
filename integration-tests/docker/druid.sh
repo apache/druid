@@ -107,10 +107,5 @@ setupData()
     cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid
   fi
 
-  # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
-    echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid
-    cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid
-  fi
   service mariadb stop
 }

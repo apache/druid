@@ -326,9 +326,8 @@ The duties will be grouped into multiple groups as per the elements in list `dru
 All duties in the same group will have the same run period configured by `druid.coordinator.<GROUP_NAME>.period`.
 Currently, there is a single thread running the duties sequentially for each group.
 
-For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `custom-coordinator-duties`
-integration test group which loads `KillSupervisorsCustomDuty` using the configs set in `integration-tests/docker/environment-configs/test-groups/custom-coordinator-duties`.
-This config file adds the configs below to enable a custom coordinator duty.
+For example, see `KillSupervisorsCustomDuty` for a custom coordinator duty implementation and the `CustomSupervisorCleanupDutyTest`
+integration test loads `KillSupervisorsCustomDuty` using the configs below.
 
 ```properties
 druid.coordinator.dutyGroups=["cleanupMetadata"]
