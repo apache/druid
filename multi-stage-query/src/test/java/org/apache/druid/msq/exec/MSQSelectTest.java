@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -64,6 +65,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -90,6 +92,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
@@ -97,6 +100,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -104,6 +108,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.druid.sql.calcite.util.CalciteTests.SOME_DATASOURCE;
 
 public class MSQSelectTest extends MSQTestBase
 {
@@ -242,6 +248,78 @@ public class MSQSelectTest extends MSQTestBase
         ))
         .setExpectedLookupLoadingSpec(LookupLoadingSpec.NONE)
         .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFooWithComplex(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("unique_dim1", HyperUniquesAggregatorFactory.TYPE)
+                                               .build();
+    final Map<String, Object> contextToPut = new HashMap<>(context);
+    contextToPut.put("includeSegmentSource", "REALTIME");
+
+    final Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put("includeSegmentSource", "REALTIME");
+
+    testSelectQuery()
+        .setSql("select cnt,unique_dim1 from some_datasource")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(SOME_DATASOURCE)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "unique_dim1")
+                           .columnTypes(List.of(ColumnType.LONG, HyperUniquesAggregatorFactory.TYPE))
+                           .context(contextToPut)
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(queryContext)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(2).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(2)
+                .frames(1),
+            0, 0, "shuffle"
+        )
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{7L, "\"AQAAAQAAAAEkAQ==\""},
+            new Object[]{8L, "\"AQAAAgAAAAAoYAEkAQ==\""}
+        ))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.NONE)
+        .verifyResults();
+
+    HyperLogLogCollector expectedCollector1 = HyperLogLogCollector.makeLatestCollector()
+                                                                  .fold(ByteBuffer.wrap(StringUtils.decodeBase64String(
+                                                                      "AQAAAQAAAAEkAQ==")));
+
+    HyperLogLogCollector expectedCollector2 = HyperLogLogCollector.makeLatestCollector()
+                                                                  .fold(ByteBuffer.wrap(StringUtils.decodeBase64String(
+                                                                      "AQAAAgAAAAAoYAEkAQ==")));
+
+    Assertions.assertEquals(1, expectedCollector1.estimateCardinality(), 0.01);
+    Assertions.assertEquals(2, expectedCollector2.estimateCardinality(), 0.01);
   }
 
   @MethodSource("data")
