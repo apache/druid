@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -138,11 +140,14 @@ public class CompactionRunSimulator
         Integer.MAX_VALUE,
         clusterConfig.getCompactionPolicy(),
         clusterConfig.isUseSupervisors(),
-        clusterConfig.getEngine()
+        clusterConfig.getEngine(),
+        clusterConfig.isLegacyPersistLastCompactionStateInSegments()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
+    // Use an in-memory CompactionStateManager for simulations
+    final CompactionStateManager inMemoryStateManager = new HeapMemoryCompactionStateManager();
+    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient, inMemoryStateManager).run(
         compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,
         defaultEngine,

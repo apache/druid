@@ -389,6 +389,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|`druid_segments`|
 |`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|`druid_rules`|
 |`druid.metadata.storage.tables.config`|The table to use to look for configs.|`druid_config`|
+|`druid.metadata.storage.tables.compactionStates`|The table to use to store compaction state fingerprints.|`druid_compactionStates`|
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|`druid_tasks`|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|`druid_tasklogs`|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|`druid_tasklocks`|
@@ -810,6 +811,8 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the Coordinator to notice rules.|`PT1M`|
 |`druid.manager.rules.defaultRule`|The default rule for the cluster|`_default`|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|`PT10M`|
+|`druid.manager.compactionState.cacheSize`|The maximum number of compaction state fingerprints to cache in memory on the coordinator and overlord. Compaction state fingerprints are used to track the compaction configuration applied to segments. Consider increasing this value if you have a large number of datasources with compaction configurations.|`100`|
+|`druid.manager.compactionState.prewarmSize`|The number of most recently used compaction state fingerprints to load into cache on Coordinator startup. This pre-warms the cache to improve performance immediately after startup.|`100`|
 
 #### Dynamic configuration
 

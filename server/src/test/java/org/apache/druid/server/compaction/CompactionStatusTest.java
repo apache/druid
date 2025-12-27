@@ -32,21 +32,26 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -58,6 +63,18 @@ public class CompactionStatusTest
       = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 0))
                    .size(100_000_000L)
                    .build();
+  private static final DataSegment WIKI_SEGMENT_2
+      = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 1))
+                   .size(100_000_000L)
+                   .build();
+
+  private CompactionStateManager compactionStateManager;
+
+  @Before
+  public void setUp()
+  {
+    compactionStateManager = EasyMock.createMock(CompactionStateManager.class);
+  }
 
   @Test
   public void testFindPartitionsSpecWhenGivenIsNull()
@@ -326,8 +343,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -375,8 +393,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -429,8 +448,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertFalse(status.isComplete());
   }
 
@@ -482,8 +502,9 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -535,9 +556,260 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
     Assert.assertFalse(status.isComplete());
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenAllSegmentsHaveUnexpectedCompactionStateFingerprint()
+  {
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build(),
+        DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.HOUR));
+    EasyMock.replay(compactionStateManager);
+
+    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
+        compactionStateManager
+    );
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenSomeSegmentsHaveUnexpectedCompactionStateFingerprint()
+  {
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+
+    String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
+        DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
+    );
+
+    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.HOUR));
+    EasyMock.replay(compactionStateManager);
+
+    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
+        compactionStateManager
+    );
+  }
+
+  @Test
+  public void test_evaluate_noCompacationIfUnexpectedFingerprintHasExpectedCompactionState()
+  {
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    EasyMock.expect(compactionStateManager.getCompactionStateByFingerprint("wrongFingerprint")).andReturn(createCompactionStateWithGranularity(Granularities.DAY));
+    EasyMock.replay(compactionStateManager);
+
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        compactionStateManager
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNullCompactionStateManager()
+  {
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        "At least one segment has a mismatched fingerprint and needs compaction",
+        null
+    );
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNoFingerprintInMetadataStore()
+  {
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        "At least one segment has a mismatched fingerprint and needs compaction",
+        compactionStateManager
+    );
+  }
+
+  @Test
+  public void test_evaluate_noCompactionWhenAllSegmentsHaveExpectedCompactionStateFingerprint()
+  {
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+
+    String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
+        DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint(expectedFingerprint).build()
+    );
+
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        compactionStateManager
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void test_evaluate_needsCompactionWhenNonFingerprintedSegmentsFailChecksOnLastCompactionState()
+  {
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+
+    String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
+        DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint(null).lastCompactionState(createCompactionStateWithGranularity(Granularities.HOUR)).build()
+    );
+
+    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
+        compactionStateManager
+    );
+  }
+
+  @Test
+  public void test_evaluate_noCompactionWhenNonFingerprintedSegmentsPassChecksOnLastCompactionState()
+  {
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(compactionConfig);
+
+    String expectedFingerprint = CompactionState.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
+        DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint(null).lastCompactionState(createCompactionStateWithGranularity(Granularities.DAY)).build()
+    );
+
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        compactionStateManager
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  // ============================
+  // SKIPPED status tests
+  // ============================
+
+  @Test
+  public void test_evaluate_isSkippedWhenInputBytesExceedLimit()
+  {
+    // Two segments with 100MB each = 200MB total
+    // inputSegmentSizeBytes is 150MB, so should be skipped
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withInputSegmentSizeBytes(150_000_000L)
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    final CompactionState lastCompactionState = createCompactionStateWithGranularity(Granularities.HOUR);
+    List<DataSegment> segments = List.of(
+        DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build(),
+        DataSegment.builder(WIKI_SEGMENT_2).lastCompactionState(lastCompactionState).build()
+    );
+
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(segments, null),
+        compactionConfig,
+        compactionStateManager
+    );
+
+    Assert.assertFalse(status.isComplete());
+    Assert.assertTrue(status.isSkipped());
+    Assert.assertTrue(status.getReason().contains("'inputSegmentSize' exceeded"));
+    Assert.assertTrue(status.getReason().contains("200000000"));
+    Assert.assertTrue(status.getReason().contains("150000000"));
+  }
+
+  /**
+   * Verify that the evaluation indicates compaction is needed for the expected reason.
+   * Allows customization of the segments in the compaction candidate.
+   */
+  private void verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
+      CompactionCandidate candidate,
+      DataSourceCompactionConfig compactionConfig,
+      String expectedReason,
+      CompactionStateManager compactionStateManager
+  )
+  {
+    final CompactionStatus status = CompactionStatus.compute(
+        candidate,
+        compactionConfig,
+        compactionStateManager
+    );
+
+    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(expectedReason, status.getReason());
   }
 
   private void verifyCompactionStatusIsPendingBecause(
@@ -552,8 +824,9 @@ public class CompactionStatusTest
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
-        compactionConfig
-    );
+        compactionConfig,
+        compactionStateManager
+        );
 
     Assert.assertFalse(status.isComplete());
     Assert.assertEquals(expectedReason, status.getReason());
@@ -578,6 +851,22 @@ public class CompactionStatusTest
         null,
         null, null, null, null, partitionsSpec, indexSpec, null, null,
         null, null, null, null, null, null, null, null, null, null
+    );
+  }
+
+  /**
+   * Simple helper to create a CompactionState with only segmentGranularity set
+   */
+  private static CompactionState createCompactionStateWithGranularity(Granularity segmentGranularity)
+  {
+    return new CompactionState(
+        null,
+        null,
+        null,
+        null,
+        IndexSpec.getDefault(),
+        new UniformGranularitySpec(segmentGranularity, null, null, null),
+        null
     );
   }
 }

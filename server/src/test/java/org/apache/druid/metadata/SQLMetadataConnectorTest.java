@@ -76,6 +76,7 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getTasksTable());
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
+    tables.add(tablesConfig.getCompactionStatesTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
@@ -83,6 +84,7 @@ public class SQLMetadataConnectorTest
     connector.createTaskTables();
     connector.createAuditTable();
     connector.createSupervisorsTable();
+    connector.createCompactionStatesTable();
 
     connector.getDBI().withHandle(
         handle -> {
@@ -184,6 +186,23 @@ public class SQLMetadataConnectorTest
     Assert.assertFalse(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
+    ));
+  }
+
+  /**
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated
+   * in the segments table.
+   */
+  @Test
+  public void testAlterSegmentTableAddCompactionStateFingerprint()
+  {
+    connector.createSegmentTable();
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN COMPACTION_STATE_FINGERPRINT");
+
+    connector.alterSegmentTable();
+    Assert.assertTrue(connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "COMPACTION_STATE_FINGERPRINT"
     ));
   }
 
@@ -309,7 +328,8 @@ public class SQLMetadataConnectorTest
     tablesConfig = new MetadataStorageTablesConfig(
         "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
-        true
+        true,
+        null
     );
     connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
 
@@ -343,7 +363,8 @@ public class SQLMetadataConnectorTest
     tablesConfig = new MetadataStorageTablesConfig(
         "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
-        false
+        false,
+        null
     );
     connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
 
@@ -377,7 +398,8 @@ public class SQLMetadataConnectorTest
     tablesConfig = new MetadataStorageTablesConfig(
         "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
-        true
+        true,
+        null
     );
     connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
 
@@ -403,7 +425,8 @@ public class SQLMetadataConnectorTest
     tablesConfig = new MetadataStorageTablesConfig(
         "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
-        false
+        false,
+        null
     );
     connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
     final String segmentsTable = tablesConfig.getSegmentsTable();

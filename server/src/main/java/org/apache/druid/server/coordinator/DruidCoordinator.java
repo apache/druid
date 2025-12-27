@@ -53,6 +53,7 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
@@ -76,6 +77,7 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
+import org.apache.druid.server.coordinator.duty.KillUnreferencedCompactionState;
 import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchema;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkEternityTombstonesAsUnused;
@@ -144,6 +146,7 @@ public class DruidCoordinator
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
   private final CloneStatusManager cloneStatusManager;
+  private final CompactionStateManager compactionStateManager;
 
   private volatile boolean started = false;
 
@@ -190,7 +193,8 @@ public class DruidCoordinator
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker,
       CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer,
-      CloneStatusManager cloneStatusManager
+      CloneStatusManager cloneStatusManager,
+      CompactionStateManager compactionStateManager
   )
   {
     this.config = config;
@@ -215,6 +219,7 @@ public class DruidCoordinator
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
     this.cloneStatusManager = cloneStatusManager;
 
+    this.compactionStateManager = compactionStateManager;
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
 
@@ -609,6 +614,7 @@ public class DruidCoordinator
     duties.add(
         new KillCompactionConfig(killConfigs.compactionConfigs(), metadataManager.indexer(), metadataManager.configs())
     );
+    duties.add(new KillUnreferencedCompactionState(killConfigs.compactionStates(), metadataManager.compactionStates()));
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       duties.add(new KillUnreferencedSegmentSchema(killConfigs.segmentSchemas(), metadataManager.schemas()));
     }
@@ -619,7 +625,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(statusTracker, overlordClient);
+      return new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(

@@ -1162,11 +1162,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         Tasks.STORE_COMPACTION_STATE_KEY,
         Tasks.DEFAULT_STORE_COMPACTION_STATE
     );
-    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = addCompactionStateToSegments(
-        storeCompactionState,
-        toolbox,
-        ingestionSchema
+    final String compactionStateFingerprint = getContextValue(
+        Tasks.COMPACTION_STATE_FINGERPRINT_KEY,
+        null
     );
+
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
+        addCompactionStateToSegments(
+            storeCompactionState,
+            toolbox,
+            ingestionSchema
+        ).andThen(
+            addCompactionStateFingerprintToSegments(compactionStateFingerprint)
+        );
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {

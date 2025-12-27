@@ -785,13 +785,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final String sql;
     if (useSchemaCache) {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated, schema_fingerprint, num_rows"
+          "SELECT id, payload, created_date, used_status_last_updated, compaction_state_fingerprint, schema_fingerprint, num_rows"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
     } else {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated"
+          "SELECT id, payload, created_date, used_status_last_updated, compaction_state_fingerprint"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
@@ -1071,9 +1071,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           DateTimes.of(resultSet.getString(3)),
           SqlSegmentsMetadataQuery.nullAndEmptySafeDate(resultSet.getString(4)),
           true,
-          useSchemaCache ? resultSet.getString(5) : null,
-          useSchemaCache ? (Long) resultSet.getObject(6) : null,
-          null
+          useSchemaCache ? resultSet.getString(6) : null,
+          useSchemaCache ? (Long) resultSet.getObject(7) : null,
+          null,
+          resultSet.getString(5)
       );
     }
     catch (Throwable t) {

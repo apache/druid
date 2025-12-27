@@ -96,6 +96,7 @@ public class DruidCoordinatorConfig
     validateKillConfig(killConfigs.rules(), "rule");
     validateKillConfig(killConfigs.supervisors(), "supervisor");
     validateKillConfig(killConfigs.segmentSchemas(), "segmentSchema");
+    validateKillConfig(killConfigs.compactionStates(), "compactionState");
 
     // Validate config for killing unused segments
     final KillUnusedSegmentsConfig killUnusedConfig

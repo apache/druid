@@ -164,7 +164,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
   private void enableCompactionSupervisor()
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 10, null, true, null))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 10, null, true, null, null))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }

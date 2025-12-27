@@ -17,30 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.segment.metadata;
 
-/**
- * A config object for tests, use by overriding the specific getter methods and returning what you want
- */
-public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class CompactionStateManagerConfig
 {
-  public TestMetadataStorageTablesConfig()
+  /**
+   * The maximum number of fingerprints to keep in the in-memory cache.
+   */
+  @JsonProperty
+  private int cacheSize = 100;
+
+  /**
+   * The number of fingerprints to prewarm into the cache on startup.
+   */
+  @JsonProperty
+  private int prewarmFingerprintCount = 100;
+
+  public int getCacheSize()
   {
-    super(
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return cacheSize;
+  }
+
+  public int getPrewarmFingerprintCount()
+  {
+    return prewarmFingerprintCount;
   }
 }

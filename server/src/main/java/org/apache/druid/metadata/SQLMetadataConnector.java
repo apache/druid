@@ -355,6 +355,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columns.add("used BOOLEAN NOT NULL");
     columns.add("payload %2$s NOT NULL");
     columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
+    columns.add("compaction_state_fingerprint VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columns.add("schema_fingerprint VARCHAR(255)");
@@ -613,6 +614,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
 
     columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
+
+    columnNameTypes.put("compaction_state_fingerprint", "VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
@@ -1098,6 +1101,55 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
+   * Creates the compaction states table for storing fingerprinted compaction states
+   * <p>
+   * This table stores unique compaction states that are referenced by
+   * segments via fingerprints.
+   */
+  public void createCompactionStatesTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  datasource VARCHAR(255) NOT NULL,\n"
+                + "  fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  UNIQUE (fingerprint)\n"
+                + ")",
+                tableName, getSerialType(), getPayloadType()
+            )
+        )
+    );
+
+    createIndex(
+        tableName,
+        "IDX_%s_FINGERPRINT",
+        List.of("fingerprint")
+    );
+
+    createIndex(
+        tableName,
+        "IDX_%s_USED",
+        List.of("used", "used_status_last_updated")
+    );
+  }
+
+  @Override
+  public void createCompactionStatesTable()
+  {
+    if (config.get().isCreateTables()) {
+      createCompactionStatesTable(tablesConfigSupplier.get().getCompactionStatesTable());
+    }
+  }
+
+  /**
    * Get the Set of the index on given table
    *
    * @param tableName name of the table to fetch the index map
@@ -1243,12 +1295,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));
 
-    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
+    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet && tableHasColumn(segmentsTables, "compaction_state_fingerprint")) {
       // do nothing
     } else {
       throw new ISE(
           "Cannot start Druid as table[%s] has an incompatible schema."
-          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows] does not exist in table."
+          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows, compaction_state_fingerprint] does not exist in table."
           + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
           tablesConfigSupplier.get().getSegmentsTable()
       );
