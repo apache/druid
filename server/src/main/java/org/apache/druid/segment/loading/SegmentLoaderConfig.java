@@ -77,6 +77,9 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageLoadThreads")
   private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
+  @JsonProperty("virtualStorageFabricEvictImmediately")
+  private boolean virtualStorageFabricEvictImmediately = false;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -154,6 +157,11 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
+  public boolean isVirtualStorageFabricEvictImmediately()
+  {
+    return virtualStorageFabricEvictImmediately;
+  }
+
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();
@@ -195,6 +203,7 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", useVirtualStorageFabric=" + virtualStorage +
            ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageFabricEvictImmediately=" + virtualStorageFabricEvictImmediately +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
