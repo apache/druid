@@ -20,7 +20,7 @@
 package org.apache.druid.msq.shuffle.input;
 
 import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 

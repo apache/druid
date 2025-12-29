@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.segment.CursorFactory;

@@ -35,12 +35,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.msq.rpc.ControllerResource;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
@@ -239,9 +241,14 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
 
   /**
-   * Maximum number of threads to use for processing. Acts as a cap on the value of {@link WorkerContext#threadCount()}.
+   * Maximum number of threads to use for processing. Cap on the value of {@link ExecutionContext#threadCount()}.
    */
   public static final String CTX_MAX_THREADS = "maxThreads";
+
+  /**
+   * Maximum number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   */
+  public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -562,6 +569,11 @@ public class MultiStageQueryContext
   public static Integer getMaxThreads(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_MAX_THREADS);
+  }
+
+  public static Integer getSegmentLoadAheadCount(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_SEGMENT_LOAD_AHEAD_COUNT);
   }
 
   /**

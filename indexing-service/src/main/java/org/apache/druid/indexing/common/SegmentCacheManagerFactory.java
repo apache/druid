@@ -54,9 +54,10 @@ public class SegmentCacheManagerFactory
 
   public SegmentCacheManager manufacturate(File storageDir)
   {
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
-        Collections.singletonList(new StorageLocationConfig(storageDir, null, null))
-    );
+    final SegmentLoaderConfig loaderConfig =
+        new SegmentLoaderConfig()
+            .setLocations(Collections.singletonList(new StorageLocationConfig(storageDir, null, null)))
+            .setVirtualStorage(true, true);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,

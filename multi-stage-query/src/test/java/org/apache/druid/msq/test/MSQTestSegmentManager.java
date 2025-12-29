@@ -19,10 +19,8 @@
 
 package org.apache.druid.msq.test;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -56,13 +54,6 @@ public class MSQTestSegmentManager
   {
     synchronized (lock) {
       testGeneratedDataSegments.put(dataSegment.getId(), dataSegment);
-
-      try {
-        segmentCacheManager.load(dataSegment);
-      }
-      catch (SegmentLoadingException e) {
-        throw new ISE(e, "Unable to load segment [%s]", dataSegment.getId());
-      }
     }
   }
 

@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input;
+package org.apache.druid.msq.querykit;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.kernel.StagePartition;
 
 import javax.annotation.Nullable;
@@ -38,7 +39,7 @@ import javax.annotation.Nullable;
 public class ReadableInput
 {
   @Nullable
-  private final SegmentWithDescriptor segment;
+  private final SegmentReferenceHolder segment;
 
   @Nullable
   private final DataServerQueryHandler dataServerQuery;
@@ -53,7 +54,7 @@ public class ReadableInput
   private final StagePartition stagePartition;
 
   private ReadableInput(
-      @Nullable SegmentWithDescriptor segment,
+      @Nullable SegmentReferenceHolder segment,
       @Nullable DataServerQueryHandler dataServerQuery,
       @Nullable ReadableFrameChannel channel,
       @Nullable FrameReader frameReader,
@@ -76,7 +77,7 @@ public class ReadableInput
    *
    * @param segment the segment
    */
-  public static ReadableInput segment(final SegmentWithDescriptor segment)
+  public static ReadableInput segment(final SegmentReferenceHolder segment)
   {
     return new ReadableInput(Preconditions.checkNotNull(segment, "segment"), null, null, null, null);
   }
@@ -115,7 +116,7 @@ public class ReadableInput
   }
 
   /**
-   * Whether this input is a segment (from {@link #segment(SegmentWithDescriptor)}).
+   * Whether this input is a segment (from {@link #segment(SegmentReferenceHolder)}).
    */
   public boolean hasSegment()
   {
@@ -141,7 +142,7 @@ public class ReadableInput
   /**
    * The segment for this input. Only valid if {@link #hasSegment()}.
    */
-  public SegmentWithDescriptor getSegment()
+  public SegmentReferenceHolder getSegment()
   {
     checkIsSegment();
     return segment;

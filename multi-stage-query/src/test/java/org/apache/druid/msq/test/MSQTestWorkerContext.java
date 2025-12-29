@@ -41,7 +41,7 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;

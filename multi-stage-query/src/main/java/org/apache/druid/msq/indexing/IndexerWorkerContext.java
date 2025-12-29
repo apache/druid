@@ -30,13 +30,13 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.DataSegmentProviderImpl;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
-import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -46,6 +46,7 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.client.IndexerControllerClient;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -58,8 +59,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
@@ -75,7 +76,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final OverlordClient overlordClient;
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
-  private final TaskDataSegmentProvider dataSegmentProvider;
+  private final DataSegmentProvider dataSegmentProvider;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
@@ -94,7 +95,7 @@ public class IndexerWorkerContext implements WorkerContext
       final OverlordClient overlordClient,
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
-      final TaskDataSegmentProvider dataSegmentProvider,
+      final DataSegmentProvider dataSegmentProvider,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -140,9 +141,10 @@ public class IndexerWorkerContext implements WorkerContext
   )
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
-    final SegmentCacheManager segmentCacheManager =
+    final SegmentManager segmentManager = new SegmentManager(
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"));
+                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"))
+    );
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
@@ -159,7 +161,7 @@ public class IndexerWorkerContext implements WorkerContext
         overlordClient,
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
-        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager),
+        new DataSegmentProviderImpl(segmentManager, toolbox.getCoordinatorClient()),
         serviceClientFactory,
         memoryIntrospector,
         processingBuffersProvider,

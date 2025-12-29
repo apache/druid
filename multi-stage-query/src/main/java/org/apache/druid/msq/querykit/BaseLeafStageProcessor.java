@@ -20,8 +20,8 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
@@ -31,24 +31,24 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.InputSlices;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -60,7 +60,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -68,7 +67,7 @@ import java.util.function.Function;
  * other stages. The term "leaf" represents the fact that they are capable of being leaves in the query tree. However,
  * they do not *need* to be leaves. They can read from prior stages as well.
  */
-public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
+public abstract class BaseLeafStageProcessor extends BasicStageProcessor
 {
   private final Query<?> query;
 
@@ -78,32 +77,24 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable Object extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  ) throws IOException
+  public ListenableFuture<Long> execute(ExecutionContext context)
   {
+    final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+    final List<InputSlice> inputSlices = context.workOrder().getInputs();
+    final StageDefinition stageDefinition = context.workOrder().getStageDefinition();
+    final FrameContext frameContext = context.frameContext();
+
     // BaseLeafStageProcessor is used for native Druid queries, where the following input cases can happen:
     //   1) Union datasources: N nonbroadcast inputs, which are treated as one big input
     //   2) Join datasources: one nonbroadcast input, N broadcast inputs
     //   3) All other datasources: single input
 
-    final int totalProcessors = InputSlices.getNumNonBroadcastReadableInputs(
-        inputSlices,
-        inputSliceReader,
-        stageDefinition.getBroadcastInputNumbers()
-    );
+    // No need to close this until startLoadaheadIfNeeded() is called.
+    final ReadableInputQueue baseInputQueue = makeBaseInputQueue(context.workOrder().getInputs(), context);
+    final int totalProcessors = baseInputQueue.remaining();
 
     if (totalProcessors == 0) {
-      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
+      return stageRunner.run(new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none()));
     }
 
     final int outstandingProcessors;
@@ -115,7 +106,7 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
       // overload by running only a single processor at once.
       outstandingProcessors = 1;
     } else {
-      outstandingProcessors = Math.min(totalProcessors, maxOutstandingProcessors);
+      outstandingProcessors = Math.min(totalProcessors, context.threadCount());
     }
 
     final Queue<FrameWriterFactory> frameWriterFactoryQueue = new ArrayDeque<>(outstandingProcessors);
@@ -123,7 +114,13 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
     final List<OutputChannel> outputChannels = new ArrayList<>(outstandingProcessors);
 
     for (int i = 0; i < outstandingProcessors; i++) {
-      final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
+      final OutputChannel outputChannel;
+      try {
+        outputChannel = stageRunner.workOutputChannelFactory().openChannel(0 /* Partition number doesn't matter */);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
       outputChannels.add(outputChannel);
       channelQueue.add(outputChannel.getWritableChannel());
       frameWriterFactoryQueue.add(
@@ -135,30 +132,20 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
     }
 
     // SegmentMapFn processor, if needed. May be null.
-    final FrameProcessor<SegmentMapFunction> segmentMapFnProcessor =
-        makeSegmentMapFnProcessor(
-            stageDefinition,
-            inputSlices,
-            inputSliceReader,
-            frameContext,
-            counters,
-            warningPublisher
-        );
+    final FrameProcessor<SegmentMapFunction> segmentMapFnProcessor = makeSegmentMapFnProcessor(context);
 
     // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
     final Function<List<SegmentMapFunction>, ProcessorManager<Object, Long>> processorManagerFn = segmentMapFnList -> {
-      final SegmentMapFunction segmentMapFunction =
-          CollectionUtils.getOnlyElement(segmentMapFnList, throwable -> DruidException.defensive("Only one segment map function expected"));
+      final SegmentMapFunction segmentMapFunction = CollectionUtils.getOnlyElement(
+          segmentMapFnList,
+          fns -> DruidException.defensive("Only one segment map function expected, got[%s]", fns)
+      );
       return createBaseLeafProcessorManagerWithHandoff(
-          stageDefinition,
-          inputSlices,
-          inputSliceReader,
-          counters,
-          warningPublisher,
+          context,
+          baseInputQueue,
           segmentMapFunction,
           frameWriterFactoryQueue,
-          channelQueue,
-          frameContext
+          channelQueue
       );
     };
 
@@ -175,39 +162,32 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
       );
     }
 
-    //noinspection unchecked,rawtypes
-    return new ProcessorsAndChannels<>(processorManager, OutputChannels.wrap(outputChannels));
+    //noinspection rawtypes,unchecked
+    return stageRunner.run(
+        new ProcessorsAndChannels<>(
+            processorManager,
+            OutputChannels.wrap(outputChannels)
+        )
+    );
   }
 
   private ProcessorManager<Object, Long> createBaseLeafProcessorManagerWithHandoff(
-      final StageDefinition stageDefinition,
-      final List<InputSlice> inputSlices,
-      final InputSliceReader inputSliceReader,
-      final CounterTracker counters,
-      final Consumer<Throwable> warningPublisher,
+      final ExecutionContext context,
+      final ReadableInputQueue baseInputQueue,
       final SegmentMapFunction segmentMapFunction,
       final Queue<FrameWriterFactory> frameWriterFactoryQueue,
-      final Queue<WritableFrameChannel> channelQueue,
-      final FrameContext frameContext
+      final Queue<WritableFrameChannel> channelQueue
   )
   {
     final BaseLeafStageProcessor factory = this;
-    // Read all base inputs in separate processors, one per processor.
-    final Iterable<ReadableInput> processorBaseInputs = readBaseInputs(
-        stageDefinition,
-        inputSlices,
-        inputSliceReader,
-        counters,
-        warningPublisher
-    );
 
     return new ChainedProcessorManager<>(
         new BaseLeafFrameProcessorManager(
-            processorBaseInputs,
+            baseInputQueue,
             segmentMapFunction,
             frameWriterFactoryQueue,
             channelQueue,
-            frameContext,
+            context.frameContext(),
             factory
         ),
         objects -> {
@@ -216,19 +196,19 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
           }
           List<InputSlice> handedOffSegments = new ArrayList<>();
           for (Object o : objects) {
-            if (o != null && o instanceof SegmentsInputSlice) {
+            if (o instanceof SegmentsInputSlice) {
               SegmentsInputSlice slice = (SegmentsInputSlice) o;
               handedOffSegments.add(slice);
             }
           }
 
-          // Fetch any handed off segments from deep storage.
+          // Fetch any handed off segments from deep storage and try again.
           return new BaseLeafFrameProcessorManager(
-              readBaseInputs(stageDefinition, handedOffSegments, inputSliceReader, counters, warningPublisher),
+              makeBaseInputQueue(handedOffSegments, context),
               segmentMapFunction,
               frameWriterFactoryQueue,
               channelQueue,
-              frameContext,
+              context.frameContext(),
               factory
           );
         }
@@ -244,33 +224,42 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
   );
 
   /**
-   * Read base inputs, where "base" is meant in the same sense as in
-   * {@link ExecutionVertex}: the primary datasource that drives query processing.
+   * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
+   * that drives query processing.
+   *
+   * The returned {@link ReadableInputQueue} does not need to be closed, because it has not started loading any
+   * segments. Once {@link ReadableInputQueue#nextInput()} or {@link ReadableInputQueue#startLoadaheadIfNeeded()} is called,
+   * the queue must be closed when done being used.
    */
-  private static Iterable<ReadableInput> readBaseInputs(
-      final StageDefinition stageDef,
+  private static ReadableInputQueue makeBaseInputQueue(
       final List<InputSlice> inputSlices,
-      final InputSliceReader inputSliceReader,
-      final CounterTracker counters,
-      final Consumer<Throwable> warningPublisher
+      final ExecutionContext context
   )
   {
-    final List<ReadableInputs> inputss = new ArrayList<>();
+    final StageDefinition stageDef = context.workOrder().getStageDefinition();
+    final List<PhysicalInputSlice> physicalInputSlices = new ArrayList<>();
 
     for (int inputNumber = 0; inputNumber < inputSlices.size(); inputNumber++) {
       if (!stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
-        final ReadableInputs inputs =
-            inputSliceReader.attach(
+        physicalInputSlices.add(
+            context.inputSliceReader().attach(
                 inputNumber,
                 inputSlices.get(inputNumber),
-                counters,
-                warningPublisher
-            );
-        inputss.add(inputs);
+                context.counters(),
+                context::onWarning
+            )
+        );
       }
     }
 
-    return Iterables.concat(inputss);
+    final Integer segmentLoadAheadCount =
+        MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
+    return new ReadableInputQueue(
+        stageDef.getId().getQueryId(),
+        new StandardPartitionReader(context),
+        physicalInputSlices,
+        segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
+    );
   }
 
   /**
@@ -279,29 +268,35 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
    *
    * Broadcast inputs that are not type {@link StageInputSlice} are ignored.
    */
-  private static Int2ObjectMap<ReadableInput> readBroadcastInputsFromEarlierStages(
-      final StageDefinition stageDef,
-      final List<InputSlice> inputSlices,
-      final InputSliceReader inputSliceReader,
-      final CounterTracker counterTracker,
-      final Consumer<Throwable> warningPublisher
-  )
+  private static Int2ObjectMap<ReadableInput> readBroadcastInputsFromEarlierStages(ExecutionContext context)
   {
+    final StageDefinition stageDef = context.workOrder().getStageDefinition();
+    final List<InputSlice> inputSlices = context.workOrder().getInputs();
     final Int2ObjectMap<ReadableInput> broadcastInputs = new Int2ObjectAVLTreeMap<>();
+    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
 
     try {
       for (int inputNumber = 0; inputNumber < inputSlices.size(); inputNumber++) {
         if (stageDef.getBroadcastInputNumbers().contains(inputNumber)
             && inputSlices.get(inputNumber) instanceof StageInputSlice) {
           final StageInputSlice slice = (StageInputSlice) inputSlices.get(inputNumber);
-          final ReadableInputs readableInputs =
-              inputSliceReader.attach(inputNumber, slice, counterTracker, warningPublisher);
 
           // We know ReadableInput::getChannel is OK, because StageInputSlice always uses channels (never segments).
           final ReadableFrameChannel channel = ReadableConcatFrameChannel.open(
-              Iterators.transform(readableInputs.iterator(), ReadableInput::getChannel)
+              Iterators.transform(
+                  slice.getPartitions().iterator(),
+                  partition -> {
+                    try {
+                      return partitionReader.openChannel(partition);
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+              )
           );
-          broadcastInputs.put(inputNumber, ReadableInput.channel(channel, readableInputs.frameReader(), null));
+          final FrameReader frameReader = partitionReader.frameReader(slice.getStageNumber());
+          broadcastInputs.put(inputNumber, ReadableInput.channel(channel, frameReader, null));
         }
       }
 
@@ -325,30 +320,16 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
    * processors being run. Returns null if a dedicated segmentMapFn processor is unnecessary.
    */
   @Nullable
-  private FrameProcessor<SegmentMapFunction> makeSegmentMapFnProcessor(
-      StageDefinition stageDefinition,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      FrameContext frameContext,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  )
+  private FrameProcessor<SegmentMapFunction> makeSegmentMapFnProcessor(ExecutionContext context)
   {
     // Read broadcast data once, so it can be reused across all processors in the form of a segmentMapFn.
     // No explicit cleanup: let the garbage collector handle it.
-    final Int2ObjectMap<ReadableInput> broadcastInputs =
-        readBroadcastInputsFromEarlierStages(
-            stageDefinition,
-            inputSlices,
-            inputSliceReader,
-            counters,
-            warningPublisher
-        );
+    final Int2ObjectMap<ReadableInput> broadcastInputs = readBroadcastInputsFromEarlierStages(context);
 
     if (broadcastInputs.isEmpty()) {
       if (ExecutionVertex.of(query).isSegmentMapFunctionExpensive()) {
         // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
-        return new SimpleSegmentMapFnProcessor(query, frameContext.policyEnforcer());
+        return new SimpleSegmentMapFnProcessor(query, context.frameContext().policyEnforcer());
       } else {
         // Non-joins are expected to have cheap-to-compute segmentMapFn. Do the computation in the factory thread,
         // without offloading to a processor.
@@ -357,9 +338,9 @@ public abstract class BaseLeafStageProcessor extends BasicStandardStageProcessor
     } else {
       return BroadcastJoinSegmentMapFnProcessor.create(
           query,
-          frameContext.policyEnforcer(),
+          context.frameContext().policyEnforcer(),
           broadcastInputs,
-          frameContext.memoryParameters().getBroadcastBufferMemory()
+          context.frameContext().memoryParameters().getBroadcastBufferMemory()
       );
     }
   }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.input.table;
 
-import com.google.common.collect.Iterators;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -28,12 +27,12 @@ import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.timeline.SegmentId;
 
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -54,15 +53,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   }
 
   @Override
-  public int numReadableInputs(InputSlice slice)
-  {
-    final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
-    final int servedSegmentsSize = segmentsInputSlice.getServedSegments() == null ? 0 : segmentsInputSlice.getServedSegments().size();
-    return segmentsInputSlice.getDescriptors().size() + servedSegmentsSize;
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
@@ -70,68 +61,34 @@ public class SegmentsInputSliceReader implements InputSliceReader
   )
   {
     final SegmentsInputSlice segmentsInputSlice = (SegmentsInputSlice) slice;
+    final ChannelCounters inputCounters = counters.channel(CounterNames.inputChannel(inputNumber))
+                                                  .setTotalFiles(slice.fileCount());
+    final List<LoadableSegment> loadableSegments = new ArrayList<>();
+    final List<DataServerQueryHandler> queryableServers = new ArrayList<>();
 
-    Iterator<ReadableInput> segmentIterator =
-        Iterators.transform(
-            dataSegmentIterator(
-                segmentsInputSlice.getDataSource(),
-                segmentsInputSlice.getDescriptors(),
-                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-            ), ReadableInput::segment);
-
-    if (segmentsInputSlice.getServedSegments() == null) {
-      return ReadableInputs.segments(() -> segmentIterator);
-    } else {
-      Iterator<ReadableInput> dataServerIterator =
-          Iterators.transform(
-              dataServerIterator(
-                  inputNumber,
-                  segmentsInputSlice.getDataSource(),
-                  segmentsInputSlice.getServedSegments(),
-                  counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-              ), ReadableInput::dataServerQuery);
-
-      return ReadableInputs.segments(() -> Iterators.concat(dataServerIterator, segmentIterator));
+    for (final RichSegmentDescriptor descriptor : segmentsInputSlice.getDescriptors()) {
+      final SegmentId segmentId = SegmentId.of(
+          segmentsInputSlice.getDataSource(),
+          descriptor.getFullInterval(),
+          descriptor.getVersion(),
+          descriptor.getPartitionNumber()
+      );
+      loadableSegments.add(dataSegmentProvider.fetchSegment(segmentId, descriptor, inputCounters, isReindex));
     }
-  }
 
-  private Iterator<SegmentWithDescriptor> dataSegmentIterator(
-      final String dataSource,
-      final List<RichSegmentDescriptor> descriptors,
-      final ChannelCounters channelCounters
-  )
-  {
-    return descriptors.stream().map(
-        descriptor -> {
-          final SegmentId segmentId = SegmentId.of(
-              dataSource,
-              descriptor.getFullInterval(),
-              descriptor.getVersion(),
-              descriptor.getPartitionNumber()
-          );
+    if (segmentsInputSlice.getQueryableServers() != null) {
+      for (final DataServerRequestDescriptor queryableServer : segmentsInputSlice.getQueryableServers()) {
+        queryableServers.add(
+            dataServerQueryHandlerFactory.createDataServerQueryHandler(
+                inputNumber,
+                segmentsInputSlice.getDataSource(),
+                inputCounters,
+                queryableServer
+            )
+        );
+      }
+    }
 
-          return new SegmentWithDescriptor(
-              dataSegmentProvider.fetchSegment(segmentId, channelCounters, isReindex),
-              descriptor
-          );
-        }
-    ).iterator();
-  }
-
-  private Iterator<DataServerQueryHandler> dataServerIterator(
-      final int inputNumber,
-      final String dataSource,
-      final List<DataServerRequestDescriptor> servedSegments,
-      final ChannelCounters channelCounters
-  )
-  {
-    return servedSegments.stream().map(
-        dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createDataServerQueryHandler(
-            inputNumber,
-            dataSource,
-            channelCounters,
-            dataServerRequestDescriptor
-        )
-    ).iterator();
+    return new PhysicalInputSlice(ReadablePartitions.empty(), loadableSegments, queryableServers);
   }
 }

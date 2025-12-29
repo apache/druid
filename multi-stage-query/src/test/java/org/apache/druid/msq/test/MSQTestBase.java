@@ -38,8 +38,7 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -76,6 +75,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -91,7 +91,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -108,8 +108,9 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
@@ -122,6 +123,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -137,12 +139,13 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -208,7 +211,6 @@ import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -238,7 +240,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
@@ -438,19 +439,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // SqlTestFramework to pull items from that are then used to create another
   // injector that has the MSQ dependencies. This allows the test to create a
   // "shadow" statement factory that is used for tests. It works... kinda.
-  //
-  // Better would be to sort through the Guice stuff and move it into the
-  // configureGuice() method above: use the SQL test framework injector so
-  // that everything is coordinated. Use the planner factory provided by that
-  // framework.
-  //
-  // Leaving well enough alone for now because any change should be done by
-  // someone familiar with the rather complex setup code below.
-  //
-  // One brute-force attempt ran afoul of circular dependencies: the SQL engine
-  // is created in the main injector, but it depends on the SegmentCacheManagerFactory
-  // which depends on the object mapper that the injector will provide, once it
-  // is built, but has not yet been build while we build the SQL engine.
   @BeforeEach
   public void setUp2() throws Exception
   {
@@ -504,7 +492,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(SegmentWriteOutMediumFactory.class)
                 .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(this::newTempFolder, segmentId));
+                .toInstance(
+                    (segmentId, descriptor, channelCounters, isReindex) ->
+                        getLoadableSegment(this::newTempFolder, segmentId, descriptor, channelCounters)
+                );
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
@@ -644,6 +635,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
+  // Better would be to sort through the Guice stuff and move it into the
+  // configureGuice() method above: use the SQL test framework injector so
+  // that everything is coordinated. Use the planner factory provided by that
+  // framework.
+  //
+  // Leaving well enough alone for now because any change should be done by
+  // someone familiar with the rather complex setup code below.
+  //
+  // One brute-force attempt ran afoul of circular dependencies: the SQL engine
+  // is created in the main injector, but it depends on the SegmentCacheManagerFactory
+  // which depends on the object mapper that the injector will provide, once it
+  // is built, but has not yet been build while we build the SQL engine.
+  //
 
   protected CatalogResolver createMockCatalogResolver()
   {
@@ -671,9 +675,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
   @Nonnull
-  protected Supplier<ResourceHolder<CompleteSegment>> getSupplierForSegment(
+  protected LoadableSegment getLoadableSegment(
       Function<String, File> tempFolderProducer,
-      SegmentId segmentId
+      SegmentId segmentId,
+      SegmentDescriptor descriptor,
+      ChannelCounters counters
   )
   {
     if (segmentManager.getSegment(segmentId) == null) {
@@ -751,6 +757,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         {
           if (CursorFactory.class.equals(clazz)) {
             return (T) new QueryableIndexCursorFactory(index);
+          } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+            return (T) new QueryableIndexPhysicalSegmentInspector(index);
           } else if (QueryableIndex.class.equals(clazz)) {
             return (T) index;
           }
@@ -764,14 +772,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       };
       segmentManager.addSegment(segment);
     }
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource(segmentId.getDataSource())
-                                         .interval(segmentId.getInterval())
-                                         .version(segmentId.getVersion())
-                                         .shardSpec(new LinearShardSpec(0))
-                                         .size(0)
-                                         .build();
-    return () -> ReferenceCountingResourceHolder.fromCloseable(new CompleteSegment(dataSegment, segmentManager.getSegment(segmentId)));
+    return LoadableSegment.forSegment(descriptor, counters, null, segmentManager.getSegment(segmentId));
   }
 
   public SelectTester testSelectQuery()
@@ -1371,7 +1372,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          segmentCacheManager.load(dataSegment);
+          FutureUtils.getUnchecked(segmentCacheManager.acquireSegment(dataSegment).getSegmentFuture(), false);
           final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
           final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 

@@ -28,8 +28,6 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
@@ -47,12 +45,13 @@ import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -71,7 +70,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -151,14 +149,15 @@ public class CalciteMSQTestsHelper
       }
 
       @Override
-      public Supplier<ResourceHolder<CompleteSegment>> fetchSegment(
+      public LoadableSegment fetchSegment(
           SegmentId segmentId,
-          ChannelCounters channelCounters,
+          SegmentDescriptor descriptor,
+          ChannelCounters inputCounters,
           boolean isReindex
       )
       {
-        CompleteSegment a = walker.getSegment(segmentId);
-        return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());
+        final SpecificSegmentsQuerySegmentWalker.CompleteSegment a = walker.getSegment(segmentId);
+        return LoadableSegment.forSegment(descriptor, inputCounters, null, a.segment);
       }
     }
 

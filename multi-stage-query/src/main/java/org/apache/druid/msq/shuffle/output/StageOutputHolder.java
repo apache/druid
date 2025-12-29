@@ -22,6 +22,7 @@ package org.apache.druid.msq.shuffle.output;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -82,10 +83,11 @@ public class StageOutputHolder implements Closeable
   public void setChannel(final ReadableFrameChannel channel)
   {
     if (!channelFuture.set(channel)) {
-      if (FutureUtils.getUncheckedImmediately(channelFuture) == null) {
-        throw new ISE("Closed");
+      final ReadableFrameChannel existingChannel = FutureUtils.getUncheckedImmediately(channelFuture);
+      if (existingChannel == null) {
+        throw DruidException.defensive("Closed, cannot set to[%s]");
       } else {
-        throw new ISE("Channel already set");
+        throw DruidException.defensive("Channel already set to[%s], cannot set to[%s]", existingChannel, channel);
       }
     }
   }

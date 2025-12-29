@@ -30,25 +30,27 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
@@ -56,6 +58,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -73,26 +76,24 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
+class DataSegmentProviderImplTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "foo";
   private static final int NUM_SEGMENTS = 10;
   private static final int THREADS = 8;
-
-  private List<DataSegment> segments;
-  private File cacheDir;
-  private SegmentLocalCacheManager cacheManager;
-  private TaskDataSegmentProvider provider;
-  private ListeningExecutorService exec;
-
   private static File SEGMENT_ZIP_FILE;
-
   @TempDir
   public Path tempDir;
+  private List<DataSegment> segments;
+  private File cacheDir;
+  private DataSegmentProviderImpl provider;
+  private ListeningExecutorService exec;
 
   @BeforeAll
   public static void setupStatic(@TempDir Path tempDir) throws IOException
@@ -151,21 +152,23 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
     }
 
     cacheDir = tempDir.resolve("cache").toFile();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
-        ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
-    );
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+        .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
+        .setVirtualStorage(true, true);
     final List<StorageLocation> locations = loaderConfig.toStorageLocations();
-    cacheManager = new SegmentLocalCacheManager(
-        locations,
-        loaderConfig,
-        new LeastBytesUsedStorageLocationSelectorStrategy(locations),
-        TestIndex.INDEX_IO,
-        jsonMapper
+    final SegmentManager segmentManager = new SegmentManager(
+        new SegmentLocalCacheManager(
+            locations,
+            loaderConfig,
+            new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+            TestIndex.INDEX_IO,
+            jsonMapper
+        )
     );
 
-    provider = new TaskDataSegmentProvider(
-        new TestCoordinatorClientImpl(),
-        cacheManager
+    provider = new DataSegmentProviderImpl(
+        segmentManager,
+        new TestCoordinatorClientImpl()
     );
 
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(THREADS, getClass().getSimpleName() + "-%s"));
@@ -189,20 +192,36 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
     for (int i = 0; i < iterations; i++) {
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
-      final ListenableFuture<Supplier<ResourceHolder<CompleteSegment>>> f =
-          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
+      final ListenableFuture<LoadableSegment> f =
+          exec.submit(() -> provider.fetchSegment(segment.getId(), segment.toDescriptor(), null, false));
 
       testFutures.add(
           FutureUtils.transform(
-              f,
-              holderSupplier -> {
-                final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
-                Assertions.assertEquals(segment.getId(), holder.get().getSegment().getId());
-                PhysicalSegmentInspector gadget = holder.get().getSegment().as(PhysicalSegmentInspector.class);
-                Assertions.assertNotNull(gadget);
-                Assertions.assertEquals(1209, gadget.getNumRows());
-                holder.close();
-                return true;
+              FutureUtils.transformAsync(
+                  f,
+                  loadableSegment -> {
+                    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+                    return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
+                  }
+              ),
+              pair -> {
+                final AcquireSegmentResult acquireResult = pair.rhs;
+                final Optional<Segment> acquiredSegmentOptional =
+                    acquireResult.getReferenceProvider().acquireReference();
+                Assertions.assertTrue(acquiredSegmentOptional.isPresent());
+
+                try (final AcquireSegmentAction ignored = pair.lhs; // Close action after this try block
+                     final Segment acquiredSegment = acquiredSegmentOptional.get()) {
+                  Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  Assertions.assertNotNull(gadget);
+                  Assertions.assertEquals(1209, gadget.getNumRows());
+                  acquiredSegment.close();
+                  return true;
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
               }
           )
       );
@@ -214,24 +233,11 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
       Assertions.assertTrue(FutureUtils.getUnchecked(testFuture, false), "Test iteration #" + i);
     }
 
-    // Cache dir should exist, but be (mostly) empty, since we've closed all holders.
+    // Cache dir should exist, but be (mostly) empty, since we've closed all segments.
     Assertions.assertTrue(cacheDir.exists());
-    Assertions.assertEquals(List.of("__drop"), List.of(cacheDir.list()));
-  }
-
-  private class TestCoordinatorClientImpl extends NoopCoordinatorClient
-  {
-    @Override
-    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
-    {
-      for (final DataSegment segment : segments) {
-        if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {
-          return Futures.immediateFuture(segment);
-        }
-      }
-
-      return Futures.immediateFailedFuture(new ISE("No such segment[%s] for dataSource[%s]", segmentId, dataSource));
-    }
+    Assertions.assertEquals(List.of("info_dir", "__drop"), Arrays.asList(cacheDir.list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "__drop").list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "info_dir").list()));
   }
 
   @JsonTypeName("test")
@@ -261,6 +267,21 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
       catch (IOException e) {
         throw new SegmentLoadingException(e, "Failed to load segment in location [%s]", destDir);
       }
+    }
+  }
+
+  private class TestCoordinatorClientImpl extends NoopCoordinatorClient
+  {
+    @Override
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
+    {
+      for (final DataSegment segment : segments) {
+        if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {
+          return Futures.immediateFuture(segment);
+        }
+      }
+
+      return Futures.immediateFailedFuture(new ISE("No such segment[%s] for dataSource[%s]", segmentId, dataSource));
     }
   }
 }

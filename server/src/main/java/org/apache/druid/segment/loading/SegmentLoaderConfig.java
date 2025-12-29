@@ -162,13 +162,17 @@ public class SegmentLoaderConfig
     return virtualStorageFabricEvictImmediately;
   }
 
-  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
-    return retVal;
+    this.locations = Lists.newArrayList(locations);
+    return this;
+  }
+
+  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage, boolean virtualStorageFabricEvictImmediately)
+  {
+    this.virtualStorage = virtualStorage;
+    this.virtualStorageFabricEvictImmediately = virtualStorageFabricEvictImmediately;
+    return this;
   }
 
   /**

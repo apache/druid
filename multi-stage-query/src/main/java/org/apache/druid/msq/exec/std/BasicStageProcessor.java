@@ -20,7 +20,7 @@
 package org.apache.druid.msq.exec.std;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.ExtraInfoHolder;
 import org.apache.druid.msq.exec.StageProcessor;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
@@ -29,9 +29,9 @@ import javax.annotation.Nullable;
 
 /**
  * Basic abstract {@link StageProcessor} that yields workers that do not require extra info and that
- * ignore the return values of their processors.
+ * sum up the return values of their processors.
  */
-public abstract class BasicStandardStageProcessor extends StandardStageProcessor<Object, Long, Object>
+public abstract class BasicStageProcessor implements StageProcessor<Long, Object>
 {
   @Override
   public TypeReference<Long> getResultTypeReference()
@@ -49,7 +49,7 @@ public abstract class BasicStandardStageProcessor extends StandardStageProcessor
   public ExtraInfoHolder makeExtraInfoHolder(@Nullable Object extra)
   {
     if (extra != null) {
-      throw new ISE("Expected null 'extra'");
+      throw DruidException.defensive("Expected null 'extra'");
     }
 
     return NilExtraInfoHolder.instance();

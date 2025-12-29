@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.input.external;
 
-import com.google.common.collect.Iterators;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -31,7 +29,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -39,13 +37,12 @@ import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.CountableInputSourceReader;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
+import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.NilInputSource;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
-import org.apache.druid.segment.CompleteSegment;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -54,8 +51,8 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -66,6 +63,7 @@ import java.util.stream.Collectors;
 public class ExternalInputSliceReader implements InputSliceReader
 {
   public static final String SEGMENT_ID = "__external";
+  public static final SegmentDescriptor SEGMENT_DESCRIPTOR = SegmentId.dummy(SEGMENT_ID).toDescriptor();
   private final File temporaryDirectory;
 
   public ExternalInputSliceReader(final File temporaryDirectory)
@@ -73,15 +71,13 @@ public class ExternalInputSliceReader implements InputSliceReader
     this.temporaryDirectory = temporaryDirectory;
   }
 
-  @Override
-  public int numReadableInputs(InputSlice slice)
+  public static boolean isFileBasedInputSource(final InputSource inputSource)
   {
-    final ExternalInputSlice externalInputSlice = (ExternalInputSlice) slice;
-    return externalInputSlice.getInputSources().size();
+    return !(inputSource instanceof NilInputSource) && !(inputSource instanceof InlineInputSource);
   }
 
   @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
@@ -89,25 +85,41 @@ public class ExternalInputSliceReader implements InputSliceReader
   )
   {
     final ExternalInputSlice externalInputSlice = (ExternalInputSlice) slice;
+    final ChannelCounters inputCounters = counters.channel(CounterNames.inputChannel(inputNumber))
+                                                  .setTotalFiles(slice.fileCount());
+    final List<LoadableSegment> loadableSegments = new ArrayList<>();
 
-    return ReadableInputs.segments(
-        () -> Iterators.transform(
-            inputSourceSegmentIterator(
-                externalInputSlice.getInputSources(),
-                externalInputSlice.getInputFormat(),
-                externalInputSlice.getSignature(),
-                new File(temporaryDirectory, String.valueOf(inputNumber)),
-                counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount()),
-                counters.warnings(),
-                warningPublisher
-            ),
-            ReadableInput::segment
-        )
-    );
+    for (final InputSource inputSource : externalInputSlice.getInputSources()) {
+      // The LoadableSegment generated here does not acquire a real hold, and ends up loading the external data in a
+      // processing thread (when the cursor is created). Ideally, this would be better integrated with the virtual
+      // storage system, giving us storage holds and the ability to load data outside of a processing thread.
+      final Segment segment = makeExternalSegment(
+          inputSource,
+          externalInputSlice.getInputFormat(),
+          externalInputSlice.getSignature(),
+          new File(temporaryDirectory, String.valueOf(inputNumber)),
+          inputCounters,
+          counters.warnings(),
+          warningPublisher
+      );
+      loadableSegments.add(
+          LoadableSegment.forSegment(
+              SEGMENT_DESCRIPTOR,
+              null,
+              StringUtils.format("external[%s]", inputSource.toString()),
+              segment
+          )
+      );
+    }
+
+    return new PhysicalInputSlice(ReadablePartitions.empty(), loadableSegments, Collections.emptyList());
   }
 
-  private static Iterator<SegmentWithDescriptor> inputSourceSegmentIterator(
-      final List<InputSource> inputSources,
+  /**
+   * Creates a lazy segment that fetches external data when a cursor is created.
+   */
+  private Segment makeExternalSegment(
+      final InputSource inputSource,
       final InputFormat inputFormat,
       final RowSignature signature,
       final File temporaryDirectory,
@@ -130,49 +142,27 @@ public class ExternalInputSliceReader implements InputSliceReader
         ColumnsFilter.all()
     );
 
-    try {
-      FileUtils.mkdirp(temporaryDirectory);
+    final InputSourceReader reader;
+    final boolean incrementCounters = isFileBasedInputSource(inputSource);
+
+    final InputStats inputStats = new SimpleRowIngestionMeters();
+    if (incrementCounters) {
+      reader = new CountableInputSourceReader(
+          inputSource.reader(schema, inputFormat, temporaryDirectory),
+          channelCounters
+      );
+    } else {
+      reader = inputSource.reader(schema, inputFormat, temporaryDirectory);
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
 
-    return Iterators.transform(
-        inputSources.iterator(),
-        inputSource -> {
-          final InputSourceReader reader;
-          final boolean incrementCounters = isFileBasedInputSource(inputSource);
-
-          final InputStats inputStats = new SimpleRowIngestionMeters();
-          if (incrementCounters) {
-            reader = new CountableInputSourceReader(
-                inputSource.reader(schema, inputFormat, temporaryDirectory),
-                channelCounters
-            );
-          } else {
-            reader = inputSource.reader(schema, inputFormat, temporaryDirectory);
-          }
-
-          final SegmentId segmentId = SegmentId.dummy(SEGMENT_ID);
-          final Segment segment = new ExternalSegment(
-              inputSource,
-              reader,
-              inputStats,
-              warningCounters,
-              warningPublisher,
-              channelCounters,
-              signature
-          );
-          return new SegmentWithDescriptor(
-              () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
-              new RichSegmentDescriptor(segmentId.toDescriptor(), null)
-          );
-        }
+    return new ExternalSegment(
+        inputSource,
+        reader,
+        inputStats,
+        warningCounters,
+        warningPublisher,
+        channelCounters,
+        signature
     );
-  }
-
-  public static boolean isFileBasedInputSource(final InputSource inputSource)
-  {
-    return !(inputSource instanceof NilInputSource) && !(inputSource instanceof InlineInputSource);
   }
 }
