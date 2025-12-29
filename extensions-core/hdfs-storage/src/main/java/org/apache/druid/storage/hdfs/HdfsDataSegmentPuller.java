@@ -235,26 +235,22 @@ public class HdfsDataSegmentPuller implements URIDataPuller
         catch (Exception e) {
           throw new RuntimeException(e);
         }
-      } else if (CompressionUtils.isZip(path.getName())) {
+      }
 
-        // --------    zip     ---------
-
-        final FileUtils.FileCopyResult result = CompressionUtils.unzip(
-            new ByteSource()
-            {
-              @Override
-              public InputStream openStream() throws IOException
-              {
-                return getInputStream(path);
-              }
-            }, outDir, shouldRetryPredicate(), false
+      // Try to detect format from file extension and decompress
+      final CompressionUtils.Format format = CompressionUtils.Format.fromFileName(path.getName());
+      if (format != null && (format == CompressionUtils.Format.ZIP || format == CompressionUtils.Format.LZ4)) {
+        final FileUtils.FileCopyResult result = format.decompressDirectory(
+            getInputStream(path),
+            outDir
         );
 
         log.info(
-            "Unzipped %d bytes from [%s] to [%s]",
+            "Decompressed %d bytes from [%s] to [%s] using %s",
             result.size(),
             path.toString(),
-            outDir.getAbsolutePath()
+            outDir.getAbsolutePath(),
+            format.name()
         );
 
         return result;
