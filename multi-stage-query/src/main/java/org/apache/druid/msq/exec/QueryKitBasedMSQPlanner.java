@@ -36,29 +36,19 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.querykit.MultiQueryKit;
-import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
-import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
-import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsStageProcessor;
 import org.apache.druid.msq.querykit.results.QueryResultStageProcessor;
-import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.operator.WindowOperatorQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
-
-import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
@@ -89,25 +79,6 @@ public class QueryKitBasedMSQPlanner
     this.query = query;
     this.resultsContext = resultsContext;
     this.queryKitSpec = queryKitSpec;
-  }
-
-  @SuppressWarnings("rawtypes")
-  public static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ObjectMapper jsonMapper)
-  {
-    final Map<Class<? extends Query>, QueryKit> kitMap =
-        ImmutableMap.<Class<? extends Query>, QueryKit>builder()
-                    .put(ScanQuery.class, new ScanQueryKit(jsonMapper))
-                    .put(GroupByQuery.class, new GroupByQueryKit(jsonMapper))
-                    .put(
-                        WindowOperatorQuery.class,
-                        new WindowOperatorQueryKit(
-                            jsonMapper,
-                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
-                        )
-                    )
-                    .build();
-
-    return new MultiQueryKit(kitMap);
   }
 
   @SuppressWarnings("unchecked")

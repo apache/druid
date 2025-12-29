@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
@@ -87,8 +88,15 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.RestrictedInputNumberDataSource;
+import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
 import org.apache.druid.msq.querykit.WindowOperatorQueryStageProcessor;
+import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
+import org.apache.druid.msq.querykit.scan.ScanQueryKit;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.msq.querykit.common.SortMergeJoinStageProcessor;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleStageProcessor;
@@ -214,5 +222,21 @@ public class MSQIndexingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(MultiQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(ScanQuery.class)
+              .to(ScanQueryKit.class);
+    binder.bind(ScanQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(GroupByQuery.class)
+              .to(GroupByQueryKit.class);
+    binder.bind(GroupByQueryKit.class).in(LazySingleton.class);
+
+    MSQBinders.queryKitBinder(binder)
+              .addBinding(WindowOperatorQuery.class)
+              .to(WindowOperatorQueryKit.class);
+    binder.bind(WindowOperatorQueryKit.class).in(LazySingleton.class);
   }
 }
