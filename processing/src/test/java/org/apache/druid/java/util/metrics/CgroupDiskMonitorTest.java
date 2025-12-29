@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
@@ -65,7 +64,7 @@ public class CgroupDiskMonitorTest
   @Test
   public void testMonitor() throws IOException
   {
-    final CgroupDiskMonitor monitor = new CgroupDiskMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final CgroupDiskMonitor monitor = new CgroupDiskMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(0, emitter.getNumEmittedEvents());

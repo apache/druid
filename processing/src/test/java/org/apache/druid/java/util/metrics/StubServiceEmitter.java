@@ -19,12 +19,15 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,18 +44,32 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
+  public static final String TYPE = "stub";
+
   private final Deque<Event> events = new ConcurrentLinkedDeque<>();
   private final Deque<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
   private final ConcurrentHashMap<String, Deque<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {
-    super("testing", "localhost", null);
+    this("testing", "localhost");
   }
 
+  /**
+   * Initialize a stub service emitter and auto-{@link #start()}  it for test convenience.
+   */
   public StubServiceEmitter(String service, String host)
   {
-    super(service, host, null);
+    this(service, host, new NoopTaskHolder());
+    super.start();
+  }
+
+  /**
+   * Initialize a stub service emitter. Tests must explicitly call {@link #start()}.
+   */
+  public StubServiceEmitter(String service, String host, TaskHolder taskHolder)
+  {
+    super(service, host, new NoopEmitter(), ImmutableMap.of(), taskHolder);
   }
 
   @Override
@@ -103,7 +120,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public List<Number> getMetricValues(
       String metricName,
-      Map<String, Object> dimensionFilters
+      @Nullable Map<String, Object> dimensionFilters
   )
   {
     final List<Number> values = new ArrayList<>();
@@ -160,6 +177,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public void start()
   {
+    super.start();
   }
 
   @Override
@@ -173,5 +191,11 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public void close()
   {
+    try {
+      emitter.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

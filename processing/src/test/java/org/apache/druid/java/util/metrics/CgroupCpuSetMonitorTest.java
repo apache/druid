@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
@@ -71,7 +70,7 @@ public class CgroupCpuSetMonitorTest
   @Test
   public void testMonitor()
   {
-    final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(4, emitter.getNumEmittedEvents());
@@ -101,7 +100,7 @@ public class CgroupCpuSetMonitorTest
     Assert.assertEquals(CgroupVersion.V2, v2Discoverer.getCgroupVersion());
 
     // Constructor should detect v2 and log warning
-    CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, ImmutableMap.of(), "test-feed");
+    CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, "test-feed");
 
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     

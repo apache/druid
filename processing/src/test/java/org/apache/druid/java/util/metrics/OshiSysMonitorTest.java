@@ -647,6 +647,6 @@ public class OshiSysMonitorTest
 
   private OshiSysMonitor createMonitor(SystemInfo si, List<String> categories)
   {
-    return new OshiSysMonitor(ImmutableMap.of(), new OshiSysMonitorConfig(categories), si);
+    return new OshiSysMonitor(new OshiSysMonitorConfig(categories), si);
   }
 }

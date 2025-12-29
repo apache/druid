@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.junit.Assert;
@@ -45,7 +44,7 @@ public class MonitorsTest
   {
     String feed = "testFeed";
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of(), feed);
+    Monitor m = Monitors.createCompoundJvmMonitor(feed);
     m.start();
     m.monitor(emitter);
     m.stop();
@@ -56,7 +55,7 @@ public class MonitorsTest
   public void testDefaultFeed()
   {
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    Monitor m = Monitors.createCompoundJvmMonitor(ImmutableMap.of());
+    Monitor m = Monitors.createCompoundJvmMonitor();
     m.start();
     m.monitor(emitter);
     m.stop();

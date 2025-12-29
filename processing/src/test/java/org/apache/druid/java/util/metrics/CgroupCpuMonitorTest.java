@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -76,7 +75,7 @@ public class CgroupCpuMonitorTest
   @Test
   public void testMonitor() throws IOException, InterruptedException
   {
-    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
@@ -131,7 +130,7 @@ public class CgroupCpuMonitorTest
     CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
     
     // Constructor should detect v2 and log warning
-    CgroupCpuMonitor monitor = new CgroupCpuMonitor(v2Discoverer, ImmutableMap.of(), "test-feed");
+    CgroupCpuMonitor monitor = new CgroupCpuMonitor(v2Discoverer, "test-feed");
     
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
 
@@ -147,7 +146,7 @@ public class CgroupCpuMonitorTest
   {
     // This test verifies that the existing v1 monitoring continues to work
     // after the v2 detection changes
-    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     
     Assert.assertTrue(monitor.doMonitor(emitter));

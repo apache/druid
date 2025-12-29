@@ -23,11 +23,14 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.java.util.metrics.TaskHolder;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.server.metrics.TaskHolder;
+
+import java.util.Map;
 
 /**
  * TaskHolder implementation for {@code CliPeon} processes.
@@ -58,5 +61,35 @@ public class PeonTaskHolder implements TaskHolder
   public String getTaskId()
   {
     return taskProvider.get().getId();
+  }
+
+  @Override
+  public String getTaskType()
+  {
+    return taskProvider.get().getType();
+  }
+
+  @Override
+  public String getGroupId()
+  {
+    return taskProvider.get().getGroupId();
+  }
+
+  /**
+   * @return a map of all task-specific dimensions applicable to this peon.
+   * The task ID ({@link TaskHolder#getTaskId()}) is added to both {@link DruidMetrics#TASK_ID}
+   * {@link DruidMetrics#ID} dimensions to the map for backward compatibility. {@link DruidMetrics#ID} is
+   * deprecated because it's ambiguous and can be removed in a future release.</p>
+   */
+  @Override
+  public Map<String, String> getMetricDimensions()
+  {
+    return Map.of(
+        DruidMetrics.DATASOURCE, getDataSource(),
+        DruidMetrics.TASK_ID, getTaskId(),
+        DruidMetrics.ID, getTaskId(),
+        DruidMetrics.TASK_TYPE, getTaskType(),
+        DruidMetrics.GROUP_ID, getGroupId()
+    );
   }
 }
