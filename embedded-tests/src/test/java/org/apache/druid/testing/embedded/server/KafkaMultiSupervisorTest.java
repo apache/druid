@@ -20,10 +20,12 @@
 package org.apache.druid.testing.embedded.server;
 
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.testing.embedded.indexing.KafkaTestBase;
+import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,13 +41,17 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
   @ValueSource(booleans = {true, false})
   public void test_ingestIntoSingleDatasource_fromDifferentTopics(boolean useTransactions)
   {
+    final List<DimensionSchema> dimensionsSpec = DimensionsSpec.getDefaultSchemas(
+        List.of("kafka.topic", WikipediaStreamEventStreamGenerator.COL_UNIQUE_NAMESPACE)
+    );
+
     // Set up first topic and supervisor
     final String topic1 = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic1, 1);
 
     final KafkaSupervisorSpec supervisor1 = createSupervisor()
         .withIoConfig(io -> io.withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null)))
-        .withDataSchema(d -> d.withDimensions(DimensionsSpec.getDefaultSchemas(List.of("kafka.topic", "comment"))))
+        .withDataSchema(d -> d.withDimensions(dimensionsSpec))
         .withId(topic1)
         .build(dataSource, topic1);
     cluster.callApi().postSupervisor(supervisor1);
@@ -56,7 +62,7 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
 
     final KafkaSupervisorSpec supervisor2 = createSupervisor()
         .withIoConfig(io -> io.withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null)))
-        .withDataSchema(d -> d.withDimensions(DimensionsSpec.getDefaultSchemas(List.of("kafka.topic", "comment"))))
+        .withDataSchema(d -> d.withDimensions(dimensionsSpec))
         .withId(topic2)
         .build(dataSource, topic2);
     cluster.callApi().postSupervisor(supervisor2);

@@ -31,6 +31,14 @@ import java.util.List;
 
 public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerator
 {
+  /**
+   * Column which may serve as a unique identifier for each record. This column
+   * is used instead of a dedicated "id" column since some tests like
+   * {@code KafkaDataFormatsTest} use hardcoded schemas that rely on these
+   * specific column names.
+   */
+  public static final String COL_UNIQUE_NAMESPACE = "namespace";
+
   private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
   public WikipediaStreamEventStreamGenerator(EventSerializer serializer, int eventsPerSeconds, long cyclePaddingMs)
@@ -50,12 +58,11 @@ public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerato
     event.add(Pair.of("newPage", "true"));
     event.add(Pair.of("robot", "false"));
     event.add(Pair.of("anonymous", "false"));
-    event.add(Pair.of("namespace", "article"));
+    event.add(Pair.of(COL_UNIQUE_NAMESPACE, "article " + IdUtils.getRandomId()));
     event.add(Pair.of("continent", "North America"));
     event.add(Pair.of("country", "United States"));
     event.add(Pair.of("region", "Bay Area"));
     event.add(Pair.of("city", "San Francisco"));
-    event.add(Pair.of("comment", "Unique comment " + IdUtils.getRandomId()));
     event.add(Pair.of("added", i));
     event.add(Pair.of("deleted", 0));
     event.add(Pair.of("delta", i));
