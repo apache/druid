@@ -450,7 +450,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"));
+        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), true);
     segmentManager = new MSQTestSegmentManager(segmentCacheManager);
 
     List<Module> modules = ImmutableList.of(

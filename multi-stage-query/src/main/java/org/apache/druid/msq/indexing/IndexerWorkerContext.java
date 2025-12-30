@@ -143,7 +143,7 @@ public class IndexerWorkerContext implements WorkerContext
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
     final SegmentManager segmentManager = new SegmentManager(
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"))
+                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true)
     );
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));

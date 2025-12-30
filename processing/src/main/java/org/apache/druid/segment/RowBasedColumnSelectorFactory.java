@@ -500,7 +500,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
           if (expressionType != null && !expressionType.is(ExprType.COMPLEX)) {
             try {
               return ExprEval.bestEffortOf(currentValue).castTo(expressionType).value();
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
               if (throwParseExceptions) {
                 throw new ParseException(
                     String.valueOf(currentValue),

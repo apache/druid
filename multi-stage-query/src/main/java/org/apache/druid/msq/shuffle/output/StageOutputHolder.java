@@ -85,7 +85,7 @@ public class StageOutputHolder implements Closeable
     if (!channelFuture.set(channel)) {
       final ReadableFrameChannel existingChannel = FutureUtils.getUncheckedImmediately(channelFuture);
       if (existingChannel == null) {
-        throw DruidException.defensive("Closed, cannot set to[%s]");
+        throw DruidException.defensive("Closed, cannot set to[%s]", channel);
       } else {
         throw DruidException.defensive("Channel already set to[%s], cannot set to[%s]", existingChannel, channel);
       }
