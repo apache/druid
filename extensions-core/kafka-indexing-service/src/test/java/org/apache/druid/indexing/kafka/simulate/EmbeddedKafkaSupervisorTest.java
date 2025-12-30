@@ -30,6 +30,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -45,6 +46,7 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -94,7 +96,8 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
+    final KafkaSupervisorSpec kafkaSupervisorSpec
+        = newKafkaSupervisor().withId(supervisorId).build(dataSource, topic);
 
     Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
@@ -142,7 +145,36 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, lockedIntervals.size());
   }
 
-  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
+  @Test
+  public void test_supervisorBecomesIdle_ifTopicHasNoData()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final long idleAfterMillis = 100L;
+    final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        .withId(dataSource)
+        .withIoConfig(ioConfig -> ioConfig.withIdleConfig(new IdleConfig(true, idleAfterMillis)).withTaskCount(1))
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(supervisorSpec);
+
+    // Wait for the first set of tasks to finish
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    // Verify that the supervisor is now idle
+    final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorSpec.getId());
+    Assertions.assertFalse(status.isSuspended());
+    Assertions.assertTrue(status.isHealthy());
+    Assertions.assertEquals("IDLE", status.getState());
+
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    kafkaServer.deleteTopic(topic);
+  }
+
+  private KafkaSupervisorSpecBuilder newKafkaSupervisor()
   {
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
@@ -159,10 +191,12 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
                 .withUseEarliestSequenceNumber(true)
-        )
-        .withId(supervisorId)
-        .build(dataSource, topic);
+        );
   }
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
