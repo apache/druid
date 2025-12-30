@@ -20,6 +20,9 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import com.google.common.primitives.Doubles;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.ExprEval;
@@ -341,6 +344,45 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
 
         @Override
+        public boolean isNull()
+        {
+          updateCurrentValues();
+          return DimensionHandlerUtils.isNumericNull(getObject());
+        }
+
+        @Override
+        public float getFloat()
+        {
+          updateCurrentValues();
+          return (float) getDouble();
+        }
+
+        @Override
+        public double getDouble()
+        {
+          updateCurrentValues();
+
+          // Below is safe since isNull() returned true.
+          final String str = Iterables.getOnlyElement(dimensionValues);
+          return Doubles.tryParse(str);
+        }
+
+        @Override
+        public long getLong()
+        {
+          updateCurrentValues();
+
+          // Below is safe since isNull() returned true.
+          final String str = Iterables.getOnlyElement(dimensionValues);
+          final Long n = GuavaUtils.tryParseLong(str);
+          if (n != null) {
+            return n;
+          } else {
+            return (long) getDouble();
+          }
+        }
+
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", rowSupplier);
@@ -499,7 +541,13 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
           if (expressionType != null && !expressionType.is(ExprType.COMPLEX)) {
             try {
-              return ExprEval.bestEffortOf(currentValue).castTo(expressionType).value();
+              final Object val = ExprEval.bestEffortOf(currentValue).castTo(expressionType).value();
+              if (val != null && expressionType.is(ExprType.DOUBLE) && numberType == ValueType.FLOAT) {
+                // Adjustment for FLOAT. Expressions don't speak float, so we need to cast it ourselves.
+                return ((Number) val).floatValue();
+              } else {
+                return val;
+              }
             }
             catch (Exception e) {
               if (throwParseExceptions) {
