@@ -19,31 +19,25 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
-import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
-import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.name.Named;
+import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.emitter.core.Emitter;
 
-/**
- * Monitor that reports CPU set metrics from cgroups v2 with native v2 file support.
- */
-public class CgroupV2CpuSetMonitor extends CgroupCpuSetMonitor
+public class StubServiceEmitterModule implements Module
 {
-
-  public CgroupV2CpuSetMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
+  @Override
+  public void configure(Binder binder)
   {
-    super(cgroupDiscoverer, feed);
-
   }
 
-  @VisibleForTesting
-  CgroupV2CpuSetMonitor(CgroupDiscoverer cgroupDiscoverer)
+  @Provides
+  @ManageLifecycle
+  @Named(StubServiceEmitter.TYPE)
+  public Emitter getEmitter(TaskHolder taskHolder)
   {
-    this(cgroupDiscoverer, DEFAULT_METRICS_FEED);
-  }
-
-  CgroupV2CpuSetMonitor()
-  {
-    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class));
+    return new StubServiceEmitter("test", "host", taskHolder);
   }
 }

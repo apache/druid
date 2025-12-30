@@ -24,10 +24,10 @@ import com.google.inject.Binder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.ExcludeScope;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.metrics.NoopTaskHolder;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NoopTaskHolder;
-import org.apache.druid.server.metrics.TaskHolder;
 
 /**
  * Binds the following holder configs for all servers except {@code CliPeon}:
