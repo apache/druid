@@ -135,8 +135,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
- * logic are similar enough so they're grouped together into this class.
+ * This class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
+ * logic is similar enough, so they're grouped together into this class.
  * <p>
  * Supervisor responsible for managing the SeekableStreamIndexTasks (Kafka/Kinesis) for a single dataSource. At a high level, the class accepts a
  * {@link SeekableStreamSupervisorSpec} which includes the stream name (topic / stream) and configuration as well as an ingestion spec which will
@@ -541,10 +541,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * This method determines how to do scale actions based on collected lag points.
-   * If scale action is triggered :
-   * First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
-   * Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled in the next 'RunNotice'.
-   * Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
+   * If scale action is triggered:
+   * <ul>
+   * <li>First, call <code>gracefulShutdownInternal()</code> which will change the state of current datasource ingest tasks from reading to publishing.
+   * <li>Secondly, clear all the stateful data structures:
+   * <ul>
+   *  <li><code>activelyReadingTaskGroups</code>,
+   *  <li><code>partitionGroups</code>,
+   *  <li><code>partitionOffsets</code>,
+   *  <li><code>pendingCompletionTaskGroups</code>,
+   *  <li><code>partitionIds</code>.
+   * </ul>
+   * These structures will be rebuiled in the next 'RunNotice'.
+   * <li>Finally, change the <code>taskCount</code> in <code>SeekableStreamSupervisorIOConfig</code> and sync it to <code>MetadataStorage</code>.
+   * </ul>
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
@@ -916,7 +926,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
-  // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
+  // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
   private final IdleConfig idleConfig;
@@ -1469,7 +1479,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public Map<String, Map<String, Object>> getStats()
   {
     try {
-      return getCurrentTotalStats();
+      return getCurrentStats();
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1508,7 +1518,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private Map<String, Map<String, Object>> getCurrentTotalStats()
+  private Map<String, Map<String, Object>> getCurrentStats()
       throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();

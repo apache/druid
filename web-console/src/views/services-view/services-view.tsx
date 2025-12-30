@@ -56,6 +56,7 @@ import {
   formatBytesCompact,
   formatDate,
   formatDurationWithMsIfNeeded,
+  formatInteger,
   getApiArray,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
@@ -67,6 +68,7 @@ import {
   QueryManager,
   QueryState,
   ResultWithAuxiliaryWork,
+  twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
 import { TableFilter, TableFilters } from '../../utils/table-filters';
@@ -87,7 +89,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
-    'CPU processors',
+    'Available processors',
     'Total memory',
     'Labels',
     'Detail',
@@ -290,7 +292,10 @@ ORDER BY
       processQuery: async ({ capabilities, visibleColumns }, signal) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, signal);
+          services = await queryDruidSql(
+            { query: ServicesView.SERVICE_SQL, context: { engine: 'native' } },
+            signal,
+          );
         } else if (capabilities.hasCoordinatorAccess()) {
           services = (await getApiArray('/druid/coordinator/v1/servers?simple', signal)).map(
             (s: any): ServiceResultRow => {
@@ -672,13 +677,13 @@ ORDER BY
           Aggregated: () => '',
         },
         {
-          Header: 'CPU processors',
-          show: visibleColumns.shown('CPU processors'),
+          Header: twoLines('Available', 'processors'),
+          show: visibleColumns.shown('Available processors'),
           accessor: 'available_processors',
           className: 'padded',
           filterable: false,
-          width: 120,
-          Cell: ({ value }) => (value === null ? '' : value),
+          width: 100,
+          Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
             const totalAvailableProcessors = sum(originalRows, s => s.available_processors);

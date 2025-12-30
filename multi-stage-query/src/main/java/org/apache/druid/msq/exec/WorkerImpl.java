@@ -429,6 +429,11 @@ public class WorkerImpl implements Worker
     // Set up processorCloser (called when processing is done).
     kernelHolder.processorCloser.register(() -> runWorkOrder.stop(null));
 
+    // Set resultPartitionBoundaries in RunWorkOrder if it is known ahead of time.
+    if (kernel.hasResultPartitionBoundaries()) {
+      runWorkOrder.getStagePartitionBoundariesFuture().set(kernel.getResultPartitionBoundaries());
+    }
+
     // Start working on this stage immediately.
     kernel.startReading();
     runWorkOrder.startAsync();

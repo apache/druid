@@ -33,8 +33,6 @@ public class TestNGGroup
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
 
-  public static final String APPEND_INGESTION = "append-ingestion";
-
   /**
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
    */
@@ -115,11 +113,5 @@ public class TestNGGroup
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 
-  public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
-
   public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
-
-  public static final String CDS_TASK_SCHEMA_PUBLISH_DISABLED = "cds-task-schema-publish-disabled";
-
-  public static final String CDS_COORDINATOR_METADATA_QUERY_DISABLED = "cds-coordinator-metadata-query-disabled";
 }

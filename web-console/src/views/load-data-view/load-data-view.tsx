@@ -143,7 +143,7 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import { getSpecDatasourceName, getSpecSupervisorId } from '../../helpers';
+import { getSpecSupervisorId } from '../../helpers';
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
@@ -3740,7 +3740,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       intent: Intent.SUCCESS,
     });
 
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (supervisorId) {
       setTimeout(() => {
         goToView('supervisors', TableFilters.eq({ supervisor_id: supervisorId }));

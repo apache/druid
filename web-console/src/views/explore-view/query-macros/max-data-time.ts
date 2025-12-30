@@ -28,6 +28,7 @@ const tablesForWhichWeCouldNotDetermineMaxTime = new Set<string>();
 
 export async function rewriteMaxDataTime(
   query: SqlQuery,
+  signal?: AbortSignal,
 ): Promise<{ query: SqlQuery; maxTime?: Date }> {
   if (!query.containsFunction('MAX_DATA_TIME')) return { query };
 
@@ -36,7 +37,7 @@ export async function rewriteMaxDataTime(
 
   let maxTime: Date;
   try {
-    maxTime = await getMaxTimeForTable(tableName);
+    maxTime = await getMaxTimeForTable(tableName, signal);
   } catch (error) {
     if (!tablesForWhichWeCouldNotDetermineMaxTime.has(tableName)) {
       tablesForWhichWeCouldNotDetermineMaxTime.add(tableName);

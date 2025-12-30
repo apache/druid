@@ -88,9 +88,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -113,10 +110,12 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
@@ -195,9 +194,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
-  private static ServiceEmitter emitter;
   private static int topicPostfix;
-
   static final Module TEST_MODULE = new SimpleModule("kafkaTestModule").registerSubtypes(
       new NamedType(TestKafkaInputFormat.class, "testKafkaInputFormat"),
       new NamedType(TestKafkaFormatWithMalformedDataDetection.class, "testKafkaFormatWithMalformedDataDetection")
@@ -287,14 +284,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @BeforeClass
   public static void setupClass() throws Exception
   {
-    emitter = new ServiceEmitter(
-        "service",
-        "host",
-        new NoopEmitter()
-    );
-    emitter.start();
-    EmittingLogger.registerEmitter(emitter);
-
     zkServer = new TestingCluster(1);
     zkServer.start();
 
@@ -353,8 +342,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     zkServer.stop();
     zkServer = null;
-
-    emitter.close();
   }
 
   @Test(timeout = 60_000L)
@@ -387,7 +374,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
-    Assert.assertTrue(task.getRunner().getSegmentGenerationMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -401,6 +387,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L))),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -449,6 +441,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         Assert.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
       }
     }
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -717,7 +715,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     long totalBytes = getTotalSizeOfRecords(0, 10) + getTotalSizeOfRecords(13, 15);
-    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAway(1).totalProcessed(8));
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(8));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -738,6 +736,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(8, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(7, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(4, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -851,7 +856,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     long totalBytes = getTotalSizeOfRecords(0, 10) + getTotalSizeOfRecords(13, 15);
-    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAway(1).totalProcessed(8));
+    verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(8));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1165,7 +1170,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(2).totalProcessed(3));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1214,7 +1219,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(2).totalProcessed(3));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1272,7 +1277,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(4).totalProcessed(1));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1642,7 +1647,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyTaskMetrics(task, RowMeters.with()
                                      .bytes(totalRecordBytes)
                                      .unparseable(3).errors(3)
-                                     .thrownAway(1).totalProcessed(4));
+                                     .thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(4));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -1660,6 +1665,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
     Assert.assertNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1667,7 +1674,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalRecordBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1694,6 +1702,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}"
     );
     Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+
+    emitter.verifyValue("ingest/segments/count", 4);
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(4, observedSegmentGenerationMetrics.handOffCount());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 60_000L)
@@ -1745,6 +1761,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
     Assert.assertNotNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1752,7 +1770,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1768,6 +1787,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     List<String> expectedInputs = Arrays.asList("", "unparseable");
     Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+
+    emitter.verifyNotEmitted("ingest/segments/count");
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(1, observedSegmentGenerationMetrics.numPersists());
+    Assert.assertEquals(0, observedSegmentGenerationMetrics.handOffCount());
   }
 
   @Test(timeout = 60_000L)
@@ -1887,7 +1914,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
     verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(3, 10))
-                                      .unparseable(3).thrownAway(1).totalProcessed(3));
+                                      .unparseable(3).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(3));
 
     // Check published segments & metadata, should all be from the first task
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -1961,7 +1988,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
     verifyTaskMetrics(task2, RowMeters.with().bytes(getTotalSizeOfRecords(3, 10))
-                                      .unparseable(3).thrownAway(1).totalProcessed(3));
+                                      .unparseable(3).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(3));
 
     // Check published segments & metadata
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
@@ -2576,7 +2603,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     long totalBytes = getTotalSizeOfRecords(0, 2) + getTotalSizeOfRecords(5, 11);
     verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes)
-                                     .unparseable(3).errors(1).thrownAway(1).totalProcessed(3));
+                                     .unparseable(3).errors(1).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 1).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -3437,7 +3464,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(4).totalProcessed(1));
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
 
     // Check published metadata
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
@@ -3450,6 +3477,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
     Assert.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
+
+    emitter.verifyValue("ingest/segments/count", 1);
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(1, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(1, observedSegmentGenerationMetrics.handOffCount());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   public static class TestKafkaInputFormat implements InputFormat

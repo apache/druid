@@ -441,7 +441,7 @@ GROUP BY 1, 2`;
         if (capabilities.hasSql()) {
           const query = DatasourcesView.query(visibleColumns);
           setIntermediateQuery(query);
-          datasources = await queryDruidSql({ query }, signal);
+          datasources = await queryDruidSql({ query, context: { engine: 'native' } }, signal);
         } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await getApiArray(
             '/druid/coordinator/v1/datasources?simple',
@@ -493,6 +493,7 @@ GROUP BY 1, 2`;
                 const runningTasks = await queryDruidSql<RunningTaskRow>(
                   {
                     query: DatasourcesView.RUNNING_TASK_SQL,
+                    context: { engine: 'native' },
                   },
                   signal,
                 );

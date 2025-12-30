@@ -1119,7 +1119,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.78.1"
+version: "1.79"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1643,7 +1643,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.13.0
+version: 5.18.1
 libraries:
   - net.java.dev.jna: jna
 
@@ -2427,7 +2427,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 6.4.4
+version: 6.9.1
 libraries:
   - com.github.oshi: oshi-core
 license_file_path: licenses/bin/oshi.MIT
@@ -3851,7 +3851,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.7.14
+version: 1.7.14.1
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:
@@ -4796,7 +4796,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.13.0
+version: 5.18.1
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
