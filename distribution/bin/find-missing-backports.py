@@ -57,7 +57,7 @@ def find_next_url(links):
         if link.find("rel=\"next\"") >= 0:
             match_result = re.match("<https.*>", link)
             if match_result is None:
-                raise Exception("Next link[{}] is found but can't find url".format(link))
+                raise Exception("❌ Next link[{}] is found but can't find url".format(link))
             else:
                 url_holder = match_result.group(0)
                 return url_holder[1:-1]
@@ -84,7 +84,7 @@ command = "git log {}..{} --oneline | tail -1".format(master_branch, previous_br
 previous_branch_first_commit = subprocess.check_output(command, shell=True).decode('UTF-8')
 match_result = re.match("(\w+) .*", previous_branch_first_commit)
 if match_result is None:
-    raise Exception("Can't find the first commit of the previous release.")
+    raise Exception("❌ Can't find the first commit of the previous release.")
 previous_branch_first_commit = match_result.group(1)
 
 print("Previous branch: {}, first commit: {}".format(previous_branch, previous_branch_first_commit))
@@ -110,14 +110,14 @@ while True:
   pr_url = "https://api.github.com/search/issues?per_page=50&page={}&q=milestone:{}+type:pr+is:merged+is:closed+repo:apache/druid".format(page,milestone_title)
   pr_resp = requests.get(pr_url, auth=(github_username, os.environ["GIT_TOKEN"])).json()
   if pr_resp['incomplete_results']:
-    sys.stderr.write('This script cannot handle incomplete results')
+    sys.stderr.write('❌ This script cannot handle incomplete results')
     sys.exit(1)
   pr_items.extend(pr_resp['items'])
   if len(pr_resp['items']) < 50:
     print("Total PRs for current milestone: {}".format(len(pr_items)))
     print("Total expected count: {}".format(pr_resp['total_count']))
     if pr_resp['total_count'] != len(pr_items):
-      sys.stderr.write('Expected PR count does not match with number of PRs fetched')
+      sys.stderr.write('❌ Expected PR count does not match with number of PRs fetched')
       sys.exit(1)
     break
 find_missing_backports(pr_items, release_pr_subjects, release_pr_numbers)
