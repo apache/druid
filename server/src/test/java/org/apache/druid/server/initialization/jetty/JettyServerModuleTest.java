@@ -56,8 +56,7 @@ public class JettyServerModuleTest
 
     JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor();
 
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
-    serviceEmitter.start();
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     jettyMonitor.doMonitor(serviceEmitter);
 
     serviceEmitter.verifyValue("jetty/numOpenConnections", 0);

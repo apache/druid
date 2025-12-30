@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * Provides identifying information for a task. Implementations return {@code null}
- * when used in server processes that are not {@code CliPeon}. Note that t
+ * when used in server processes that are not {@code CliPeon}.
  */
 public interface TaskHolder
 {
@@ -41,13 +41,13 @@ public interface TaskHolder
   String getTaskId();
 
   /**
-   * @return the taskId, or {@code null} if called from a server that is not {@code CliPeon}.
+   * @return the type name of this task, or {@code null} if called from a server that is not {@code CliPeon}.
    */
   @Nullable
   String getTaskType();
 
   /**
-   * @return the taskId, or {@code null} if called from a server that is not {@code CliPeon}.
+   * @return the group ID of this task, or {@code null} if called from a server that is not {@code CliPeon}.
    */
   @Nullable
   String getGroupId();

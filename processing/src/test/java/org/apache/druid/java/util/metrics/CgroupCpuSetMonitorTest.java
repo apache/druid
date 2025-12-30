@@ -71,7 +71,7 @@ public class CgroupCpuSetMonitorTest
   public void testMonitor()
   {
     final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, "some_feed");
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(4, emitter.getNumEmittedEvents());
 
@@ -102,7 +102,7 @@ public class CgroupCpuSetMonitorTest
     // Constructor should detect v2 and log warning
     CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, "test-feed");
 
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     
     // doMonitor should return true but skip actual monitoring
     Assert.assertTrue(monitor.doMonitor(emitter));

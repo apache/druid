@@ -118,7 +118,7 @@ public class EmitterModuleTest
 
     ImmutableSet<NodeRole> nodeRoles = ImmutableSet.of();
 
-    TestTaskHolder testTaskHolder = new TestTaskHolder("d", "e", "a", "w");
+    TestTaskHolder testTaskHolder = new TestTaskHolder("wiki", "id1", "type1", "group1");
     Injector injector = Guice.createInjector(
         new JacksonModule(),
         new LifecycleModule(),
@@ -156,16 +156,16 @@ public class EmitterModuleTest
     Assert.assertEquals(1, events.size());
     ServiceMetricEvent event = (ServiceMetricEvent) events.get(0);
     EventMap map = event.toMap();
-    Assert.assertEquals("e", map.get(DruidMetrics.TASK_ID));
-    Assert.assertEquals("e", map.get(DruidMetrics.ID));
-    Assert.assertEquals("a", map.get(DruidMetrics.TASK_TYPE));
-    Assert.assertEquals("w", map.get(DruidMetrics.GROUP_ID));
-    Assert.assertEquals("d", map.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals("id1", map.get(DruidMetrics.TASK_ID));
+    Assert.assertEquals("id1", map.get(DruidMetrics.ID));
+    Assert.assertEquals("type1", map.get(DruidMetrics.TASK_TYPE));
+    Assert.assertEquals("group1", map.get(DruidMetrics.GROUP_ID));
+    Assert.assertEquals("wiki", map.get(DruidMetrics.DATASOURCE));
     stubEmitter.flush();
 
     // Override a dimension and verify that is emitted
     final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
-    builder2.setDimension("taskId", "xyz");
+    builder2.setDimension("taskId", "id2");
     builder2.setMetric("metric2", 1);
     instance.emit(builder2);
 
@@ -173,11 +173,11 @@ public class EmitterModuleTest
     Assert.assertEquals(1, events2.size());
     ServiceMetricEvent event2 = (ServiceMetricEvent) events2.get(0);
     EventMap map2 = event2.toMap();
-    Assert.assertEquals("xyz", map2.get(DruidMetrics.TASK_ID));
-    Assert.assertEquals("e", map2.get(DruidMetrics.ID));
-    Assert.assertEquals("a", map2.get(DruidMetrics.TASK_TYPE));
-    Assert.assertEquals("w", map2.get(DruidMetrics.GROUP_ID));
-    Assert.assertEquals("d", map2.get(DruidMetrics.DATASOURCE));
+    Assert.assertEquals("id2", map2.get(DruidMetrics.TASK_ID));
+    Assert.assertEquals("id1", map2.get(DruidMetrics.ID));
+    Assert.assertEquals("type1", map2.get(DruidMetrics.TASK_TYPE));
+    Assert.assertEquals("group1", map2.get(DruidMetrics.GROUP_ID));
+    Assert.assertEquals("wiki", map2.get(DruidMetrics.DATASOURCE));
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

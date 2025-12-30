@@ -32,7 +32,7 @@ import java.io.IOException;
 
 public class ServiceEmitter implements Emitter
 {
-  protected final Emitter emitter;
+  private final Emitter emitter;
   private final String service;
   private final ImmutableMap<String, String> otherServiceDimensions;
   private final String host;

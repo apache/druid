@@ -116,17 +116,21 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    final Map<String, Object> dimFilters = Map.of(DruidMetrics.DATASOURCE, dataSource, DruidMetrics.TASK_ID, taskId,
-        DruidMetrics.ID, taskId, DruidMetrics.TASK_TYPE, taskType, DruidMetrics.GROUP_ID, groupId
+    final Map<String, Object> dimFilters = Map.of(
+        DruidMetrics.DATASOURCE, dataSource,
+        DruidMetrics.TASK_ID, taskId,
+        DruidMetrics.ID, taskId,
+        DruidMetrics.TASK_TYPE,
+        taskType, DruidMetrics.GROUP_ID, groupId
     );
 
-    verifyTaskServiceDimensions(emitter, "mergeBuffer/pendingRequests", dimFilters, 0L);
-    verifyTaskServiceDimensions(emitter, "mergeBuffer/used", dimFilters, 0L);
-    verifyTaskServiceDimensions(emitter, "mergeBuffer/queries", dimFilters, 1L);
-    verifyTaskServiceDimensions(emitter, "mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
-    verifyTaskServiceDimensions(emitter, "groupBy/spilledQueries", dimFilters, 2L);
-    verifyTaskServiceDimensions(emitter, "groupBy/spilledBytes", dimFilters, 200L);
-    verifyTaskServiceDimensions(emitter, "groupBy/mergeDictionarySize", dimFilters, 300L);
+    verifyMetricValue(emitter, "mergeBuffer/pendingRequests", dimFilters, 0L);
+    verifyMetricValue(emitter, "mergeBuffer/used", dimFilters, 0L);
+    verifyMetricValue(emitter, "mergeBuffer/queries", dimFilters, 1L);
+    verifyMetricValue(emitter, "mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "groupBy/spilledQueries", dimFilters, 2L);
+    verifyMetricValue(emitter, "groupBy/spilledBytes", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/mergeDictionarySize", dimFilters, 300L);
   }
 
   @Test
@@ -181,8 +185,7 @@ public class GroupByStatsMonitorTest
     }
   }
 
-
-  private void verifyTaskServiceDimensions(StubServiceEmitter emitter, String metricName, Map<String, Object> dimFilters, Number expectedValue)
+  private void verifyMetricValue(StubServiceEmitter emitter, String metricName, Map<String, Object> dimFilters, Number expectedValue)
   {
     final List<ServiceMetricEvent> observedMetricEvents = emitter.getMetricEvents(metricName);
     Assert.assertEquals(1, observedMetricEvents.size());

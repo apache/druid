@@ -84,12 +84,13 @@ public class PeonTaskHolder implements TaskHolder
   @Override
   public Map<String, String> getMetricDimensions()
   {
+    final Task task = taskProvider.get();
     return Map.of(
-        DruidMetrics.DATASOURCE, getDataSource(),
-        DruidMetrics.TASK_ID, getTaskId(),
-        DruidMetrics.ID, getTaskId(),
-        DruidMetrics.TASK_TYPE, getTaskType(),
-        DruidMetrics.GROUP_ID, getGroupId()
+        DruidMetrics.DATASOURCE, task.getDataSource(),
+        DruidMetrics.TASK_ID, task.getId(),
+        DruidMetrics.ID, task.getId(),
+        DruidMetrics.TASK_TYPE, task.getType(),
+        DruidMetrics.GROUP_ID, task.getGroupId()
     );
   }
 }
