@@ -117,6 +117,8 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
 
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
     kafkaServer.deleteTopic(topic);
+
+    verifyRowCount();
   }
 
   protected void verifyIngestedEvents()
@@ -139,6 +141,16 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
     Assertions.assertTrue(status.isHealthy());
     Assertions.assertFalse(status.isSuspended());
     Assertions.assertEquals("RUNNING", status.getState());
+  }
+
+  protected void verifyRowCount()
+  {
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().verifySqlQuery(
+        "SELECT COUNT(*) FROM %s",
+        dataSource,
+        String.valueOf(totalPublishedRecords)
+    );
   }
 
   protected void publishRecords(String topic, boolean useTransactions)

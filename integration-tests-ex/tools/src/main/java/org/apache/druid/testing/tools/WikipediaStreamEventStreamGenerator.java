@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.tools;
 
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -54,6 +55,7 @@ public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerato
     event.add(Pair.of("country", "United States"));
     event.add(Pair.of("region", "Bay Area"));
     event.add(Pair.of("city", "San Francisco"));
+    event.add(Pair.of("comment", "Unique comment " + IdUtils.getRandomId()));
     event.add(Pair.of("added", i));
     event.add(Pair.of("deleted", 0));
     event.add(Pair.of("delta", i));

@@ -57,10 +57,14 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 {
+  private static final String COL_ITEM = "item";
+  private static final String COL_TIMESTAMP = "timestamp";
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private KafkaResource kafkaServer;
 
   @Override
@@ -74,7 +78,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
-           .addServer(new EmbeddedCoordinator())
+           .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(historical)
@@ -153,7 +157,6 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
     final long idleAfterMillis = 100L;
     final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
-        .withId(dataSource)
         .withIoConfig(ioConfig -> ioConfig.withIdleConfig(new IdleConfig(true, idleAfterMillis)).withTaskCount(1))
         .build(dataSource, topic);
     cluster.callApi().postSupervisor(supervisorSpec);
@@ -174,12 +177,59 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     kafkaServer.deleteTopic(topic);
   }
 
+  @Test
+  public void test_runSupervisor_withEmptyDimension()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final String emptyColumn = "unknownColumn";
+    final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        .withDataSchema(
+            s -> s.withDimensions(
+                DimensionsSpec.getDefaultSchemas(List.of(emptyColumn, COL_ITEM))
+            )
+        )
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(supervisorSpec);
+
+    final int numRows = 100;
+    kafkaServer.produceRecordsToTopic(generateRecordsForTopic(topic, numRows, DateTimes.nowUtc()));
+
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numRows)
+    );
+
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(
+        "100",
+        cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s IS NULL", dataSource, emptyColumn)
+    );
+    Assertions.assertEquals(
+        "0",
+        cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s IS NOT NULL", dataSource, emptyColumn)
+    );
+    Assertions.assertEquals(
+        StringUtils.format("%s,YES,VARCHAR", emptyColumn),
+        cluster.runSql(
+            "SELECT COLUMN_NAME, IS_NULLABLE, DATA_TYPE"
+            + " FROM INFORMATION_SCHEMA.COLUMNS"
+            + " WHERE TABLE_NAME = '%s' AND COLUMN_NAME = '%s'",
+            dataSource, emptyColumn
+        )
+    );
+  }
+
   private KafkaSupervisorSpecBuilder newKafkaSupervisor()
   {
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
-                .withTimestamp(new TimestampSpec("timestamp", null, null))
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
                 .withDimensions(DimensionsSpec.EMPTY)
         )
         .withTuningConfig(
@@ -189,7 +239,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
         )
         .withIoConfig(
             ioConfig -> ioConfig
-                .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+                .withInputFormat(new CsvInputFormat(List.of(COL_TIMESTAMP, COL_ITEM), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskDuration(Period.millis(500))
                 .withStartDelay(Period.millis(10))
