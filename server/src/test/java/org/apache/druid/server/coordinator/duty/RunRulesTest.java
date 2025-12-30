@@ -96,7 +96,7 @@ public class RunRulesTest
   public void setUp()
   {
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    emitter = new StubServiceEmitter("coordinator", "host");
+    emitter = StubServiceEmitter.createStarted();
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     ruleRunner = new RunRules((ds, set) -> set.size(), databaseRuleManager::getRulesWithDefault);

@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -73,7 +72,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   private final SysStats sysStats;
   private final TcpStats tcpStats;
 
-  private final Map<String, String[]> dimensions;
   private final OshiSysMonitorConfig config;
   private final Map<String, Consumer<ServiceEmitter>> monitoringFunctions = ImmutableMap.of(
       "mem", this::monitorMemStats,
@@ -86,18 +84,16 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       "tcp", this::monitorTcpStats
   );
 
-  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config)
+  public OshiSysMonitor(OshiSysMonitorConfig config)
   {
-    this(dimensions, config, new SystemInfo());
+    this(config, new SystemInfo());
   }
 
   // Create an object with mocked systemInfo for testing purposes
   @VisibleForTesting
-  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config, SystemInfo systemInfo)
+  public OshiSysMonitor(OshiSysMonitorConfig config, SystemInfo systemInfo)
   {
     super(DEFAULT_METRICS_FEED);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
     this.config = config;
 
     this.si = systemInfo;
@@ -188,7 +184,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
             mem.getAvailable()
         );
         final ServiceMetricEvent.Builder builder = builder();
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
@@ -216,7 +211,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         );
 
         final ServiceMetricEvent.Builder builder = builder();
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
@@ -243,7 +237,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("fsDevName", fs.getVolume())
             .setDimension("fsDirName", fs.getMount());
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
@@ -277,7 +270,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         if (stats != null) {
           final ServiceMetricEvent.Builder builder = builder()
               .setDimension("diskName", disk.getName());
-          MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
             emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
@@ -319,7 +311,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
                   .setDimension("netName", net.getName())
                   .setDimension("netAddress", addr)
                   .setDimension("netHwaddr", net.getMacaddr());
-              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
                 emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
               }
@@ -371,7 +362,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
             final ServiceMetricEvent.Builder builder = builder()
                 .setDimension("cpuName", name)
                 .setDimension("cpuTime", entry.getKey());
-            MonitorUtils.addDimensionsToBuilder(builder, dimensions);
             if (total != 0) {
               // prevent divide by 0 exception and don't emit such events
               emitter.emit(builder.setMetric("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
@@ -389,8 +379,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-
       long uptime = os.getSystemUptime();
 
       final Map<String, Number> stats = ImmutableMap.of(
@@ -422,7 +410,6 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       InternetProtocolStats ipstats = os.getInternetProtocolStats();
       InternetProtocolStats.TcpStats tcpv4 = ipstats.getTCPv4Stats();
