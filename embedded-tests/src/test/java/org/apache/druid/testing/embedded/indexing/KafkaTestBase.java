@@ -107,13 +107,15 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(supervisorSpec);
 
     publishRecords(topic, useTransactions);
-    verifyIngestedEvents();
+    waitUntilPublishedRecordsAreIngested();
+    verifySupervisorIsRunningHealthy();
   }
 
   protected void verifyDataAndTearDown(boolean useTransactions)
   {
     publishRecords(topic, useTransactions);
-    verifyIngestedEvents();
+    waitUntilPublishedRecordsAreIngested();
+    verifySupervisorIsRunningHealthy();
 
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
     kafkaServer.deleteTopic(topic);
@@ -121,7 +123,10 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
     verifyRowCount();
   }
 
-  protected void verifyIngestedEvents()
+  /**
+   * Waits until number of processed events matches {@link #totalPublishedRecords}.
+   */
+  protected void waitUntilPublishedRecordsAreIngested()
   {
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
@@ -136,13 +141,19 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
         .mapToInt(Number::intValue)
         .sum();
     Assertions.assertEquals(totalPublishedRecords, totalEventsProcessed);
+  }
 
+  private void verifySupervisorIsRunningHealthy()
+  {
     final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorSpec.getId());
     Assertions.assertTrue(status.isHealthy());
     Assertions.assertFalse(status.isSuspended());
     Assertions.assertEquals("RUNNING", status.getState());
   }
 
+  /**
+   * Verifies that the row count in {@link #dataSource} matches {@link #totalPublishedRecords}.
+   */
   protected void verifyRowCount()
   {
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);

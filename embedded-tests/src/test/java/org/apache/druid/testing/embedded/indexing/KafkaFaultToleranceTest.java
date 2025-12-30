@@ -19,9 +19,17 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.rpc.RequestBuilder;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.List;
+import java.util.Map;
 
 public class KafkaFaultToleranceTest extends KafkaTestBase
 {
@@ -75,6 +83,33 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
   {
     setupTopicAndSupervisor(2, useTransactions);
     kafkaServer.increasePartitionsInTopic(topic, 4);
+    publishRecords(topic, useTransactions);
+    verifyDataAndTearDown(useTransactions);
+  }
+
+  @Test
+  public void test_supervisorLaunchesNewTask_ifEarlyHandoff()
+  {
+    final boolean useTransactions = true;
+    setupTopicAndSupervisor(2, useTransactions);
+
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/taskGroups/handoff",
+        supervisorSpec.getId()
+    );
+    cluster.callApi().serviceClient().onLeaderOverlord(
+        mapper -> new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(mapper, Map.of("taskGroupIds", List.of(0, 1))),
+        new TypeReference<>() {}
+    );
+
+    // Wait for the handoff notice to be processed
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("ingest/notices/time")
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorSpec.getId())
+                      .hasDimension("noticeType", "handoff_task_group_notice")
+    );
+
     publishRecords(topic, useTransactions);
     verifyDataAndTearDown(useTransactions);
   }
