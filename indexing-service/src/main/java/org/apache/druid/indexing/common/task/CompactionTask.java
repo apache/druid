@@ -784,35 +784,38 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       SegmentCacheManager segmentCacheManager
   )
   {
-    return Pair.of(
-        dataSegment,
-        () -> {
-          final Closer closer = Closer.create();
-          try {
-            final AcquireSegmentAction acquireAction = closer.register(segmentCacheManager.acquireSegment(dataSegment));
-            final ReferenceCountedObjectProvider<Segment> segmentProvider =
-                FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
-            final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
-            return new ResourceHolder<>()
-            {
-              @Override
-              public QueryableIndex get()
-              {
-                return segment.as(QueryableIndex.class);
-              }
+    return Pair.of(dataSegment, () -> fetchSegmentInternal(dataSegment, segmentCacheManager));
+  }
 
-              @Override
-              public void close()
-              {
-                CloseableUtils.closeAndWrapExceptions(closer);
-              }
-            };
-          }
-          catch (Exception e) {
-            throw CloseableUtils.closeAndWrapInCatch(e, closer);
-          }
+  private static ResourceHolder<QueryableIndex> fetchSegmentInternal(
+      DataSegment dataSegment,
+      SegmentCacheManager segmentCacheManager
+  )
+  {
+    final Closer closer = Closer.create();
+    try {
+      final AcquireSegmentAction acquireAction = closer.register(segmentCacheManager.acquireSegment(dataSegment));
+      final ReferenceCountedObjectProvider<Segment> segmentProvider =
+          FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
+      final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
+      return new ResourceHolder<>()
+      {
+        @Override
+        public QueryableIndex get()
+        {
+          return segment.as(QueryableIndex.class);
         }
-    );
+
+        @Override
+        public void close()
+        {
+          CloseableUtils.closeAndWrapExceptions(closer);
+        }
+      };
+    }
+    catch (Exception e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+    }
   }
 
   /**
