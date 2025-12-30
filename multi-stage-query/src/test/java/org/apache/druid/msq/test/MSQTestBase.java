@@ -84,6 +84,7 @@ import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
@@ -91,7 +92,6 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -109,8 +109,8 @@ import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.input.LoadableSegment;
-import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.input.table.DataSegmentProvider;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
@@ -491,11 +491,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(SegmentWriteOutMediumFactory.class)
                 .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
-          binder.bind(DataSegmentProvider.class)
-                .toInstance(
-                    (segmentId, descriptor, channelCounters, isReindex) ->
-                        getLoadableSegment(this::newTempFolder, segmentId, descriptor, channelCounters)
-                );
+          binder.bind(DataSegmentProvider.class).toInstance(
+              (segmentId, descriptor, channelCounters, isReindex) ->
+                  getLoadableSegment(this::newTempFolder, segmentId, descriptor, channelCounters)
+          );
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());

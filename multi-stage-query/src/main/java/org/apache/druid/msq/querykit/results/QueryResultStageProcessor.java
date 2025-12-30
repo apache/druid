@@ -37,8 +37,8 @@ import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;

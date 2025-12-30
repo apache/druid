@@ -20,8 +20,8 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.input.table.DataSegmentProvider;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;

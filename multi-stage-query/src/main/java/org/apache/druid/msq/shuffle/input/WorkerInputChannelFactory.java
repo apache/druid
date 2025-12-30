@@ -27,8 +27,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.InputChannelFactory;
+import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 
 import java.util.List;

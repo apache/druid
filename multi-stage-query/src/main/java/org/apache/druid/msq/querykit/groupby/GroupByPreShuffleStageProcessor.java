@@ -28,8 +28,8 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.SegmentMapFunction;
 

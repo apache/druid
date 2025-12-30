@@ -21,7 +21,6 @@ package org.apache.druid.msq.input;
 
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
-import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 
