@@ -69,6 +69,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
+  private volatile CostMetrics lastKnownMetrics;
 
   public CostBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
@@ -128,14 +129,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public int computeTaskCountForRollover()
   {
-    return computeOptimalTaskCount(collectMetrics());
+    return computeOptimalTaskCount(lastKnownMetrics);
   }
 
   public int computeTaskCountForScaleAction()
   {
-    CostMetrics costMetrics = collectMetrics();
-    final int optimalTaskCount = computeOptimalTaskCount(costMetrics);
-    final int currentTaskCount = costMetrics.getCurrentTaskCount();
+    lastKnownMetrics = collectMetrics();
+    final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
+    final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
     // Perform only scale-up actions
     return optimalTaskCount >= currentTaskCount ? optimalTaskCount : -1;
@@ -212,7 +213,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         metrics.getAvgPartitionLag(),
         metrics.getPollIdleRatio()
     );
-
 
     if (optimalTaskCount == currentTaskCount) {
       return -1;

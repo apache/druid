@@ -71,12 +71,23 @@ public class CostBasedAutoScalerTest
   {
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
     int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100, 25);
-
     Assert.assertTrue("Should contain the current task count", contains(validTaskCounts, 25));
     Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
 
-    // Edge case: zero partitions return an empty array
-    Assert.assertEquals(0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
+    // Edge cases
+    Assert.assertEquals("Zero partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
+    Assert.assertEquals("Negative partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(-5, 10).length);
+
+    // Single partition
+    int[] singlePartition = CostBasedAutoScaler.computeValidTaskCounts(1, 1);
+    Assert.assertTrue("Single partition should have at least one valid count", singlePartition.length > 0);
+    Assert.assertTrue("Single partition should contain 1", contains(singlePartition, 1));
+
+    // Current exceeds partitions - should still yield valid, deduplicated options
+    int[] exceedsPartitions = CostBasedAutoScaler.computeValidTaskCounts(2, 5);
+    Assert.assertEquals(2, exceedsPartitions.length);
+    Assert.assertTrue(contains(exceedsPartitions, 1));
+    Assert.assertTrue(contains(exceedsPartitions, 2));
   }
 
   @Test
@@ -84,28 +95,24 @@ public class CostBasedAutoScalerTest
   {
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null));
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, 10, -5, 0.3)));
+    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, -1, 100, 0.3)));
   }
 
   @Test
   public void testComputeOptimalTaskCountScaling()
   {
     // High idle (underutilized) - should scale down
-    // With high idle (0.8), the algorithm evaluates lower task counts and finds they have lower idle cost
     int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
     Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
-  }
 
-  @Test
-  public void testComputeOptimalTaskCountLowIdleDoesNotScaleUpWithBalancedWeights()
-  {
-    // With a corrected idle ratio model and marginal lag model, low idle does not automatically trigger scale-up.
-    int result = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
+    // Very high idle with high task count - should scale down
+    int highIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(10.0, 50, 100, 0.9));
+    Assert.assertTrue("Scale down scenario should return optimal <= current", highIdleResult <= 50);
 
-    // Algorithm evaluates costs and may find the current count optimal
-    // or may scale down if idle cost reduction outweighs lag increase.
-    Assert.assertTrue(
-        "With low idle and balanced weights, algorithm should not scale up aggressively", result <= 25
-    );
+    // With low idle and balanced weights, algorithm should not scale up aggressively
+    int lowIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
+    Assert.assertTrue("With low idle and balanced weights, should not scale up aggressively", lowIdleResult <= 25);
   }
 
   @Test
@@ -130,26 +137,50 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testExtractProcessingRateMovingAverage()
+  public void testExtractPollIdleRatioInvalidTypes()
+  {
+    // Non-map task metric
+    Map<String, Map<String, Object>> nonMapTask = new HashMap<>();
+    nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapTask), 0.0001);
+
+    // Empty autoscaler metrics
+    Map<String, Map<String, Object>> emptyAutoscaler = new HashMap<>();
+    Map<String, Object> taskStats1 = new HashMap<>();
+    taskStats1.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, new HashMap<>());
+    emptyAutoscaler.put("0", Collections.singletonMap("task-0", taskStats1));
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(emptyAutoscaler), 0.0001);
+
+    // Non-map autoscaler metrics
+    Map<String, Map<String, Object>> nonMapAutoscaler = new HashMap<>();
+    Map<String, Object> taskStats2 = new HashMap<>();
+    taskStats2.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, "not-a-map");
+    nonMapAutoscaler.put("0", Collections.singletonMap("task-0", taskStats2));
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapAutoscaler), 0.0001);
+
+    // Non-number poll idle ratio
+    Map<String, Map<String, Object>> nonNumberRatio = new HashMap<>();
+    Map<String, Object> taskStats3 = new HashMap<>();
+    Map<String, Object> autoscalerMetrics = new HashMap<>();
+    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, "not-a-number");
+    taskStats3.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
+    nonNumberRatio.put("0", Collections.singletonMap("task-0", taskStats3));
+    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonNumberRatio), 0.0001);
+  }
+
+  @Test
+  public void testExtractMovingAverage()
   {
     // Null and empty return -1
-    Assert.assertEquals(
-        -1.,
-        CostBasedAutoScaler.extractMovingAverage(null),
-        0.0001
-    );
-    Assert.assertEquals(
-        -1.,
-        CostBasedAutoScaler.extractMovingAverage(Collections.emptyMap()),
-        0.0001
-    );
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(null), 0.0001);
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(Collections.emptyMap()), 0.0001);
 
     // Missing metrics return -1
     Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
     missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
     Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingMetrics), 0.0001);
 
-    // Valid stats return average
+    // Valid stats return average (using 5-minute)
     Map<String, Map<String, Object>> validStats = new HashMap<>();
     Map<String, Object> group = new HashMap<>();
     group.put("task-0", buildTaskStatsWithMovingAverage(1000.0));
@@ -159,361 +190,139 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testExtractMovingAverageFifteenMinuteFallback()
+  public void testExtractMovingAverageIntervalFallback()
   {
-    // Test that 15-minute average is preferred when available
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    group.put("task-0", buildTaskStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0));
-    stats.put("0", group);
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
+    // 15-minute average is preferred
+    Map<String, Map<String, Object>> fifteenMin = new HashMap<>();
+    fifteenMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)));
+    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(fifteenMin), 0.0001);
+
+    // 1-minute as final fallback
+    Map<String, Map<String, Object>> oneMin = new HashMap<>();
+    oneMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0)));
+    Assert.assertEquals(500.0, CostBasedAutoScaler.extractMovingAverage(oneMin), 0.0001);
+
+    // 15-minute preferred over 5-minute when both available
+    Map<String, Map<String, Object>> allIntervals = new HashMap<>();
+    allIntervals.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0)));
+    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(allIntervals), 0.0001);
+
+    // Falls back to 5-minute when 15-minute is null
+    Map<String, Map<String, Object>> nullFifteen = new HashMap<>();
+    nullFifteen.put("0", Collections.singletonMap("task-0", buildTaskStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)));
+    Assert.assertEquals(750.0, CostBasedAutoScaler.extractMovingAverage(nullFifteen), 0.0001);
+
+    // Falls back to 1-minute when both 15 and 5 are null
+    Map<String, Map<String, Object>> bothNull = new HashMap<>();
+    bothNull.put("0", Collections.singletonMap("task-0", buildTaskStatsWithTwoNullIntervals(250.0)));
+    Assert.assertEquals(250.0, CostBasedAutoScaler.extractMovingAverage(bothNull), 0.0001);
   }
 
   @Test
-  public void testExtractMovingAverageOneMinuteFallback()
+  public void testExtractMovingAverageInvalidTypes()
   {
-    // Test that 1-minute average is used as final fallback
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    group.put(
-        "task-0",
-        buildTaskStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0)
-    );
-    stats.put("0", group);
-    Assert.assertEquals(500.0, CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
+    // Non-map task metric
+    Map<String, Map<String, Object>> nonMapTask = new HashMap<>();
+    nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapTask), 0.0001);
 
-  @Test
-  public void testExtractMovingAveragePrefersFifteenOverFive()
-  {
-    // Test that 15-minute average is preferred over 5-minute when both are available
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    group.put("task-0", buildTaskStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0));
-    stats.put("0", group);
-    // Should use 15-minute average (1500.0), not 5-minute (1000.0) or 1-minute (500.0)
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
+    // Missing buildSegments
+    Map<String, Map<String, Object>> missingBuild = new HashMap<>();
+    Map<String, Object> taskStats1 = new HashMap<>();
+    taskStats1.put("movingAverages", new HashMap<>());
+    missingBuild.put("0", Collections.singletonMap("task-0", taskStats1));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingBuild), 0.0001);
 
-  @Test
-  public void testComputeTaskCountForScaleActionScaleUp()
-  {
-    // Test scale-up scenario: optimal > current
-    // With low idle ratio and high lag, should want to scale up
-    CostMetrics highLagMetrics = new CostMetrics(
-        10000.0,  // high lag
-        5,        // current task count
-        100,      // partition count
-        0.1,      // low idle ratio (busy)
-        3600,
-        1000.0
-    );
+    // Non-map movingAverages
+    Map<String, Map<String, Object>> nonMapMA = new HashMap<>();
+    Map<String, Object> taskStats2 = new HashMap<>();
+    taskStats2.put("movingAverages", "not-a-map");
+    nonMapMA.put("0", Collections.singletonMap("task-0", taskStats2));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapMA), 0.0001);
 
-    int result = autoScaler.computeOptimalTaskCount(highLagMetrics);
-    // The algorithm should evaluate different task counts
-    Assert.assertTrue("Should return a valid task count", result >= -1);
-  }
+    // Non-map buildSegments
+    Map<String, Map<String, Object>> nonMapBS = new HashMap<>();
+    Map<String, Object> taskStats3 = new HashMap<>();
+    Map<String, Object> movingAverages3 = new HashMap<>();
+    movingAverages3.put(RowIngestionMeters.BUILD_SEGMENTS, "not-a-map");
+    taskStats3.put("movingAverages", movingAverages3);
+    nonMapBS.put("0", Collections.singletonMap("task-0", taskStats3));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapBS), 0.0001);
 
-  @Test
-  public void testComputeTaskCountForScaleActionNoScale()
-  {
-    // Test no-scale scenario: optimal == current
-    CostMetrics balancedMetrics = new CostMetrics(
-        100.0,    // moderate lag
-        25,       // current task count
-        100,      // partition count
-        0.4,      // moderate idle ratio
-        3600,
-        1000.0
-    );
+    // Non-map interval data
+    Map<String, Map<String, Object>> nonMapInterval = new HashMap<>();
+    Map<String, Object> taskStats4 = new HashMap<>();
+    Map<String, Object> movingAverages4 = new HashMap<>();
+    Map<String, Object> buildSegments4 = new HashMap<>();
+    buildSegments4.put(FIFTEEN_MINUTE_NAME, "not-a-map");
+    movingAverages4.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments4);
+    taskStats4.put("movingAverages", movingAverages4);
+    nonMapInterval.put("0", Collections.singletonMap("task-0", taskStats4));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapInterval), 0.0001);
 
-    int result = autoScaler.computeOptimalTaskCount(balancedMetrics);
-    // Either returns -1 (no change) or a different task count
-    Assert.assertTrue("Result should be -1 or a valid positive number", result >= -1);
-  }
-
-  @Test
-  public void testComputeOptimalTaskCountWithNegativePartitions()
-  {
-    CostMetrics invalidMetrics = new CostMetrics(
-        100.0,
-        10,
-        -5,  // negative partition count
-        0.3,
-        3600,
-        1000.0
-    );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(invalidMetrics));
-  }
-
-  @Test
-  public void testComputeOptimalTaskCountWithNegativeTaskCount()
-  {
-    CostMetrics invalidMetrics = new CostMetrics(
-        100.0,
-        -1,  // negative task count
-        100,
-        0.3,
-        3600,
-        1000.0
-    );
-    Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(invalidMetrics));
-  }
-
-  @Test
-  public void testComputeValidTaskCountsWithSinglePartition()
-  {
-    // Edge case: single partition
-    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(1, 1);
-    Assert.assertTrue("Should have at least one valid count", validTaskCounts.length > 0);
-    Assert.assertTrue("Should contain 1 as valid count", contains(validTaskCounts, 1));
-  }
-
-  @Test
-  public void testComputeValidTaskCountsWithNegativePartitions()
-  {
-    // Negative partitions should return empty array
-    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(-5, 10);
-    Assert.assertEquals(0, validTaskCounts.length);
-  }
-
-  @Test
-  public void testExtractPollIdleRatioWithNonMapTaskMetric()
-  {
-    // Test branch where taskMetric is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    group.put("task-0", "not-a-map");
-    stats.put("0", group);
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractPollIdleRatioWithMissingAutoscalerMetrics()
-  {
-    // Test branch where autoscaler metrics map is present but poll idle ratio is missing
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> emptyAutoscalerMetrics = new HashMap<>();
-    taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, emptyAutoscalerMetrics);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithNonMapTaskMetric()
-  {
-    // Test branch where taskMetric is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    group.put("task-0", "not-a-map");
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithMissingBuildSegments()
-  {
-    // Test branch where movingAverages exists but buildSegments is missing
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithNonMapMovingAverage()
-  {
-    // Test branch where movingAveragesObj is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    taskStats.put("movingAverages", "not-a-map");
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
-
-  @Test
-  public void testComputeTaskCountForScaleActionReturnsMinusOneWhenScaleDown()
-  {
-    // When optimal < current, computeTaskCountForScaleAction should return -1
-    // This tests the ternary: optimalTaskCount >= currentTaskCount ? optimalTaskCount : -1
-    // Create a scenario where the algorithm wants to scale down (high idle ratio)
-    CostMetrics highIdleMetrics = new CostMetrics(
-        10.0,     // low lag
-        50,       // current task count (high)
-        100,      // partition count
-        0.9,      // very high idle ratio (underutilized)
-        3600,
-        1000.0
-    );
-
-    // computeOptimalTaskCount may return a lower task count
-    int optimalResult = autoScaler.computeOptimalTaskCount(highIdleMetrics);
-    // The test verifies that computeTaskCountForScaleAction handles scale-down correctly
-    Assert.assertTrue("Scale down scenario should return optimal <= current", optimalResult <= 50);
-  }
-
-  @Test
-  public void testComputeTaskCountForScaleActionReturnsPositiveWhenScaleUp()
-  {
-    // When optimal > current, computeTaskCountForScaleAction should return the optimal value
-    // Create a scenario with low idle (tasks are busy) and some lag
-    CostMetrics busyMetrics = new CostMetrics(
-        5000.0,   // significant lag
-        5,        // low current task count
-        100,      // partition count (20 partitions per task)
-        0.05,     // very low idle ratio (tasks are very busy)
-        3600,
-        1000.0
-    );
-
-    int optimalResult = autoScaler.computeOptimalTaskCount(busyMetrics);
-    // With very low idle ratio, algorithm should evaluate higher task counts
-    Assert.assertTrue("Busy scenario result should be valid", optimalResult >= -1);
-  }
-
-  @Test
-  public void testComputeOptimalTaskCountWhenOptimalEqualsCurrent()
-  {
-    // Test the branch where optimalTaskCount == currentTaskCount returns -1
-    // Create balanced metrics that likely result in current count being optimal
-    CostMetrics balancedMetrics = new CostMetrics(
-        50.0,     // low lag
-        20,       // current task count
-        100,      // partition count (5 partitions per task)
-        0.5,      // moderate idle ratio
-        3600,
-        1000.0
-    );
-
-    int result = autoScaler.computeOptimalTaskCount(balancedMetrics);
-    // Either -1 (optimal == current) or a different task count
-    Assert.assertTrue("Result should be -1 or positive", result >= -1);
-  }
-
-  @Test
-  public void testExtractPollIdleRatioWithNonMapAutoscalerMetrics()
-  {
-    // Test branch where AUTOSCALER_METRICS_KEY exists but is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, "not-a-map");
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractPollIdleRatioWithNonNumberPollIdleRatio()
-  {
-    // Test branch where pollIdleRatioAvg exists but is not a Number
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> autoscalerMetrics = new HashMap<>();
-    autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, "not-a-number");
-    taskStats.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithNonMapBuildSegments()
-  {
-    // Test branch where buildSegmentsObj is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, "not-a-map");
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithNonMapIntervalData()
-  {
-    // Test branch where the 15min/5min/1min interval data is not a Map
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(FIFTEEN_MINUTE_NAME, "not-a-map");
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
-  }
-
-  @Test
-  public void testExtractMovingAverageWithNonNumberProcessedRate()
-  {
-    // Test branch where processedRate is not a Number
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    Map<String, Object> buildSegments = new HashMap<>();
+    // Non-number processed rate
+    Map<String, Map<String, Object>> nonNumberRate = new HashMap<>();
+    Map<String, Object> taskStats5 = new HashMap<>();
+    Map<String, Object> movingAverages5 = new HashMap<>();
+    Map<String, Object> buildSegments5 = new HashMap<>();
     Map<String, Object> fifteenMin = new HashMap<>();
     fifteenMin.put(RowIngestionMeters.PROCESSED, "not-a-number");
-    buildSegments.put(FIFTEEN_MINUTE_NAME, fifteenMin);
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
+    buildSegments5.put(FIFTEEN_MINUTE_NAME, fifteenMin);
+    movingAverages5.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments5);
+    taskStats5.put("movingAverages", movingAverages5);
+    nonNumberRate.put("0", Collections.singletonMap("task-0", taskStats5));
+    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonNumberRate), 0.0001);
   }
 
   @Test
-  public void testExtractMovingAverageFallsBackToFiveMinuteWhenFifteenMinuteNull()
+  public void testComputeTaskCountForRolloverReturnsMinusOneWhenSuspended()
   {
-    // Test the fallback from 15min to 5min when 15min is explicitly null
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    Map<String, Object> buildSegments = new HashMap<>();
-    // Explicitly set 15min to null (not just missing)
-    buildSegments.put(FIFTEEN_MINUTE_NAME, null);
-    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, 750.0));
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(750.0, CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("s-up");
+    when(spec.isSuspended()).thenReturn(true);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("stream");
+
+    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
+                                                             .taskCountMax(10)
+                                                             .taskCountMin(1)
+                                                             .enableTaskAutoScaler(true)
+                                                             .lagWeight(0.5)
+                                                             .idleWeight(0.5)
+                                                             .build();
+
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
+    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
   }
 
   @Test
-  public void testExtractMovingAverageFallsBackToOneMinuteWhenBothNull()
+  public void testComputeTaskCountForRolloverReturnsMinusOneWhenLagStatsNull()
   {
-    // Test the fallback from 15min to 5min to 1min when both 15min and 5min are null
-    Map<String, Map<String, Object>> stats = new HashMap<>();
-    Map<String, Object> group = new HashMap<>();
-    Map<String, Object> taskStats = new HashMap<>();
-    Map<String, Object> movingAverages = new HashMap<>();
-    Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(FIFTEEN_MINUTE_NAME, null);
-    buildSegments.put(FIVE_MINUTE_NAME, null);
-    buildSegments.put(ONE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, 250.0));
-    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
-    taskStats.put("movingAverages", movingAverages);
-    group.put("task-0", taskStats);
-    stats.put("0", group);
-    Assert.assertEquals(250.0, CostBasedAutoScaler.extractMovingAverage(stats), 0.0001);
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("s-up");
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.computeLagStats()).thenReturn(null);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("stream");
+
+    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
+                                                             .taskCountMax(10)
+                                                             .taskCountMin(1)
+                                                             .enableTaskAutoScaler(true)
+                                                             .lagWeight(0.5)
+                                                             .idleWeight(0.5)
+                                                             .build();
+
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
+    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
   }
 
   private CostMetrics createMetrics(
@@ -556,10 +365,7 @@ public class CostBasedAutoScalerTest
   private Map<String, Object> buildTaskStatsWithMovingAverage(double processedRate)
   {
     Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(
-        FIVE_MINUTE_NAME,
-        Map.of(RowIngestionMeters.PROCESSED, processedRate)
-    );
+    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processedRate));
 
     Map<String, Object> movingAverages = new HashMap<>();
     movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
@@ -589,10 +395,7 @@ public class CostBasedAutoScalerTest
   )
   {
     Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(
-        FIFTEEN_MINUTE_NAME,
-        Map.of(RowIngestionMeters.PROCESSED, fifteenMinRate)
-    );
+    buildSegments.put(FIFTEEN_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, fifteenMinRate));
     buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, fiveMinRate));
     buildSegments.put(ONE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, oneMinRate));
 
@@ -604,71 +407,32 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  @Test
-  public void testComputeValidTaskCountsWhenCurrentExceedsPartitions()
+  private Map<String, Object> buildTaskStatsWithNullInterval(String nullInterval, String validInterval, double processedRate)
   {
-    // the currentTaskCount > partitionCount should still yield valid,
-    // deduplicated options
-    int[] counts = CostBasedAutoScaler.computeValidTaskCounts(2, 5);
-    Assert.assertEquals(2, counts.length);
-    Assert.assertTrue(contains(counts, 1));
-    Assert.assertTrue(contains(counts, 2));
+    Map<String, Object> buildSegments = new HashMap<>();
+    buildSegments.put(nullInterval, null);
+    buildSegments.put(validInterval, Map.of(RowIngestionMeters.PROCESSED, processedRate));
+
+    Map<String, Object> movingAverages = new HashMap<>();
+    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
+
+    Map<String, Object> taskStats = new HashMap<>();
+    taskStats.put("movingAverages", movingAverages);
+    return taskStats;
   }
 
-  @Test
-  public void testComputeTaskCountForRolloverReturnsMinusOneWhenSuspended()
+  private Map<String, Object> buildTaskStatsWithTwoNullIntervals(double oneMinRate)
   {
-    // Arrange: build autoscaler with suspended spec so collectMetrics returns null
-    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
-    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+    Map<String, Object> buildSegments = new HashMap<>();
+    buildSegments.put(FIFTEEN_MINUTE_NAME, null);
+    buildSegments.put(FIVE_MINUTE_NAME, null);
+    buildSegments.put(ONE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, oneMinRate));
 
-    when(spec.getId()).thenReturn("s-up");
-    when(spec.isSuspended()).thenReturn(true);
-    when(supervisor.getIoConfig()).thenReturn(ioConfig);
-    when(ioConfig.getStream()).thenReturn("stream");
+    Map<String, Object> movingAverages = new HashMap<>();
+    movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
 
-    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
-                                                             .taskCountMax(10)
-                                                             .taskCountMin(1)
-                                                             .enableTaskAutoScaler(true)
-                                                             .lagWeight(0.5)
-                                                             .idleWeight(0.5)
-                                                             .build();
-
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
-
-    // Then
-    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
-  }
-
-  @Test
-  public void testComputeTaskCountForRolloverReturnsMinusOneWhenLagStatsNull()
-  {
-    // Arrange: collectMetrics should early-return when lagStats is null
-    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
-    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
-
-    when(spec.getId()).thenReturn("s-up");
-    when(spec.isSuspended()).thenReturn(false);
-    when(supervisor.computeLagStats()).thenReturn(null);
-    when(supervisor.getIoConfig()).thenReturn(ioConfig);
-    when(ioConfig.getStream()).thenReturn("stream");
-
-    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
-                                                             .taskCountMax(10)
-                                                             .taskCountMin(1)
-                                                             .enableTaskAutoScaler(true)
-                                                             .lagWeight(0.5)
-                                                             .idleWeight(0.5)
-                                                             .build();
-
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
-
-    // Then
-    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
+    Map<String, Object> taskStats = new HashMap<>();
+    taskStats.put("movingAverages", movingAverages);
+    return taskStats;
   }
 }

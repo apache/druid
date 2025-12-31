@@ -87,9 +87,9 @@ public interface Supervisor
     return null; // default implementation for interface compatability; returning null since true or false is misleading
   }
 
-  default SupervisorTaskAutoScaler createAutoscaler()
+  default SupervisorTaskAutoScaler createAutoscaler(SupervisorSpec spec)
   {
-    return null;
+    return spec.createAutoscaler(this);
   }
 
   /**

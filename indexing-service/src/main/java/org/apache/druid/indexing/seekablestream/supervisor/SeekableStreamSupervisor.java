@@ -61,6 +61,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -1685,7 +1686,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public SupervisorTaskAutoScaler createAutoscaler()
+  public SupervisorTaskAutoScaler createAutoscaler(SupervisorSpec spec)
   {
     this.taskAutoScaler = spec.createAutoscaler(this);
     return this.taskAutoScaler;
@@ -3352,7 +3353,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     final AtomicInteger numStoppedTasks = new AtomicInteger();
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
-    // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
     activelyReadingTaskGroups.entrySet().stream().sorted(
             Comparator.comparingLong(
                 taskGroupEntry -> computeEarliestTaskStartTime(taskGroupEntry.getValue()).getMillis()
@@ -3391,6 +3391,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
           }
         });
+
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
@@ -3443,10 +3444,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.remove(groupId);
     }
 
+    maybeScaleUpDuringTaskRollover();
+  }
+
+  /**
+   * Scales up or down the number of tasks during a task rollover, if applicable.
+   * <p>
+   * This method is invoked to determine whether a task count adjustment is needed
+   * during a task rollover based on the recommendations from the task auto-scaler.
+ */
+  private void maybeScaleUpDuringTaskRollover()
+  {
     if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
       int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
-      if (rolloverTaskCount > 0 && rolloverTaskCount < ioConfig.getTaskCount()) {
-        log.info("Cost-based autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
+      if (rolloverTaskCount > 0) {
+        log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
         changeTaskCountInIOConfig(rolloverTaskCount);
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
@@ -4353,15 +4365,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public SeekableStreamSupervisorIOConfig getIoConfig()
   {
     return ioConfig;
-  }
-
-  /**
-   * Sets the autoscaler reference for rollover-based scale-down decisions.
-   * Called by {@link SupervisorManager} after supervisor creation.
-   */
-  public void setTaskAutoScaler(@Nullable SupervisorTaskAutoScaler taskAutoScaler)
-  {
-    this.taskAutoScaler = taskAutoScaler;
   }
 
   @Override

@@ -102,9 +102,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     metadataSupervisorManager.insert("id1", spec);
     supervisor3.start();
-    EasyMock.expect(supervisor3.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.start();
@@ -117,7 +117,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     resetAll();
     supervisor2.start();
-    EasyMock.expect(supervisor2.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor2.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.stop(true);
     replayAll();
 
@@ -167,7 +167,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     metadataSupervisorManager.insert("id1", spec);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.start();
@@ -229,7 +229,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
     manager.start();
     Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
@@ -254,7 +254,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     exception.expect(DruidException.class);
     replayAll();
     manager.start();
@@ -338,7 +338,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(supervisor1.getStatus()).andReturn(report);
     replayAll();
 
@@ -359,7 +359,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.handoffTaskGroupsEarly(ImmutableList.of(1));
 
     replayAll();
@@ -381,7 +381,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor3.start();
-    EasyMock.expect(supervisor3.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
 
     replayAll();
 
@@ -423,8 +423,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor3.start();
-    EasyMock.expect(supervisor3.createAutoscaler()).andReturn(null).anyTimes();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.start();
     EasyMock.expectLastCall().andThrow(new RuntimeException("supervisor explosion"));
     replayAll();
@@ -444,9 +444,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
     metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.stop(true);
-    EasyMock.expect(supervisor2.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor2.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor2.start();
     EasyMock.expectLastCall().andThrow(new RuntimeException("supervisor failed to start"));
     replayAll();
@@ -474,7 +474,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.stopAsync();
     EasyMock.expectLastCall().andThrow(new RuntimeException("RTE"));
     replayAll();
@@ -493,7 +493,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.reset(EasyMock.anyObject(DataSourceMetadata.class));
     replayAll();
 
@@ -513,7 +513,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor3.start();
-    EasyMock.expect(supervisor3.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.start();
@@ -549,7 +549,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.resetOffsets(datasourceMetadata);
     replayAll();
 
@@ -575,9 +575,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     metadataSupervisorManager.insert("id1", spec);
     supervisor3.start();
-    EasyMock.expect(supervisor3.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor3.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.start();
@@ -593,7 +593,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     resetAll();
     metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
     supervisor2.start();
-    EasyMock.expect(supervisor2.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor2.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     supervisor1.stop(true);
     replayAll();
 
@@ -609,7 +609,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
     supervisor2.stop(true);
     supervisor1.start();
-    EasyMock.expect(supervisor1.createAutoscaler()).andReturn(null).anyTimes();
+    EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     replayAll();
 
     manager.suspendOrResumeSupervisor("id1", false);

@@ -502,7 +502,7 @@ public class SupervisorManager
     SupervisorTaskAutoScaler autoscaler;
     try {
       supervisor = spec.createSupervisor();
-      autoscaler = supervisor.createAutoscaler();
+      autoscaler = supervisor.createAutoscaler(spec);
 
       supervisor.start();
       if (autoscaler != null) {
