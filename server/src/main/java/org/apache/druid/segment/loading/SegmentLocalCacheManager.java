@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -54,8 +53,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -185,6 +186,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return config.isVirtualStorage();
+  }
+
+  @Override
   public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
   {
     return config.isVirtualStorage();
@@ -248,47 +255,48 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-    boolean removeInfo = false;
     if (!segment.getId().toString().equals(file.getName())) {
       log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
       ignored.incrementAndGet();
-    } else {
-      removeInfo = true;
-      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-      for (StorageLocation location : locations) {
-        // check for migrate from old nested local storage path format
-        final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-        if (legacyPath.exists()) {
-          final File destination = cacheEntry.toPotentialLocation(location.getPath());
-          FileUtils.mkdirp(destination);
-          final File[] oldFiles = legacyPath.listFiles();
-          final File[] newFiles = destination.listFiles();
-          // make sure old files exist and new files do not exist
-          if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-            Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
-          }
-          cleanupLegacyCacheLocation(location.getPath(), legacyPath);
-        }
+      return;
+    }
 
-        if (cacheEntry.checkExists(location.getPath())) {
-          removeInfo = false;
-          final boolean reserveResult;
-          if (config.isVirtualStorage()) {
-            reserveResult = location.reserveWeak(cacheEntry);
-          } else {
-            reserveResult = location.reserve(cacheEntry);
-          }
-          if (!reserveResult) {
-            log.makeAlert(
-                "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-                location.getPath(),
-                location.availableSizeBytes(),
-                segment.getId(),
-                segment.getSize()
-            ).emit();
-          }
-          cachedSegments.add(segment);
+    boolean removeInfo = true;
+
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      // check for migrate from old nested local storage path format
+      final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+      if (legacyPath.exists()) {
+        final File destination = cacheEntry.toPotentialLocation(location.getPath());
+        FileUtils.mkdirp(destination);
+        final File[] oldFiles = legacyPath.listFiles();
+        final File[] newFiles = destination.listFiles();
+        // make sure old files exist and new files do not exist
+        if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+          Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
         }
+        cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+      }
+
+      if (cacheEntry.checkExists(location.getPath())) {
+        removeInfo = false;
+        final boolean reserveResult;
+        if (config.isVirtualStorage()) {
+          reserveResult = location.reserveWeak(cacheEntry);
+        } else {
+          reserveResult = location.reserve(cacheEntry);
+        }
+        if (!reserveResult) {
+          log.makeAlert(
+              "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+              location.getPath(),
+              location.availableSizeBytes(),
+              segment.getId(),
+              segment.getSize()
+          ).emit();
+        }
+        cachedSegments.add(segment);
       }
     }
 
@@ -460,7 +468,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (hold != null) {
           if (hold.getEntry().isMounted()) {
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(hold.getEntry().referenceProvider),
+                () -> Futures.immediateFuture(AcquireSegmentResult.cached(hold.getEntry().referenceProvider)),
                 hold
             );
           } else {
@@ -614,6 +622,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Nullable
+  @Override
+  public StorageStats getStorageStats()
+  {
+    if (config.isVirtualStorage()) {
+      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetWeakStats());
+      }
+      return new StorageStats(
+          Map.of(),
+          locationStats
+      );
+    } else {
+      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetStaticStats());
+      }
+      return new StorageStats(
+          locationStats,
+          Map.of()
+      );
+    }
+  }
+
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
@@ -641,6 +674,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return false;
+  }
+
+  /**
+   * Testing use only please, any callers that want to do stuff with segments should use
+   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
+   * and so is not really safe to use while the cache manager is active
+   */
+  @VisibleForTesting
+  @Nullable
+  public ReferenceCountedSegmentProvider getSegmentReferenceProvider(DataSegment segment)
+  {
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+      if (entry != null) {
+        return entry.referenceProvider;
+      }
+    }
+    return null;
   }
 
   /**
@@ -673,18 +725,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> makeOnDemandLoadSupplier(
+  private Supplier<ListenableFuture<AcquireSegmentResult>> makeOnDemandLoadSupplier(
       final SegmentCacheEntry entry,
       final StorageLocation location
   )
   {
     return Suppliers.memoize(
-        () -> virtualStorageLoadOnDemandExec.submit(
-            () -> {
-              entry.mount(location);
-              return entry.referenceProvider;
-            }
-        )
+        () -> {
+          final long startTime = System.nanoTime();
+          return virtualStorageLoadOnDemandExec.submit(
+              () -> {
+                final long execStartTime = System.nanoTime();
+                final long waitTime = execStartTime - startTime;
+                entry.mount(location);
+                return new AcquireSegmentResult(
+                    entry.referenceProvider,
+                    entry.dataSegment.getSize(),
+                    waitTime,
+                    System.nanoTime() - startTime
+                );
+              }
+          );
+        }
     );
   }
 
@@ -926,7 +988,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   location.getPath(),
                   mountLocation.getPath()
               );
-            } else {
+            } else if (referenceProvider != null) {
               log.debug("already mounted [%s] in location[%s]", id, mountLocation.getPath());
               return;
             }
@@ -1008,14 +1070,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       try {
         synchronized (this) {
           if (referenceProvider != null) {
-            referenceProvider.close();
+            ReferenceCountedSegmentProvider provider = referenceProvider;
             referenceProvider = null;
+            provider.close();
           }
           if (!config.isDeleteOnRemove()) {
             return;
           }
           if (storageDir != null) {
-            atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            if (storageDir.exists()) {
+              atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            }
             storageDir = null;
             location = null;
           }

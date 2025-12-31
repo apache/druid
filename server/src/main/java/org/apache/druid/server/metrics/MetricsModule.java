@@ -57,7 +57,6 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -87,8 +86,6 @@ public class MetricsModule implements Module
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
-    binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
-
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
@@ -109,10 +106,6 @@ public class MetricsModule implements Module
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
-    // CliPeon.runTask and CliPeon.getDataSourceFromTask/CliPeon.getTaskIDFromTask. The reason for this is unclear
-    // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
-    injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       if (shouldLoadMonitor(monitorClass, nodeRoles)) {
         monitors.add(injector.getInstance(monitorClass));
@@ -149,60 +142,39 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public JvmMonitor getJvmMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JvmMonitor getJvmMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmMonitor(dimensions);
+    return new JvmMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmCpuMonitor getJvmCpuMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JvmCpuMonitor getJvmCpuMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmCpuMonitor(dimensions);
+    return new JvmCpuMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmThreadsMonitor getJvmThreadsMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public JvmThreadsMonitor getJvmThreadsMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmThreadsMonitor(dimensions);
+    return new JvmThreadsMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
+  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          dataSourceTaskIdHolder.getDataSource(),
-          dataSourceTaskIdHolder.getTaskId()
-      );
-      return new SysMonitor(dimensions);
+      return new SysMonitor();
     }
   }
 
   @Provides
   @ManageLifecycle
   public OshiSysMonitor getOshiSysMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder,
       @Self Set<NodeRole> nodeRoles,
       OshiSysMonitorConfig oshiSysConfig
   )
@@ -210,11 +182,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          dataSourceTaskIdHolder.getDataSource(),
-          dataSourceTaskIdHolder.getTaskId()
-      );
-      return new OshiSysMonitor(dimensions, oshiSysConfig);
+      return new OshiSysMonitor(oshiSysConfig);
     }
   }
 

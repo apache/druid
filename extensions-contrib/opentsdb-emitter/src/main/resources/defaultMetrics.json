@@ -54,7 +54,8 @@
   "query/cache/total/timeouts": [],
   "query/cache/total/errors": [],
   "ingest/events/thrownAway": [
-    "dataSource"
+    "dataSource",
+    "reason"
   ],
   "ingest/events/unparseable": [
     "dataSource"
@@ -143,15 +144,6 @@
     "tier"
   ],
   "segment/unneeded/count": [
-    "tier"
-  ],
-  "segment/cost/raw": [
-    "tier"
-  ],
-  "segment/cost/normalization": [
-    "tier"
-  ],
-  "segment/cost/normalized": [
     "tier"
   ],
   "segment/loadQueue/size": [

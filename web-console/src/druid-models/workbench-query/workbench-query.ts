@@ -230,7 +230,7 @@ export class WorkbenchQuery {
   public readonly unlimited?: boolean;
   public readonly prefixLines?: number;
 
-  public readonly parsedQuery?: SqlQuery;
+  public readonly parsedQuery?: SqlQuery; // Derived from query string
 
   constructor(value: WorkbenchQueryValue) {
     let queryString = value.queryString;
@@ -267,7 +267,9 @@ export class WorkbenchQuery {
       queryContext: this.queryContext,
       queryParameters: this.queryParameters,
       engine: this.engine,
+      lastExecution: this.lastExecution,
       unlimited: this.unlimited,
+      prefixLines: this.prefixLines,
     };
   }
 
@@ -279,6 +281,12 @@ export class WorkbenchQuery {
       `===== Context =====`,
       JSONBig.stringify(queryContext, undefined, 2),
     ].join('\n\n');
+  }
+
+  public formatLastExecution(): string | undefined {
+    const { lastExecution } = this;
+    if (!lastExecution) return;
+    return `Attached to: ${lastExecution.id} (${lastExecution.engine})`;
   }
 
   public changeQueryString(queryString: string): WorkbenchQuery {
@@ -543,6 +551,10 @@ export class WorkbenchQuery {
       ...(apiQuery.context || {}),
       ...queryContext,
     };
+
+    if (engine === 'sql-native') {
+      apiQuery.context.engine ??= 'native';
+    }
 
     let cancelQueryId: string | undefined;
     if (engine === 'sql-native' || engine === 'sql-msq-dart') {

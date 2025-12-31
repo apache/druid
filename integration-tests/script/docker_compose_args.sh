@@ -28,8 +28,8 @@ getComposeArgs()
   fi
   if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
   then
-    # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
-    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ]
+    # Sanity check: cannot combine CliIndexer tests with security tests
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
     then
       echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
       exit 1
@@ -41,16 +41,6 @@ getComposeArgs()
   then
     # default + additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
     echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
-  then
-    # default + additional historical modified for query retry test
-    # See CliHistoricalForQueryRetryTest.
-    echo "-f ${DOCKERDIR}/docker-compose.query-retry-test.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ]
-  then
-    # default + additional historical modified for query error test
-    # See CliHistoricalForQueryRetryTest.
-    echo "-f ${DOCKERDIR}/docker-compose.query-error-test.yml"
   elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]
       then
         # default + with override config + schema registry container
@@ -59,14 +49,6 @@ getComposeArgs()
       then
         # cluster with overriden properties for broker and coordinator
         echo "-f ${DOCKERDIR}/docker-compose.centralized-datasource-schema.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-task-schema-publish-disabled" ]
-      then
-        # cluster with overriden properties for broker and coordinator
-        echo "-f ${DOCKERDIR}/docker-compose.cds-task-schema-publish-disabled.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-coordinator-metadata-query-disabled" ]
-      then
-        # cluster with overriden properties for broker and coordinator
-        echo "-f ${DOCKERDIR}/docker-compose.cds-coordinator-metadata-query-disabled.yml"
   else
     # default
     echo "-f ${DOCKERDIR}/docker-compose.yml"

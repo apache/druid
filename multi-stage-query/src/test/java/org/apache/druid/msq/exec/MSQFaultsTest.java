@@ -472,7 +472,7 @@ public class MSQFaultsTest extends MSQTestBase
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
 
-    final int numFiles = 20000;
+    final int numFiles = 100000;
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -492,10 +492,83 @@ public class MSQFaultsTest extends MSQTestBase
             + ") PARTITIONED by day",
             externalFiles
         ))
+        .setQueryContext(Map.of("maxNumTasks", 8))
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
+        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, 10))
         .verifyResults();
+  }
+
+  @Test
+  public void testTooManyInputFilesWithLowContextLimit() throws IOException
+  {
+    final RowSignature dummyRowSignature = RowSignature.builder().addTimeColumn().build();
+
+    final int numFiles = 100;
+    final int maxInputFilesPerWorker = 10;
+
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+    final String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
+
+    final Map<String, Object> context =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker)
+                    .build();
+
+    testIngestQuery()
+        .setSql(StringUtils.format(
+            "insert into foo1 SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ") PARTITIONED by day",
+            externalFiles
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedRowSignature(dummyRowSignature)
+        .setQueryContext(context)
+        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, maxInputFilesPerWorker, 10))
+        .verifyResults();
+  }
+
+  @Test
+  public void testTooManyPartitionsWithLowContextLimit() throws IOException
+  {
+    final int maxPartitions = 5;
+
+    final Map<String, Object> context =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
+                    .put(MultiStageQueryContext.CTX_MAX_PARTITIONS, maxPartitions)
+                    .build();
+
+    final RowSignature rowSignature = RowSignature.builder().addTimeColumn().build();
+
+    // Create a file with enough rows to exceed the partition limit
+    final File file = createNdJsonFile(newTempFile("ndjson"), 100, 1);
+    final String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
+
+    testIngestQuery().setSql(" insert into foo1 SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(new TooManyPartitionsFault(maxPartitions))
+                     .verifyResults();
   }
 
   @Test

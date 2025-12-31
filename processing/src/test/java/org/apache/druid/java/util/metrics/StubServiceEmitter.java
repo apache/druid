@@ -19,14 +19,19 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -39,18 +44,32 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
-  private final Queue<Event> events = new ConcurrentLinkedDeque<>();
-  private final Queue<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
-  private final ConcurrentHashMap<String, Queue<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
+  public static final String TYPE = "stub";
+
+  private final Deque<Event> events = new ConcurrentLinkedDeque<>();
+  private final Deque<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
+  private final ConcurrentHashMap<String, Deque<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {
-    super("testing", "localhost", null);
+    this("testing", "localhost");
   }
 
   public StubServiceEmitter(String service, String host)
   {
-    super(service, host, null);
+    this(service, host, new NoopTaskHolder());
+  }
+
+  public StubServiceEmitter(String service, String host, TaskHolder taskHolder)
+  {
+    super(service, host, new NoopEmitter(), ImmutableMap.of(), taskHolder);
+  }
+
+  public static StubServiceEmitter createStarted()
+  {
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter();
+    stubServiceEmitter.start();
+    return stubServiceEmitter;
   }
 
   @Override
@@ -101,7 +120,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public List<Number> getMetricValues(
       String metricName,
-      Map<String, Object> dimensionFilters
+      @Nullable Map<String, Object> dimensionFilters
   )
   {
     final List<Number> values = new ArrayList<>();
@@ -123,9 +142,42 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     return values;
   }
 
+  public int getMetricEventCount(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? 0 : metricEventQueue.size();
+  }
+
+  public long getMetricEventLongSum(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    long total = 0;
+    for (ServiceMetricEvent event : metricEventQueue) {
+      total += event.getValue().longValue();
+    }
+    return total;
+  }
+
+  @Nullable
+  public Number getLatestMetricEventValue(String metricName)
+  {
+    final Deque<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? null : metricEventQueue.getLast().getValue();
+  }
+
+  public Number getLatestMetricEventValue(String metricName, Number defaultValue)
+  {
+    final Number latest = getLatestMetricEventValue(metricName);
+    if (latest == null) {
+      return defaultValue;
+    }
+    return latest;
+  }
+
   @Override
   public void start()
   {
+    super.start();
   }
 
   @Override
@@ -139,5 +191,11 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public void close()
   {
+    try {
+      super.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

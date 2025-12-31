@@ -232,7 +232,7 @@ public class WorkerImpl implements Worker
     final Set<String> datasources = (Set<String>) queryMetricDimensions.get(DruidMetrics.DATASOURCE);
     final Set<Interval> intervals = (Set<Interval>) queryMetricDimensions.get(DruidMetrics.INTERVAL);
 
-    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
                  .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
                  .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
@@ -428,6 +428,11 @@ public class WorkerImpl implements Worker
 
     // Set up processorCloser (called when processing is done).
     kernelHolder.processorCloser.register(() -> runWorkOrder.stop(null));
+
+    // Set resultPartitionBoundaries in RunWorkOrder if it is known ahead of time.
+    if (kernel.hasResultPartitionBoundaries()) {
+      runWorkOrder.getStagePartitionBoundariesFuture().set(kernel.getResultPartitionBoundaries());
+    }
 
     // Start working on this stage immediately.
     kernel.startReading();

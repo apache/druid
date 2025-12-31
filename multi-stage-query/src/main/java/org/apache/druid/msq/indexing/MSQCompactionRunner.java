@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
@@ -63,6 +64,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -73,6 +75,14 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -262,7 +272,9 @@ public class MSQCompactionRunner implements CompactionRunner
       } else {
         query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
+
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
       DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
@@ -327,7 +339,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
     // value specified by user.
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getMaxRowsInMemory(compactionTaskContext);
     final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(compactionTaskContext);
 
     Integer rowsPerSegment = getRowsPerSegment(compactionTask);
@@ -368,6 +380,28 @@ public class MSQCompactionRunner implements CompactionRunner
       rowSignatureBuilder.add(aggregatorFactory.getName(), aggregatorFactory.getIntermediateType());
     }
     return rowSignatureBuilder.build();
+  }
+
+  /**
+   * Creates a {@link DataSource} and uses 'system' {@link AuthorizationResult} using an {@link Escalator} and
+   * {@link AuthorizerMapper} and applies any resulting {@link org.apache.druid.query.policy.Policy} to it using
+   * {@link DataSource#withPolicies(Map, PolicyEnforcer)}
+   */
+  private DataSource getInputDataSource(String name)
+  {
+    TableDataSource dataSource = new TableDataSource(name);
+    final Escalator escalator = injector.getInstance(Escalator.class);
+    if (escalator != null) {
+      final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+      final PolicyEnforcer policyEnforcer = injector.getInstance(PolicyEnforcer.class);
+      final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+          escalator.createEscalatedAuthenticationResult(),
+          List.of(new ResourceAction(new Resource(name, ResourceType.DATASOURCE), Action.READ)),
+          authorizerMapper
+      );
+      return dataSource.withPolicies(authResult.getPolicyMap(), policyEnforcer);
+    }
+    return dataSource;
   }
 
   private static List<DimensionSpec> getAggregateDimensions(
@@ -457,7 +491,7 @@ public class MSQCompactionRunner implements CompactionRunner
     return queryContext;
   }
 
-  private static Query<?> buildScanQuery(
+  private Query<?> buildScanQuery(
       CompactionTask compactionTask,
       Interval interval,
       DataSchema dataSchema,
@@ -467,7 +501,7 @@ public class MSQCompactionRunner implements CompactionRunner
     RowSignature rowSignature = getRowSignature(dataSchema);
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
-        .dataSource(dataSchema.getDataSource())
+        .dataSource(getInputDataSource(dataSchema.getDataSource()))
         .columns(rowSignature.getColumnNames())
         .virtualColumns(virtualColumns)
         .columnTypes(rowSignature.getColumnTypes())
@@ -618,7 +652,7 @@ public class MSQCompactionRunner implements CompactionRunner
                             .collect(Collectors.toList());
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
-        .setDataSource(new TableDataSource(compactionTask.getDataSource()))
+        .setDataSource(getInputDataSource(compactionTask.getDataSource()))
         .setVirtualColumns(virtualColumns)
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
@@ -683,40 +717,57 @@ public class MSQCompactionRunner implements CompactionRunner
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] MSQControllerTask specs", totalNumSpecs);
 
+    TaskStatus firstFailure = null;
     int failCnt = 0;
 
-    for (MSQControllerTask eachTask : tasks) {
-      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachTask);
-      if (!currentSubTaskHolder.setTask(eachTask)) {
+    for (int taskCnt = 0; taskCnt < tasks.size(); taskCnt++) {
+      final MSQControllerTask task = tasks.get(taskCnt);
+      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task);
+      if (!currentSubTaskHolder.setTask(task)) {
         String errMsg = "Task was asked to stop. Finish as failed.";
-        log.info(errMsg);
+        log.info("%s", errMsg);
         return TaskStatus.failure(compactionTaskId, errMsg);
       }
       try {
-        if (eachTask.isReady(toolbox.getTaskActionClient())) {
-          log.info("Running MSQControllerTask: " + json);
-          final TaskStatus eachResult = eachTask.run(toolbox);
-          if (!eachResult.isSuccess()) {
+        if (task.isReady(toolbox.getTaskActionClient())) {
+          log.info("Running MSQControllerTask number[%d]: %s", taskCnt, json);
+          final TaskStatus taskStatus = task.run(toolbox);
+          if (!taskStatus.isSuccess()) {
             failCnt++;
-            log.warn("Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+            log.warn("Failed to run MSQControllerTask number[%d]: %s", taskCnt, taskStatus.getErrorMsg());
+            if (firstFailure == null) {
+              firstFailure = taskStatus;
+            }
           }
         } else {
           failCnt++;
-          log.warn("MSQControllerTask is not ready: [%s].\nTrying the next MSQControllerTask.", json);
+          log.warn("MSQControllerTask number[%d] is not ready.", taskCnt);
         }
       }
       catch (Exception e) {
         failCnt++;
-        log.warn(e, "Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+        log.warn(e, "Failed to run MSQControllerTask number[%d].", taskCnt);
       }
     }
-    String msg = StringUtils.format(
+
+    log.info(
         "Ran [%d] MSQControllerTasks, [%d] succeeded, [%d] failed",
         totalNumSpecs,
         totalNumSpecs - failCnt,
         failCnt
     );
-    log.info(msg);
-    return failCnt == 0 ? TaskStatus.success(compactionTaskId) : TaskStatus.failure(compactionTaskId, msg);
+
+    if (failCnt == 0) {
+      return TaskStatus.success(compactionTaskId);
+    } else if (firstFailure != null && failCnt == 1) {
+      return TaskStatus.failure(compactionTaskId, firstFailure.getErrorMsg());
+    } else {
+      final StringBuilder msgBuilder =
+          new StringBuilder().append(failCnt).append("/").append(totalNumSpecs).append(" jobs failed");
+      if (firstFailure != null) {
+        msgBuilder.append("; first failure was: ").append(firstFailure.getErrorMsg());
+      }
+      return TaskStatus.failure(compactionTaskId, msgBuilder.toString());
+    }
   }
 }

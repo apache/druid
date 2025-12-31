@@ -121,7 +121,8 @@ jobs:
       - name: (openjdk17) strict compilation
         # errorprone requires JDK 11+
         # Strict compilation requires more than 2 GB
-        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+        # safe to exclude embedded-tests, it's not in distribution
+        run: ${MVN} clean -DstrictCompile -pl '!embedded-tests' compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
   openrewrite:
     runs-on: ubuntu-latest
@@ -197,7 +198,7 @@ jobs:
 
       - name: Tar druid logs
         if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log -C ./var druid/indexing-logs
 
       - name: Upload druid logs to GitHub
         if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}

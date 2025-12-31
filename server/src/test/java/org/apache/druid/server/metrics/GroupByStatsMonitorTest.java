@@ -19,18 +19,13 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
-import org.apache.druid.server.DruidNode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,9 +84,9 @@ public class GroupByStatsMonitorTest
   @Test
   public void testMonitor()
   {
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    emitter.start();
     monitor.doMonitor(emitter);
     emitter.flush();
     // Trigger metric emission
@@ -116,46 +112,36 @@ public class GroupByStatsMonitorTest
   {
     final String dataSource = "fooDs";
     final String taskId = "taskId1";
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        List.of(binder -> {
-          JsonConfigProvider.bindInstance(
-              binder,
-              Key.get(DruidNode.class, Self.class),
-              new DruidNode("test-inject", null, false, null, null, true, false)
-          );
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
-                .toInstance(dataSource);
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
-                .toInstance(taskId);
-        })
-    );
-    final DataSourceTaskIdHolder dsTaskIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dsTaskIdHolder);
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, dsTaskIdHolder);
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final String groupId = "test_groupid";
+    final String taskType = "test_tasktype";
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host", new TestTaskHolder(dataSource, taskId, taskType, groupId));
+    emitter.start();
     monitor.doMonitor(emitter);
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
     final Map<String, Object> dimFilters = Map.of(
-        "taskId", List.of(taskId), "dataSource", List.of(dataSource), "id", List.of(taskId)
+        DruidMetrics.DATASOURCE, dataSource,
+        DruidMetrics.TASK_ID, taskId,
+        DruidMetrics.ID, taskId,
+        DruidMetrics.TASK_TYPE,
+        taskType, DruidMetrics.GROUP_ID, groupId
     );
-    Assert.assertEquals(12, emitter.getNumEmittedEvents());
-    emitter.verifyValue("mergeBuffer/pendingRequests", dimFilters, 0L);
-    emitter.verifyValue("mergeBuffer/used", dimFilters, 0L);
-    emitter.verifyValue("mergeBuffer/queries", dimFilters, 1L);
-    emitter.verifyValue("mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
-    emitter.verifyValue("mergeBuffer/bytesUsed", dimFilters, 200L);
-    emitter.verifyValue("mergeBuffer/maxAcquisitionTimeNs", dimFilters, 100L);
-    emitter.verifyValue("mergeBuffer/maxBytesUsed", dimFilters, 200L);
-    emitter.verifyValue("groupBy/spilledQueries", dimFilters, 2L);
-    emitter.verifyValue("groupBy/spilledBytes", dimFilters, 200L);
-    emitter.verifyValue("groupBy/maxSpilledBytes", dimFilters, 200L);
-    emitter.verifyValue("groupBy/mergeDictionarySize", dimFilters, 300L);
-    emitter.verifyValue("groupBy/maxMergeDictionarySize", dimFilters, 300L);
+
+    verifyMetricValue(emitter, "mergeBuffer/pendingRequests", dimFilters, 0L);
+    verifyMetricValue(emitter, "mergeBuffer/used", dimFilters, 0L);
+    verifyMetricValue(emitter, "mergeBuffer/queries", dimFilters, 1L);
+    verifyMetricValue(emitter, "mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "mergeBuffer/bytesUsed", dimFilters, 200L);
+    verifyMetricValue(emitter, "mergeBuffer/maxAcquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "mergeBuffer/maxBytesUsed", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/spilledQueries", dimFilters, 2L);
+    verifyMetricValue(emitter, "groupBy/spilledBytes", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/maxSpilledBytes", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/mergeDictionarySize", dimFilters, 300L);
+    verifyMetricValue(emitter, "groupBy/maxMergeDictionarySize", dimFilters, 300L);
   }
 
 
@@ -167,8 +153,7 @@ public class GroupByStatsMonitorTest
       mergeBufferPool.takeBatch(4);
     }).get(20, TimeUnit.SECONDS);
 
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
@@ -196,8 +181,7 @@ public class GroupByStatsMonitorTest
         }
       }
 
-      final GroupByStatsMonitor monitor =
-          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+      final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);
@@ -209,5 +193,17 @@ public class GroupByStatsMonitorTest
     catch (InterruptedException e) {
       // do nothing
     }
+  }
+
+  private void verifyMetricValue(StubServiceEmitter emitter, String metricName, Map<String, Object> dimFilters, Number expectedValue)
+  {
+    final List<ServiceMetricEvent> observedMetricEvents = emitter.getMetricEvents(metricName);
+    Assert.assertEquals(1, observedMetricEvents.size());
+    final ServiceMetricEvent event = observedMetricEvents.get(0);
+    final EventMap map = event.toMap();
+    final boolean matchesDims = dimFilters.entrySet().stream()
+                                          .allMatch(e -> Objects.equals(e.getValue(), map.get(e.getKey())));
+    Assert.assertTrue(matchesDims);
+    Assert.assertEquals(expectedValue, event.getValue());
   }
 }

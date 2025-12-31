@@ -46,14 +46,22 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A KubernetesPeonClient implementation that directly queries the Kubernetes API server for all read and write
+ * operations on a per-task basis.
+ * <p>
+ * This implementation does not use caching and may put more load on the Kubernetes API server compared to
+ * {@link CachingKubernetesPeonClient}, especially when many tasks are running concurrently.
+ * </p>
+ */
 public class KubernetesPeonClient
 {
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonClient.class);
 
-  private final KubernetesClientApi clientApi;
-  private final String namespace;
-  private final String overlordNamespace;
-  private final boolean debugJobs;
+  protected final KubernetesClientApi clientApi;
+  protected final String namespace;
+  protected final String overlordNamespace;
+  protected final boolean debugJobs;
   private final ServiceEmitter emitter;
 
   public KubernetesPeonClient(
@@ -66,19 +74,9 @@ public class KubernetesPeonClient
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
-    this.overlordNamespace = overlordNamespace;
+    this.overlordNamespace = overlordNamespace == null ? "" : overlordNamespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-  }
-
-  public KubernetesPeonClient(
-      KubernetesClientApi clientApi,
-      String namespace,
-      boolean debugJobs,
-      ServiceEmitter emitter
-  )
-  {
-    this(clientApi, namespace, "", debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -92,21 +90,39 @@ public class KubernetesPeonClient
       createK8sJobWithRetries(job);
       log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
 
-      // Wait for the pod to be available
-      Pod mainPod = getPeonPodWithRetries(jobName);
-      log.info("Pod for job[%s] launched for task[%s]. Waiting for pod to be in running state.", jobName, task.getId());
-
-      // Wait for the pod to be in state running, completed, or failed.
-      Pod result = waitForPodResultWithRetries(mainPod, howLong, timeUnit);
+      Pod result = waitUntilPeonPodCreatedAndReady(jobName, howLong, timeUnit);
 
       if (result == null) {
-        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
+        throw new ISE("K8s pod for the task[%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
-      log.info("Pod for job[%s] is in state [%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
+      log.info("Pod for job[%s] is in state[%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
     });
+  }
+
+  /**
+   * Waits until a pod for the given job is created and ready to be monitored.
+   * <p>
+   * A pod can appear and dissapear in some cases, such as the task being canceled. In this case, null is returned and
+   * the caller should handle accordingly.
+   * </p>
+   *
+   * @param jobName  the name of the job whose pod we're waiting for
+   * @param howLong  the maximum time to wait
+   * @param timeUnit the time unit for the timeout
+   * @return the {@link Pod} which was waited for or null if the pod appeared and dissapeared
+   * @throws DruidException if the pod never appears within the timeout period
+   */
+  protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
+  {
+    // Wait for the pod to be available
+    Pod mainPod = getPeonPodWithRetries(jobName);
+    log.info("Pod for job[%s] launched. Waiting for pod to be in running state.", jobName);
+
+    // Wait for the pod to be in state running, completed, or failed.
+    return waitForPodResultWithRetries(mainPod, howLong, timeUnit);
   }
 
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
@@ -119,18 +135,18 @@ public class KubernetesPeonClient
                       .withName(taskId.getK8sJobName())
                       .waitUntilCondition(
                           x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
-                          && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
+                                               && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
                           howLong,
                           unit
                       );
       if (job == null) {
-        log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
+        log.info("K8s job for the task[%s] was not found. It can happen if the task was canceled", taskId);
         return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
         return new JobResponse(job, PeonPhase.SUCCEEDED);
       }
-      log.warn("Task %s failed with status %s", taskId, job.getStatus());
+      log.warn("Task[%s] failed with status[%s]", taskId, job.getStatus());
       return new JobResponse(job, PeonPhase.FAILED);
     });
   }
@@ -145,57 +161,84 @@ public class KubernetesPeonClient
                                                                  .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s job: %s", taskId);
+        log.info("Cleaned up k8s job[%s]", taskId);
       } else {
-        log.info("K8s job does not exist: %s", taskId);
+        log.info("K8s job[%s] does not exist", taskId);
       }
       return result;
     } else {
-      log.info("Not cleaning up job %s due to flag: debugJobs=true", taskId);
+      log.info("Not cleaning up job[%s] due to flag: debugJobs=true", taskId);
       return true;
     }
   }
 
+  /**
+   * Get a LogWatch for the peon pod associated with the given taskId. Create it if it does not already exist.
+   * <p>
+   * Any issues creating the LogWatch will be logged and an absent Optional will be returned.
+   * </p>
+   *
+   * @return an Optional containing the {@link LogWatch} if it exists or was created.
+   */
   public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot watch logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      LogWatch logWatch = k8sClient.batch()
-          .v1()
-          .jobs()
-          .inNamespace(namespace)
-          .withName(taskId.getK8sJobName())
-          .inContainer("main")
-          .watchLog();
+      LogWatch logWatch = k8sClient.pods()
+                                   .inNamespace(namespace)
+                                   .withName(podName)
+                                   .inContainer("main")
+                                   .watchLog();
       if (logWatch == null) {
         return Optional.absent();
       }
       return Optional.of(logWatch);
     }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+      log.error(e, "Error watching logs from task[%s], pod[%s].", taskId, podName);
       return Optional.absent();
     }
   }
 
+  /**
+   * Get an InputStream for the logs of the peon pod associated with the given taskId.
+   *
+   * @return an Optional containing the {@link InputStream} for the logs of the pod, if it exists and logs could be streamed, or absent otherwise.
+   */
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot stream logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      InputStream logStream = k8sClient.batch()
-                                   .v1()
-                                   .jobs()
-                                   .inNamespace(namespace)
-                                   .withName(taskId.getK8sJobName())
-                                   .inContainer("main")
-                                   .getLogInputStream();
+      InputStream logStream = k8sClient.pods()
+                                       .inNamespace(namespace)
+                                       .resource(pod)
+                                       .inContainer("main")
+                                       .getLogInputStream();
       if (logStream == null) {
         return Optional.absent();
       }
       return Optional.of(logStream);
     }
     catch (Exception e) {
-      log.error(e, "Error streaming logs from task: %s", taskId);
+      log.error(e, "Error streaming logs for pod[%s] associated with task[%s]", podName, taskId.getOriginalTaskId());
       return Optional.absent();
     }
   }
@@ -244,7 +287,7 @@ public class KubernetesPeonClient
                    .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         } else {
-          log.error("Failed to delete job %s", x.getMetadata().getName());
+          log.error("Failed to delete job[%s]", x.getMetadata().getName());
         }
       });
       return numDeleted.get();

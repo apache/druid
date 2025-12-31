@@ -170,7 +170,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                       @Override
                       public Authorizer getAuthorizer(String name)
                       {
-                        return new AllowAllAuthorizer();
+                        return new AllowAllAuthorizer(null);
                       }
                     }
                 );
@@ -500,7 +500,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
 
-    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -571,7 +571,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
 
-    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -624,7 +624,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.when(responseMock.getStatus()).thenReturn(0); // Test unassigned http status code case from server
     Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
 
-    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -871,7 +871,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final Result result = new Result(proxyRequestMock, response);
-    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         jsonMapper,

@@ -28,7 +28,6 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -55,11 +54,9 @@ public class JettyServerModuleTest
     Mockito.when(jettyServerThreadPool.getQueueSize()).thenReturn(50);
     Mockito.when(jettyServerThreadPool.getBusyThreads()).thenReturn(60);
 
-    JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor(
-        MonitorsConfig.mapOfDatasourceAndTaskID("ds", "t0")
-    );
+    JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor();
 
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     jettyMonitor.doMonitor(serviceEmitter);
 
     serviceEmitter.verifyValue("jetty/numOpenConnections", 0);

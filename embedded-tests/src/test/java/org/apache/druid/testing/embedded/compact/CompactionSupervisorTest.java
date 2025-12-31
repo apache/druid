@@ -22,22 +22,20 @@ package org.apache.druid.testing.embedded.compact;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -51,9 +49,10 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,15 +77,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .useDefaultTimeoutForLatchableEmitter(600)
-                               .addExtensions(
-                                   CatalogClientModule.class,
-                                   CatalogCoordinatorModule.class,
-                                   IndexerMemoryManagementModule.class,
-                                   MSQDurableStorageModule.class,
-                                   MSQIndexingModule.class,
-                                   MSQSqlModule.class,
-                                   SqlTaskModule.class
+                               .addCommonProperty("druid.auth.authorizers", "[\"allowAll\"]")
+                               .addCommonProperty("druid.auth.authorizer.allowAll.type", "allowAll")
+                               .addCommonProperty("druid.auth.authorizer.allowAll.policy.type", "noRestriction")
+                               .addCommonProperty(
+                                   "druid.policy.enforcer.allowedPolicies",
+                                   "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
                                )
+                               .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
+                               .addExtensions(CatalogClientModule.class, CatalogCoordinatorModule.class)
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)
@@ -95,18 +94,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                .addServer(new EmbeddedRouter());
   }
 
-  @BeforeAll
-  public void enableCompactionSupervisors()
+
+  private void configureCompaction(CompactionEngine compactionEngine)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, null))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
 
-  @Test
-  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig()
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig(CompactionEngine compactionEngine)
   {
+    configureCompaction(compactionEngine);
+
     // Ingest data at DAY granularity and verify
     runIngestionAtGranularity(
         "DAY",
@@ -124,6 +126,29 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withSkipOffsetFromLatest(Period.seconds(0))
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
             )
             .build();
 
@@ -191,5 +216,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .dataSource(dataSource)
         .withId(IdUtils.getRandomId());
     cluster.callApi().runTask(task, overlord);
+  }
+
+  public static List<CompactionEngine> getEngine()
+  {
+    return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
   }
 }

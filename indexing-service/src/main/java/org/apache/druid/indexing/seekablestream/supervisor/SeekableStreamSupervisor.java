@@ -135,8 +135,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
- * logic are similar enough so they're grouped together into this class.
+ * This class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
+ * logic is similar enough, so they're grouped together into this class.
  * <p>
  * Supervisor responsible for managing the SeekableStreamIndexTasks (Kafka/Kinesis) for a single dataSource. At a high level, the class accepts a
  * {@link SeekableStreamSupervisorSpec} which includes the stream name (topic / stream) and configuration as well as an ingestion spec which will
@@ -541,10 +541,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * This method determines how to do scale actions based on collected lag points.
-   * If scale action is triggered :
-   * First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
-   * Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled in the next 'RunNotice'.
-   * Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
+   * If scale action is triggered:
+   * <ul>
+   * <li>First, call <code>gracefulShutdownInternal()</code> which will change the state of current datasource ingest tasks from reading to publishing.
+   * <li>Secondly, clear all the stateful data structures:
+   * <ul>
+   *  <li><code>activelyReadingTaskGroups</code>,
+   *  <li><code>partitionGroups</code>,
+   *  <li><code>partitionOffsets</code>,
+   *  <li><code>pendingCompletionTaskGroups</code>,
+   *  <li><code>partitionIds</code>.
+   * </ul>
+   * These structures will be rebuiled in the next 'RunNotice'.
+   * <li>Finally, change the <code>taskCount</code> in <code>SeekableStreamSupervisorIOConfig</code> and sync it to <code>MetadataStorage</code>.
+   * </ul>
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
@@ -608,13 +618,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Clears allocation information including active task groups, partition groups, partition offsets, and partition IDs.
+   * <p>
+   * Note: Does not clear {@link #pendingCompletionTaskGroups} so that the supervisor remembers that these
+   * tasks are publishing and auto-scaler does not repeatedly attempt a scale down until these tasks
+   * complete. If this is cleared, the next {@link #discoverTasks()} might add these tasks to
+   * {@link #activelyReadingTaskGroups}.
+   */
   private void clearAllocationInfo()
   {
     activelyReadingTaskGroups.clear();
     partitionGroups.clear();
     partitionOffsets.clear();
-
-    pendingCompletionTaskGroups.clear();
     partitionIds.clear();
   }
 
@@ -910,7 +926,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
-  // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
+  // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
   private final IdleConfig idleConfig;
@@ -1463,7 +1479,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public Map<String, Map<String, Object>> getStats()
   {
     try {
-      return getCurrentTotalStats();
+      return getCurrentStats();
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1502,7 +1518,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private Map<String, Map<String, Object>> getCurrentTotalStats()
+  private Map<String, Map<String, Object>> getCurrentStats()
       throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();
@@ -1738,7 +1754,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       checkIfStreamInactiveAndTurnSupervisorIdle();
 
       // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
-      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+      if (isStopping()) {
         logDebugReport();
         return;
       }
@@ -1746,7 +1762,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       synchronized (stateChangeLock) {
         // if supervisor is not suspended, ensure required tasks are running
         // if suspended, ensure tasks have been requested to gracefully stop
-        if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        if (isStopping()) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
           log.debug("Supervisor[%s] for datasource[%s] is already stopping.", supervisorId, dataSource);
         } else if (stateManager.isIdle()) {
@@ -2018,7 +2034,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdown(id, reasonFormat, args);
+      if (isStopping()) {
+        log.debug(
+            "Not shutting down task[%s] because the supervisor[%s] has been stopped. Reason was[%s]",
+            id,
+            supervisorId,
+            StringUtils.format(reasonFormat, args)
+        );
+      } else {
+        taskQueue.get().shutdown(id, reasonFormat, args);
+      }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -2028,7 +2053,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
+      if (isStopping()) {
+        log.debug(
+            "Not shutting down task[%s] because the supervisor[%s] has been stopped. Reason was[%s]",
+            id,
+            supervisorId,
+            StringUtils.format(reasonFormat, args)
+        );
+      } else {
+        taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
+      }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -4554,6 +4588,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     finally {
       recordSupplierLock.unlock();
     }
+  }
+
+  /**
+   * Whether this supervisor is in a {@link SupervisorStateManager.BasicState#STOPPING} state.
+   */
+  private boolean isStopping()
+  {
+    return stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING);
   }
 
   /**

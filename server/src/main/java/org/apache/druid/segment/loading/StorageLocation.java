@@ -114,10 +114,11 @@ public class StorageLocation
    * Current total size of files in bytes, including weak entries.
    */
   private final AtomicLong currSizeBytes = new AtomicLong(0);
-
+  private final AtomicLong currStaticSizeBytes = new AtomicLong(0);
   private final AtomicLong currWeakSizeBytes = new AtomicLong(0);
 
-  private final AtomicReference<Stats> stats = new AtomicReference<>();
+  private final AtomicReference<StaticStats> staticStats = new AtomicReference<>();
+  private final AtomicReference<WeakStats> weakStats = new AtomicReference<>();
 
   /**
    * A {@link ReentrantReadWriteLock.ReadLock} may be used for any operations to access {@link #staticCacheEntries} or
@@ -147,7 +148,8 @@ public class StorageLocation
     } else {
       this.freeSpaceToKeep = 0;
     }
-    resetStats();
+    resetStaticStats();
+    resetWeakStats();
   }
 
   /**
@@ -259,6 +261,8 @@ public class StorageLocation
       if (reclaimResult.isSuccess()) {
         staticCacheEntries.put(entry.getId(), entry);
         currSizeBytes.getAndAdd(entry.getSize());
+        currStaticSizeBytes.getAndAdd(entry.getSize());
+        staticStats.getAndUpdate(s -> s.load(entry.getSize()));
       }
       return reclaimResult.isSuccess();
     }
@@ -306,7 +310,7 @@ public class StorageLocation
         final WeakCacheEntry newEntry = new WeakCacheEntry(entry);
         linkNewWeakEntry(newEntry);
         weakCacheEntries.put(entry.getId(), newEntry);
-        stats.get().load();
+        weakStats.getAndUpdate(s -> s.load(entry.getSize()));
       }
       return reclaimResult.isSuccess();
     }
@@ -335,7 +339,7 @@ public class StorageLocation
       WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
       if (existingEntry != null && existingEntry.hold()) {
         existingEntry.visited = true;
-        stats.get().hit();
+        weakStats.getAndUpdate(WeakStats::hit);
         return new ReservationHold<>((T) existingEntry.cacheEntry, existingEntry::release);
       }
       return null;
@@ -369,7 +373,7 @@ public class StorageLocation
       WeakCacheEntry retryExistingEntry = weakCacheEntries.get(entryId);
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
-        stats.get().hit();
+        weakStats.getAndUpdate(WeakStats::hit);
         return new ReservationHold<>((T) retryExistingEntry.cacheEntry, retryExistingEntry::release);
       }
       final CacheEntry newEntry = entrySupplier.get();
@@ -381,7 +385,7 @@ public class StorageLocation
         newWeakEntry.hold();
         linkNewWeakEntry(newWeakEntry);
         weakCacheEntries.put(newEntry.getId(), newWeakEntry);
-        stats.get().load();
+        weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
             () -> {
@@ -408,7 +412,7 @@ public class StorageLocation
             }
         );
       } else {
-        stats.get().reject();
+        weakStats.getAndUpdate(WeakStats::reject);
         hold = null;
       }
       return hold;
@@ -431,6 +435,8 @@ public class StorageLocation
         final CacheEntry toRemove = staticCacheEntries.remove(entry.getId());
         toRemove.unmount();
         currSizeBytes.getAndAdd(-entry.getSize());
+        currStaticSizeBytes.getAndAdd(-entry.getSize());
+        staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
       }
     }
     finally {
@@ -578,7 +584,7 @@ public class StorageLocation
             cacheEntryIdentifier -> {
               if (!staticCacheEntries.containsKey(cacheEntryIdentifier)) {
                 removed.unmount();
-                stats.get().unmount();
+                weakStats.getAndUpdate(WeakStats::unmount);
               }
               return null;
             }
@@ -633,17 +639,24 @@ public class StorageLocation
     }
     currSizeBytes.set(0);
     currWeakSizeBytes.set(0);
-    resetStats();
+    currStaticSizeBytes.set(0);
+    resetStaticStats();
+    resetWeakStats();
   }
 
-  public Stats getStats()
+  public WeakStats getWeakStats()
   {
-    return stats.get();
+    return weakStats.get();
   }
 
-  public void resetStats()
+  public StaticStats resetStaticStats()
   {
-    stats.set(new Stats());
+    return staticStats.getAndSet(new StaticStats(currStaticSizeBytes));
+  }
+
+  public WeakStats resetWeakStats()
+  {
+    return weakStats.getAndSet(new WeakStats(currWeakSizeBytes));
   }
 
   /**
@@ -701,11 +714,11 @@ public class StorageLocation
           );
         }
         unlinkWeakEntry(removed);
-        stats.get().evict();
-        toRemove.next = null;
-        toRemove.prev = null;
-        droppedEntries.add(toRemove);
-        sizeFreed += toRemove.cacheEntry.getSize();
+        weakStats.getAndUpdate(s -> s.evict(removed.cacheEntry.getSize()));
+        removed.next = null;
+        removed.prev = null;
+        droppedEntries.add(removed);
+        sizeFreed += removed.cacheEntry.getSize();
         startEntry = null;
       }
 
@@ -897,62 +910,158 @@ public class StorageLocation
     }
   }
 
-  public static final class Stats
+  public static final class StaticStats implements StorageLocationStats
   {
+    private final AtomicLong sizeUsed;
     private final AtomicLong loadCount = new AtomicLong(0);
-    private final AtomicLong rejectionCount = new AtomicLong(0);
-    private final AtomicLong hitCount = new AtomicLong(0);
-    private final AtomicLong evictionCount = new AtomicLong(0);
-    private final AtomicLong unmountCount = new AtomicLong(0);
+    private final AtomicLong loadBytes = new AtomicLong(0);
+    private final AtomicLong dropCount = new AtomicLong(0);
+    private final AtomicLong dropBytes = new AtomicLong(0);
 
-    public void hit()
+    public StaticStats(AtomicLong sizeUsed)
     {
-      hitCount.getAndIncrement();
+      this.sizeUsed = sizeUsed;
     }
 
-    public long getHitCount()
-    {
-      return hitCount.get();
-    }
-
-    public void load()
+    public StaticStats load(long size)
     {
       loadCount.getAndIncrement();
+      loadBytes.getAndAdd(size);
+      return this;
     }
 
+    public StaticStats drop(long size)
+    {
+      dropCount.getAndIncrement();
+      dropBytes.getAndAdd(size);
+      return this;
+    }
+
+    @Override
+    public long getUsedBytes()
+    {
+      return sizeUsed.get();
+    }
+
+    @Override
     public long getLoadCount()
     {
       return loadCount.get();
     }
 
-    public void evict()
+    @Override
+    public long getLoadBytes()
     {
-      evictionCount.getAndIncrement();
+      return loadBytes.get();
     }
 
+    @Override
+    public long getDropCount()
+    {
+      return dropCount.get();
+    }
+
+    @Override
+    public long getDropBytes()
+    {
+      return dropBytes.get();
+    }
+  }
+
+  public static final class WeakStats implements VirtualStorageLocationStats
+  {
+    private final AtomicLong sizeUsed;
+    private final AtomicLong loadCount = new AtomicLong(0);
+    private final AtomicLong loadBytes = new AtomicLong(0);
+    private final AtomicLong rejectionCount = new AtomicLong(0);
+    private final AtomicLong hitCount = new AtomicLong(0);
+    private final AtomicLong evictionCount = new AtomicLong(0);
+    private final AtomicLong evictionBytes = new AtomicLong(0);
+    private final AtomicLong unmountCount = new AtomicLong(0);
+
+    public WeakStats(AtomicLong sizeUsed)
+    {
+      this.sizeUsed = sizeUsed;
+    }
+
+    public WeakStats hit()
+    {
+      hitCount.getAndIncrement();
+      return this;
+    }
+
+    public WeakStats load(long size)
+    {
+      loadCount.getAndIncrement();
+      loadBytes.getAndAdd(size);
+      return this;
+    }
+
+    public WeakStats evict(long size)
+    {
+      evictionCount.getAndIncrement();
+      evictionBytes.getAndAdd(size);
+      return this;
+    }
+
+    public WeakStats unmount()
+    {
+      unmountCount.getAndIncrement();
+      return this;
+    }
+
+    public WeakStats reject()
+    {
+      rejectionCount.getAndIncrement();
+      return this;
+    }
+
+    @Override
+    public long getUsedBytes()
+    {
+      return sizeUsed.get();
+    }
+
+    @Override
+    public long getHitCount()
+    {
+      return hitCount.get();
+    }
+
+    @Override
+    public long getLoadCount()
+    {
+      return loadCount.get();
+    }
+
+    @Override
+    public long getLoadBytes()
+    {
+      return loadBytes.get();
+    }
+
+    @Override
     public long getEvictionCount()
     {
       return evictionCount.get();
     }
 
-    public void unmount()
+    @Override
+    public long getEvictionBytes()
     {
-      unmountCount.getAndIncrement();
+      return evictionBytes.get();
     }
 
-    public long getUnmountCount()
-    {
-      return unmountCount.get();
-    }
-
-    public void reject()
-    {
-      rejectionCount.getAndIncrement();
-    }
-
+    @Override
     public long getRejectCount()
     {
       return rejectionCount.get();
+    }
+
+    @VisibleForTesting
+    public long getUnmountCount()
+    {
+      return unmountCount.get();
     }
   }
 }

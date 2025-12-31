@@ -19,50 +19,42 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.CpuSet;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
-import java.util.Map;
+/**
+ * Monitor that reports CPU set metrics from cgroups both v1 and v2.
+ */
 
 public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 {
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
 
-  public CgroupCpuSetMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupCpuSetMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
   }
 
-  public CgroupCpuSetMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupCpuSetMonitor(String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupCpuSetMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
   }
 
   public CgroupCpuSetMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final CpuSet cpuset = new CpuSet(cgroupDiscoverer);
-    final CpuSet.CpuSetMetric cpusetSnapshot = cpuset.snapshot();
-
+    final CpuSet.CpuSetMetric cpusetSnapshot = cgroupDiscoverer.getCpuSetMetrics();
     final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
     emitter.emit(builder.setMetric(
         "cgroup/cpuset/cpu_count",
         cpusetSnapshot.getCpuSetCpus().length

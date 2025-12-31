@@ -141,6 +141,8 @@ public class MultiStageQueryContext
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
+  public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
+  public static final String CTX_MAX_PARTITIONS = "maxPartitions";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -157,10 +159,22 @@ public class MultiStageQueryContext
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
-  public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}.
+   */
+  static final String CTX_MAX_ROWS_IN_MEMORY = "maxRowsInMemory";
+
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}. Alternate spelling of {@link #CTX_MAX_ROWS_IN_MEMORY}.
+   * Ignored if {@link #CTX_MAX_ROWS_IN_MEMORY} is set.
+   */
+  static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+
+  /**
+   * Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+   * OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+   */
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
@@ -189,11 +203,10 @@ public class MultiStageQueryContext
    * {@link ControllerResource#httpPostCounters} would throw errors when encountering new counter types that they do
    * not yet recognize. This causes problems during rolling updates.
    *
-   * Once all servers are on Druid 31 or later, this can safely be flipped to "true". At that point, unknown counters
-   * are represented on the deserialization side using {@link NilQueryCounterSnapshot}.
+   * For a rolling update from a version prior to Druid 31, this must be set to "false" by the job submitter.
    */
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
-  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = false;
+  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
 
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
@@ -315,6 +328,34 @@ public class MultiStageQueryContext
     );
   }
 
+  public static int getMaxInputFilesPerWorker(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_INPUT_FILES_PER_WORKER);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
+    }
+    if (value <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+    }
+    return value;
+  }
+
+  public static int getMaxPartitions(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_PARTITIONS);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_PARTITIONS;
+    }
+    if (value <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
+  }
+
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
   {
     return QueryContexts.getAsEnum(
@@ -414,9 +455,14 @@ public class MultiStageQueryContext
     return destination;
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext)
+  public static int getMaxRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+    Integer ctxValue = queryContext.getInt(CTX_MAX_ROWS_IN_MEMORY);
+    if (ctxValue == null) {
+      ctxValue = queryContext.getInt(CTX_ROWS_IN_MEMORY);
+    }
+
+    return ctxValue != null ? ctxValue : DEFAULT_MAX_ROWS_IN_MEMORY;
   }
 
   public static Integer getMaxNumSegments(final QueryContext queryContext)

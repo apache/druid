@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
@@ -72,9 +73,9 @@ public class LatchableEmitter extends StubServiceEmitter
   /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host, LatchableEmitterConfig config)
+  public LatchableEmitter(String service, String host, LatchableEmitterConfig config, TaskHolder taskHolder)
   {
-    super(service, host);
+    super(service, host, taskHolder);
     this.defaultWaitTimeoutMillis = config.getDefaultWaitTimeoutMillis();
   }
 
@@ -112,7 +113,8 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Waits until an event that satisfies the given predicate is emitted.
+   * Waits until an event that satisfies the given predicate is emitted, considering all previously observed events
+   * since the last call to {@link #flush()} as potential candidates for match as well.
    *
    * @param condition     condition to wait for
    * @param timeoutMillis timeout, or negative to not use a timeout
@@ -125,7 +127,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for event");
+        throw new ISE("Timed out waiting for event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {
@@ -137,15 +139,56 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Wait until a metric event that matches the given condition is emitted.
+   * Waits until the next event that satisfies the given predicate is emitted. This method should only be called
+   * if the caller is certain that a metric matching the condition is going to be emitted, such as from a monitor.
+   *
+   * @param condition     condition to wait for
+   * @param timeoutMillis timeout, or negative to not use a timeout
+   */
+  public void waitForNextEvent(Predicate<Event> condition, long timeoutMillis)
+  {
+    final WaitCondition waitCondition = new WaitCondition(condition);
+    registerWaitConditionNextEvent(waitCondition);
+
+    try {
+      final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
+      if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
+        throw new ISE("Timed out waiting for next event after [%,d]ms", awaitTime);
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      waitConditions.remove(waitCondition);
+    }
+  }
+
+  /**
+   * Wait until a metric event that matches the given condition is emitted, considering all previously observed events
+   * since the last call to {@link #flush()} as potential candidates for match as well.
    * Uses the {@link LatchableEmitterConfig#defaultWaitTimeoutMillis}.
    */
   public ServiceMetricEvent waitForEvent(UnaryOperator<EventMatcher> condition)
   {
     final EventMatcher matcher = condition.apply(new EventMatcher());
     waitForEvent(
-        event -> event instanceof ServiceMetricEvent
-                 && matcher.test((ServiceMetricEvent) event),
+        event -> event instanceof ServiceMetricEvent && matcher.test((ServiceMetricEvent) event),
+        defaultWaitTimeoutMillis
+    );
+    return matcher.matchingEvent.get();
+  }
+
+  /**
+   * Wait until the next metric event that matches the given condition is emitted. This method should only be called
+   * if the caller is certain that a metric matching the condition is going to be emitted, such as from a monitor.
+   * Uses the {@link LatchableEmitterConfig#defaultWaitTimeoutMillis}.
+   */
+  public ServiceMetricEvent waitForNextEvent(UnaryOperator<EventMatcher> condition)
+  {
+    final EventMatcher matcher = condition.apply(new EventMatcher());
+    waitForNextEvent(
+        event -> event instanceof ServiceMetricEvent && matcher.test((ServiceMetricEvent) event),
         defaultWaitTimeoutMillis
     );
     return matcher.matchingEvent.get();
@@ -225,6 +268,17 @@ public class LatchableEmitter extends StubServiceEmitter
     finally {
       eventProcessingLock.unlock();
     }
+  }
+
+  /**
+   * Evaluates the given new condition for all past events and then adds it to
+   * {@link #waitConditions}.
+   */
+  private void registerWaitConditionNextEvent(WaitCondition condition)
+  {
+    eventProcessingLock.lock();
+    waitConditions.add(condition);
+    eventProcessingLock.unlock();
   }
 
   private static class WaitCondition

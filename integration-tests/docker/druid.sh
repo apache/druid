@@ -22,8 +22,8 @@ getConfPath()
     cluster_conf_base=/tmp/conf/druid/cluster
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
-    historical) echo $cluster_conf_base/data/historical ;;
     historical-for-query-error-test) echo $cluster_conf_base/data/historical ;;
+    historical) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
     indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator) echo $cluster_conf_base/master/coordinator ;;
@@ -103,14 +103,9 @@ setupData()
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "upgrade" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "centralized-datasource-schema" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-task-schema-publish-disabled" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-coordinator-metadata-query-disabled" ]; then
+  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "upgrade" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "centralized-datasource-schema" ]; then
     cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid
   fi
 
-  # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
-    echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid
-    cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid
-  fi
   service mariadb stop
 }

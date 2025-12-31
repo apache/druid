@@ -126,7 +126,8 @@
   },
   "ingest/events/thrownAway": {
     "dimensions": [
-      "dataSource"
+      "dataSource",
+      "reason"
     ],
     "type": "counter"
   },
@@ -260,24 +261,6 @@
     "type": "counter"
   },
   "segment/unneeded/count": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/raw": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalization": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalized": {
     "dimensions": [
       "tier"
     ],
@@ -449,33 +432,33 @@
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/count": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/write/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/write/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/read/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/fs/used": {
     "dimensions": [

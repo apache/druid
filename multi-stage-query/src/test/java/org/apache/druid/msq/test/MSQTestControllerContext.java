@@ -49,7 +49,7 @@ import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -293,7 +293,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   }
 
   @Override
-  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     serviceEmitter.emit(
         metricBuilder.setDimension(

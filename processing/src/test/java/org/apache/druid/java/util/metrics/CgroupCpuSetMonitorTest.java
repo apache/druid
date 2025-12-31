@@ -19,10 +19,11 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,6 +34,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class CgroupCpuSetMonitorTest
 {
@@ -66,8 +70,8 @@ public class CgroupCpuSetMonitorTest
   @Test
   public void testMonitor()
   {
-    final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, ImmutableMap.of(), "some_feed");
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(discoverer, "some_feed");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(4, emitter.getNumEmittedEvents());
 
@@ -75,5 +79,35 @@ public class CgroupCpuSetMonitorTest
     emitter.verifyValue("cgroup/cpuset/effective_cpu_count", 7);
     emitter.verifyValue("cgroup/cpuset/mems_count", 4);
     emitter.verifyValue("cgroup/cpuset/effective_mems_count", 1);
+    Assert.assertEquals(CgroupVersion.V1.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
+
+  @Test
+  public void testCgroupsV2DetectionInConstructor() throws IOException
+  {
+    // Set up cgroups v2 structure
+    File cgroupV2Dir = temporaryFolder.newFolder();
+    File procV2Dir = temporaryFolder.newFolder();
+    TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
+    
+    // Create v2 cpuset files in unified hierarchy
+    File cgroupRoot = new File(procV2Dir, "unified");
+    FileUtils.mkdirp(cgroupRoot);
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), "0-3\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), "0\n".getBytes(StandardCharsets.UTF_8));
+
+    CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
+    Assert.assertEquals(CgroupVersion.V2, v2Discoverer.getCgroupVersion());
+
+    // Constructor should detect v2 and log warning
+    CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, "test-feed");
+
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    
+    // doMonitor should return true but skip actual monitoring
+    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
+  }
+
 }
