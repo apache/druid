@@ -2751,6 +2751,28 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertEquals(12, config.getMaxAllowedStops());
   }
 
+  @Test
+  public void testCreateAutoscalerStoresAndReturnsAutoscaler()
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    // Test that createAutoscaler returns null when spec returns null
+    SeekableStreamSupervisorSpec mockSpec = EasyMock.createMock(SeekableStreamSupervisorSpec.class);
+    EasyMock.expect(mockSpec.createAutoscaler(supervisor)).andReturn(null).once();
+    EasyMock.replay(mockSpec);
+
+    Assert.assertNull(supervisor.createAutoscaler(mockSpec));
+    EasyMock.verify(mockSpec);
+
+    verifyAll();
+  }
+
   private static DataSchema getDataSchema()
   {
     List<DimensionSchema> dimensions = new ArrayList<>();

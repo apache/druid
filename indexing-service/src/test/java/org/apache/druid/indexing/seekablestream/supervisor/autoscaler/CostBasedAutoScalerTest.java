@@ -325,6 +325,33 @@ public class CostBasedAutoScalerTest
     Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
   }
 
+  @Test
+  public void testComputeTaskCountForRolloverReturnsMinusOneWhenNoMetrics()
+  {
+    // Tests the case where lastKnownMetrics is null (no computeTaskCountForScaleAction called)
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("s-up");
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("stream");
+
+    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
+                                                             .taskCountMax(10)
+                                                             .taskCountMin(1)
+                                                             .enableTaskAutoScaler(true)
+                                                             .lagWeight(0.5)
+                                                             .idleWeight(0.5)
+                                                             .build();
+
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
+    // Should return -1 when lastKnownMetrics is null
+    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
+  }
+
   private CostMetrics createMetrics(
       double avgPartitionLag,
       int currentTaskCount,
