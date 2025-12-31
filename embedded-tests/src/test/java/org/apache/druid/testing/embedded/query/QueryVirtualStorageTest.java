@@ -102,6 +102,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         .useDefaultTimeoutForLatchableEmitter(20)
         .addResource(storageResource)
         .addCommonProperty("druid.storage.zip", "false")
+        .addCommonProperty("druid.indexer.task.buildV10", "true")
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT1s")
         .addCommonProperty(
             "druid.monitoring.monitors",

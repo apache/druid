@@ -107,6 +107,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.cacheConfig,
         bob.cachePopulatorStats,
         bob.indexMergerV9Factory,
+        null,
         bob.druidNodeAnnouncer,
         bob.druidNode,
         bob.lookupNodeService,

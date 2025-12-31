@@ -39,6 +39,7 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -66,7 +67,13 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
+import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.BaseTableProjectionSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
+import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
@@ -96,8 +103,11 @@ public class IndexIO
 {
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
+  public static final byte V10_VERSION = 0xA;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
   public static final BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
+
+  public static final String V10_FILE_NAME = "druid.segment";
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
   static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
@@ -119,6 +129,7 @@ public class IndexIO
       indexLoadersBuilder.put(i, legacyIndexLoader);
     }
     indexLoadersBuilder.put((int) V9_VERSION, new V9IndexLoader(columnConfig));
+    indexLoadersBuilder.put((int) V10_VERSION, new V10IndexLoader(columnConfig));
     indexLoaders = indexLoadersBuilder.build();
   }
 
@@ -901,6 +912,203 @@ public class IndexIO
     {
       ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
       return serde.read(byteBuffer, columnConfig, smooshedFiles, parentColumn);
+    }
+  }
+
+  static class V10IndexLoader implements IndexLoader
+  {
+    private final ColumnConfig columnConfig;
+
+    V10IndexLoader(ColumnConfig columnConfig)
+    {
+      this.columnConfig = columnConfig;
+    }
+
+    @Override
+    public QueryableIndex load(File inDir, ObjectMapper mapper, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
+        throws IOException
+    {
+      final File segmentFile = new File(inDir, V10_FILE_NAME);
+
+      final SegmentFileMapperV10 fileMapper = SegmentFileMapperV10.create(
+          segmentFile,
+          mapper
+      );
+
+      // we need to convert back to v9 metadatas until queryable index is refactored to use v10 metadata...
+      final SegmentFileMetadata metadata = fileMapper.getSegmentFileMetadata();
+
+      // base table projection is always first
+      final ProjectionMetadata baseProjection = metadata.getProjections().get(0);
+      DruidException.conditionalDefensive(
+          Projections.BASE_TABLE_PROJECTION_NAME.equals(baseProjection.getSchema().getName()),
+          "Expected base table projection with name[%s], but got projection with name[%s] instead",
+          Projections.BASE_TABLE_PROJECTION_NAME,
+          baseProjection.getSchema().getName()
+      );
+      final BaseTableProjectionSchema baseSchema = (BaseTableProjectionSchema) baseProjection.getSchema();
+      // woo, no reason to read __time to know how many rows the segment has
+      final int baseNumRows = baseProjection.getNumRows();
+      // projections can omit a __time column, but one still has to exist, so we use the interval start to make a
+      // constant for this case
+      final long intervalStartMillis = Intervals.of(metadata.getInterval()).getStartMillis();
+      // read base table projection columns, which are shared with other projections
+      final Map<String, Supplier<BaseColumnHolder>> baseColumns = readProjectionColumns(
+          metadata,
+          baseProjection,
+          fileMapper,
+          Map.of(),
+          intervalStartMillis,
+          lazy,
+          loadFailed
+      );
+
+      final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final List<AggregateProjectionMetadata> aggProjections = new ArrayList<>(metadata.getProjections().size() - 1);
+      boolean first = true;
+      for (ProjectionMetadata projectionSpec : metadata.getProjections()) {
+        // skip the base table projection
+        if (first) {
+          first = false;
+          continue;
+        }
+        final Map<String, Supplier<BaseColumnHolder>> projectionColumns = readProjectionColumns(
+            metadata,
+            projectionSpec,
+            fileMapper,
+            baseColumns,
+            intervalStartMillis,
+            lazy,
+            loadFailed
+        );
+
+        projectionsColumns.put(projectionSpec.getSchema().getName(), projectionColumns);
+        if (projectionSpec.getSchema() instanceof AggregateProjectionSchema) {
+          aggProjections.add(
+              new AggregateProjectionMetadata(
+                  (AggregateProjectionSchema) projectionSpec.getSchema(),
+                  projectionSpec.getNumRows()
+              )
+          );
+        } else {
+          throw DruidException.defensive(
+              "Unexpected projection[%s] with type[%s]",
+              projectionSpec.getSchema().getName(),
+              projectionSpec.getSchema().getClass()
+          );
+        }
+      }
+      final Metadata reconstructedMetadata = baseSchema.asMetadata(aggProjections);
+
+      return new SimpleQueryableIndex(
+          Intervals.fromString(metadata.getInterval()),
+          new ListIndexed<>(baseSchema.getDimensionNames()),
+          metadata.getBitmapEncoding().getBitmapFactory(),
+          baseColumns,
+          fileMapper,
+          reconstructedMetadata,
+          projectionsColumns
+      )
+      {
+        @Override
+        public int getNumRows()
+        {
+          return baseNumRows;
+        }
+
+        @Override
+        public Metadata getMetadata()
+        {
+          return reconstructedMetadata;
+        }
+      };
+    }
+
+    private Map<String, Supplier<BaseColumnHolder>> readProjectionColumns(
+        SegmentFileMetadata metadata,
+        ProjectionMetadata projectionSpec,
+        SegmentFileMapper segmentFileMapper,
+        Map<String, Supplier<BaseColumnHolder>> parentColumns,
+        long intervalStartMillis,
+        boolean lazy,
+        SegmentLazyLoadFailCallback loadFailed
+    ) throws IOException
+    {
+      final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
+      final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
+      final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
+
+      for (String column : projectionSpec.getSchema().getColumnNames()) {
+        final String smooshName = Projections.getProjectionSmooshFileName(projectionSpec.getSchema(), column);
+        final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
+        final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
+
+        final BaseColumnHolder parentColumn;
+        if (parentColumns.containsKey(column)) {
+          parentColumn = parentColumns.get(column).get();
+        } else {
+          parentColumn = null;
+        }
+        final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
+        projectionColumns.put(
+            internedColumnName,
+            makeColumnHolderSupplier(
+                internedColumnName,
+                columnDescriptor,
+                colBuffer,
+                segmentFileMapper,
+                parentColumn,
+                lazy,
+                loadFailed
+            )
+        );
+
+        if (column.equals(timeColumnName) && renameTime) {
+          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(column));
+          projectionColumns.remove(column);
+        }
+      }
+      if (timeColumnName == null) {
+        projectionColumns.put(
+            ColumnHolder.TIME_COLUMN_NAME,
+            ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), intervalStartMillis)
+        );
+      }
+      return projectionColumns;
+    }
+
+    private Supplier<BaseColumnHolder> makeColumnHolderSupplier(
+        String columnName,
+        ColumnDescriptor columnDescriptor,
+        ByteBuffer colBuffer,
+        SegmentFileMapper segmentFileMapper,
+        @Nullable BaseColumnHolder parentColumn,
+        boolean lazy,
+        SegmentLazyLoadFailCallback loadFailed
+    )
+    {
+      if (lazy) {
+        return Suppliers.memoize(
+            () -> {
+              try {
+                return columnDescriptor.read(colBuffer, columnConfig, segmentFileMapper, parentColumn);
+              }
+              catch (Throwable e) {
+                log.warn(e, "Failed to deserialize column[%s].", columnName);
+                loadFailed.execute();
+                throw e;
+              }
+            }
+        );
+      } else {
+        final BaseColumnHolder columnHolder = columnDescriptor.read(
+            colBuffer,
+            columnConfig,
+            segmentFileMapper,
+            parentColumn
+        );
+        return () -> columnHolder;
+      }
     }
   }
 

@@ -126,6 +126,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         utils.getIndexMergerV9Factory(),
         null,
+        null,
         node,
         null,
         null,
