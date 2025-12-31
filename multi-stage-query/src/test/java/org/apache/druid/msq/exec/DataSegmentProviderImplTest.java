@@ -240,6 +240,31 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "info_dir").list()));
   }
 
+  @Test
+  public void testFetchSegment() throws IOException
+  {
+    final DataSegment segment = segments.get(0);
+    final LoadableSegment loadableSegment =
+        provider.fetchSegment(segment.getId(), segment.toDescriptor(), null, false);
+
+    // Verify that the DataSegment is set properly.
+    Assertions.assertEquals(segment, loadableSegment.dataSegment());
+
+    // Verify segment acquisition works.
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
+    final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
+    Assertions.assertTrue(acquiredSegmentOptional.isPresent());
+
+    try (final AcquireSegmentAction ignored = acquireAction;
+         final Segment acquiredSegment = acquiredSegmentOptional.get()) {
+      Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      Assertions.assertNotNull(gadget);
+      Assertions.assertEquals(1209, gadget.getNumRows());
+    }
+  }
+
   @JsonTypeName("test")
   private static class TestLoadSpec implements LoadSpec
   {

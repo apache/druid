@@ -70,10 +70,9 @@ public class InlineInputSliceReader implements InputSliceReader
     for (final Segment segment : segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY)) {
       segments.add(
           LoadableSegment.forSegment(
-              DUMMY_SEGMENT_DESCRIPTOR,
-              counters.channel(CounterNames.inputChannel(inputNumber)),
+              segment,
               "inline data",
-              segment
+              counters.channel(CounterNames.inputChannel(inputNumber))
           )
       );
     }

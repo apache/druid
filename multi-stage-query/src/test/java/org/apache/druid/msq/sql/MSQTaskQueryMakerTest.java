@@ -176,7 +176,7 @@ public class MSQTaskQueryMakerTest
         SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER))
     );
     dataSegmentProviderMock = (segmentId, descriptor, inputCounters, isReindex) ->
-        LoadableSegment.forSegment(descriptor, inputCounters, null, walker.getSegment(segmentId).segment);
+        LoadableSegment.forSegment(walker.getSegment(segmentId).segment, null, inputCounters);
 
     objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();

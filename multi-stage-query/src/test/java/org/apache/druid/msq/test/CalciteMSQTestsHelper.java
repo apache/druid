@@ -157,7 +157,7 @@ public class CalciteMSQTestsHelper
       )
       {
         final SpecificSegmentsQuerySegmentWalker.CompleteSegment a = walker.getSegment(segmentId);
-        return LoadableSegment.forSegment(descriptor, inputCounters, null, a.segment);
+        return LoadableSegment.forSegment(a.segment, null, inputCounters);
       }
     }
 

@@ -104,10 +104,9 @@ public class ExternalInputSliceReader implements InputSliceReader
       );
       loadableSegments.add(
           LoadableSegment.forSegment(
-              SEGMENT_DESCRIPTOR,
-              null,
+              segment,
               StringUtils.format("external[%s]", inputSource.toString()),
-              segment
+              null
           )
       );
     }

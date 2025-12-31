@@ -33,7 +33,6 @@ import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.util.Collections;
@@ -88,10 +87,9 @@ public class LookupInputSliceReader implements InputSliceReader
     }
 
     final LoadableSegment loadableSegment = LoadableSegment.forSegment(
-        SegmentId.dummy(lookupName).toDescriptor(),
-        counters.channel(CounterNames.inputChannel(inputNumber)),
+        segment,
         StringUtils.format("lookup[%s]", lookupName),
-        segment
+        counters.channel(CounterNames.inputChannel(inputNumber))
     );
 
     return new PhysicalInputSlice(

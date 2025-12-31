@@ -19,13 +19,13 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -33,6 +33,7 @@ import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -81,11 +82,14 @@ public class DataSegmentProviderImpl implements DataSegmentProvider
     // Can't rely on local timeline if isReindex; always need to check the Coordinator to confirm the segment
     // is still active.
     final DataSegment cachedDataSegment = isReindex ? null : getDataSegmentFromLocalTimeline(segmentId);
+    final Supplier<ListenableFuture<DataSegment>> dataSegmentFutureSupplier =
+        Suppliers.memoize(() -> fetchDataSegment(cachedDataSegment, segmentId, isReindex));
 
     return new LoadableSegment(
+        dataSegmentFutureSupplier,
         descriptor,
         inputCounters,
-        StringUtils.format("segment[%s]", segmentId),
+        segmentId.toString(),
         () -> {
           final Closer closer = Closer.create();
           // Create a shim AcquireSegmentAction that doesn't acquire a hold (yet). We can't make a real
@@ -94,23 +98,16 @@ public class DataSegmentProviderImpl implements DataSegmentProvider
           // we don't make them all at once.
           return new AcquireSegmentAction(
               Suppliers.memoize(() -> {
-                final ListenableFuture<DataSegment> dataSegmentFuture;
-
-                if (cachedDataSegment != null) {
-                  dataSegmentFuture = Futures.immediateFuture(cachedDataSegment);
-                } else if (coordinatorClient != null) {
-                  dataSegmentFuture = coordinatorClient.fetchSegment(
-                      segmentId.getDataSource(),
-                      segmentId.toString(),
-                      !isReindex
-                  );
-                } else {
-                  dataSegmentFuture = Futures.immediateFailedFuture(segmentNotFound(segmentId));
-                }
-
                 return FutureUtils.transformAsync(
-                    dataSegmentFuture,
-                    dataSegment -> closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture()
+                    dataSegmentFutureSupplier.get(),
+                    dataSegment -> {
+                      try {
+                        return closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture();
+                      }
+                      catch (SegmentLoadingException e) {
+                        return Futures.immediateFailedFuture(e);
+                      }
+                    }
                 );
               }),
               closer
@@ -118,6 +115,28 @@ public class DataSegmentProviderImpl implements DataSegmentProvider
         },
         cachedDataSegment != null
     );
+  }
+
+  /**
+   * Fetches the {@link DataSegment}, either returning it immediately if cached or fetching from the Coordinator.
+   */
+  private ListenableFuture<DataSegment> fetchDataSegment(
+      @Nullable DataSegment cachedDataSegment,
+      final SegmentId segmentId,
+      final boolean isReindex
+  )
+  {
+    if (cachedDataSegment != null) {
+      return Futures.immediateFuture(cachedDataSegment);
+    } else if (coordinatorClient != null) {
+      return coordinatorClient.fetchSegment(
+          segmentId.getDataSource(),
+          segmentId.toString(),
+          !isReindex
+      );
+    } else {
+      return Futures.immediateFailedFuture(segmentNotFound(segmentId));
+    }
   }
 
   /**

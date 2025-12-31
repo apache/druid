@@ -21,13 +21,16 @@ package org.apache.druid.msq.input;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,6 +46,7 @@ import java.util.function.Supplier;
 public class LoadableSegment
 {
   private final AtomicBoolean acquired = new AtomicBoolean(false);
+  private final Supplier<ListenableFuture<DataSegment>> dataSegmentFutureSupplier;
   private final SegmentDescriptor descriptor;
   @Nullable
   private final ChannelCounters inputCounters;
@@ -51,7 +55,18 @@ public class LoadableSegment
   private final Supplier<AcquireSegmentAction> acquireSupplier;
   private final boolean likelyCached;
 
+  /**
+   * Constructor.
+   *
+   * @param dataSegmentFutureSupplier supplier to fetch the DataSegment; called lazily and memoized
+   * @param descriptor                segment descriptor for querying
+   * @param inputCounters             optional counters for tracking input
+   * @param description               user-oriented description for error messages
+   * @param acquireSupplier           supplier to acquire the actual segment
+   * @param likelyCached              whether the segment is likely cached locally
+   */
   public LoadableSegment(
+      Supplier<ListenableFuture<DataSegment>> dataSegmentFutureSupplier,
       SegmentDescriptor descriptor,
       @Nullable ChannelCounters inputCounters,
       @Nullable String description,
@@ -59,6 +74,7 @@ public class LoadableSegment
       boolean likelyCached
   )
   {
+    this.dataSegmentFutureSupplier = dataSegmentFutureSupplier;
     this.descriptor = descriptor;
     this.inputCounters = inputCounters;
     this.description = description;
@@ -67,20 +83,47 @@ public class LoadableSegment
   }
 
   /**
-   * Returns a LoadableSegment wrapper around a Segment object, whose lifecycle is not managed by this
-   * {@link LoadableSegment} instance.
+   * Returns a LoadableSegment wrapper around a Segment object, which is not a regular Druid segment, has
+   * no associated {@link DataSegment}, and whose lifecycle is not managed by the {@link LoadableSegment} instance.
+   * The {@link #dataSegmentFuture()} returns a failed future.
    */
   public static LoadableSegment forSegment(
-      final SegmentDescriptor descriptor,
-      @Nullable final ChannelCounters channelCounters,
+      final Segment segment,
       @Nullable final String description,
-      final Segment segment
+      @Nullable final ChannelCounters channelCounters
   )
   {
     final ListenableFuture<AcquireSegmentResult> segmentFuture =
         Futures.immediateFuture(AcquireSegmentResult.cached(ReferenceCountedSegmentProvider.of(segment)));
     final AcquireSegmentAction acquireSegmentAction = new AcquireSegmentAction(() -> segmentFuture, null);
-    return new LoadableSegment(descriptor, channelCounters, description, () -> acquireSegmentAction, true);
+    final ListenableFuture<DataSegment> dataSegmentFuture =
+        Futures.immediateFailedFuture(DruidException.defensive("DataSegment not available"));
+    return new LoadableSegment(
+        () -> dataSegmentFuture,
+        new SegmentDescriptor(Intervals.ETERNITY, "0", 0),
+        channelCounters,
+        description,
+        () -> acquireSegmentAction,
+        true
+    );
+  }
+
+  /**
+   * Returns a future for the {@link DataSegment} object. The future is created lazily when this method is first
+   * called. For LoadableSegments created via {@link #forSegment}, this will return a failed future.
+   */
+  public ListenableFuture<DataSegment> dataSegmentFuture()
+  {
+    return dataSegmentFutureSupplier.get();
+  }
+
+  /**
+   * Returns the {@link DataSegment} object, blocking until it is available. For LoadableSegments created via
+   * {@link #forSegment}, this will throw an exception.
+   */
+  public DataSegment dataSegment()
+  {
+    return FutureUtils.getUnchecked(dataSegmentFuture(), false);
   }
 
   /**
@@ -103,7 +146,7 @@ public class LoadableSegment
   }
 
   /**
-   * User-oriented description, suitable for inclusion in error messages.
+   * User-oriented description, suitable for inclusion in log or error messages.
    */
   @Nullable
   public String description()

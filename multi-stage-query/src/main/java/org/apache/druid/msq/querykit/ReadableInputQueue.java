@@ -306,7 +306,7 @@ public class ReadableInputQueue implements Closeable
                 throw DruidException.defensive(
                     "Segment[%s] removed from loadingSegments before loading complete. It is possible that close() "
                     + "was called with futures in flight.",
-                    nextLoadableSegment.descriptor()
+                    nextLoadableSegment.description()
                 );
               }
             }
