@@ -20,9 +20,11 @@
 package org.apache.druid.testing.embedded.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ClusterTestingModule;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorReportPayload;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -70,16 +72,22 @@ public class FaultyClusterTest extends KafkaTestBase
     );
 
     // Set up the topic and supervisor
+    final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 1);
-    supervisorSpec = createSupervisor()
+    final KafkaSupervisorSpec supervisorSpec = createSupervisor()
         .withIoConfig(io -> io.withTaskCount(1))
         .withContext(taskContext)
         .withId("supe_" + dataSource)
         .build(dataSource, topic);
     cluster.callApi().postSupervisor(supervisorSpec);
 
-    publishRecords(topic, true);
-    verifyDataAndTearDown(true);
+    final int recordCount = publish1kRecords(topic, true);
+    waitUntilPublishedRecordsAreIngested(recordCount);
+
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    kafkaServer.deleteTopic(topic);
+
+    verifyRowCount(recordCount);
 
     // Verify that pending segments are not cleaned up
     final List<PendingSegmentRecord> pendingSegments = overlord
@@ -94,10 +102,11 @@ public class FaultyClusterTest extends KafkaTestBase
   public void test_supervisor_reportsMagnifiedLag()
   {
     // Set up the topic and supervisor
+    final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
 
     final int lagMultiplier = 1_000_000;
-    supervisorSpec = createSupervisor()
+    final KafkaSupervisorSpec supervisorSpec = createSupervisor()
         .withIoConfig(
             io -> io
                 .withTaskCount(2)
@@ -117,7 +126,7 @@ public class FaultyClusterTest extends KafkaTestBase
     cluster.callApi().postSupervisor(supervisorSpec);
 
     // Publish records to build up some lag
-    publishRecords(topic, true);
+    final int totalPublishedRecords = publish1kRecords(topic, true);
 
     // Wait for supervisor to report the expected lag
     final long expectedLag = (long) totalPublishedRecords * lagMultiplier;
@@ -145,5 +154,6 @@ public class FaultyClusterTest extends KafkaTestBase
       cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
     }
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    kafkaServer.deleteTopic(topic);
   }
 }

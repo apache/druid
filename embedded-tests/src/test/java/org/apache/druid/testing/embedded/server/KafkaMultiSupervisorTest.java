@@ -68,9 +68,12 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
     cluster.callApi().postSupervisor(supervisor2);
 
     // Produce records to both topics
-    publishRecords(topic1, useTransactions);
-    publishRecords(topic2, useTransactions);
-    waitUntilPublishedRecordsAreIngested();
+    final int rowCountTopic1 = publish1kRecords(topic1, useTransactions)
+                               + publish1kRecords(topic1, useTransactions);
+    final int rowCountTopic2 = publish1kRecords(topic2, useTransactions);
+
+    final int totalRowCount = rowCountTopic1 + rowCountTopic2;
+    waitUntilPublishedRecordsAreIngested(totalRowCount);
 
     // Tear down both topics and supervisors
     kafkaServer.deleteTopic(topic1);
@@ -79,13 +82,13 @@ public class KafkaMultiSupervisorTest extends KafkaTestBase
     cluster.callApi().postSupervisor(supervisor2.createSuspendedSpec());
 
     // Verify total row count and row count for each topic
-    verifyRowCount();
+    verifyRowCount(totalRowCount);
     Assertions.assertEquals(
-        "60",
+        "2000",
         cluster.runSql("SELECT COUNT(*) FROM %s WHERE \"kafka.topic\" = '%s'", dataSource, topic1)
     );
     Assertions.assertEquals(
-        "60",
+        "1000",
         cluster.runSql("SELECT COUNT(*) FROM %s WHERE \"kafka.topic\" = '%s'", dataSource, topic2)
     );
   }

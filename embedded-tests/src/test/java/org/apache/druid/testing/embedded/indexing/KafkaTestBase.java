@@ -23,7 +23,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -40,7 +39,6 @@ import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,10 +52,6 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
   protected final EmbeddedBroker broker = new EmbeddedBroker();
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-
-  protected int totalPublishedRecords = 0;
-  protected String topic = null;
-  protected SupervisorSpec supervisorSpec = null;
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -79,14 +73,6 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
         .addServer(new EmbeddedRouter());
   }
 
-  @BeforeEach
-  public void initState()
-  {
-    topic = "topic_" + dataSource;
-    supervisorSpec = null;
-    totalPublishedRecords = 0;
-  }
-
   protected KafkaSupervisorSpecBuilder createSupervisor()
   {
     return MoreResources.Supervisor.KAFKA_JSON
@@ -100,38 +86,15 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
         );
   }
 
-  protected void setupTopicAndSupervisor(int partitionCount, boolean useTransactions)
-  {
-    kafkaServer.createTopicWithPartitions(topic, partitionCount);
-    supervisorSpec = createSupervisor().withId("supe_" + dataSource).build(dataSource, topic);
-    cluster.callApi().postSupervisor(supervisorSpec);
-
-    publishRecords(topic, useTransactions);
-    waitUntilPublishedRecordsAreIngested();
-    verifySupervisorIsRunningHealthy();
-  }
-
-  protected void verifyDataAndTearDown(boolean useTransactions)
-  {
-    publishRecords(topic, useTransactions);
-    waitUntilPublishedRecordsAreIngested();
-    verifySupervisorIsRunningHealthy();
-
-    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
-    kafkaServer.deleteTopic(topic);
-
-    verifyRowCount();
-  }
-
   /**
-   * Waits until number of processed events matches {@link #totalPublishedRecords}.
+   * Waits until number of processed events matches {@code expectedRowCount}.
    */
-  protected void waitUntilPublishedRecordsAreIngested()
+  protected void waitUntilPublishedRecordsAreIngested(int expectedRowCount)
   {
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(totalPublishedRecords)
+        agg -> agg.hasSumAtLeast(expectedRowCount)
     );
 
     final int totalEventsProcessed = indexer
@@ -140,39 +103,34 @@ public abstract class KafkaTestBase extends EmbeddedClusterTestBase
         .stream()
         .mapToInt(Number::intValue)
         .sum();
-    Assertions.assertEquals(totalPublishedRecords, totalEventsProcessed);
+    Assertions.assertEquals(expectedRowCount, totalEventsProcessed);
   }
 
-  private void verifySupervisorIsRunningHealthy()
+  protected void verifySupervisorIsRunningHealthy(String supervisorId)
   {
-    final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorSpec.getId());
+    final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(status.isHealthy());
     Assertions.assertFalse(status.isSuspended());
     Assertions.assertEquals("RUNNING", status.getState());
   }
 
   /**
-   * Verifies that the row count in {@link #dataSource} matches {@link #totalPublishedRecords}.
+   * Verifies that the row count in {@link #dataSource} matches the {@code expectedRowCount}.
    */
-  protected void verifyRowCount()
+  protected void verifyRowCount(int expectedRowCount)
   {
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     cluster.callApi().verifySqlQuery(
         "SELECT COUNT(*) FROM %s",
         dataSource,
-        String.valueOf(totalPublishedRecords)
+        String.valueOf(expectedRowCount)
     );
   }
 
-  protected void publishRecords(String topic, boolean useTransactions)
-  {
-    totalPublishedRecords += generateRecordsAndPublishToKafka(topic, useTransactions);
-  }
-
-  protected int generateRecordsAndPublishToKafka(String topic, boolean useTransactions)
+  protected int publish1kRecords(String topic, boolean useTransactions)
   {
     final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
-    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 6, 100);
+    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
     List<byte[]> records = streamGenerator.generateEvents(10);
 
     ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();

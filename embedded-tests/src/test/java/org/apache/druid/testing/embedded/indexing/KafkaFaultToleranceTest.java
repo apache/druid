@@ -20,10 +20,13 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -33,65 +36,102 @@ import java.util.Map;
 
 public class KafkaFaultToleranceTest extends KafkaTestBase
 {
+  private SupervisorSpec supervisorSpec = null;
+  private String topic = null;
+  private int totalRecords = 0;
+
+  @BeforeEach
+  public void setupTopicAndSupervisor()
+  {
+    totalRecords = 0;
+    topic = "topic_" + dataSource;
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    supervisorSpec = createSupervisor().withId("supe_" + dataSource).build(dataSource, topic);
+    cluster.callApi().postSupervisor(supervisorSpec);
+  }
+  
+  @AfterEach
+  public void verifyAndTearDown()
+  {
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+    verifySupervisorIsRunningHealthy(supervisorSpec.getId());
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    kafkaServer.deleteTopic(topic);
+    verifyRowCount(totalRecords);
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
   {
-    setupTopicAndSupervisor(2, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
     overlord.stop();
-    publishRecords(topic, useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
+
     overlord.start();
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 
   @Test
   public void test_supervisorRecovers_afterCoordinatorRestart() throws Exception
   {
     final boolean useTransactions = true;
-    setupTopicAndSupervisor(3, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
     coordinator.stop();
-    publishRecords(topic, useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
+
     coordinator.start();
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 
   @Test
   public void test_supervisorRecovers_afterHistoricalRestart() throws Exception
   {
     final boolean useTransactions = false;
-    setupTopicAndSupervisor(2, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
     historical.stop();
-    publishRecords(topic, useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
+
     historical.start();
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
   {
-    setupTopicAndSupervisor(2, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
-    publishRecords(topic, useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
+
     cluster.callApi().postSupervisor(supervisorSpec.createRunningSpec());
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
   {
-    setupTopicAndSupervisor(2, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
+
     kafkaServer.increasePartitionsInTopic(topic, 4);
-    publishRecords(topic, useTransactions);
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 
   @Test
   public void test_supervisorLaunchesNewTask_ifEarlyHandoff()
   {
     final boolean useTransactions = true;
-    setupTopicAndSupervisor(2, useTransactions);
+    totalRecords = publish1kRecords(topic, useTransactions);
 
     final String path = StringUtils.format(
         "/druid/indexer/v1/supervisor/%s/taskGroups/handoff",
@@ -110,7 +150,6 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
                       .hasDimension("noticeType", "handoff_task_group_notice")
     );
 
-    publishRecords(topic, useTransactions);
-    verifyDataAndTearDown(useTransactions);
+    totalRecords += publish1kRecords(topic, useTransactions);
   }
 }
