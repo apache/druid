@@ -22,10 +22,13 @@ package org.apache.druid.java.util.common.io.smoosh;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import junit.framework.Assert;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.file.SegmentFileChannel;
+import org.hamcrest.MatcherAssert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -78,6 +81,22 @@ public class SmooshedFileMapperTest
       }
     }
     validateOutput(baseDir);
+  }
+
+  @Test
+  public void testColumnSerializedSizeExceedsMaximum() throws Exception
+  {
+    File baseDir = folder.newFolder("base");
+    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 5)) {
+      MatcherAssert.assertThat(
+          org.junit.Assert.assertThrows(
+              DruidException.class,
+              () -> smoosher.addWithChannel("foo", 10)
+          ),
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.RUNTIME_FAILURE, "general")
+              .expectMessageContains("Serialized buffer size[10] for column[foo] exceeds the maximum[5].")
+      );
+    }
   }
 
   @Test(expected = ISE.class)
