@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
@@ -105,6 +106,7 @@ public class ExternalInputSliceReader implements InputSliceReader
       loadableSegments.add(
           LoadableSegment.forSegment(
               segment,
+              Intervals.ETERNITY,
               StringUtils.format("external[%s]", inputSource.toString()),
               null
           )

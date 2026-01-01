@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
@@ -31,6 +30,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -86,9 +86,15 @@ public class LoadableSegment
    * Returns a LoadableSegment wrapper around a Segment object, which is not a regular Druid segment, has
    * no associated {@link DataSegment}, and whose lifecycle is not managed by the {@link LoadableSegment} instance.
    * The {@link #dataSegmentFuture()} returns a failed future.
+   *
+   * @param segment         the segment to wrap
+   * @param queryInterval   the query interval to use for filtering
+   * @param description     user-oriented description for error messages
+   * @param channelCounters counters for tracking input
    */
   public static LoadableSegment forSegment(
       final Segment segment,
+      final Interval queryInterval,
       @Nullable final String description,
       @Nullable final ChannelCounters channelCounters
   )
@@ -100,7 +106,7 @@ public class LoadableSegment
         Futures.immediateFailedFuture(DruidException.defensive("DataSegment not available"));
     return new LoadableSegment(
         () -> dataSegmentFuture,
-        new SegmentDescriptor(Intervals.ETERNITY, "0", 0),
+        new SegmentDescriptor(queryInterval, "0", 0),
         channelCounters,
         description,
         () -> acquireSegmentAction,

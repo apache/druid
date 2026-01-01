@@ -88,6 +88,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
     final LoadableSegment loadableSegment = LoadableSegment.forSegment(
         segment,
+        Intervals.ETERNITY,
         StringUtils.format("lookup[%s]", lookupName),
         counters.channel(CounterNames.inputChannel(inputNumber))
     );

@@ -123,6 +123,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -492,7 +493,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
           binder.bind(DataSegmentProvider.class).toInstance(
               (segmentId, descriptor, channelCounters, isReindex) ->
-                  getLoadableSegment(this::newTempFolder, segmentId, channelCounters)
+                  getLoadableSegment(this::newTempFolder, segmentId, descriptor, channelCounters)
           );
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
@@ -676,6 +677,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected LoadableSegment getLoadableSegment(
       Function<String, File> tempFolderProducer,
       SegmentId segmentId,
+      SegmentDescriptor descriptor,
       ChannelCounters counters
   )
   {
@@ -769,7 +771,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       };
       segmentManager.addSegment(segment);
     }
-    return LoadableSegment.forSegment(segmentManager.getSegment(segmentId), null, counters);
+    return LoadableSegment.forSegment(segmentManager.getSegment(segmentId), descriptor.getInterval(), null, counters);
   }
 
   public SelectTester testSelectQuery()
