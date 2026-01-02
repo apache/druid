@@ -102,6 +102,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
         const tables = await queryDruidSql<{ TABLE_NAME: string }>(
           {
             query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE'`,
+            context: { engine: 'native' },
           },
           signal,
         );
@@ -134,9 +135,10 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           .addSelect(C('end'), { addToOrderBy: 'end', direction: 'DESC' })
           .toString();
 
-        const endRes = await queryDruidSql<{ end: string }>({ query: endQuery }, signal).catch(
-          () => [],
-        );
+        const endRes = await queryDruidSql<{ end: string }>(
+          { query: endQuery, context: { engine: 'native' } },
+          signal,
+        ).catch(() => []);
         if (endRes.length !== 1) {
           return getDateRange(DEFAULT_SHOWN_DURATION);
         }
@@ -153,7 +155,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           .toString();
 
         const startRes = await queryDruidSql<{ start: string }>(
-          { query: startQuery },
+          { query: startQuery, context: { engine: 'native' } },
           signal,
         ).catch(() => []);
         if (startRes.length !== 1) {

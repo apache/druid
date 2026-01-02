@@ -22,7 +22,10 @@ package org.apache.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Scopes;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -30,6 +33,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -46,9 +51,18 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitterModule;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -61,7 +75,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -70,10 +83,14 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -254,6 +271,43 @@ public class CliPeonTest
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
   }
 
+  @Test
+  public void testCliPeonMetricsContainAllTaskDimensions() throws IOException
+  {
+    final CompactionTask compactionTask = compactBuilder
+        .metricsSpec(new AggregatorFactory[]{
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        }).build();
+
+    final Injector peonInjector = makePeonInjectorWithStubEmitter(compactionTask, temporaryFolder, mapper);
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+
+    Emitter instance = peonInjector.getInstance(Emitter.class);
+    Assert.assertTrue(instance instanceof StubServiceEmitter);
+    instance.start();
+
+    ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
+    ServiceEventBuilder eventBuilder = builder.setMetric("foo", 1.0);
+    builder.setDimension("dd", "wikipedia");
+    builder.setDimension("ee", "index");
+    ((StubServiceEmitter) instance).emit(eventBuilder);
+
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) instance;
+    Assert.assertEquals(1, stubEmitter.getNumEmittedEvents());
+    List<Event> events = stubEmitter.getEvents();
+    for (Event event : events) {
+      Assert.assertTrue(event instanceof ServiceMetricEvent);
+      EventMap map = event.toMap();
+      Assert.assertEquals(compactionTask.getDataSource(), map.get("dataSource"));
+      Assert.assertEquals(compactionTask.getId(), map.get("id"));
+      Assert.assertEquals(compactionTask.getId(), map.get("taskId"));
+      Assert.assertEquals(compactionTask.getType(), map.get("taskType"));
+      Assert.assertEquals(compactionTask.getGroupId(), map.get("groupId"));
+    }
+  }
+
   private Injector makePeonInjector(File taskFile, Properties properties)
   {
     final CliPeon peon = new CliPeon();
@@ -261,6 +315,43 @@ public class CliPeonTest
 
     peon.configure(properties);
     peon.configure(properties, GuiceInjectors.makeStartupInjector());
+    return peon.makeInjector(Set.of(NodeRole.PEON));
+  }
+
+  public static Injector makePeonInjectorWithStubEmitter(Task task, TemporaryFolder temporaryFolder, ObjectMapper mapper) throws IOException
+  {
+    File taskFile = temporaryFolder.newFile("task.json");
+    FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
+
+    final Properties properties = new Properties();
+    properties.setProperty("druid.emitter", "stub");
+
+    final Injector baseInjector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(properties);
+        }
+    );
+
+    final CliPeon peon = new CliPeon()
+    {
+      @Override
+      protected List<? extends Module> getModules()
+      {
+        // Load the CliPeon with StubServiceEmitter
+        List<Module> modules = new ArrayList<>(super.getModules());
+        modules.add(new StubServiceEmitterModule());
+        return modules;
+      }
+    };
+
+    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
+
+    peon.configure(properties);
+    peon.configure(properties, baseInjector);
     return peon.makeInjector(Set.of(NodeRole.PEON));
   }
 

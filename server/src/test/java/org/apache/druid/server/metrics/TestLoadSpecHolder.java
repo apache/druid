@@ -19,27 +19,32 @@
 
 package org.apache.druid.server.metrics;
 
-import javax.annotation.Nullable;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
-/**
- * A TaskHolder implementation for all servers that are not {@code CliPeon}.
- *
- * <p>This holder does not provide task information and will return null from
- * all its methods.</p>
- */
-public class NoopTaskHolder implements TaskHolder
+public class TestLoadSpecHolder implements LoadSpecHolder
 {
-  @Nullable
-  @Override
-  public String getDataSource()
+  private final LookupLoadingSpec lookupLoadingSpec;
+  private final BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec;
+
+  public TestLoadSpecHolder(
+      final LookupLoadingSpec lookupLoadingSpec,
+      final BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec
+  )
   {
-    return null;
+    this.lookupLoadingSpec = lookupLoadingSpec;
+    this.broadcastDatasourceLoadingSpec = broadcastDatasourceLoadingSpec;
   }
 
-  @Nullable
   @Override
-  public String getTaskId()
+  public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return null;
+    return lookupLoadingSpec;
+  }
+
+  @Override
+  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return broadcastDatasourceLoadingSpec;
   }
 }

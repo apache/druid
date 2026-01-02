@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.TaskHolder;
 
 class LookupListeningAnnouncerConfig
 {

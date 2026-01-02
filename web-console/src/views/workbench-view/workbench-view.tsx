@@ -227,6 +227,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         return await queryDruidSql<ColumnMetadata>(
           {
             query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+            context: { engine: 'native' },
           },
           signal,
         );

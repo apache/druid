@@ -69,17 +69,27 @@ public class TestHttpClient implements HttpClient
   private final ObjectMapper objectMapper;
   @Nullable
   private final ListenableFuture future;
+  private final long timeoutMillis;
 
   public TestHttpClient(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
     this.future = null;
+    this.timeoutMillis = -1;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, long timeoutMillis)
+  {
+    this.objectMapper = objectMapper;
+    this.future = null;
+    this.timeoutMillis = timeoutMillis;
   }
 
   public TestHttpClient(ObjectMapper objectMapper, ListenableFuture future)
   {
     this.objectMapper = objectMapper;
     this.future = future;
+    this.timeoutMillis = -1;
   }
 
   public void addServerAndRunner(DruidServer server, SimpleServerManager serverManager)
@@ -146,6 +156,9 @@ public class TestHttpClient implements HttpClient
       response.setContent(
           HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
       );
+      if (timeoutMillis > 0) {
+        Thread.sleep(timeoutMillis);
+      }
       final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
       if (future != null) {
@@ -155,6 +168,9 @@ public class TestHttpClient implements HttpClient
       }
     }
     catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }

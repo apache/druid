@@ -27,7 +27,6 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -48,6 +47,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -69,7 +70,6 @@ import java.io.PipedOutputStream;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class DirectDruidClientTest
@@ -84,18 +84,25 @@ public class DirectDruidClientTest
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
   private final ResponseContext responseContext = ResponseContext.createEmpty();
 
-  private ScheduledExecutorService queryCancellationExecutor;
+  private WrappingScheduledExecutorService queryCancellationExecutor;
+  private BlockingExecutorService blockingExecutorService;
 
   @Before
   public void setup()
   {
     responseContext.initialize();
-    queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
+    blockingExecutorService = new BlockingExecutorService("test-druid-client-cancel-executor");
+    queryCancellationExecutor = new WrappingScheduledExecutorService(
+        "DirectDruidClientTest-%s",
+        blockingExecutorService,
+        false
+    );
   }
 
   @After
   public void teardown() throws InterruptedException
   {
+    blockingExecutorService.shutdownNow();
     queryCancellationExecutor.shutdown();
     queryCancellationExecutor.awaitTermination(1, TimeUnit.SECONDS);
   }
@@ -105,23 +112,23 @@ public class DirectDruidClientTest
   {
     final URL url = new URL(StringUtils.format("http://%s/druid/v2/", hostName));
 
-    QueuedTestHttpClient sequenced = new QueuedTestHttpClient();
-    DirectDruidClient client1 = makeDirectDruidClient(sequenced);
+    QueuedTestHttpClient queuedHttpClient = new QueuedTestHttpClient();
+    DirectDruidClient client1 = makeDirectDruidClient(queuedHttpClient);
 
-    DirectDruidClient client2 = makeDirectDruidClient(sequenced);
+    DirectDruidClient client2 = makeDirectDruidClient(queuedHttpClient);
 
     // Queue first call: pending until we provide a result
     SettableFuture<InputStream> futureResult = SettableFuture.create();
-    sequenced.enqueue(futureResult);
+    queuedHttpClient.enqueue(futureResult);
     // Queue second call: will fail with ReadTimeoutException
     SettableFuture<InputStream> futureException = SettableFuture.create();
-    sequenced.enqueue(futureException);
+    queuedHttpClient.enqueue(futureException);
     // Subsequent calls: no enqueue → default pending futures created in client
 
     QueryPlus queryPlus = getQueryPlus();
 
     Sequence s1 = client1.run(queryPlus, responseContext);
-    List<Request> requests = sequenced.getRequests();
+    List<Request> requests = queuedHttpClient.getRequests();
     Assert.assertFalse(requests.isEmpty());
     Assert.assertEquals(url, requests.get(0).getUrl());
     Assert.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
@@ -233,6 +240,51 @@ public class DirectDruidClientTest
     Assert.assertEquals("Query timeout", actualException.getErrorCode());
     Assert.assertEquals(StringUtils.format("Query [%s] timed out!", query.getQuery().getId()), actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
+  }
+
+  @Test
+  public void testQueryTimeoutDuringRunThrowsExceptionImmediately()
+  {
+    SettableFuture<Object> timeoutFuture = SettableFuture.create();
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
+
+    QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis()));
+    QueryTimeoutException actualException = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assert.assertEquals("Query timeout", actualException.getErrorCode());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Query[%s] url[http://%s/druid/v2/] timed out.",
+            queryPlus.getQuery().getId(),
+            hostName
+        ), actualException.getMessage()
+    );
+  }
+
+  @Test
+  public void testQueryTimeoutDuringResponseHandling()
+  {
+    final TestHttpClient testHttpClient = new TestHttpClient(objectMapper, 110);
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(testHttpClient, false));
+
+    final QueryPlus queryPlus = getQueryPlus(Map.of(
+        QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 100,
+        DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 100
+    ));
+
+    QueryTimeoutException actualException = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assert.assertEquals("Query timeout", actualException.getErrorCode());
+    Assert.assertEquals(
+        StringUtils.format("Query[%s] url[http://%s/druid/v2/] timed out.",
+                           queryPlus.getQuery().getId(),
+                           hostName
+        ), actualException.getMessage()
+    );
   }
 
   @Test

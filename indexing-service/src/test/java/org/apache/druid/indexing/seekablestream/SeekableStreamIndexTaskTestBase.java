@@ -83,8 +83,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
@@ -120,6 +122,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
@@ -134,7 +137,9 @@ import org.assertj.core.api.Assertions;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
@@ -198,6 +203,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 
   protected final List<Task> runningTasks = new ArrayList<>();
   protected final LockGranularity lockGranularity;
+
+  protected StubServiceEmitter emitter;
   protected File directory;
   protected File reportsFile;
   protected TaskToolboxFactory toolboxFactory;
@@ -249,6 +256,20 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   )
   {
     this.lockGranularity = lockGranularity;
+  }
+
+  @Before
+  public void setupBase()
+  {
+    emitter = new StubServiceEmitter();
+    emitter.start();
+    EmittingLogger.registerEmitter(emitter);
+  }
+
+  @After
+  public void tearDownBase() throws IOException
+  {
+    emitter.close();
   }
 
   protected static ByteEntity jb(
@@ -406,6 +427,16 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     final Interval interval = Intervals.of(intervalString);
     return new SegmentDescriptor(interval, "fakeVersion", partitionNum);
+  }
+
+  protected void verifyPersistAndMergeTimeMetricsArePositive(SegmentGenerationMetrics observedSegmentGenerationMetrics)
+  {
+    Assert.assertNotNull(observedSegmentGenerationMetrics);
+    Assert.assertTrue(observedSegmentGenerationMetrics.persistTimeMillis() > 0);
+    Assert.assertTrue(observedSegmentGenerationMetrics.persistCpuTime() > 0);
+
+    Assert.assertTrue(observedSegmentGenerationMetrics.mergeTimeMillis() > 0);
+    Assert.assertTrue(observedSegmentGenerationMetrics.mergeCpuTime() > 0);
   }
 
   protected void assertEqualsExceptVersion(
