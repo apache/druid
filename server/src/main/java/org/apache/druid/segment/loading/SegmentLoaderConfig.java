@@ -22,6 +22,9 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadStrategy;
+import org.apache.druid.server.coordination.startup.LoadAllEagerlyStrategy;
+import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
@@ -41,8 +44,15 @@ public class SegmentLoaderConfig
   @JsonProperty
   private List<StorageLocationConfig> locations = Collections.emptyList();
 
+  /**
+   * @deprecated Use {@link #startupLoadStrategy} instead.
+   */
+  @Deprecated
   @JsonProperty("lazyLoadOnStart")
   private boolean lazyLoadOnStart = false;
+
+  @JsonProperty("startupLoadStrategy")
+  private HistoricalStartupCacheLoadStrategy startupLoadStrategy = null;
 
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;
@@ -84,9 +94,22 @@ public class SegmentLoaderConfig
     return locations;
   }
 
+  /**
+   * @deprecated Use {@link #getStartupCacheLoadStrategy()} instead.
+   * Removal of this method in the future will requires a change in {@link #getStartupCacheLoadStrategy()}
+   * to default to {@link LoadAllEagerlyStrategy#STRATEGY_NAME} when {@link #startupLoadStrategy} is null.
+   */
+  @Deprecated
   public boolean isLazyLoadOnStart()
   {
     return lazyLoadOnStart;
+  }
+
+  public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
+  {
+    return startupLoadStrategy == null
+           ? isLazyLoadOnStart() ? new LoadAllLazilyStrategy() : new LoadAllEagerlyStrategy()
+           : startupLoadStrategy;
   }
 
   public boolean isDeleteOnRemove()
@@ -184,6 +207,7 @@ public class SegmentLoaderConfig
     return "SegmentLoaderConfig{" +
            "locations=" + locations +
            ", lazyLoadOnStart=" + lazyLoadOnStart +
+           ", startupLoadStrategy=" + startupLoadStrategy +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
            ", announceIntervalMillis=" + announceIntervalMillis +
