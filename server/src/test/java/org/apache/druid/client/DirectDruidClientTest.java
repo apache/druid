@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
@@ -54,7 +53,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,9 +67,6 @@ import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URL;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -110,46 +105,7 @@ public class DirectDruidClientTest
   {
     final URL url = new URL(StringUtils.format("http://%s/druid/v2/", hostName));
 
-    // A simple HttpClient that records requests and returns queued futures per call.
-    class SequencedHttpClient implements HttpClient
-    {
-      private final List<Request> captured = new ArrayList<>();
-      private final Deque<ListenableFuture<InputStream>> queue = new ArrayDeque<>();
-
-      void enqueue(ListenableFuture<InputStream> f)
-      {
-        queue.addLast(f);
-      }
-
-      List<Request> requests()
-      {
-        return captured;
-      }
-
-      @Override
-      public <Intermediate, Final> ListenableFuture<Final> go(Request request, HttpResponseHandler<Intermediate, Final> handler)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      @SuppressWarnings("unchecked")
-      public <Intermediate, Final> ListenableFuture<Final> go(
-          Request request,
-          HttpResponseHandler<Intermediate, Final> handler,
-          Duration readTimeout
-      )
-      {
-        captured.add(request);
-        ListenableFuture<InputStream> f = queue.pollFirst();
-        if (f == null) {
-          f = SettableFuture.create(); // pending forever
-        }
-        return (ListenableFuture<Final>) f;
-      }
-    }
-
-    SequencedHttpClient sequenced = new SequencedHttpClient();
+    QueuedTestHttpClient sequenced = new QueuedTestHttpClient();
     DirectDruidClient client1 = makeDirectDruidClient(sequenced);
 
     DirectDruidClient client2 = makeDirectDruidClient(sequenced);
@@ -165,9 +121,10 @@ public class DirectDruidClientTest
     QueryPlus queryPlus = getQueryPlus();
 
     Sequence s1 = client1.run(queryPlus, responseContext);
-    Assert.assertFalse(sequenced.requests().isEmpty());
-    Assert.assertEquals(url, sequenced.requests().get(0).getUrl());
-    Assert.assertEquals(HttpMethod.POST, sequenced.requests().get(0).getMethod());
+    List<Request> requests = sequenced.getRequests();
+    Assert.assertFalse(requests.isEmpty());
+    Assert.assertEquals(url, requests.get(0).getUrl());
+    Assert.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout on second request
@@ -201,7 +158,7 @@ public class DirectDruidClientTest
   @Test
   public void testCancel()
   {
-    DirectDruidClient client = makeDirectDruidClient(initHttpClientWithFuture(Futures.immediateCancelledFuture()));
+    DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(Futures.immediateCancelledFuture()));
     Sequence results = client.run(getQueryPlus(), responseContext);
 
     Assert.assertEquals(0, client.getNumOpenConnections());
@@ -221,7 +178,7 @@ public class DirectDruidClientTest
             StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")
         )
     );
-    final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithFuture(interruptionFuture));
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(interruptionFuture));
 
     interruptionFuture.set(
         new ByteArrayInputStream(StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}"))
@@ -236,10 +193,10 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testQueryTimeoutBeforeFuture() throws IOException, InterruptedException
+  public void testQueryTimeoutBeforeFuture() throws IOException
   {
     SettableFuture<Object> timeoutFuture = SettableFuture.create();
-    final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithFuture(timeoutFuture));
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
     QueryPlus queryPlus = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 250));
     Sequence results = client.run(queryPlus, responseContext);
@@ -268,7 +225,7 @@ public class DirectDruidClientTest
   public void testQueryTimeoutFromFuture()
   {
     final SettableFuture<Object> timeoutFuture = SettableFuture.create();
-    final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithFuture(timeoutFuture));
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(timeoutFuture));
 
     QueryPlus query = getQueryPlus(Map.of(DirectDruidClient.QUERY_FAIL_TIME, System.currentTimeMillis() + 500));
     Sequence results = client.run(query, responseContext);
@@ -281,7 +238,7 @@ public class DirectDruidClientTest
   @Test
   public void testConnectionCountAfterException()
   {
-    final DirectDruidClient client = makeDirectDruidClient(initHttpClientWithQueryError());
+    final DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient());
 
     Assert.assertThrows(RuntimeException.class, () -> client.run(getQueryPlus(), responseContext));
     Assert.assertEquals(0, client.getNumOpenConnections());
@@ -324,22 +281,22 @@ public class DirectDruidClientTest
     );
   }
 
-  private HttpClient initHttpClientWithQueryError()
+  private HttpClient initHttpClientFromExistingClient()
   {
-    return initHttpClientWithFuture(new TestHttpClient(objectMapper), true);
+    return initHttpClientFromExistingClient(new TestHttpClient(objectMapper), true);
   }
 
   private HttpClient initHttpClientWithSuccessfulQuery()
   {
-    return initHttpClientWithFuture(new TestHttpClient(objectMapper), false);
+    return initHttpClientFromExistingClient(new TestHttpClient(objectMapper), false);
   }
 
-  private HttpClient initHttpClientWithFuture(ListenableFuture future)
+  private HttpClient initHttpClientFromExistingClient(ListenableFuture future)
   {
-    return initHttpClientWithFuture(new TestHttpClient(objectMapper, future), false);
+    return initHttpClientFromExistingClient(new TestHttpClient(objectMapper, future), false);
   }
 
-  private HttpClient initHttpClientWithFuture(TestHttpClient httpClient, boolean throwQueryError)
+  private HttpClient initHttpClientFromExistingClient(TestHttpClient httpClient, boolean throwQueryError)
   {
     final QueryableIndex index = makeQueryableIndex();
     httpClient.addServerAndRunner(
