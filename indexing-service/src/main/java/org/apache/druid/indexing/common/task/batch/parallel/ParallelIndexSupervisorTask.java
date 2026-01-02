@@ -1610,11 +1610,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       return (RowIngestionMetersTotals) buildSegmentsRowStats;
     } else if (buildSegmentsRowStats instanceof Map) {
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
+      Map<String, Integer> thrownAwayByReason = (Map) buildSegmentsRowStatsMap.get("thrownAwayByReason");
       return new RowIngestionMetersTotals(
           ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
+          // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+          thrownAwayByReason != null ? CollectionUtils.mapValues(thrownAwayByReason, Integer::longValue) : null,
           ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
       );
     } else {

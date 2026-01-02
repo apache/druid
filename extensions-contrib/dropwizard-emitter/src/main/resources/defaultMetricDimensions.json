@@ -126,7 +126,8 @@
   },
   "ingest/events/thrownAway": {
     "dimensions": [
-      "dataSource"
+      "dataSource",
+      "reason"
     ],
     "type": "counter"
   },

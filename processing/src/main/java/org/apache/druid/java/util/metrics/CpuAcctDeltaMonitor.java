@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,7 +31,6 @@ import org.apache.druid.java.util.metrics.cgroups.CpuAcct;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.joda.time.DateTime;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
@@ -44,35 +42,23 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
       CgroupV2CpuMonitor.class.getSimpleName()
   );
   private final AtomicReference<SnapshotHolder> priorSnapshot = new AtomicReference<>(null);
-  private final Map<String, String[]> dimensions;
 
   private final CgroupDiscoverer cgroupDiscoverer;
   private final boolean isRunningOnCgroupsV2;
 
   public CpuAcctDeltaMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
-  public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions)
+  public CpuAcctDeltaMonitor(final String feed)
   {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(feed, ProcSelfCgroupDiscoverer.autoCgroupDiscoverer());
   }
 
-  public CpuAcctDeltaMonitor(final Map<String, String[]> dimensions, final String feed)
-  {
-    this(feed, dimensions, ProcSelfCgroupDiscoverer.autoCgroupDiscoverer());
-  }
-
-  public CpuAcctDeltaMonitor(
-      String feed,
-      Map<String, String[]> dimensions,
-      CgroupDiscoverer cgroupDiscoverer
-  )
+  public CpuAcctDeltaMonitor(String feed, CgroupDiscoverer cgroupDiscoverer)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
     this.cgroupDiscoverer = Preconditions.checkNotNull(cgroupDiscoverer, "cgroupDiscoverer required");
 
     isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
@@ -119,8 +105,6 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
           .setDimension("cpuName", Integer.toString(i))
           .setDimension("cpuTime", "sys")
           .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
-      MonitorUtils.addDimensionsToBuilder(builderUsr, dimensions);
-      MonitorUtils.addDimensionsToBuilder(builderSys, dimensions);
       emitter.emit(builderUsr.setCreatedTime(dateTime).setMetric(
           "cgroup/cpu_time_delta_ns",
           snapshot.usrTime(i) - priorSnapshotHolder.metric.usrTime(i)
