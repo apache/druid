@@ -22,9 +22,6 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -51,8 +48,6 @@ import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -83,8 +78,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
   private final ObjectMapper jsonMapper;
   private final ObjectMapper deterministicMapper;
   private final SQLMetadataConnector connector;
-  private final CompactionStateManagerConfig config;
-  private final Cache<String, CompactionState> fingerprintCache;
   private final Striped<Lock> datasourceLocks = Striped.lock(128);
 
   @Inject
@@ -92,46 +85,23 @@ public class PersistedCompactionStateManager implements CompactionStateManager
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
       @Deterministic @Nonnull ObjectMapper deterministicMapper,
-      @Nonnull SQLMetadataConnector connector,
-      @Nonnull CompactionStateManagerConfig config
+      @Nonnull SQLMetadataConnector connector
   )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
     this.deterministicMapper = deterministicMapper;
     this.connector = connector;
-    this.config = config;
-
-    this.fingerprintCache = CacheBuilder.newBuilder()
-                                        .maximumSize(config.getCacheSize())
-                                        .build();
   }
 
   @LifecycleStart
   public void start()
   {
-    // This is defensive. Since the new table is created during startup after upgrade, we need to defend against
-    // the table not existing yet. If that is the case we do not pre-warm the cache.
-    try {
-      boolean tableExists = connector.retryWithHandle(
-          handle -> connector.tableExists(handle, dbTables.getCompactionStatesTable())
-      );
-      if (tableExists) {
-        log.info("Pre-warming compaction state cache");
-        prewarmCache(config.getPrewarmFingerprintCount());
-      } else {
-        log.info("Compaction states table does not exist, skipping pre-warm");
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to prewarm cache, will load lazily");
-    }
   }
 
   @LifecycleStop
   public void stop()
   {
-    fingerprintCache.invalidateAll();
   }
 
   @VisibleForTesting
@@ -141,8 +111,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
     this.jsonMapper = null;
     this.deterministicMapper = null;
     this.connector = null;
-    this.config = null;
-    this.fingerprintCache = null;
   }
 
   @Override
@@ -255,7 +223,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
             );
           }
         }
-        warmCache(fingerprintToStateMap);
         return null;
       });
     }
@@ -336,29 +303,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
   }
 
   @Override
-  @Nullable
-  public CompactionState getCompactionStateByFingerprint(String fingerprint)
-  {
-    try {
-      return fingerprintCache.get(
-          fingerprint,
-          () -> {
-            CompactionState fromDb = loadCompactionStateFromDatabase(fingerprint);
-            if (fromDb == null) {
-              throw new CacheLoader.InvalidCacheLoadException("Fingerprint not found"); // Guava won't cache nulls
-            }
-            return fromDb;
-          }
-      );
-    }
-    catch (Exception e) {
-      // Return null for any cache loading failure (ExecutionException, UncheckedExecutionException, InvalidCacheLoadException, etc.)
-      log.debug(e, "Failed to load compaction state for fingerprint[%s] from cache", fingerprint);
-      return null;
-    }
-  }
-
-  @Override
   @SuppressWarnings("UnstableApiUsage")
   public String generateCompactionStateFingerprint(
       final CompactionState compactionState,
@@ -381,107 +325,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
     return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
 
-
-  /**
-   * Warms cache with specific states (after persisting).
-   */
-  private void warmCache(Map<String, CompactionState> fingerprintToStateMap)
-  {
-    fingerprintCache.putAll(fingerprintToStateMap);
-    log.debug("Warmed cache with [%d] compaction states", fingerprintToStateMap.size());
-  }
-
-  /**
-   * Pre-warms the cache by loading the N most recently used fingerprints.
-   */
-  private void prewarmCache(int limit)
-  {
-    final long startTime = System.currentTimeMillis();
-    log.info("Pre-warming compaction state cache with up to [%d] most recent fingerprints", limit);
-
-    final Map<String, CompactionState> recentStates = connector.retryWithHandle(
-        handle -> {
-          final String sql = StringUtils.format(
-              "SELECT fingerprint, payload FROM %s "
-              + "WHERE used = true "
-              + "ORDER BY used_status_last_updated DESC "
-              + "%s",
-              dbTables.getCompactionStatesTable(),
-              connector.limitClause(limit)
-          );
-
-          final Map<String, CompactionState> states = new HashMap<>();
-          handle.createQuery(sql)
-                .map((index, r, ctx) -> {
-                  String fingerprint = r.getString("fingerprint");
-                  byte[] payload = r.getBytes("payload");
-
-                  try {
-                    CompactionState state = jsonMapper.readValue(payload, CompactionState.class);
-                    states.put(fingerprint, state);
-                  }
-                  catch (IOException e) {
-                    log.warn(e, "Failed to deserialize compaction state for fingerprint[%s], skipping", fingerprint);
-                  }
-                  return null;
-                })
-                .list();
-
-          return states;
-        }
-    );
-
-    // Populate cache
-    fingerprintCache.putAll(recentStates);
-
-    final long duration = System.currentTimeMillis() - startTime;
-    log.info(
-        "Pre-warmed cache with [%d] compaction states in [%d]ms",
-        recentStates.size(),
-        duration
-    );
-
-  }
-
-  /**
-   * Invalidates a fingerprint from cache.
-   */
-  public void invalidateFingerprint(String fingerprint)
-  {
-    fingerprintCache.invalidate(fingerprint);
-  }
-
-  /**
-   * Loads from database. Returns null if not found or unused.
-   */
-  @Nullable
-  private CompactionState loadCompactionStateFromDatabase(String fingerprint)
-  {
-    return connector.retryWithHandle(
-        handle -> {
-          List<byte[]> results = handle.createQuery(
-                                           StringUtils.format(
-                                               "SELECT payload FROM %s WHERE fingerprint = :fingerprint AND used = true",
-                                               dbTables.getCompactionStatesTable()
-                                           ))
-                                       .bind("fingerprint", fingerprint)
-                                       .map((index, r, ctx) -> r.getBytes("payload"))
-                                       .list();
-
-          if (results.isEmpty()) {
-            return null;
-          }
-
-          try {
-            return jsonMapper.readValue(results.get(0), CompactionState.class);
-          }
-          catch (IOException e) {
-            log.error(e, "Failed to deserialize compaction state for fingerprint[%s]", fingerprint);
-            return null;
-          }
-        }
-    );
-  }
 
   /**
    * Query the metadata DB to filter the fingerprints that already exist.
@@ -516,12 +359,6 @@ public class PersistedCompactionStateManager implements CompactionStateManager
            .list();
     }
     return existingFingerprints;
-  }
-
-  @VisibleForTesting
-  protected boolean isCached(String fingerprint)
-  {
-    return fingerprintCache.getIfPresent(fingerprint) != null;
   }
 
   /**

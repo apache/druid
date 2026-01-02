@@ -33,6 +33,7 @@ import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -74,6 +75,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   {
     setUp(derbyConnectorRule);
     connector.createPendingSegmentsTable();
+    connector.createCompactionStatesTable();
 
     emitter = new StubServiceEmitter();
 
@@ -91,6 +93,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null)),
         Suppliers.ofInstance(storageConfig),
         useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache(),
+        new CompactionStateCache(),
         connector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, segmentMetadataCacheExec, false),
         emitter

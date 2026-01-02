@@ -38,6 +38,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -76,6 +77,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private HeapMemorySegmentMetadataCache cache;
   private SegmentSchemaCache schemaCache;
+  private CompactionStateCache compactionStateCache;
   private SegmentSchemaTestUtils schemaTestUtils;
 
   @Before
@@ -112,7 +114,8 @@ public class HeapMemorySegmentMetadataCacheTest
   /**
    * Creates the target {@link #cache} to be tested in the current test.
    */
-  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode, boolean useSchemaCache)
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode, boolean useSchemaCache
+  )
   {
     if (cache != null) {
       throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());
@@ -120,11 +123,13 @@ public class HeapMemorySegmentMetadataCacheTest
     final SegmentsMetadataManagerConfig metadataManagerConfig
         = new SegmentsMetadataManagerConfig(null, cacheMode, null);
     schemaCache = useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache();
+    compactionStateCache = new CompactionStateCache();
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         schemaCache,
+        compactionStateCache,
         derbyConnector,
         executorFactory,
         serviceEmitter

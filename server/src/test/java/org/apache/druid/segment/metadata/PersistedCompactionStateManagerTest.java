@@ -48,10 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PersistedCompactionStateManagerTest
@@ -85,11 +82,11 @@ public class PersistedCompactionStateManagerTest
       return null;
     });
 
-    manager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector, new CompactionStateManagerConfig());
+    manager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector);
   }
 
   @Test
-  public void test_persistCompactionState_andThen_getCompactionStateByFingerprint()
+  public void test_persistCompactionState_successfullyInsertsIntoDatabase()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
@@ -106,31 +103,16 @@ public class PersistedCompactionStateManagerTest
       return null;
     });
 
-    assertTrue(manager.isCached(fingerprint));
-    CompactionState retrieved = manager.getCompactionStateByFingerprint(fingerprint);
-    assertNotNull(retrieved);
-    assertEquals(state1, retrieved);
-  }
-
-  @Test
-  public void test_persistCompactionState_andThen_confirmCached_andThen_invalidateCache_andThen_confirmNotCached()
-  {
-    String fingerprint = "cachemiss_fingerprint";
-    CompactionState state = createTestCompactionState();
-
-    derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, state);
-      manager.persistCompactionState("ds1", map, DateTimes.nowUtc());
-      return null;
-    });
-
-    assertTrue(manager.isCached(fingerprint));
-    manager.invalidateFingerprint(fingerprint);
-    assertFalse(manager.isCached(fingerprint));
-    CompactionState result = manager.getCompactionStateByFingerprint(fingerprint);
-    assertNotNull(result);
-    assertEquals(state, result);
+    // Verify the state was inserted into database by checking count
+    Integer count = derbyConnector.retryWithHandle(handle ->
+        handle.createQuery(
+            "SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable()
+            + " WHERE fingerprint = :fp"
+        ).bind("fp", fingerprint)
+         .map((i, r, ctx) -> r.getInt(1))
+         .first()
+    );
+    assertEquals(1, count);
   }
 
   @Test
@@ -254,10 +236,6 @@ public class PersistedCompactionStateManagerTest
     int deleted = manager.deleteUnusedCompactionStatesOlderThan(cutoffTime.getMillis());
     assertEquals(1, deleted);
 
-    // Verify the old one is gone
-    CompactionState oldResult = manager.getCompactionStateByFingerprint(oldFingerprint);
-    assertNull(oldResult);
-
     // Verify only 1 state remains in the table
     Integer count = derbyConnector.retryWithHandle(handle ->
                                                        handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
@@ -265,48 +243,6 @@ public class PersistedCompactionStateManagerTest
                                                              .first()
     );
     assertEquals(1, count);
-  }
-
-  @Test
-  public void test_prewarmCache_onModuleLifecycleStart() throws Exception
-  {
-    String fingerprint = "prewarm_fingerprint";
-    CompactionState state = createTestCompactionState();
-
-    // Insert a used compaction state directly into the database
-    derbyConnector.retryWithHandle(handle -> {
-      handle.createStatement(
-                "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
-                + "(created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-                + "VALUES (:cd, :ds, :fp, :pl, :used, :updated)"
-            )
-            .bind("cd", DateTimes.nowUtc().toString())
-            .bind("ds", "testDatasource")
-            .bind("fp", fingerprint)
-            .bind("pl", jsonMapper.writeValueAsBytes(state))
-            .bind("used", true)  // Mark as used so it gets prewarmed
-            .bind("updated", DateTimes.nowUtc().toString())
-            .execute();
-      return null;
-    });
-
-    // Create a NEW manager (not the shared one) - should prewarm cache in constructor
-    PersistedCompactionStateManager newManager = new PersistedCompactionStateManager(
-        tablesConfig,
-        jsonMapper,
-        deterministicMapper,
-        derbyConnector,
-        new CompactionStateManagerConfig()
-    );
-    newManager.start(); // normally handled by Guice during startup
-
-    // Verify the state was prewarmed into cache
-    assertTrue(newManager.isCached(fingerprint));
-
-    // Verify we can retrieve it
-    CompactionState retrieved = newManager.getCompactionStateByFingerprint(fingerprint);
-    assertNotNull(retrieved);
-    assertEquals(state, retrieved);
   }
 
   @Test
@@ -333,18 +269,6 @@ public class PersistedCompactionStateManagerTest
     );
 
     assertEquals(beforeCount, afterCount);
-  }
-
-  @Test
-  public void test_getCompactionStateByFingerprint_notFound_returnsNull()
-  {
-    // Try to get a fingerprint that doesn't exist
-    CompactionState result = manager.getCompactionStateByFingerprint("nonexistent_fingerprint");
-
-    assertNull(result);
-
-    // Verify it's not cached (shouldn't cache nulls)
-    assertFalse(manager.isCached("nonexistent_fingerprint"));
   }
 
   @Test

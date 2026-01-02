@@ -111,6 +111,11 @@ public class Metric
   public static final String RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchSchemas/time";
 
   /**
+   * Time taken in milliseconds to fetch all compaction states from the metadata store.
+   */
+  public static final String RETRIEVE_COMPACTION_STATES_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchCompactionStates/time";
+
+  /**
    * Time taken to update the datasource snapshot in the cache.
    */
   public static final String UPDATE_SNAPSHOT_DURATION_MILLIS = METRIC_NAME_PREFIX + "updateSnapshot/time";
@@ -157,6 +162,11 @@ public class Metric
    * Number of unparseable segment schema records skipped while refreshing the cache.
    */
   public static final String SKIPPED_SEGMENT_SCHEMAS = METRIC_NAME_PREFIX + "schema/skipped";
+
+  /**
+   * Number of unparseable compaction state records skipped while refreshing the cache.
+   */
+  public static final String SKIPPED_COMPACTION_STATES = METRIC_NAME_PREFIX + "compactionState/skipped";
 
   /**
    * Number of unparseable pending segment records skipped while refreshing the cache.

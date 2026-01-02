@@ -173,8 +173,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class),
-        persistedCompactionStateManager
+        EasyMock.niceMock(CloneStatusManager.class)
     );
   }
 
@@ -487,8 +486,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class),
-        persistedCompactionStateManager
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -540,8 +538,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class),
-        persistedCompactionStateManager
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -593,8 +590,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class),
-        persistedCompactionStateManager
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 
@@ -704,8 +700,7 @@ public class DruidCoordinatorTest
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
-        EasyMock.niceMock(CloneStatusManager.class),
-        persistedCompactionStateManager
+        EasyMock.niceMock(CloneStatusManager.class)
     );
     coordinator.start();
 

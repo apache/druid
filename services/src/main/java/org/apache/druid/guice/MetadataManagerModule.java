@@ -41,8 +41,9 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataReadOnlyTransactionFa
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateManager;
-import org.apache.druid.segment.metadata.CompactionStateManagerConfig;
+import org.apache.druid.segment.metadata.NoopCompactionStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -62,6 +63,7 @@ import java.util.Set;
  * <li>{@link IndexerMetadataStorageCoordinator}</li>
  * <li>{@link CoordinatorConfigManager}</li>
  * <li>{@link SegmentMetadataCache}</li>
+ * <li>{@link CompactionStateCache} - Overlord only</li>
  * <li>{@link SegmentSchemaCache} - Coordinator only</li>
  * <li>{@link PersistedCompactionStateManager}</li>
  * </ul>
@@ -105,6 +107,9 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
+    binder.bind(CompactionStateManager.class)
+          .to(PersistedCompactionStateManager.class)
+          .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {
@@ -127,16 +132,20 @@ public class MetadataManagerModule implements Module
             .in(LazySingleton.class);
     }
 
+    // Overlord-only compaction state dependencies
+    if (nodeRoles.contains(NodeRole.OVERLORD)) {
+      binder.bind(CompactionStateCache.class).in(LazySingleton.class);
+    } else {
+      binder.bind(CompactionStateCache.class)
+            .to(NoopCompactionStateCache.class)
+            .in(LazySingleton.class);
+    }
+
     // Overlord-only dependencies
     if (nodeRoles.contains(NodeRole.OVERLORD)) {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
-
-      JsonConfigProvider.bind(binder, "druid.manager.compactionState", CompactionStateManagerConfig.class);
-      binder.bind(CompactionStateManager.class)
-            .to(PersistedCompactionStateManager.class)
-            .in(ManageLifecycle.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)

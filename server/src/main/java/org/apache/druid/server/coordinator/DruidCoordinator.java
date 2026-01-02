@@ -53,7 +53,6 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
@@ -146,7 +145,6 @@ public class DruidCoordinator
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
   private final CloneStatusManager cloneStatusManager;
-  private final CompactionStateManager compactionStateManager;
 
   private volatile boolean started = false;
 
@@ -193,8 +191,7 @@ public class DruidCoordinator
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker,
       CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer,
-      CloneStatusManager cloneStatusManager,
-      CompactionStateManager compactionStateManager
+      CloneStatusManager cloneStatusManager
   )
   {
     this.config = config;
@@ -219,7 +216,6 @@ public class DruidCoordinator
     this.coordinatorDynamicConfigSyncer = coordinatorDynamicConfigSyncer;
     this.cloneStatusManager = cloneStatusManager;
 
-    this.compactionStateManager = compactionStateManager;
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
   }
 

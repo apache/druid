@@ -51,8 +51,10 @@ import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -137,6 +139,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final boolean useSchemaCache;
   private final SegmentSchemaCache segmentSchemaCache;
 
+  private final boolean useCompactionStateCache;
+  private final CompactionStateCache compactionStateCache;
+
   private final ListeningScheduledExecutorService pollExecutor;
   private final ServiceEmitter emitter;
 
@@ -168,6 +173,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
       SegmentSchemaCache segmentSchemaCache,
+      CompactionStateCache compactionStateCache,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter
@@ -179,6 +185,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
+    this.useCompactionStateCache = compactionStateCache.isEnabled();
+    this.compactionStateCache = compactionStateCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
                         ? MoreExecutors.listeningDecorator(executorFactory.create(1, "SegmentMetadataCache-%s"))
@@ -265,6 +273,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     synchronized (cacheStateLock) {
       if (isEnabled()) {
+        if (useCompactionStateCache) {
+          compactionStateCache.clear();
+        }
         updateCacheState(CacheState.FOLLOWER, "Not leader anymore");
       }
     }
@@ -574,6 +585,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     if (useSchemaCache) {
       retrieveAndResetUsedSegmentSchemas(datasourceToSummary);
+    }
+
+    if (useCompactionStateCache) {
+      retrieveAndResetUsedCompactionStates();
     }
 
     markCacheSynced(syncStartTime);
@@ -1105,6 +1120,89 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                           .setDimension(DruidMetrics.DATASOURCE, datasource)
                           .setMetric(metric, value)
     );
+  }
+
+  /**
+   * Retrieves required used compaction states from the metadata store and resets
+   * them in the {@link CompactionStateCache}. If this is the first sync, all used
+   * compaction states are retrieved from the metadata store. If this is a delta sync,
+   * first only the fingerprints of all used compaction states are retrieved. Payloads are
+   * then fetched for only the fingerprints which are not present in the cache.
+   */
+  private void retrieveAndResetUsedCompactionStates()
+  {
+    final Stopwatch compactionStateSyncDuration = Stopwatch.createStarted();
+
+    // Reset the CompactionStateCache with latest compaction states
+    final Map<String, CompactionState> fingerprintToStateMap;
+    if (syncFinishTime.get() == null) {
+      fingerprintToStateMap = buildFingerprintToStateMapForFullSync();
+    } else {
+      fingerprintToStateMap = buildFingerprintToStateMapForDeltaSync();
+    }
+
+    compactionStateCache.resetCompactionStatesForPublishedSegments(fingerprintToStateMap);
+
+    // Emit metrics for the current contents of the cache
+    compactionStateCache.getStats().forEach(this::emitMetric);
+    emitMetric(Metric.RETRIEVE_COMPACTION_STATES_DURATION_MILLIS, compactionStateSyncDuration.millisElapsed());
+  }
+
+  /**
+   * Retrieves all used compaction states from the metadata store and builds a
+   * fresh map from compaction state fingerprint to state.
+   */
+  private Map<String, CompactionState> buildFingerprintToStateMapForFullSync()
+  {
+    final List<CompactionStateRecord> records = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates
+    );
+
+    return records.stream().collect(
+        Collectors.toMap(
+            CompactionStateRecord::getFingerprint,
+            CompactionStateRecord::getState
+        )
+    );
+  }
+
+  /**
+   * Retrieves compaction states from the metadata store if they are not present
+   * in the cache or have been recently updated in the metadata store. These
+   * compaction states along with those already present in the cache are used to
+   * build a complete updated map from compaction state fingerprint to state.
+   *
+   * @return Complete updated map from compaction state fingerprint to state for all
+   * used compaction states currently persisted in the metadata store.
+   */
+  private Map<String, CompactionState> buildFingerprintToStateMapForDeltaSync()
+  {
+    // Identify fingerprints in the cache and in the metadata store
+    final Map<String, CompactionState> fingerprintToStateMap = new HashMap<>(
+        compactionStateCache.getPublishedCompactionStateMap()
+    );
+    final Set<String> cachedFingerprints = Set.copyOf(fingerprintToStateMap.keySet());
+    final Set<String> persistedFingerprints = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints
+    );
+
+    // Remove entry for compaction states that have been deleted from the metadata store
+    final Set<String> deletedFingerprints = Sets.difference(cachedFingerprints, persistedFingerprints);
+    deletedFingerprints.forEach(fingerprintToStateMap::remove);
+
+    // Retrieve and add entry for compaction states that have been added to the metadata store
+    final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
+    final List<CompactionStateRecord> addedCompactionStateRecords = query(
+        sql -> sql.retrieveCompactionStatesForFingerprints(addedFingerprints)
+    );
+    if (addedCompactionStateRecords.size() < addedFingerprints.size()) {
+      emitMetric(Metric.SKIPPED_COMPACTION_STATES, addedFingerprints.size() - addedCompactionStateRecords.size());
+    }
+    addedCompactionStateRecords.forEach(
+        record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
+    );
+
+    return fingerprintToStateMap;
   }
 
   /**

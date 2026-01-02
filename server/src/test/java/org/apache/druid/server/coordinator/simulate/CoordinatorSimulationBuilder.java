@@ -226,8 +226,7 @@ public class CoordinatorSimulationBuilder
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         env.configSyncer,
-        env.cloneStatusManager,
-        new HeapMemoryCompactionStateManager()
+        env.cloneStatusManager
     );
 
     return new SimulationImpl(coordinator, env);

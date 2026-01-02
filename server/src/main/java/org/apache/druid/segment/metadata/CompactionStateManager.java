@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -43,15 +42,6 @@ public interface CompactionStateManager
    * @return A hex-encoded SHA-256 fingerprint string
    */
   String generateCompactionStateFingerprint(CompactionState compactionState, String dataSource);
-
-  /**
-   * Retrieves a compaction state by its fingerprint.
-   *
-   * @param fingerprint The fingerprint to look up
-   * @return The compaction state, or null if not found
-   */
-  @Nullable
-  CompactionState getCompactionStateByFingerprint(String fingerprint);
 
   /**
    * Persists compaction states to storage.

@@ -29,7 +29,6 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.metadata.CompactionStateManager;
-import org.apache.druid.segment.metadata.CompactionStateManagerConfig;
 import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
@@ -73,7 +72,7 @@ public class KillUnreferencedCompactionStateTest
     derbyConnector.createCompactionStatesTable();
     derbyConnector.createSegmentTable();
 
-    compactionStateManager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, createDeterministicMapper(), derbyConnector, new CompactionStateManagerConfig());
+    compactionStateManager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, createDeterministicMapper(), derbyConnector);
 
     mockParams = EasyMock.createMock(DruidCoordinatorRuntimeParams.class);
     CoordinatorRunStats runStats = new CoordinatorRunStats();

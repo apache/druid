@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -261,7 +262,8 @@ public class CompactionStatus
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
-      @Nullable CompactionStateManager compactionStateManager
+      @Nullable CompactionStateManager compactionStateManager,
+      @Nullable CompactionStateCache compactionStateCache
   )
   {
     final CompactionState expectedState = CompactSegments.createCompactionStateFromConfig(config);
@@ -274,7 +276,7 @@ public class CompactionStatus
           config.getDataSource()
       );
     }
-    return new Evaluator(candidateSegments, config, expectedFingerprint, compactionStateManager).evaluate();
+    return new Evaluator(candidateSegments, config, expectedFingerprint, compactionStateCache).evaluate();
   }
 
   @Nullable
@@ -359,13 +361,13 @@ public class CompactionStatus
 
     @Nullable
     private final String targetFingerprint;
-    private final CompactionStateManager compactionStateManager;
+    private final CompactionStateCache compactionStateCache;
 
     private Evaluator(
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         @Nullable String targetFingerprint,
-        @Nullable CompactionStateManager compactionStateManager
+        @Nullable CompactionStateCache compactionStateCache
     )
     {
       this.candidateSegments = candidateSegments;
@@ -373,7 +375,7 @@ public class CompactionStatus
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
       this.targetFingerprint = targetFingerprint;
-      this.compactionStateManager = compactionStateManager;
+      this.compactionStateCache = compactionStateCache;
     }
 
     private CompactionStatus evaluate()
@@ -389,7 +391,7 @@ public class CompactionStatus
         reasonsForCompaction.add(compactedOnceCheck.getReason());
       }
 
-      if (compactionStateManager != null && targetFingerprint != null) {
+      if (compactionStateCache != null && targetFingerprint != null) {
         // First try fingerprint-based evaluation (fast path)
         CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
                                                                .map(f -> f.apply(this))
@@ -460,10 +462,10 @@ public class CompactionStatus
 
       boolean fingerprintedSegmentNeedingCompactionFound = false;
 
-      if (compactionStateManager != null) {
+      if (compactionStateCache != null) {
         for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
           String fingerprint = e.getKey();
-          CompactionState stateToValidate = compactionStateManager.getCompactionStateByFingerprint(fingerprint);
+          CompactionState stateToValidate = compactionStateCache.getCompactionStateByFingerprint(fingerprint).orElse(null);
           if (stateToValidate == null) {
             log.warn("No compaction state found for fingerprint[%s]", fingerprint);
             fingerprintedSegmentNeedingCompactionFound = true;

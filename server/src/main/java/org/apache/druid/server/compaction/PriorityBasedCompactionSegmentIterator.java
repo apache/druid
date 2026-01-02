@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -50,7 +51,8 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      CompactionStateManager compactionStateManager
+      CompactionStateManager compactionStateManager,
+      CompactionStateCache compactionStateCache
   )
   {
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
@@ -72,7 +74,8 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
               searchPolicy,
-              compactionStateManager
+              compactionStateManager,
+              compactionStateCache
           )
       );
       addNextItemForDatasourceToQueue(datasource);

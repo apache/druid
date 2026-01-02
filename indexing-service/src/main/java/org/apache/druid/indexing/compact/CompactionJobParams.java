@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -35,13 +36,15 @@ public class CompactionJobParams
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final CompactionStateManager compactionStateManager;
+  private final CompactionStateCache compactionStateCache;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
       CompactionSnapshotBuilder snapshotBuilder,
-      CompactionStateManager compactionStateManager
+      CompactionStateManager compactionStateManager,
+      CompactionStateCache compactionStateCache
   )
   {
     this.scheduleStartTime = scheduleStartTime;
@@ -49,6 +52,7 @@ public class CompactionJobParams
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
     this.compactionStateManager = compactionStateManager;
+    this.compactionStateCache = compactionStateCache;
   }
 
   /**
@@ -95,6 +99,11 @@ public class CompactionJobParams
   public CompactionStateManager getCompactionStateManager()
   {
     return compactionStateManager;
+  }
+
+  public CompactionStateCache getCompactionStateCache()
+  {
+    return compactionStateCache;
   }
 
   @FunctionalInterface

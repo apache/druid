@@ -114,11 +114,21 @@ public class HeapMemoryCompactionStateManager implements CompactionStateManager
     this.fingerprintToStateMap.putAll(fingerprintToStateMap);
   }
 
-  @Override
+  /**
+   * Gets a compaction state by fingerprint. For test verification only.
+   */
   @Nullable
   public CompactionState getCompactionStateByFingerprint(String fingerprint)
   {
     return fingerprintToStateMap.get(fingerprint);
+  }
+
+  /**
+   * Gets all stored compaction states. For test verification only.
+   */
+  public Map<String, CompactionState> getAllStoredStates()
+  {
+    return Map.copyOf(fingerprintToStateMap);
   }
 
   /**
@@ -138,11 +148,4 @@ public class HeapMemoryCompactionStateManager implements CompactionStateManager
     return fingerprintToStateMap.size();
   }
 
-  /**
-   * Checks if a fingerprint exists in the store.
-   */
-  public boolean containsFingerprint(String fingerprint)
-  {
-    return fingerprintToStateMap.containsKey(fingerprint);
-  }
 }
