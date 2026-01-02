@@ -47,6 +47,10 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
+import org.apache.druid.segment.metadata.NoopCompactionStateCache;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -81,6 +85,8 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
+  private final CompactionStateManager compactionStateManager = new HeapMemoryCompactionStateManager();
+  private final CompactionStateCache compactionStateCache = new NoopCompactionStateCache();
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -276,8 +282,10 @@ public class NewestSegmentFirstPolicyTest
                                 .withNumPartitions(4)
             )
         ),
-        Collections.emptyMap()
-    );
+        Collections.emptyMap(),
+        compactionStateManager,
+        compactionStateCache
+        );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -508,8 +516,10 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-15T00:00:00/2017-11-15T20:00:00"),
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
-        )
-    );
+        ),
+        compactionStateManager,
+        compactionStateCache
+        );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -547,8 +557,10 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T04:00:00/2017-11-16T10:00:00"),
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
-        )
-    );
+        ),
+        compactionStateManager,
+        compactionStateCache
+        );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -1402,7 +1414,7 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
+  public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter()
   {
     // Same indexSpec as what is set in the auto compaction config
     IndexSpec indexSpec = IndexSpec.getDefault();
@@ -2052,8 +2064,10 @@ public class NewestSegmentFirstPolicyTest
             TestDataSource.WIKI, SegmentTimeline.forSegments(wikiSegments),
             TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
-        Collections.emptyMap()
-    );
+        Collections.emptyMap(),
+        compactionStateManager,
+        compactionStateCache
+        );
 
     // Verify that the segments of WIKI are preferred even though they are older
     Assert.assertTrue(iterator.hasNext());
@@ -2073,8 +2087,10 @@ public class NewestSegmentFirstPolicyTest
         policy,
         Collections.singletonMap(TestDataSource.WIKI, config),
         Collections.singletonMap(TestDataSource.WIKI, timeline),
-        Collections.emptyMap()
-    );
+        Collections.emptyMap(),
+        compactionStateManager,
+        compactionStateCache
+        );
   }
 
   private static void assertCompactSegmentIntervals(

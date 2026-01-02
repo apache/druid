@@ -17,30 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.guice.annotations;
+
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * A config object for tests, use by overriding the specific getter methods and returning what you want
+ * ObjectMapper with deterministic serialization for fingerprinting.
+ * Serializes with sorted map keys and alphabetically ordered properties.
  */
-public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@BindingAnnotation
+public @interface Deterministic
 {
-  public TestMetadataStorageTablesConfig()
-  {
-    super(
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-  }
 }

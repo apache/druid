@@ -36,6 +36,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -104,7 +106,9 @@ public class CompactionJobQueue
       GlobalTaskLockbox taskLockbox,
       OverlordClient overlordClient,
       BrokerClient brokerClient,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      CompactionStateManager compactionStateManager,
+      CompactionStateCache compactionStateCache
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -120,7 +124,9 @@ public class CompactionJobQueue
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
-        snapshotBuilder
+        snapshotBuilder,
+        compactionStateManager,
+        compactionStateCache
     );
 
     this.taskActionClientFactory = taskActionClientFactory;
@@ -315,6 +321,7 @@ public class CompactionJobQueue
     // Assume MSQ jobs to be always ready
     if (job.isMsq()) {
       try {
+        persistPendingCompactionState(job);
         return FutureUtils.getUnchecked(brokerClient.submitSqlTask(job.getNonNullMsqQuery()), true)
                           .getTaskId();
       }
@@ -333,6 +340,7 @@ public class CompactionJobQueue
     try {
       taskLockbox.add(task);
       if (task.isReady(taskActionClientFactory.create(task))) {
+        persistPendingCompactionState(job);
         // Hold the locks acquired by task.isReady() as we will reacquire them anyway
         FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
         return task.getId();
@@ -345,6 +353,20 @@ public class CompactionJobQueue
       log.error(e, "Error while submitting task[%s] to Overlord", task.getId());
       taskLockbox.unlockAll(task);
       return null;
+    }
+  }
+
+  /**
+   * Persist the compaction state associated with the given job with {@link CompactionStateManager}.
+   */
+  private void persistPendingCompactionState(CompactionJob job)
+  {
+    if (job.getCompactionState() != null && job.getCompactionStateFingerprint() != null) {
+      jobParams.getCompactionStateManager().persistCompactionState(
+          job.getDataSource(),
+          Map.of(job.getCompactionStateFingerprint(), job.getCompactionState()),
+          DateTimes.nowUtc()
+      );
     }
   }
 

@@ -27,6 +27,7 @@ export interface CompactionDynamicConfig {
   compactionPolicy: { type: 'newestSegmentFirst'; priorityDatasource?: string | null };
   useSupervisors: boolean;
   engine: 'native' | 'msq';
+  legacyPersistLastCompactionStateInSegments: boolean;
 }
 
 export const COMPACTION_DYNAMIC_CONFIG_DEFAULT_RATIO = 0.1;
@@ -91,6 +92,31 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
         Datasource to prioritize for compaction. The intervals of this datasource are chosen for
         compaction before the intervals of any other datasource. Within this datasource, the
         intervals are prioritized based on the chosen compaction policy.
+      </>
+    ),
+  },
+  {
+    name: 'legacyPersistLastCompactionStateInSegments',
+    label: 'Legacy: Persist last compaction state in segments',
+    type: 'boolean',
+    defaultValue: true,
+    info: (
+      <>
+        <p>
+          Whether to persist the full compaction state in segment metadata. When{' '}
+          <Code>true</Code> (default), compaction state is stored in both the segment metadata and
+          the compaction states table.
+        </p>
+        <p>
+          When <Code>false</Code>, only a fingerprint reference is stored in the segment metadata,
+          reducing storage overhead in the segments table. The actual compaction state is stored in
+          the compaction states table.
+        </p>
+        <p>
+          <strong>Note:</strong> Eventually this configuration will be removed and all compaction
+          will use the fingerprint method only. This configuration exists for operators to opt into
+          this future pattern early.
+        </p>
       </>
     ),
   },

@@ -42,6 +42,7 @@ import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -514,7 +515,8 @@ public class CoordinatorSimulationBuilder
           ruleManager,
           null,
           null,
-          NoopSegmentMetadataCache.instance()
+          NoopSegmentMetadataCache.instance(),
+          new HeapMemoryCompactionStateManager()
       );
 
       this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);

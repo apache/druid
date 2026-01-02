@@ -162,7 +162,8 @@ class TestSegment extends DataSegment
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("replicationFactor") Integer replicationFactor
+      @JsonProperty("replicationFactor") Integer replicationFactor,
+      @JsonProperty("compactionStateFingerprint") String compactionStateFingerprint
   )
   {
     super(
@@ -177,6 +178,7 @@ class TestSegment extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
+        compactionStateFingerprint,
         PruneSpecsHolder.DEFAULT
     );
     this.overshadowed = overshadowed;

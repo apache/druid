@@ -34,12 +34,17 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -53,14 +58,17 @@ import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -76,7 +84,12 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
-  public static final String COMPACTION_INTERVAL_KEY = "compactionInterval";
+
+  /**
+   * Must be the same as org.apache.druid.indexing.common.task.Tasks.COMPACTION_STATE_FINGERPRINT_KEY
+   */
+  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+
   private static final String COMPACTION_REASON_KEY = "compactionReason";
 
   private static final Logger LOG = new Logger(CompactSegments.class);
@@ -177,8 +190,10 @@ public class CompactSegments implements CoordinatorCustomDuty
         policy,
         compactionConfigs,
         dataSources.getUsedSegmentsTimelinesPerDataSource(),
-        slotManager.getDatasourceIntervalsToSkipCompaction()
-    );
+        slotManager.getDatasourceIntervalsToSkipCompaction(),
+        null,
+        null
+        );
 
     final CompactionSnapshotBuilder compactionSnapshotBuilder = new CompactionSnapshotBuilder(stats);
     final int numSubmittedCompactionTasks = submitCompactionTasks(
@@ -254,7 +269,13 @@ public class CompactSegments implements CoordinatorCustomDuty
         snapshotBuilder.addToComplete(entry);
       }
 
-      final ClientCompactionTaskQuery taskPayload = createCompactionTask(entry, config, defaultEngine);
+      final ClientCompactionTaskQuery taskPayload = createCompactionTask(
+          entry,
+          config,
+          defaultEngine,
+          null,
+          true
+      );
 
       final String taskId = taskPayload.getId();
       FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
@@ -280,7 +301,9 @@ public class CompactSegments implements CoordinatorCustomDuty
   public static ClientCompactionTaskQuery createCompactionTask(
       CompactionCandidate candidate,
       DataSourceCompactionConfig config,
-      CompactionEngine defaultEngine
+      CompactionEngine defaultEngine,
+      String compactionStateFingerprint,
+      boolean persistLastCompactionStateInSegments
   )
   {
     final List<DataSegment> segmentsToCompact = candidate.getSegments();
@@ -357,6 +380,9 @@ public class CompactSegments implements CoordinatorCustomDuty
     if (candidate.getCurrentStatus() != null) {
       autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
     }
+
+    autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, persistLastCompactionStateInSegments);
+    autoCompactionContext.put(COMPACTION_STATE_FINGERPRINT_KEY, compactionStateFingerprint);
 
     return compactSegments(
         candidate,
@@ -459,6 +485,61 @@ public class CompactSegments implements CoordinatorCustomDuty
         projectionSpecs,
         context,
         compactionRunner
+    );
+  }
+
+  /**
+   * Given a {@link DataSourceCompactionConfig}, create a {@link CompactionState}
+   */
+  public static CompactionState createCompactionStateFromConfig(DataSourceCompactionConfig config)
+  {
+    ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(config);
+
+    // 1. PartitionsSpec - reuse existing method
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
+
+    // 2. DimensionsSpec
+    DimensionsSpec dimensionsSpec = null;
+    if (config.getDimensionsSpec() != null && config.getDimensionsSpec().getDimensions() != null) {
+      dimensionsSpec = new DimensionsSpec(config.getDimensionsSpec().getDimensions());
+    }
+
+    // 3. Metrics
+    List<AggregatorFactory> metricsSpec = config.getMetricsSpec() == null
+                                          ? null
+                                          : Arrays.asList(config.getMetricsSpec());
+
+    // 4. Transform
+    CompactionTransformSpec transformSpec = config.getTransformSpec();
+
+    // 5. IndexSpec
+    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
+                          ? IndexSpec.getDefault()
+                          : tuningConfig.getIndexSpec();
+
+    // 6. GranularitySpec
+    GranularitySpec granularitySpec = null;
+    if (config.getGranularitySpec() != null) {
+      UserCompactionTaskGranularityConfig userGranularityConfig = config.getGranularitySpec();
+      granularitySpec = new UniformGranularitySpec(
+          userGranularityConfig.getSegmentGranularity(),
+          userGranularityConfig.getQueryGranularity(),
+          userGranularityConfig.isRollup(),
+          null  // intervals
+      );
+    }
+
+    // 7. Projections
+    List<AggregateProjectionSpec> projections = config.getProjections();
+
+    return new CompactionState(
+        partitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec,
+        projections
     );
   }
 }

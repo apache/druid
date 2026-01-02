@@ -138,7 +138,8 @@ public class CompactionRunSimulator
         Integer.MAX_VALUE,
         clusterConfig.getCompactionPolicy(),
         clusterConfig.isUseSupervisors(),
-        clusterConfig.getEngine()
+        clusterConfig.getEngine(),
+        clusterConfig.isLegacyPersistLastCompactionStateInSegments()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();

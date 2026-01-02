@@ -1,0 +1,72 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.metadata.segment.cache;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.timeline.CompactionState;
+
+import java.sql.ResultSet;
+
+/**
+ * Represents a single record in the compaction_states table.
+ */
+public class CompactionStateRecord
+{
+  private final String fingerprint;
+  private final CompactionState state;
+
+  public CompactionStateRecord(String fingerprint, CompactionState state)
+  {
+    this.fingerprint = fingerprint;
+    this.state = state;
+  }
+
+  public String getFingerprint()
+  {
+    return fingerprint;
+  }
+
+  public CompactionState getState()
+  {
+    return state;
+  }
+
+  /**
+   * Creates a CompactionStateRecord from a ResultSet row.
+   * Expected columns: fingerprint (String), payload (byte[])
+   *
+   * @param rs ResultSet positioned at the row to read
+   * @param jsonMapper ObjectMapper for deserializing the payload
+   * @return CompactionStateRecord or null if deserialization fails
+   */
+  public static CompactionStateRecord fromResultSet(ResultSet rs, ObjectMapper jsonMapper)
+      throws Exception
+  {
+    String fingerprint = rs.getString("fingerprint");
+    byte[] payload = rs.getBytes("payload");
+
+    if (fingerprint == null || payload == null) {
+      return null;
+    }
+
+    CompactionState state = jsonMapper.readValue(payload, CompactionState.class);
+    return new CompactionStateRecord(fingerprint, state);
+  }
+}

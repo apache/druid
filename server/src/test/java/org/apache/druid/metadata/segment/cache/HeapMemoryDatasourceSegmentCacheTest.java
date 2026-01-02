@@ -220,6 +220,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         true,
         null,
         null,
+        null,
         null
     );
 
@@ -779,7 +780,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
         segment.getUsed(),
         segment.getSchemaFingerprint(),
         segment.getNumRows(),
-        segment.getUpgradedFromSegmentId()
+        segment.getUpgradedFromSegmentId(),
+        segment.getCompactionStateFingerprint()
     );
   }
 

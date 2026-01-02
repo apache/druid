@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -68,6 +70,8 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
+  private final CompactionStateManager compactionStateManager;
+  private final CompactionStateCache compactionStateCache;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -84,12 +88,16 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       DataSourceCompactionConfig config,
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
-      CompactionCandidateSearchPolicy searchPolicy
+      CompactionCandidateSearchPolicy searchPolicy,
+      CompactionStateManager compactionStateManager,
+      CompactionStateCache compactionStateCache
   )
   {
     this.config = config;
     this.dataSource = config.getDataSource();
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
+    this.compactionStateManager = compactionStateManager;
+    this.compactionStateCache = compactionStateCache;
 
     populateQueue(timeline, skipIntervals);
   }
@@ -326,7 +334,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
 
       final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
-      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config, compactionStateManager, compactionStateCache);
       final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
 
       if (compactionStatus.isComplete()) {

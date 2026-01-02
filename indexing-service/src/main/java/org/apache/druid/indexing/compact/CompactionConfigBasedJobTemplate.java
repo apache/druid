@@ -31,6 +31,7 @@ import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -70,17 +71,31 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
+    CompactionState compactionState = CompactSegments.createCompactionStateFromConfig(config);
+
+    String compactionStateFingerprint = params.getCompactionStateManager().generateCompactionStateFingerprint(
+        compactionState,
+        config.getDataSource()
+    );
+
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
 
-      ClientCompactionTaskQuery taskPayload
-          = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
+      ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
+          candidate,
+          config,
+          params.getClusterCompactionConfig().getEngine(),
+          compactionStateFingerprint,
+          params.getClusterCompactionConfig().isLegacyPersistLastCompactionStateInSegments()
+      );
       jobs.add(
           new CompactionJob(
               taskPayload,
               candidate,
-              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload)
+              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
+              compactionStateFingerprint,
+              compactionState
           )
       );
     }
@@ -120,7 +135,9 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         Intervals.complementOf(searchInterval),
         // This policy is used only while creating jobs
         // The actual order of jobs is determined by the policy used in CompactionJobQueue
-        new NewestSegmentFirstPolicy(null)
+        new NewestSegmentFirstPolicy(null),
+        params.getCompactionStateManager(),
+        params.getCompactionStateCache()
     );
 
     // Collect stats for segments that are already compacted
