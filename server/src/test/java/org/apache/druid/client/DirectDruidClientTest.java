@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -67,9 +68,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 public class DirectDruidClientTest
@@ -163,10 +166,26 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testCancel()
+  public void testCancel() throws MalformedURLException
   {
-    DirectDruidClient client = makeDirectDruidClient(initHttpClientFromExistingClient(Futures.immediateCancelledFuture()));
-    Sequence results = client.run(getQueryPlus(), responseContext);
+    QueryPlus queryPlus = getQueryPlus();
+    TestHttpClient testHttpClient = new TestHttpClient(objectMapper, Futures.immediateCancelledFuture());
+
+    // add a generic server and a cancel query URL
+    QueryableIndex index = makeQueryableIndex();
+    TestHttpClient.SimpleServerManager simpleServerManager = new TestHttpClient.SimpleServerManager(
+        conglomerateRule.getConglomerate(), DataSegment.builder(SegmentId.dummy("test")).build(), index, false
+    );
+    testHttpClient.addServerAndRunner(
+        new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        simpleServerManager
+    );
+    testHttpClient.addUrlAndRunner(
+        new URL(StringUtils.format("http://%s/druid/v2/%s", hostName, queryPlus.getQuery().getId())),
+        simpleServerManager
+    );
+    DirectDruidClient client = makeDirectDruidClient(testHttpClient);
+    Sequence results = client.run(queryPlus, responseContext);
 
     Assert.assertEquals(0, client.getNumOpenConnections());
     QueryInterruptedException actualException =
@@ -174,6 +193,13 @@ public class DirectDruidClientTest
     Assert.assertEquals(hostName, actualException.getHost());
     Assert.assertEquals("Query cancelled", actualException.getErrorCode());
     Assert.assertEquals("Task was cancelled.", actualException.getCause().getMessage());
+
+    Assert.assertTrue(blockingExecutorService.hasPendingTasks());
+    blockingExecutorService.finishNextPendingTask();
+    Assert.assertTrue(blockingExecutorService.hasPendingTasks());
+    ISE observedException = Assert.assertThrows(ISE.class, () -> blockingExecutorService.finishNextPendingTask());
+    Assert.assertTrue(observedException.getCause() instanceof CancellationException);
+
   }
 
   @Test

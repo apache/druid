@@ -560,11 +560,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         Runnable checkRunnable = () -> {
           try {
-            log.info("GRRRR1 cacnelQuery");
             if (!responseFuture.isDone()) {
               log.error("Error cancelling query[%s]", query);
             }
-            log.info("GRRRR2 cacnelQuery");
             StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
@@ -580,14 +578,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             log.error(e, "Timed out cancelling query[%s]", query);
           }
         };
-        log.info("GRRRYAY INNER submit to cancel executor");
         queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
       }
       catch (IOException e) {
         log.error(e, "Error cancelling query[%s]", query);
       }
     };
-    log.info("GRRRYAY OUTER submit to cancel executor");
     queryCancellationExecutor.submit(cancelRunnable);
   }
 
