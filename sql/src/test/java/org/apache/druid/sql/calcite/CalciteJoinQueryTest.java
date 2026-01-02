@@ -3423,67 +3423,41 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new GroupByQuery.Builder()
                 .setDataSource(
-                    new QueryDataSource(
-                        GroupByQuery.builder()
-                                    .setDataSource(
-                                        join(
-                                            new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                    .dataSource(CalciteTests.DATASOURCE1)
-                                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                                    .virtualColumns(expressionVirtualColumn(
-                                                        "v0",
-                                                        "\'10.1\'",
-                                                        ColumnType.STRING
-                                                    ))
-                                                    .columns(ImmutableList.of("v0", "__time"))
-                                                    .columnTypes(ColumnType.STRING, ColumnType.LONG)
-                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                    .context(queryContext)
-                                                    .build()
-                                            ),
-                                            new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                    .dataSource(CalciteTests.DATASOURCE1)
-                                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                                    .columns(ImmutableList.of("dim1"))
-                                                    .columnTypes(ColumnType.STRING)
-                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                    .context(queryContext)
-                                                    .build()
-                                            ),
-                                            "j0.",
-                                            equalsCondition(
-                                                makeColumnExpression("v0"),
-                                                makeColumnExpression("j0.dim1")
-                                            ),
-                                            JoinType.INNER
-                                        ))
-                                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                                    .setVirtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-                                    .setGranularity(Granularities.ALL)
-                                    .setDimensions(new DefaultDimensionSpec(
-                                        "_v0",
-                                        "d0",
-                                        ColumnType.STRING
-                                    ), new DefaultDimensionSpec(
-                                        "__time",
-                                        "d1",
-                                        ColumnType.LONG
-                                    ))
-                                    .setContext(queryContext)
-                                    .build()
+                    join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
+                                .filters(equality("dim1", "10.1", ColumnType.STRING))
+                                .columns(ImmutableList.of("v0", "__time"))
+                                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(equality("dim1", "10.1", ColumnType.STRING))
+                                .columns(ImmutableList.of("dim1"))
+                                .columnTypes(ColumnType.STRING)
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(
+                            makeColumnExpression("v0"),
+                            makeColumnExpression("j0.dim1")
+                        ),
+                        JoinType.INNER
                     )
                 )
-                .setVirtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                .setVirtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setDimensions(new DefaultDimensionSpec(
-                    "v0",
-                    "_d0",
-                    ColumnType.STRING
-                ))
+                .setDimensions(new DefaultDimensionSpec("_v0", "d0", ColumnType.STRING))
                 .setContext(queryContext)
                 .setGranularity(Granularities.ALL)
                 .build()
