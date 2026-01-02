@@ -106,7 +106,7 @@ public class StorageLocation
   @GuardedBy("lock")
   private WeakCacheEntry hand;
 
-  private volatile boolean evictImmediately = false;
+  private volatile boolean evictImmediatelyOnHoldRelease = false;
 
   /**
    * Current total size of files in bytes, including weak entries.
@@ -172,9 +172,9 @@ public class StorageLocation
   /**
    * Sets whether weak cache entries should be immediately evicted once all holds are released.
    */
-  public void setEvictImmediately(final boolean evictImmediately)
+  public void setEvictImmediatelyOnHoldRelease(final boolean evictImmediatelyOnHoldRelease)
   {
-    this.evictImmediately = evictImmediately;
+    this.evictImmediatelyOnHoldRelease = evictImmediatelyOnHoldRelease;
   }
 
   public <T extends CacheEntry> T getStaticCacheEntry(CacheEntryIdentifier entryId)
@@ -448,7 +448,7 @@ public class StorageLocation
     return () -> {
       weakEntry.release();
 
-      if (!isNewEntry && !evictImmediately) {
+      if (!isNewEntry && !evictImmediatelyOnHoldRelease) {
         // No need to consider removal from weakCacheEntries on hold release.
         return;
       }
@@ -459,10 +459,10 @@ public class StorageLocation
             weakEntry.cacheEntry.getId(),
             (cacheEntryIdentifier, weakCacheEntry) -> {
               // If we never successfully mounted, go ahead and remove so we don't have a dead entry.
-              // Futhermore, if evictImmediately is set, evict on release if all holds are gone.
+              // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
               final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
               if ((isNewEntry && !isMounted)
-                  || (evictImmediately && !weakCacheEntry.isHeld())) {
+                  || (evictImmediatelyOnHoldRelease && !weakCacheEntry.isHeld())) {
                 unlinkWeakEntry(weakCacheEntry);
                 weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
                 if (isMounted) {
