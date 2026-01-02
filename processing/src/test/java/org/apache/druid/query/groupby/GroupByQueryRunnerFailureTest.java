@@ -105,7 +105,6 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -114,8 +113,7 @@ public class GroupByQueryRunnerFailureTest
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest =
         new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);

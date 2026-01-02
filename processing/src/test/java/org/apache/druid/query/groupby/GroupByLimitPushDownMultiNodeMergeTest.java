@@ -578,7 +578,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
         new GroupByResourcesReservationPool(mergePoolBroker, config);
@@ -593,8 +592,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolBroker,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
     final GroupingEngine groupingEngineHistorical = new GroupingEngine(
         druidProcessingConfig,
@@ -602,8 +600,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolHistorical,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
     final GroupingEngine groupingEngineHistorical2 = new GroupingEngine(
         druidProcessingConfig,
@@ -611,8 +608,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolHistorical2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
 
     groupByFactoryBroker = new GroupByQueryRunnerFactory(

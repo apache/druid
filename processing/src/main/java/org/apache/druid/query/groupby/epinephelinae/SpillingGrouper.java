@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
@@ -37,7 +38,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -53,6 +54,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -75,7 +77,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final AggregatorFactory[] aggregatorFactories;
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
-  private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -97,8 +98,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final boolean spillingAllowed,
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -158,7 +158,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
-    this.perQueryStats = perQueryStats;
   }
 
   @Override
@@ -216,9 +215,16 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
+  public Map<String, Long> getQueryMetricsMap()
+  {
+    return ImmutableMap.of(
+        GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, keySerde.getDictionarySize()
+    );
+  }
+
+  @Override
   public void close()
   {
-    perQueryStats.dictionarySize(keySerde.getDictionarySize());
     grouper.close();
     keySerde.reset();
     deleteFiles();

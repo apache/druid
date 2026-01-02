@@ -59,7 +59,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -68,6 +68,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -104,7 +105,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
-  private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
@@ -116,8 +116,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir,
-      GroupByStatsProvider groupByStatsProvider
+      String processingTmpDir
   )
   {
     this.config = config;
@@ -130,7 +129,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
-    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -167,9 +165,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    GroupByStatsProvider.PerQueryStats perQueryStats =
-        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
-
     final int priority = queryContext.getPriority();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
@@ -191,8 +186,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-                  perQueryStats
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
               );
 
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
@@ -226,8 +220,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize,
-                      perQueryStats
+                      mergeBufferSize
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
@@ -306,11 +299,16 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
-              return RowBasedGrouperHelper.makeGrouperIterator(
-                  grouper,
-                  query,
-                  resources
-              );
+              // Finished the query, so let's collate the metrics!
+              if (responseContext != null) {
+                responseContext.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
+
+                Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
+                responseContext.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY,
+                                    metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
+              }
+
+              return RowBasedGrouperHelper.makeGrouperIterator(grouper, query, resources);
             }
             catch (Throwable t) {
               // Exception caught while setting up the iterator; release resources.
