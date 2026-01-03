@@ -86,7 +86,6 @@ import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -123,13 +122,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     return false;
   }
 
-  @MinTopNThreshold(1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
         + "  select __time as b2 from foo group by 1 order by 1\n"
@@ -185,7 +184,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
   // to compute the query with limit 1.
-  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testExactTopNOnInnerJoinWithLimit()
@@ -193,6 +191,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
         + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
@@ -5831,12 +5830,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select t1.__time from druid.foo as t1 join\n"
         + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"
