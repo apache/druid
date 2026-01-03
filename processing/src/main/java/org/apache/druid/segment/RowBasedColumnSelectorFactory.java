@@ -20,7 +20,15 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import com.google.common.primitives.Doubles;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -75,8 +83,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     this.rowSupplier = rowSupplier;
     this.rowIdSupplier = rowIdSupplier;
     this.adapter = adapter;
-    this.columnInspector =
-        Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
+    this.columnInspector = Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
     this.useStringValueOfNullInLists = useStringValueOfNullInLists;
   }
@@ -337,6 +344,45 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
 
         @Override
+        public boolean isNull()
+        {
+          updateCurrentValues();
+          return DimensionHandlerUtils.isNumericNull(getObject());
+        }
+
+        @Override
+        public float getFloat()
+        {
+          updateCurrentValues();
+          return (float) getDouble();
+        }
+
+        @Override
+        public double getDouble()
+        {
+          updateCurrentValues();
+
+          // Below is safe since isNull() returned true.
+          final String str = Iterables.getOnlyElement(dimensionValues);
+          return Doubles.tryParse(str);
+        }
+
+        @Override
+        public long getLong()
+        {
+          updateCurrentValues();
+
+          // Below is safe since isNull() returned true.
+          final String str = Iterables.getOnlyElement(dimensionValues);
+          final Long n = GuavaUtils.tryParseLong(str);
+          if (n != null) {
+            return n;
+          } else {
+            return (long) getDouble();
+          }
+        }
+
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", rowSupplier);
@@ -412,6 +458,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
+    final ExpressionType expressionType = columnInspector.getType(columnName);
+
     if (columnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       final ToLongFunction<T> timestampFunction = adapter.timestampFunction();
 
@@ -437,6 +485,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
       }
       return new TimeLongColumnSelector();
+    } else if (expressionType != null && expressionType.is(ExprType.STRING)) {
+      return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
       final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
@@ -488,7 +538,33 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         public Object getObject()
         {
           updateCurrentValue();
-          return currentValue;
+
+          if (expressionType != null && !expressionType.is(ExprType.COMPLEX)) {
+            try {
+              final Object val = ExprEval.bestEffortOf(currentValue).castTo(expressionType).value();
+              if (val != null && expressionType.is(ExprType.DOUBLE) && numberType == ValueType.FLOAT) {
+                // Adjustment for FLOAT. Expressions don't speak float, so we need to cast it ourselves.
+                return ((Number) val).floatValue();
+              } else {
+                return val;
+              }
+            }
+            catch (Exception e) {
+              if (throwParseExceptions) {
+                throw new ParseException(
+                    String.valueOf(currentValue),
+                    "Error reading column[%s] as type[%s]",
+                    columnName,
+                    expressionType
+                );
+              } else {
+                // if !throwParseExceptions, return the original uncasted value and hope for the best.
+                return currentValue;
+              }
+            }
+          } else {
+            return currentValue;
+          }
         }
 
         @Override
@@ -556,5 +632,15 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     return getColumnCapabilities(columnInspector, columnName);
+  }
+
+  /**
+   * Determines whether the provided object should be coerced using the provided type. Generally this is true,
+   * except for STRING type with List objects. This allows multi-value strings to be passed through without being
+   * coereced by the expression engine, which would turn arrays into nulls.
+   */
+  private static boolean shouldCoerce(@Nullable final Object obj, @Nullable final ExpressionType expressionType)
+  {
+    return obj != null && expressionType != null && !(expressionType.is(ExprType.STRING) && obj instanceof List);
   }
 }

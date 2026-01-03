@@ -53,6 +53,7 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -120,6 +121,7 @@ public class DartQueryMaker implements QueryMaker
   private final ServerConfig serverConfig;
 
   final QueryKitSpecFactory queryKitSpecFactory;
+  final MultiQueryKit queryKit;
 
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
@@ -129,6 +131,7 @@ public class DartQueryMaker implements QueryMaker
       DartControllerConfig controllerConfig,
       ExecutorService controllerExecutor,
       QueryKitSpecFactory queryKitSpecFactory,
+      MultiQueryKit queryKit,
       ServerConfig serverConfig
   )
   {
@@ -139,6 +142,7 @@ public class DartQueryMaker implements QueryMaker
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
     this.queryKitSpecFactory = queryKitSpecFactory;
+    this.queryKit = queryKit;
     this.serverConfig = serverConfig;
   }
 
