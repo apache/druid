@@ -34,15 +34,14 @@ import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
 
 public class FaultyRemoteTaskActionClientFactory extends RemoteTaskActionClientFactory
 {
-  private final ClusterTestingTaskConfig config;
+  private final ObjectMapper jsonMapper;
 
   @Inject
   public FaultyRemoteTaskActionClientFactory(
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @IndexingService final ServiceLocator serviceLocator,
-      RetryPolicyConfig retryPolicyConfig,
-      ClusterTestingTaskConfig config
+      RetryPolicyConfig retryPolicyConfig
   )
   {
     super(
@@ -51,12 +50,18 @@ public class FaultyRemoteTaskActionClientFactory extends RemoteTaskActionClientF
         serviceLocator,
         retryPolicyConfig
     );
-    this.config = config;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
   public TaskActionClient create(Task task)
   {
-    return new FaultyRemoteTaskActionClient(config.getTaskActionClientConfig(), super.create(task));
+    try {
+      final ClusterTestingTaskConfig config = ClusterTestingTaskConfig.forTask(task, jsonMapper);
+      return new FaultyRemoteTaskActionClient(config.getTaskActionClientConfig(), super.create(task));
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -235,7 +235,19 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public int getTaskCount(String status, String dataSource)
   {
-    return ImmutableList.copyOf((Iterator<?>) onLeaderOverlord(o -> o.taskStatuses(status, dataSource, 100))).size();
+    return getTasks(dataSource, status).size();
+  }
+
+  /**
+   * Gets the details of tasks with the given state for the specified datasource.
+   * Valid task states are "pending", "waiting", "running", "complete".
+   */
+  public List<TaskStatusPlus> getTasks(String dataSource, String taskState)
+  {
+    return ImmutableList.copyOf(
+        (Iterator<? extends TaskStatusPlus>)
+            onLeaderOverlord(o -> o.taskStatuses(taskState, dataSource, 100))
+    );
   }
 
   /**

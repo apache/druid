@@ -30,6 +30,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -45,6 +46,7 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -55,10 +57,14 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 {
+  private static final String COL_ITEM = "item";
+  private static final String COL_TIMESTAMP = "timestamp";
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private KafkaResource kafkaServer;
 
   @Override
@@ -72,7 +78,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
-           .addServer(new EmbeddedCoordinator())
+           .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(historical)
@@ -94,7 +100,8 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
+    final KafkaSupervisorSpec kafkaSupervisorSpec
+        = newKafkaSupervisor().withId(supervisorId).build(dataSource, topic);
 
     Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
@@ -142,12 +149,87 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, lockedIntervals.size());
   }
 
-  private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
+  @Test
+  public void test_supervisorBecomesIdle_ifTopicHasNoData()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final long idleAfterMillis = 100L;
+    final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        .withIoConfig(ioConfig -> ioConfig.withIdleConfig(new IdleConfig(true, idleAfterMillis)).withTaskCount(1))
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(supervisorSpec);
+
+    // Wait for the first set of tasks to finish
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    // Verify that the supervisor is now idle
+    final SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorSpec.getId());
+    Assertions.assertFalse(status.isSuspended());
+    Assertions.assertTrue(status.isHealthy());
+    Assertions.assertEquals("IDLE", status.getState());
+
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    kafkaServer.deleteTopic(topic);
+  }
+
+  @Test
+  public void test_runSupervisor_withEmptyDimension()
+  {
+    final String topic = IdUtils.getRandomId();
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final String emptyColumn = "unknownColumn";
+    final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        .withDataSchema(
+            s -> s.withDimensions(
+                DimensionsSpec.getDefaultSchemas(List.of(emptyColumn, COL_ITEM))
+            )
+        )
+        .build(dataSource, topic);
+    cluster.callApi().postSupervisor(supervisorSpec);
+
+    final int numRows = 100;
+    kafkaServer.produceRecordsToTopic(generateRecordsForTopic(topic, numRows, DateTimes.nowUtc()));
+
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numRows)
+    );
+
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(
+        "100",
+        cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s IS NULL", dataSource, emptyColumn)
+    );
+    Assertions.assertEquals(
+        "0",
+        cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s IS NOT NULL", dataSource, emptyColumn)
+    );
+    Assertions.assertEquals(
+        StringUtils.format("%s,YES,VARCHAR", emptyColumn),
+        cluster.runSql(
+            "SELECT COLUMN_NAME, IS_NULLABLE, DATA_TYPE"
+            + " FROM INFORMATION_SCHEMA.COLUMNS"
+            + " WHERE TABLE_NAME = '%s' AND COLUMN_NAME = '%s'",
+            dataSource, emptyColumn
+        )
+    );
+  }
+
+  private KafkaSupervisorSpecBuilder newKafkaSupervisor()
   {
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
-                .withTimestamp(new TimestampSpec("timestamp", null, null))
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
                 .withDimensions(DimensionsSpec.EMPTY)
         )
         .withTuningConfig(
@@ -157,12 +239,14 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
         )
         .withIoConfig(
             ioConfig -> ioConfig
-                .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+                .withInputFormat(new CsvInputFormat(List.of(COL_TIMESTAMP, COL_ITEM), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
                 .withUseEarliestSequenceNumber(true)
-        )
-        .withId(supervisorId)
-        .build(dataSource, topic);
+        );
   }
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
