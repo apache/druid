@@ -186,7 +186,7 @@ public class EmbeddedServiceClient
     try {
       StatusResponseHolder response = serviceClient.request(requestBuilder, responseHandler);
       if (!response.getStatus().equals(HttpResponseStatus.OK)
-        && !response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+          && !response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
         throw new ISE(
             "Request[%s] failed with status[%s] content[%s].",
             requestBuilder.toString(),
