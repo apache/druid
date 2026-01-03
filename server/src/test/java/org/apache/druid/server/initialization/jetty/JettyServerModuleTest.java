@@ -53,6 +53,9 @@ public class JettyServerModuleTest
     Mockito.when(jettyServerThreadPool.getMaxThreads()).thenReturn(100);
     Mockito.when(jettyServerThreadPool.getQueueSize()).thenReturn(50);
     Mockito.when(jettyServerThreadPool.getBusyThreads()).thenReturn(60);
+    Mockito.when(jettyServerThreadPool.getReadyThreads()).thenReturn(20);
+    Mockito.when(jettyServerThreadPool.getUtilizedThreads()).thenReturn(5);
+    Mockito.when(jettyServerThreadPool.getUtilizationRate()).thenReturn(0.45);
 
     JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor();
 
@@ -67,6 +70,9 @@ public class JettyServerModuleTest
     serviceEmitter.verifyValue("jetty/threadPool/max", 100);
     serviceEmitter.verifyValue("jetty/threadPool/queueSize", 50);
     serviceEmitter.verifyValue("jetty/threadPool/busy", 60);
+    serviceEmitter.verifyValue("jetty/threadPool/ready", 20);
+    serviceEmitter.verifyValue("jetty/threadPool/utilized", 5);
+    serviceEmitter.verifyValue("jetty/threadPool/utilizationRate", 0.45);
   }
 
   @Test

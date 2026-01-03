@@ -528,6 +528,11 @@ public class JettyServerModule extends JerseyServletModule
       if (jettyServerThreadPool != null) {
         emitter.emit(builder.setMetric("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
         emitter.emit(builder.setMetric("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+
+        emitter.emit(builder.setMetric("jetty/threadPool/ready", jettyServerThreadPool.getReadyThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/utilized", jettyServerThreadPool.getUtilizedThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/utilizationRate", jettyServerThreadPool.getUtilizationRate()));
+
         emitter.emit(builder.setMetric("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
         emitter.emit(builder.setMetric("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
         emitter.emit(builder.setMetric("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
