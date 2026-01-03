@@ -240,6 +240,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
 
   /**
    * Gets the details of tasks with the given state for the specified datasource.
+   * Valid task states are "pending", "waiting", "running", "complete".
    */
   public List<TaskStatusPlus> getTasks(String dataSource, String taskState)
   {

@@ -20,12 +20,14 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +35,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KafkaFaultToleranceTest extends KafkaTestBase
 {
@@ -133,6 +137,11 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     final boolean useTransactions = true;
     totalRecords = publish1kRecords(topic, useTransactions);
 
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
+    final Set<String> taskIdsBeforeHandoff = getRunningTaskIds(dataSource);
+    Assertions.assertFalse(taskIdsBeforeHandoff.isEmpty());
+
     final String path = StringUtils.format(
         "/druid/indexer/v1/supervisor/%s/taskGroups/handoff",
         supervisorSpec.getId()
@@ -151,5 +160,20 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     );
 
     totalRecords += publish1kRecords(topic, useTransactions);
+    waitUntilPublishedRecordsAreIngested(totalRecords);
+
+    // Verify that the running task IDs have changed
+    final Set<String> taskIdsAfterHandoff = getRunningTaskIds(dataSource);
+    Assertions.assertFalse(taskIdsAfterHandoff.isEmpty());
+    Assertions.assertFalse(taskIdsBeforeHandoff.stream().anyMatch(taskIdsAfterHandoff::contains));
+  }
+
+  private Set<String> getRunningTaskIds(String dataSource)
+  {
+    return cluster.callApi()
+                  .getTasks(dataSource, "running")
+                  .stream()
+                  .map(TaskStatusPlus::getId)
+                  .collect(Collectors.toSet());
   }
 }
