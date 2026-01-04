@@ -77,6 +77,14 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageLoadThreads")
   private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
+  /**
+   * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
+   * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
+   * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
+   */
+  @JsonProperty("virtualStorageFabricEvictImmediatelyOnHoldRelease")
+  private boolean virtualStorageFabricEvictImmediatelyOnHoldRelease = false;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -154,6 +162,11 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
+  public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
+  {
+    return virtualStorageFabricEvictImmediatelyOnHoldRelease;
+  }
+
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
   {
     SegmentLoaderConfig retVal = new SegmentLoaderConfig();
@@ -161,6 +174,19 @@ public class SegmentLoaderConfig
     retVal.deleteOnRemove = this.deleteOnRemove;
     retVal.infoDir = this.infoDir;
     return retVal;
+  }
+
+  /**
+   * Sets {@link #virtualStorage} and {@link #virtualStorageFabricEvictImmediatelyOnHoldRelease}.
+   */
+  public SegmentLoaderConfig setVirtualStorage(
+      boolean virtualStorage,
+      boolean virtualStorageFabricEvictImmediatelyOnHoldRelease
+  )
+  {
+    this.virtualStorage = virtualStorage;
+    this.virtualStorageFabricEvictImmediatelyOnHoldRelease = virtualStorageFabricEvictImmediatelyOnHoldRelease;
+    return this;
   }
 
   /**
@@ -195,6 +221,7 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", useVirtualStorageFabric=" + virtualStorage +
            ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageFabricEvictImmediatelyOnHoldRelease=" + virtualStorageFabricEvictImmediatelyOnHoldRelease +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
