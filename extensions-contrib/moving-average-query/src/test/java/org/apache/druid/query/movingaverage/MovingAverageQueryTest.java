@@ -31,6 +31,7 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -365,7 +366,14 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig() {
+          @Override
+          public boolean detectUnavailableSegments()
+          {
+            return false;
+          }
+        }
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
