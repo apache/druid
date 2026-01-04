@@ -104,6 +104,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
@@ -127,6 +128,8 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -1973,6 +1976,18 @@ public class CompactionTaskTest
       {
         return Optional.of(
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
+      }
+
+      @Override
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+      {
+        final Segment segment =
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
+        final ReferenceCountedSegmentProvider provider = ReferenceCountedSegmentProvider.of(segment);
+        return new AcquireSegmentAction(
+            () -> Futures.immediateFuture(AcquireSegmentResult.cached(provider)),
+            null
         );
       }
 

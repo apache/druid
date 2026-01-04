@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -45,10 +46,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryResult;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
+import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -56,10 +57,10 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -166,15 +167,23 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
-      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
+      final SegmentReference segmentReference = closer.register(segmentHolder.getSegmentReferenceOnce());
+      if (segmentReference == null) {
+        throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
+      }
+
+      final Segment mappedSegment = closer.register(mapSegment(segmentReference));
+      if (segmentHolder.getInputCounters() != null) {
+        final int rowCount = getSegmentRowCount(segmentReference);
+        closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
+      }
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
+              query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
               Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
               mappedSegment.as(TimeBoundaryInspector.class),
               bufferPool,
@@ -205,7 +214,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
-        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
+        final Segment mappedSegment = mapUnmanagedSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(

@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -31,12 +32,12 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -119,16 +120,16 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   }
 
   /**
-   * Runs the leaf processor using a segment described by the {@link SegmentWithDescriptor} as the input. This may result
-   * in calls to fetch the segment from an external source.
+   * Runs the leaf processor using a segment described by the {@link SegmentReferenceHolder}.
    */
-  protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
+  protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentReferenceHolder segmentHolder) throws IOException;
 
   /**
    * Runs the leaf processor using the results from a data server as the input. The query and data server details are
    * described by {@link DataServerQueryHandler}.
    */
-  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
+  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler)
+      throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,
@@ -139,10 +140,43 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    * Helper intended to be used by subclasses. Applies {@link #segmentMapFn}, which applies broadcast joins
    * if applicable to this query.
    */
-  protected Optional<Segment> mapSegment(final Segment segment)
+  protected Segment mapSegment(final SegmentReference segmentReference)
   {
-    // we use a new reference counted segment because segment reference tracking and lifecycle management happens elsewhere, so all
-    // we need to be able to do here is apply a segment map function since we don't care about the provider
-    return segmentMapFn.apply(ReferenceCountedSegmentProvider.unmanaged(segment));
+    final Optional<Segment> segment = segmentReference.getSegmentReference();
+    if (!segment.isPresent()) {
+      throw DruidException.defensive("Missing segment[%s]", segmentReference.getSegmentDescriptor());
+    }
+
+    final Optional<Segment> mappedSegment = segmentMapFn.apply(segment);
+    return mappedSegment.orElseThrow(() -> DruidException.defensive(
+        "Segment[%s] went unexpectedly empty after mapping",
+        segmentReference.getSegmentDescriptor()
+    ));
+  }
+
+  /**
+   * Helper intended to be used by subclasses. Applies {@link #segmentMapFn}, which applies broadcast joins
+   * if applicable to this query.
+   */
+  protected Segment mapUnmanagedSegment(final Segment segment)
+  {
+    final Optional<Segment> mappedSegment = segmentMapFn.apply(ReferenceCountedSegmentProvider.unmanaged(segment));
+    return mappedSegment.orElseThrow(() -> DruidException.defensive(
+        "Segment[%s] went unexpectedly empty after mapping",
+        segment.getId()
+    ));
+  }
+
+  /**
+   * Helper to get the number of rows for a segment, using a {@link PhysicalSegmentInspector}. Returns 0 when the
+   * number is unknown.
+   */
+  protected int getSegmentRowCount(final SegmentReference segmentReference)
+  {
+    return segmentReference
+        .getSegmentReference()
+        .flatMap(segment -> Optional.ofNullable(segment.as(PhysicalSegmentInspector.class)))
+        .map(PhysicalSegmentInspector::getNumRows)
+        .orElse(0);
   }
 }

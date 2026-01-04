@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.query.filter.DimFilter;
 import org.joda.time.Interval;
 
@@ -54,11 +55,12 @@ public class TableInputSpec implements InputSpec
    *
    * @param dataSource   datasource to read
    * @param intervals    intervals to filter, or null if no time filtering is desired. Interval filtering is strict,
-   *                     meaning that when this spec is sliced and read, the returned {@link SegmentWithDescriptor}
-   *                     from {@link ReadableInput#getSegment()} are clipped to these intervals.
+   *                     meaning that when this spec is sliced and read, the returned {@link LoadableSegment}
+   *                     from {@link PhysicalInputSlice#getLoadableSegments()} are clipped to these intervals using
+   *                     {@link LoadableSegment#descriptor()}.
    * @param filter       other filters to use for pruning, or null if no pruning is desired. Pruning filters are
    *                     *not strict*, which means that processors must re-apply them when processing the returned
-   *                     {@link SegmentWithDescriptor} from {@link ReadableInput#getSegment()}. This matches how
+   *                     {@link LoadableSegment} from {@link PhysicalInputSlice#getLoadableSegments()}. This matches how
    *                     Broker-based pruning works for native queries.
    * @param filterFields list of fields from {@link DimFilter#getRequiredColumns()} to consider for pruning. If null,
    *                     all fields are considered for pruning.

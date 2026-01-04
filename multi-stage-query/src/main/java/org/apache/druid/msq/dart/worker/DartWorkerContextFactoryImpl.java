@@ -33,7 +33,7 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;

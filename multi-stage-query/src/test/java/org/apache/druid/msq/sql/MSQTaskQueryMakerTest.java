@@ -30,7 +30,6 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -52,7 +51,8 @@ import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageS
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
@@ -102,7 +102,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.destination.IngestDestination;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -117,15 +116,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.expressionVirtualColumn;
 import static org.apache.druid.sql.calcite.table.RowSignatures.toRelDataType;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
 
 public class MSQTaskQueryMakerTest
@@ -139,7 +135,6 @@ public class MSQTaskQueryMakerTest
   @Bind
   private SpecificSegmentsQuerySegmentWalker walker;
   @Bind
-  @Mock
   private DataSegmentProvider dataSegmentProviderMock;
   @Bind
   private ObjectMapper objectMapper;
@@ -181,16 +176,8 @@ public class MSQTaskQueryMakerTest
         FileUtils.getTempDir().toFile(),
         SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER))
     );
-    when(dataSegmentProviderMock.fetchSegment(
-        any(),
-        any(),
-        anyBoolean()
-    )).thenAnswer(invocation -> (Supplier<?>) () -> {
-      SegmentId segmentId = (SegmentId) invocation.getArguments()[0];
-      return new ReferenceCountingResourceHolder(walker.getSegment(segmentId), () -> {
-        // no-op closer, we don't want to close the segment
-      });
-    });
+    dataSegmentProviderMock = (segmentId, descriptor, inputCounters, isReindex) ->
+        LoadableSegment.forSegment(walker.getSegment(segmentId).segment, descriptor.getInterval(), null, inputCounters);
 
     objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();

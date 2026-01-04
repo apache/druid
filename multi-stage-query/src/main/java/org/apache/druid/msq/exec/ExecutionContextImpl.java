@@ -44,6 +44,7 @@ public class ExecutionContextImpl implements ExecutionContext
   private final FrameProcessorExecutor executor;
   private final InputSliceReader inputSliceReader;
   private final IntermediateOutputChannelFactoryMaker intermediateOutputChannelFactoryMaker;
+  private final InputChannelFactory inputChannelFactory;
   private final OutputChannelFactory outputChannelFactory;
   private final SettableFuture<ClusterByPartitions> globalClusterByPartitionsFuture;
   private final FrameContext frameContext;
@@ -58,6 +59,7 @@ public class ExecutionContextImpl implements ExecutionContext
       final FrameProcessorExecutor executor,
       final InputSliceReader inputSliceReader,
       final IntermediateOutputChannelFactoryMaker intermediateOutputChannelFactoryMaker,
+      final InputChannelFactory inputChannelFactory,
       final OutputChannelFactory outputChannelFactory,
       final SettableFuture<ClusterByPartitions> globalClusterByPartitionsFuture,
       final FrameContext frameContext,
@@ -71,6 +73,7 @@ public class ExecutionContextImpl implements ExecutionContext
     this.executor = executor;
     this.inputSliceReader = inputSliceReader;
     this.intermediateOutputChannelFactoryMaker = intermediateOutputChannelFactoryMaker;
+    this.inputChannelFactory = inputChannelFactory;
     this.outputChannelFactory = outputChannelFactory;
     this.globalClusterByPartitionsFuture = globalClusterByPartitionsFuture;
     this.frameContext = frameContext;
@@ -102,6 +105,12 @@ public class ExecutionContextImpl implements ExecutionContext
   public ListenableFuture<ClusterByPartitions> globalClusterByPartitions()
   {
     return globalClusterByPartitionsFuture;
+  }
+
+  @Override
+  public InputChannelFactory inputChannelFactory()
+  {
+    return inputChannelFactory;
   }
 
   @Override

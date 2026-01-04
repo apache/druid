@@ -145,6 +145,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
+      if (config.isVirtualStorageFabricEvictImmediately()) {
+        for (StorageLocation location : locations) {
+          location.setEvictImmediately(true);
+        }
+      }
       virtualStorageLoadOnDemandExec =
           MoreExecutors.listeningDecorator(
               // probably replace this with virtual threads once minimum version is java 21
@@ -333,7 +338,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void removeInfoFile(final DataSegment segment)
   {
-    final Runnable delete = () -> deleteSegmentInfoFile(segment);
     final SegmentCacheEntryIdentifier entryId = new SegmentCacheEntryIdentifier(segment.getId());
     boolean isCached = false;
     // defer deleting until the unmount operation of the cache entry, if possible, so that if the process stops before
@@ -341,13 +345,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (StorageLocation location : locations) {
       final SegmentCacheEntry cacheEntry = location.getCacheEntry(entryId);
       if (cacheEntry != null) {
-        isCached = isCached || cacheEntry.setOnUnmount(delete);
+        isCached = isCached || cacheEntry.setDeleteInfoFileOnUnmount();
       }
     }
 
     // otherwise we are probably deleting for cleanup reasons, so try it anyway if it wasn't present in any location
     if (!isCached) {
-      delete.run();
+      deleteSegmentInfoFile(segment);
     }
   }
 
@@ -426,11 +430,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
               final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
               if (!segmentInfoCacheFile.exists()) {
+                FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
                   jsonMapper.writeValue(out, dataSegment);
                   return null;
                 });
-                hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+                hold.getEntry().setDeleteInfoFileOnUnmount();
               }
 
               return new AcquireSegmentAction(
@@ -492,6 +497,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
+      if (config.isVirtualStorageFabricEvictImmediately()) {
+        throw DruidException.defensive(
+            "load() should not be called when virtualStorageFabricEvictImmediately is enabled"
+        );
+      }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
       // and if so, clear out the onUnmount action
       final ReferenceCountingLock lock = lock(dataSegment);
@@ -533,6 +543,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
+      if (config.isVirtualStorageFabricEvictImmediately()) {
+        throw DruidException.defensive(
+            "bootstrap() should not be called when virtualStorageFabricEvictImmediately is enabled"
+        );
+      }
       // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
       // did the reserving for us
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
@@ -1031,6 +1046,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           );
           unmount();
         }
+
+        if (config.isVirtualStorageFabricEvictImmediately()) {
+          setDeleteInfoFileOnUnmount();
+        }
       }
       catch (SegmentLoadingException e) {
         try {
@@ -1104,12 +1123,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return referenceProvider.acquireReference();
     }
 
-    public synchronized boolean setOnUnmount(Runnable runnable)
+    public synchronized boolean setDeleteInfoFileOnUnmount()
     {
       if (location == null) {
         return false;
       }
-      onUnmount.set(runnable);
+      onUnmount.set(() -> deleteSegmentInfoFile(dataSegment));
       return true;
     }
 

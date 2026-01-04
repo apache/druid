@@ -1602,7 +1602,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     }
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1723,7 +1723,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     }
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -1850,7 +1850,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     }
 
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     segmentCacheManager.load(compactSegment);
@@ -2065,6 +2065,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
       {
         return ImmutableList.of(new StorageLocationConfig(localDeepStorage, null, null));
       }
+
+      @Override
+      public boolean isVirtualStorage()
+      {
+        return true;
+      }
+
+      @Override
+      public boolean isVirtualStorageFabricEvictImmediately()
+      {
+        return true;
+      }
     };
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     final SegmentCacheManager cacheManager = new SegmentLocalCacheManager(
@@ -2106,7 +2118,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
     final File cacheDir = temporaryFolder.newFolder();
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir, false);
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {

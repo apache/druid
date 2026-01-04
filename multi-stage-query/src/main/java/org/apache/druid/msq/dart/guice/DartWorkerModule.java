@@ -52,19 +52,20 @@ import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.msq.dart.worker.DartDataSegmentProvider;
 import org.apache.druid.msq.dart.worker.DartDataServerQueryHandlerFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
+import org.apache.druid.msq.exec.DataSegmentProviderImpl;
 import org.apache.druid.msq.exec.MemoryIntrospector;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
@@ -104,11 +105,6 @@ public class DartWorkerModule implements DruidModule
             .to(DartWorkerContextFactoryImpl.class)
             .in(LazySingleton.class);
 
-      binder.bind(DataSegmentProvider.class)
-            .annotatedWith(Dart.class)
-            .to(DartDataSegmentProvider.class)
-            .in(LazySingleton.class);
-
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
@@ -137,6 +133,14 @@ public class DartWorkerModule implements DruidModule
           authorizerMapper,
           baseTempDir
       );
+    }
+
+    @Provides
+    @LazySingleton
+    @Dart
+    public DataSegmentProvider createDataSegmentProvider(final SegmentManager segmentManager)
+    {
+      return new DataSegmentProviderImpl(segmentManager, null);
     }
 
     @Provides

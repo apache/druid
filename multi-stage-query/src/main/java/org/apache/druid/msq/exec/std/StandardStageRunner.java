@@ -127,7 +127,7 @@ public class StandardStageRunner<T, R>
    */
   private void makeAndRunWorkProcessors(final ProcessorsAndChannels<T, R> processors)
   {
-    final ProcessorManager<T, R> processorManager = processors.getProcessorManager();
+    final ProcessorManager<T, ? extends R> processorManager = processors.getProcessorManager();
 
     final int maxOutstandingProcessors;
 

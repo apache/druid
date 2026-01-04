@@ -85,7 +85,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         .setExpectedMSQFault(
             new InvalidNullByteFault(
                 StringUtils.format(
-                    "external input source: LocalInputSource{baseDir=\"null\", filter=null, files=[%s]}",
+                    "external[LocalInputSource{baseDir=\"null\", filter=null, files=[%s]}]",
                     toRead.getAbsolutePath()
                 ),
                 1,
@@ -125,7 +125,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         .setExpectedDataSource("foo1")
         .setExpectedMSQFault(
             new InvalidNullByteFault(
-                "external input source: InlineInputSource{data='{\"desc\":\"Row with NULL\",\"text\":\"There is a null in\\u0000 here somewhere\"}\n'}",
+                "external[InlineInputSource{data='{\"desc\":\"Row with NULL\",\"text\":\"There is a null in\\u0000 here somewhere\"}\n'}]",
                 1,
                 "text",
                 "There is A null in\u0000 here somewhere",

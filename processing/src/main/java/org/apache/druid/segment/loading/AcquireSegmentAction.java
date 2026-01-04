@@ -21,6 +21,7 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
@@ -77,6 +78,9 @@ public class AcquireSegmentAction implements Closeable
    */
   public ListenableFuture<AcquireSegmentResult> getSegmentFuture()
   {
+    if (closed.get()) {
+      throw DruidException.defensive("Cannot getSegmentFuture() after close()");
+    }
     return segmentFutureSupplier.get();
   }
 

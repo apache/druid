@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;

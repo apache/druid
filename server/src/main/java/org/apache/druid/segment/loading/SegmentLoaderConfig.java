@@ -77,6 +77,9 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageLoadThreads")
   private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
+  @JsonProperty("virtualStorageFabricEvictImmediately")
+  private boolean virtualStorageFabricEvictImmediately = false;
+
   private long combinedMaxSize = 0;
 
   public List<StorageLocationConfig> getLocations()
@@ -154,13 +157,22 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
-  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  public boolean isVirtualStorageFabricEvictImmediately()
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
-    return retVal;
+    return virtualStorageFabricEvictImmediately;
+  }
+
+  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
+  {
+    this.locations = Lists.newArrayList(locations);
+    return this;
+  }
+
+  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage, boolean virtualStorageFabricEvictImmediately)
+  {
+    this.virtualStorage = virtualStorage;
+    this.virtualStorageFabricEvictImmediately = virtualStorageFabricEvictImmediately;
+    return this;
   }
 
   /**
@@ -195,6 +207,7 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", useVirtualStorageFabric=" + virtualStorage +
            ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageFabricEvictImmediately=" + virtualStorageFabricEvictImmediately +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
