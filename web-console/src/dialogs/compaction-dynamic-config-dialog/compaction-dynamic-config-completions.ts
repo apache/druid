@@ -127,8 +127,7 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       {
         value: 'true',
-        documentation:
-          'Store full compaction state in segment metadata (legacy behavior, default)',
+        documentation: 'Store full compaction state in segment metadata (legacy behavior, default)',
       },
       {
         value: 'false',

@@ -103,9 +103,9 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
     info: (
       <>
         <p>
-          Whether to persist the full compaction state in segment metadata. When{' '}
-          <Code>true</Code> (default), compaction state is stored in both the segment metadata and
-          the compaction states table.
+          Whether to persist the full compaction state in segment metadata. When <Code>true</Code>{' '}
+          (default), compaction state is stored in both the segment metadata and the compaction
+          states table.
         </p>
         <p>
           When <Code>false</Code>, only a fingerprint reference is stored in the segment metadata,
