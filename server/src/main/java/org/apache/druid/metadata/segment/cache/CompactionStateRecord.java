@@ -19,10 +19,7 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.timeline.CompactionState;
-
-import java.sql.ResultSet;
 
 /**
  * Represents a single record in the compaction_states table.
@@ -46,27 +43,5 @@ public class CompactionStateRecord
   public CompactionState getState()
   {
     return state;
-  }
-
-  /**
-   * Creates a CompactionStateRecord from a ResultSet row.
-   * Expected columns: fingerprint (String), payload (byte[])
-   *
-   * @param rs ResultSet positioned at the row to read
-   * @param jsonMapper ObjectMapper for deserializing the payload
-   * @return CompactionStateRecord or null if deserialization fails
-   */
-  public static CompactionStateRecord fromResultSet(ResultSet rs, ObjectMapper jsonMapper)
-      throws Exception
-  {
-    String fingerprint = rs.getString("fingerprint");
-    byte[] payload = rs.getBytes("payload");
-
-    if (fingerprint == null || payload == null) {
-      return null;
-    }
-
-    CompactionState state = jsonMapper.readValue(payload, CompactionState.class);
-    return new CompactionStateRecord(fingerprint, state);
   }
 }

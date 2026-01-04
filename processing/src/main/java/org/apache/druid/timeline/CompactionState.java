@@ -50,7 +50,6 @@ import java.util.stream.Collectors;
  */
 public class CompactionState
 {
-
   private final PartitionsSpec partitionsSpec;
   private final DimensionsSpec dimensionsSpec;
   private final CompactionTransformSpec transformSpec;

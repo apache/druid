@@ -240,6 +240,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
+        if (useCompactionStateCache) {
+          compactionStateCache.clear();
+        }
         syncFinishTime.set(null);
 
         updateCacheState(CacheState.STOPPED, "Stopped sync with metadata store");
@@ -273,9 +276,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     synchronized (cacheStateLock) {
       if (isEnabled()) {
-        if (useCompactionStateCache) {
-          compactionStateCache.clear();
-        }
         updateCacheState(CacheState.FOLLOWER, "Not leader anymore");
       }
     }

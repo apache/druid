@@ -114,8 +114,7 @@ public class HeapMemorySegmentMetadataCacheTest
   /**
    * Creates the target {@link #cache} to be tested in the current test.
    */
-  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode, boolean useSchemaCache
-  )
+  private void setupTargetWithCaching(SegmentMetadataCache.UsageMode cacheMode, boolean useSchemaCache)
   {
     if (cache != null) {
       throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());

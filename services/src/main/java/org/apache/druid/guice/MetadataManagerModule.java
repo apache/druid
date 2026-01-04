@@ -132,23 +132,18 @@ public class MetadataManagerModule implements Module
             .in(LazySingleton.class);
     }
 
-    // Overlord-only compaction state dependencies
-    if (nodeRoles.contains(NodeRole.OVERLORD)) {
-      binder.bind(CompactionStateCache.class).in(LazySingleton.class);
-    } else {
-      binder.bind(CompactionStateCache.class)
-            .to(NoopCompactionStateCache.class)
-            .in(LazySingleton.class);
-    }
-
     // Overlord-only dependencies
     if (nodeRoles.contains(NodeRole.OVERLORD)) {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
+      binder.bind(CompactionStateCache.class).in(LazySingleton.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)
+            .in(LazySingleton.class);
+      binder.bind(CompactionStateCache.class)
+            .to(NoopCompactionStateCache.class)
             .in(LazySingleton.class);
     }
   }

@@ -1794,6 +1794,10 @@ public class SqlSegmentsMetadataQuery
     return retrieveValidCompactionStateRecordsWithQuery(query);
   }
 
+  /**
+   * Executes the given query and maps results to valid CompactionStateRecord objects.
+   * Records that fail to parse are filtered out.
+   */
   private List<CompactionStateRecord> retrieveValidCompactionStateRecordsWithQuery(
       Query<Map<String, Object>> query
   )
@@ -1806,6 +1810,11 @@ public class SqlSegmentsMetadataQuery
                 .collect(Collectors.toList());
   }
 
+  /**
+   * Tries to parse the fields of the result set into a {@link CompactionStateRecord}.
+   *
+   * @return null if an error occurred while parsing the result
+   */
   private CompactionStateRecord mapToCompactionStateRecord(ResultSet resultSet)
   {
     String fingerprint = null;

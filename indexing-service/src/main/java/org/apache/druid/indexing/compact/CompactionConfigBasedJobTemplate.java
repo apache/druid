@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -71,7 +72,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
-    CompactionState compactionState = CompactSegments.createCompactionStateFromConfig(config);
+    CompactionState compactionState = CompactionStatus.createCompactionStateFromConfig(config);
 
     String compactionStateFingerprint = params.getCompactionStateManager().generateCompactionStateFingerprint(
         compactionState,

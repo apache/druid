@@ -27,6 +27,19 @@ import org.joda.time.DateTime;
 
 import java.util.List;
 
+/**
+ * Coordinator duty that cleans up old, unused compaction state entries from the database.
+ * <p>
+ * This duty performs a three-step cleanup process:
+ * <ol>
+ *   <li>Marks compaction states not referenced by any segments as unused</li>
+ *   <li>Repairs any incorrectly marked unused states that are still referenced by used segments</li>
+ *   <li>Deletes unused compaction states older than the configured retention period</li>
+ * </ol>
+ * <p>
+ * This prevents unbounded growth of the compaction states table while ensuring that
+ * states referenced by active segments are preserved.
+ */
 public class KillUnreferencedCompactionState extends MetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedCompactionState.class);

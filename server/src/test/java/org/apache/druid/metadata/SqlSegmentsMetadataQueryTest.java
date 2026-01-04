@@ -19,15 +19,22 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.segment.cache.CompactionStateRecord;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -38,6 +45,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -364,5 +373,359 @@ public class SqlSegmentsMetadataQueryTest
   private static Set<SegmentId> getIds(Set<DataSegment> segments)
   {
     return segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+  }
+
+  // ==================== Compaction State Tests ====================
+
+  @Test
+  public void test_retrieveAllUsedCompactionStateFingerprints_emptyDatabase()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints);
+
+    Assert.assertTrue("Should return empty set when no segments have compaction states", fingerprints.isEmpty());
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStateFingerprints_onlyUsedSegments()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    // Insert compaction states
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    compactionStates.put("fp2", createTestCompactionState());
+    compactionStates.put("fp3", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    // Insert segments referencing compaction states
+    insertSegmentWithCompactionState("seg1", "fp1", true);
+    insertSegmentWithCompactionState("seg2", "fp2", true);
+    insertSegmentWithCompactionState("seg3", "fp1", true);  // Duplicate fingerprint
+    insertSegmentWithCompactionState("seg4", "fp3", false); // Unused segment
+
+    Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints);
+
+    Assert.assertEquals("Should return only fingerprints from used segments", Set.of("fp1", "fp2"), fingerprints);
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStateFingerprints_ignoresNullFingerprints()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    insertSegmentWithCompactionState("seg1", "fp1", true);
+    insertSegmentWithCompactionState("seg2", null, true); // No compaction state
+
+    Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints);
+
+    Assert.assertEquals("Should ignore segments without compaction states", Set.of("fp1"), fingerprints);
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStates_emptyDatabase()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
+
+    Assert.assertTrue("Should return empty list when no compaction states exist", records.isEmpty());
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStates_fullSync()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    // Create distinct compaction states
+    CompactionState state1 = createTestCompactionState();
+    CompactionState state2 = new CompactionState(
+        new DynamicPartitionsSpec(200, null),
+        DimensionsSpec.EMPTY,
+        null,
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", state1);
+    compactionStates.put("fp2", state2);
+    compactionStates.put("fp3", createTestCompactionState()); // Unreferenced state
+    insertCompactionStates(compactionStates);
+
+    // Only reference fp1 and fp2
+    insertSegmentWithCompactionState("seg1", "fp1", true);
+    insertSegmentWithCompactionState("seg2", "fp2", true);
+
+    List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
+
+    Assert.assertEquals("Should return only referenced compaction states", 2, records.size());
+
+    Set<String> retrievedFingerprints = records.stream()
+                                                .map(CompactionStateRecord::getFingerprint)
+                                                .collect(Collectors.toSet());
+    Assert.assertEquals("Should contain fp1 and fp2", Set.of("fp1", "fp2"), retrievedFingerprints);
+
+    // Verify payloads
+    Map<String, CompactionState> retrievedStates = records.stream()
+        .collect(Collectors.toMap(
+            CompactionStateRecord::getFingerprint,
+            CompactionStateRecord::getState
+        ));
+    Assert.assertEquals("fp1 state should match", state1, retrievedStates.get("fp1"));
+    Assert.assertEquals("fp2 state should match", state2, retrievedStates.get("fp2"));
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStates_onlyFromUsedSegments()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    compactionStates.put("fp2", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    insertSegmentWithCompactionState("seg1", "fp1", true);  // Used
+    insertSegmentWithCompactionState("seg2", "fp2", false); // Unused
+
+    List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
+
+    Assert.assertEquals("Should only return states from used segments", 1, records.size());
+    Assert.assertEquals("Should return fp1", "fp1", records.get(0).getFingerprint());
+  }
+
+  @Test
+  public void test_retrieveAllUsedCompactionStates_ignoresUnusedCompactionStates()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    insertSegmentWithCompactionState("seg1", "fp1", true);
+
+    // Mark compaction state as unused
+    markCompactionStateAsUnused("fp1");
+
+    List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
+
+    Assert.assertTrue("Should not return unused compaction states", records.isEmpty());
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_emptyInput()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(Set.of())
+    );
+
+    Assert.assertTrue("Should return empty list for empty input", records.isEmpty());
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_deltaSync()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    // Insert multiple compaction states
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    compactionStates.put("fp2", createTestCompactionState());
+    compactionStates.put("fp3", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    // Request specific fingerprints (delta sync scenario)
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(Set.of("fp1", "fp3"))
+    );
+
+    Assert.assertEquals("Should return requested fingerprints", 2, records.size());
+
+    Set<String> retrievedFingerprints = records.stream()
+                                                .map(CompactionStateRecord::getFingerprint)
+                                                .collect(Collectors.toSet());
+    Assert.assertEquals("Should contain only requested fingerprints", Set.of("fp1", "fp3"), retrievedFingerprints);
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_largeBatch()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    // Insert 150 compaction states (exceeds batching threshold of 100)
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    Set<String> expectedFingerprints = new HashSet<>();
+    for (int i = 0; i < 150; i++) {
+      String fingerprint = "fp" + i;
+      compactionStates.put(fingerprint, createTestCompactionState());
+      expectedFingerprints.add(fingerprint);
+    }
+    insertCompactionStates(compactionStates);
+
+    // Request all fingerprints
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(expectedFingerprints)
+    );
+
+    Assert.assertEquals("Should return all fingerprints across multiple batches", 150, records.size());
+
+    Set<String> retrievedFingerprints = records.stream()
+                                                .map(CompactionStateRecord::getFingerprint)
+                                                .collect(Collectors.toSet());
+    Assert.assertEquals("Should contain all requested fingerprints", expectedFingerprints, retrievedFingerprints);
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_nonexistentFingerprints()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    // Request fingerprints that don't exist
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(Set.of("fp999", "fp888"))
+    );
+
+    Assert.assertTrue("Should return empty list when fingerprints don't exist", records.isEmpty());
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_mixedExistingAndNonexistent()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    compactionStates.put("fp2", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    // Mix existing and non-existing fingerprints
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(Set.of("fp1", "fp999", "fp2", "fp888"))
+    );
+
+    Assert.assertEquals("Should return only existing fingerprints", 2, records.size());
+
+    Set<String> retrievedFingerprints = records.stream()
+                                                .map(CompactionStateRecord::getFingerprint)
+                                                .collect(Collectors.toSet());
+    Assert.assertEquals("Should contain only existing fingerprints", Set.of("fp1", "fp2"), retrievedFingerprints);
+  }
+
+  @Test
+  public void test_retrieveCompactionStatesForFingerprints_onlyReturnsUsedStates()
+  {
+    derbyConnectorRule.getConnector().createCompactionStatesTable();
+
+    Map<String, CompactionState> compactionStates = new HashMap<>();
+    compactionStates.put("fp1", createTestCompactionState());
+    compactionStates.put("fp2", createTestCompactionState());
+    insertCompactionStates(compactionStates);
+
+    // Mark fp2 as unused
+    markCompactionStateAsUnused("fp2");
+
+    List<CompactionStateRecord> records = read(
+        sql -> sql.retrieveCompactionStatesForFingerprints(Set.of("fp1", "fp2"))
+    );
+
+    Assert.assertEquals("Should only return used compaction states", 1, records.size());
+    Assert.assertEquals("Should return fp1", "fp1", records.get(0).getFingerprint());
+  }
+
+  // ==================== Helper Methods for Compaction State Tests ====================
+
+  private CompactionState createTestCompactionState()
+  {
+    return new CompactionState(
+        new DynamicPartitionsSpec(100, null),
+        DimensionsSpec.EMPTY,
+        null,
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+  }
+
+  private void insertCompactionStates(Map<String, CompactionState> compactionStates)
+  {
+    ObjectMapper mapper = TestHelper.JSON_MAPPER;
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    PersistedCompactionStateManager manager = new PersistedCompactionStateManager(
+        tablesConfig,
+        mapper,
+        mapper,
+        derbyConnectorRule.getConnector()
+    );
+
+    derbyConnectorRule.getConnector().retryWithHandle(handle -> {
+      manager.persistCompactionState(TestDataSource.WIKI, compactionStates, DateTimes.nowUtc());
+      return null;
+    });
+  }
+
+  private void insertSegmentWithCompactionState(
+      String segmentId,
+      String compactionStateFingerprint,
+      boolean used
+  )
+  {
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    DerbyConnector connector = derbyConnectorRule.getConnector();
+
+    connector.retryWithHandle(handle -> {
+      handle.createStatement(
+                "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
+                + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
+                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
+                + ":used_status_last_updated, :compaction_state_fingerprint)"
+            )
+            .bind("id", segmentId)
+            .bind("dataSource", TestDataSource.WIKI)
+            .bind("created_date", DateTimes.nowUtc().toString())
+            .bind("start", JAN_1.toString())
+            .bind("end", JAN_1.plusDays(1).toString())
+            .bind("partitioned", false)
+            .bind("version", V1)
+            .bind("used", used)
+            .bind("payload", TestHelper.JSON_MAPPER.writeValueAsBytes(WIKI_SEGMENTS_2X5D.get(0)))
+            .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+            .bind("compaction_state_fingerprint", compactionStateFingerprint)
+            .execute();
+      return null;
+    });
+  }
+
+  private void markCompactionStateAsUnused(String fingerprint)
+  {
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    DerbyConnector connector = derbyConnectorRule.getConnector();
+
+    connector.retryWithHandle(handle -> {
+      handle.createStatement(
+                "UPDATE " + tablesConfig.getCompactionStatesTable() + " "
+                + "SET used = false "
+                + "WHERE fingerprint = :fingerprint"
+            )
+            .bind("fingerprint", fingerprint)
+            .execute();
+      return null;
+    });
   }
 }
