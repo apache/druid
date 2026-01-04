@@ -21,8 +21,8 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Optional;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;

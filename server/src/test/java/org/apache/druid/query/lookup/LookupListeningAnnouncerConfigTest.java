@@ -29,12 +29,13 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.TaskHolder;
+import org.apache.druid.server.metrics.TestLoadSpecHolder;
 import org.apache.druid.server.metrics.TestTaskHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,21 +60,10 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-              binder.bind(TaskHolder.class).toInstance(new TestTaskHolder("some_datasource", "some_taskid"));
-              binder.bind(LoadSpecHolder.class).toInstance(new LoadSpecHolder()
-              {
-                @Override
-                public LookupLoadingSpec getLookupLoadingSpec()
-                {
-                  return LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2"));
-                }
-
-                @Override
-                public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
-                {
-                  return BroadcastDatasourceLoadingSpec.ALL;
-                }
-              });
+              binder.bind(TaskHolder.class).toInstance(new TestTaskHolder("some_datasource", "some_taskid", "test_tasktype", "test_groupid"));
+              binder.bind(LoadSpecHolder.class).toInstance(
+                  new TestLoadSpecHolder(LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2")), BroadcastDatasourceLoadingSpec.ALL)
+              );
             }
           },
           new LookupModule()

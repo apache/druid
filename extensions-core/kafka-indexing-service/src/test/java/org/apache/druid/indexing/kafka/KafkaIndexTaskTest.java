@@ -39,6 +39,7 @@ import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.cli.CliPeon;
+import org.apache.druid.cli.CliPeonTest;
 import org.apache.druid.cli.PeonLoadSpecHolder;
 import org.apache.druid.cli.PeonTaskHolder;
 import org.apache.druid.data.input.InputEntity;
@@ -88,6 +89,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -121,7 +128,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -3485,6 +3491,64 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(1, observedSegmentGenerationMetrics.rowOutput());
     Assert.assertEquals(1, observedSegmentGenerationMetrics.handOffCount());
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testKafkaTaskContainsAllTaskDimensions()
+      throws IOException, ExecutionException, InterruptedException
+  {
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        "index_kafka_test_id1",
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null,
+            Duration.standardHours(2).getStandardMinutes()
+        )
+    );
+
+    Injector peonInjector = CliPeonTest.makePeonInjectorWithStubEmitter(task, temporaryFolder, OBJECT_MAPPER);
+    Emitter peonEmitter = peonInjector.getInstance(Emitter.class);
+    Assert.assertTrue(peonEmitter instanceof StubServiceEmitter);
+    emitter = (StubServiceEmitter) peonEmitter;
+    emitter.start();
+    makeToolboxFactory();
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assert.assertTrue(emitter.getNumEmittedEvents() > 0);
+
+    // Check published metadata & segments in deep storage
+    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L))),
+        newDataSchemaMetadata()
+    );
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
+
+    Assert.assertTrue(emitter.getNumEmittedEvents() > 0);
+    for (Event event : emitter.getEvents()) {
+      if (event instanceof ServiceMetricEvent) {
+        EventMap observedEvent = event.toMap();
+        Assert.assertEquals("test_ds", observedEvent.get("dataSource"));
+        Assert.assertEquals("index_kafka_test_id1", observedEvent.get("id"));
+        Assert.assertEquals("index_kafka_test_id1", observedEvent.get("taskId"));
+        Assert.assertEquals("index_kafka", observedEvent.get("taskType"));
+        Assert.assertEquals("index_kafka_test_ds", observedEvent.get("groupId"));
+      }
+    }
   }
 
   public static class TestKafkaInputFormat implements InputFormat

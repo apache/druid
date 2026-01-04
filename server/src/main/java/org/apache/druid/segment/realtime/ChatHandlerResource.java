@@ -23,9 +23,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.TaskHolder;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.Path;

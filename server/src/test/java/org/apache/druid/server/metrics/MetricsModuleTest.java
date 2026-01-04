@@ -49,9 +49,12 @@ import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
+import org.apache.druid.java.util.metrics.NoopTaskHolder;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
+import org.apache.druid.java.util.metrics.TaskHolder;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -64,6 +67,7 @@ import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -99,8 +103,10 @@ public class MetricsModuleTest
   @Test
   public void testSimpleInjectionWithValues()
   {
-    final String dataSource = "some datasource";
-    final String taskId = "some task";
+    final String dataSource = "some_datasource";
+    final String taskId = "some_taskid";
+    final String taskType = "some_task_type";
+    final String groupId = "some_groupid";
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(new Module()
@@ -113,7 +119,7 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(TaskHolder.class).toInstance(new TestTaskHolder(dataSource, taskId));
+            binder.bind(TaskHolder.class).toInstance(new TestTaskHolder(dataSource, taskId, taskType, groupId));
             binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
           }
         })
@@ -121,6 +127,17 @@ public class MetricsModuleTest
     TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
     Assert.assertEquals(dataSource, taskHolder.getDataSource());
     Assert.assertEquals(taskId, taskHolder.getTaskId());
+    Assert.assertEquals(taskType, taskHolder.getTaskType());
+    Assert.assertEquals(groupId, taskHolder.getGroupId());
+    Map<String, String> expectedTaskDims = Map.of(
+        DruidMetrics.DATASOURCE, dataSource,
+        DruidMetrics.TASK_ID, taskId,
+        DruidMetrics.ID, taskId,
+        DruidMetrics.TASK_TYPE, taskType,
+        DruidMetrics.GROUP_ID, groupId
+    );
+
+    Assert.assertEquals(expectedTaskDims, taskHolder.getMetricDimensions());
   }
 
   @Test

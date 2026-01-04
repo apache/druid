@@ -221,7 +221,7 @@ public class ClientQuerySegmentWalkerTest
 
   private Closer closer;
   private QueryRunnerFactoryConglomerate conglomerate;
-  private final StubServiceEmitter emitter = new StubServiceEmitter();
+  private final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
 
   // Queries that are issued; checked by "testQuery" against its "expectedQueries" parameter.
   private final List<ExpectedQuery> issuedQueries = new ArrayList<>();

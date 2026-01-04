@@ -40,23 +40,21 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   private static final Logger LOG = new Logger(CgroupCpuMonitor.class);
   private static final Long DEFAULT_USER_HZ = 100L;
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
   private Long userHz;
   private final KeyedDiff jiffies = new KeyedDiff();
   private long prevJiffiesSnapshotAt = 0;
   private final boolean isRunningOnCgroupsV2;
   private final CgroupV2CpuMonitor cgroupV2CpuMonitor;
 
-  public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
-    
+
     // Check if we're running on cgroups v2
     this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
     if (isRunningOnCgroupsV2) {
-      this.cgroupV2CpuMonitor = new CgroupV2CpuMonitor(cgroupDiscoverer, dimensions, feed);
+      this.cgroupV2CpuMonitor = new CgroupV2CpuMonitor(cgroupDiscoverer, feed);
       LOG.info("Detected cgroups v2, using CgroupV2CpuMonitor behavior for accurate metrics");
     } else {
       this.cgroupV2CpuMonitor = null;
@@ -65,19 +63,14 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
 
   }
 
-  public CgroupCpuMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupCpuMonitor(String feed)
   {
-    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupCpuMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
   }
 
   public CgroupCpuMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
 
   @Override
@@ -96,7 +89,6 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
     long now = Instant.now().getEpochSecond();
 
     final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
     builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
 
     emitter.emit(builder.setMetric("cgroup/cpu/shares", cpuSnapshot.getShares()));
