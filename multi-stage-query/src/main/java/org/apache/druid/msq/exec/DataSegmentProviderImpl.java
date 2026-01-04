@@ -68,7 +68,7 @@ public class DataSegmentProviderImpl implements DataSegmentProvider
   }
 
   @Override
-  public LoadableSegment fetchSegment(
+  public LoadableSegment getLoadableSegment(
       final SegmentId segmentId,
       final SegmentDescriptor descriptor,
       @Nullable final ChannelCounters inputCounters,
@@ -93,23 +93,21 @@ public class DataSegmentProviderImpl implements DataSegmentProvider
         () -> {
           final Closer closer = Closer.create();
           // Create a shim AcquireSegmentAction that doesn't acquire a hold (yet). We can't make a real
-          // AcquireSegmentAction yet because we don't have the DataSegment object. It needs to be fetched
-          // from the Coordinator. That call is deferred until we're actually ready to load the segment, so
-          // we don't make them all at once.
+          // AcquireSegmentAction yet because we don't necessarily have the DataSegment object yet. It may need
+          // to be fetched from the Coordinator. That call is deferred until we're actually ready to load the
+          // segment, so we don't make the calls all at once.
           return new AcquireSegmentAction(
-              Suppliers.memoize(() -> {
-                return FutureUtils.transformAsync(
-                    dataSegmentFutureSupplier.get(),
-                    dataSegment -> {
-                      try {
-                        return closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture();
-                      }
-                      catch (SegmentLoadingException e) {
-                        return Futures.immediateFailedFuture(e);
-                      }
+              Suppliers.memoize(() -> FutureUtils.transformAsync(
+                  dataSegmentFutureSupplier.get(),
+                  dataSegment -> {
+                    try {
+                      return closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture();
                     }
-                );
-              }),
+                    catch (SegmentLoadingException e) {
+                      return Futures.immediateFailedFuture(e);
+                    }
+                  }
+              )),
               closer
           );
         },

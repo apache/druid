@@ -193,7 +193,7 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
       final ListenableFuture<LoadableSegment> f =
-          exec.submit(() -> provider.fetchSegment(segment.getId(), segment.toDescriptor(), null, false));
+          exec.submit(() -> provider.getLoadableSegment(segment.getId(), segment.toDescriptor(), null, false));
 
       testFutures.add(
           FutureUtils.transform(
@@ -241,11 +241,11 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFetchSegment() throws IOException
+  public void testGetLoadableSegment() throws IOException
   {
     final DataSegment segment = segments.get(0);
     final LoadableSegment loadableSegment =
-        provider.fetchSegment(segment.getId(), segment.toDescriptor(), null, false);
+        provider.getLoadableSegment(segment.getId(), segment.toDescriptor(), null, false);
 
     // Verify that the DataSegment is set properly.
     Assertions.assertEquals(segment, loadableSegment.dataSegment());

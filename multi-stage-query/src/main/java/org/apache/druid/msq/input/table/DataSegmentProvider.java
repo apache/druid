@@ -39,7 +39,7 @@ public interface DataSegmentProvider
    *                      reading from; false otherwise. When true, implementations must only allow reading from
    *                      segments that are currently-used according to the Coordinator.
    */
-  LoadableSegment fetchSegment(
+  LoadableSegment getLoadableSegment(
       SegmentId segmentId,
       SegmentDescriptor descriptor,
       @Nullable ChannelCounters inputCounters,

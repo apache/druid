@@ -149,7 +149,7 @@ public class CalciteMSQTestsHelper
       }
 
       @Override
-      public LoadableSegment fetchSegment(
+      public LoadableSegment getLoadableSegment(
           SegmentId segmentId,
           SegmentDescriptor descriptor,
           ChannelCounters inputCounters,

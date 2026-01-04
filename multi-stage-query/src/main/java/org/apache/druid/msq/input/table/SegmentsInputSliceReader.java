@@ -73,7 +73,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
           descriptor.getVersion(),
           descriptor.getPartitionNumber()
       );
-      loadableSegments.add(dataSegmentProvider.fetchSegment(segmentId, descriptor, inputCounters, isReindex));
+      loadableSegments.add(dataSegmentProvider.getLoadableSegment(segmentId, descriptor, inputCounters, isReindex));
     }
 
     if (segmentsInputSlice.getQueryableServers() != null) {
