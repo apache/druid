@@ -599,6 +599,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new CacheConfig(),
         new CachePopulatorStats(),
         INDEX_MERGER_V9_FACTORY,
+        null,
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

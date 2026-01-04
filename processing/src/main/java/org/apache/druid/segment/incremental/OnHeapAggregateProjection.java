@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ import java.util.function.Function;
  */
 public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
 {
-  private final AggregateProjectionMetadata.Schema projectionSchema;
+  private final AggregateProjectionSchema projectionSchema;
   private final List<IncrementalIndex.DimensionDesc> dimensions;
   private final int[] parentDimensionIndex;
   private final AggregatorFactory[] aggregatorFactories;

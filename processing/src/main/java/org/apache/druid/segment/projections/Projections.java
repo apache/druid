@@ -52,6 +52,8 @@ import java.util.function.Function;
 
 public class Projections
 {
+  public static final String BASE_TABLE_PROJECTION_NAME = "__base";
+
   private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
 
   @Nullable
@@ -112,7 +114,7 @@ public class Projections
    * aggregator factories to process the pre-aggregated data from the projection, as well as a mapping of query column
    * names to projection column names.
    *
-   * @param projection            the {@link AggregateProjectionMetadata.Schema} to check for match
+   * @param projection            the {@link AggregateProjectionSchema} to check for match
    * @param queryCursorBuildSpec  the {@link CursorBuildSpec} that contains the required inputs to build a
    *                              {@link CursorHolder} for a query
    * @param physicalColumnChecker Helper utility which can determine if a physical column required by
@@ -122,7 +124,7 @@ public class Projections
    */
   @Nullable
   public static ProjectionMatch matchAggregateProjection(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       Interval dataInterval,
       PhysicalColumnChecker physicalColumnChecker
@@ -166,7 +168,7 @@ public class Projections
 
   @Nullable
   public static ProjectionMatchBuilder matchQueryVirtualColumns(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -189,7 +191,7 @@ public class Projections
 
   @Nullable
   public static ProjectionMatchBuilder matchFilter(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -247,7 +249,7 @@ public class Projections
 
   @Nullable
   public static ProjectionMatchBuilder matchGrouping(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -281,7 +283,7 @@ public class Projections
 
   @Nullable
   public static ProjectionMatchBuilder matchAggregators(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -360,7 +362,7 @@ public class Projections
    * missing columns that do not exist anywhere do not disqualify a projection from being used).
    *
    * @param column                Column name to check
-   * @param projection            {@link AggregateProjectionMetadata.Schema} to match against
+   * @param projection            {@link AggregateProjectionSchema} to match against
    * @param queryCursorBuildSpec  the {@link CursorBuildSpec} required by the query
    * @param physicalColumnChecker Helper to check if the physical column exists on a projection, or does not exist on
    *                              the base table
@@ -373,7 +375,7 @@ public class Projections
   @Nullable
   public static ProjectionMatchBuilder matchRequiredColumn(
       String column,
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -396,7 +398,7 @@ public class Projections
   @Nullable
   public static ProjectionMatchBuilder matchQueryVirtualColumn(
       VirtualColumn queryVirtualColumn,
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
@@ -475,7 +477,7 @@ public class Projections
   @Nullable
   public static ProjectionMatchBuilder matchQueryPhysicalColumn(
       String column,
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
   )
@@ -503,12 +505,22 @@ public class Projections
     return projectionSpec.getSchema().getName() + "/";
   }
 
+  public static String getProjectionSmooshFileName(ProjectionSchema schema, String columnName)
+  {
+    return getProjectionSmooshPrefix(schema) + columnName;
+  }
+
+  public static String getProjectionSmooshPrefix(ProjectionSchema projectionSchema)
+  {
+    return projectionSchema.getName() + "/";
+  }
+
   /**
    * Check that the query {@link CursorBuildSpec} either contains the entire data interval, or that the query interval
-   * is aligned with {@link AggregateProjectionMetadata.Schema#getEffectiveGranularity()}
+   * is aligned with {@link AggregateProjectionSchema#getEffectiveGranularity()}
    */
   private static boolean isUnalignedInterval(
-      AggregateProjectionMetadata.Schema projection,
+      AggregateProjectionSchema projection,
       CursorBuildSpec queryCursorBuildSpec,
       Interval dataInterval
   )
@@ -542,7 +554,7 @@ public class Projections
    * Returns true if column is defined in {@link AggregateProjectionSpec#getGroupingColumns()} OR if the column does not
    * exist in the base table. Part of determining if a projection can be used for a given {@link CursorBuildSpec},
    *
-   * @see #matchAggregateProjection(AggregateProjectionMetadata.Schema, CursorBuildSpec, Interval, PhysicalColumnChecker)
+   * @see #matchAggregateProjection(AggregateProjectionSchema, CursorBuildSpec, Interval, PhysicalColumnChecker)
    */
   @FunctionalInterface
   public interface PhysicalColumnChecker

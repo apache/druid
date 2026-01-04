@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   void testSerde() throws JsonProcessingException
   {
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "some_projection",
             "time",
             new EqualityFilter("a", ColumnType.STRING, "a", null),
@@ -83,7 +84,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   {
     SortedSet<AggregateProjectionMetadata> metadataBest = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     AggregateProjectionMetadata good = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "good",
             "theTime",
             null,
@@ -101,7 +102,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // same row count, but less grouping columns aggs more better
     AggregateProjectionMetadata betterLessGroupingColumns = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "betterLessGroupingColumns",
             "theTime",
             null,
@@ -118,7 +119,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // same grouping columns, but more aggregators
     AggregateProjectionMetadata evenBetterMoreAggs = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "evenBetterMoreAggs",
             "theTime",
             null,
@@ -138,7 +139,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // small rows is best
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "best",
             null,
             null,
@@ -166,7 +167,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 null,
                 null,
                 null,
@@ -186,7 +187,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 "",
                 null,
                 null,
@@ -210,7 +211,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 "other_projection",
                 null,
                 null,
@@ -230,7 +231,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 "other_projection",
                 null,
                 null,
@@ -254,7 +255,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 "no order",
                 null,
                 null,
@@ -274,7 +275,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
+            new AggregateProjectionSchema(
                 "",
                 null,
                 null,
@@ -301,7 +302,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   @Test
   void testEqualsAndHashcodeSchema()
   {
-    EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
+    EqualsVerifier.forClass(AggregateProjectionSchema.class)
                   .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "effectiveGranularity")
                   .usingGetClass()
                   .verify();

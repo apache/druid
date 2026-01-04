@@ -454,66 +454,59 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     for (boolean incremental : new boolean[]{true, false}) {
       for (boolean sortByDim : new boolean[]{true, false}) {
         for (boolean autoSchema : new boolean[]{false, true}) {
-          for (boolean writeNullColumns : new boolean[]{true, false}) {
-
-            final DimensionsSpec dims;
-            final DimensionsSpec rollupDims;
-            if (sortByDim) {
-              if (autoSchema) {
-                dims = dimsOrdered.withDimensions(autoDims);
-                rollupDims = rollupDimsOrdered.withDimensions(rollupAutoDims);
-              } else {
-                dims = dimsOrdered;
-                rollupDims = rollupDimsOrdered;
-              }
+          final DimensionsSpec dims;
+          final DimensionsSpec rollupDims;
+          if (sortByDim) {
+            if (autoSchema) {
+              dims = dimsOrdered.withDimensions(autoDims);
+              rollupDims = rollupDimsOrdered.withDimensions(rollupAutoDims);
             } else {
-              if (autoSchema) {
-                dims = dimsTimeOrdered.withDimensions(autoDims);
-                rollupDims = rollupDimsTimeOrdered.withDimensions(autoDims);
-              } else {
-                dims = dimsTimeOrdered;
-                rollupDims = rollupDimsTimeOrdered;
-              }
+              dims = dimsOrdered;
+              rollupDims = rollupDimsOrdered;
             }
-            if (incremental) {
-              IncrementalIndex index = CLOSER.register(makeBuilder(
-                  dims,
-                  autoSchema,
-                  writeNullColumns
-              ).buildIncrementalIndex());
-              IncrementalIndex rollupIndex = CLOSER.register(
-                  makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildIncrementalIndex()
-              );
-              constructors.add(new Object[]{
-                  "incrementalIndex",
-                  new IncrementalIndexCursorFactory(index),
-                  new IncrementalIndexTimeBoundaryInspector(index),
-                  new IncrementalIndexCursorFactory(rollupIndex),
-                  new IncrementalIndexTimeBoundaryInspector(rollupIndex),
-                  !sortByDim,
-                  autoSchema,
-                  writeNullColumns
-              });
+          } else {
+            if (autoSchema) {
+              dims = dimsTimeOrdered.withDimensions(autoDims);
+              rollupDims = rollupDimsTimeOrdered.withDimensions(autoDims);
             } else {
-              QueryableIndex index = CLOSER.register(makeBuilder(
-                  dims,
-                  autoSchema,
-                  writeNullColumns
-              ).buildMMappedIndex());
-              QueryableIndex rollupIndex = CLOSER.register(
-                  makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildMMappedIndex()
-              );
-              constructors.add(new Object[]{
-                  "queryableIndex",
-                  new QueryableIndexCursorFactory(index),
-                  QueryableIndexTimeBoundaryInspector.create(index),
-                  new QueryableIndexCursorFactory(rollupIndex),
-                  QueryableIndexTimeBoundaryInspector.create(rollupIndex),
-                  !sortByDim,
-                  autoSchema,
-                  writeNullColumns
-              });
+              dims = dimsTimeOrdered;
+              rollupDims = rollupDimsTimeOrdered;
             }
+          }
+          if (incremental) {
+            IncrementalIndex index = CLOSER.register(makeBuilder(
+                dims,
+                autoSchema
+            ).buildIncrementalIndex());
+            IncrementalIndex rollupIndex = CLOSER.register(
+                makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildIncrementalIndex()
+            );
+            constructors.add(new Object[]{
+                "incrementalIndex",
+                new IncrementalIndexCursorFactory(index),
+                new IncrementalIndexTimeBoundaryInspector(index),
+                new IncrementalIndexCursorFactory(rollupIndex),
+                new IncrementalIndexTimeBoundaryInspector(rollupIndex),
+                !sortByDim,
+                autoSchema
+            });
+          } else {
+            QueryableIndex index = CLOSER.register(makeBuilder(
+                dims,
+                autoSchema
+            ).buildMMappedIndex());
+            QueryableIndex rollupIndex = CLOSER.register(
+                makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildMMappedIndex()
+            );
+            constructors.add(new Object[]{
+                "queryableIndex",
+                new QueryableIndexCursorFactory(index),
+                QueryableIndexTimeBoundaryInspector.create(index),
+                new QueryableIndexCursorFactory(rollupIndex),
+                QueryableIndexTimeBoundaryInspector.create(rollupIndex),
+                !sortByDim,
+                autoSchema
+            });
           }
         }
       }
@@ -551,8 +544,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       CursorFactory rollupProjectionsCursorFactory,
       TimeBoundaryInspector rollupProjectionsTimeBoundaryInspector,
       boolean segmentSortedByTime,
-      boolean autoSchema,
-      boolean writeNullColumns
+      boolean autoSchema
   )
   {
     this.projectionsCursorFactory = projectionsCursorFactory;
@@ -2158,11 +2150,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     return AutoTypeColumnSchema.of(x.getName());
   }
 
-  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)
+  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema)
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);
     return IndexBuilder.create()
+                       .useV10()
                        .tmpDir(tmp)
                        .schema(
                            IncrementalIndexSchema.builder()
@@ -2172,7 +2165,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )
-                       .writeNullColumns(writeNullColumns)
                        .rows(ROWS);
   }
 

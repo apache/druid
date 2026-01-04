@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.file;
 
+import org.apache.druid.segment.column.ColumnDescriptor;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -33,11 +35,16 @@ import java.nio.ByteBuffer;
  *
  * @see org.apache.druid.segment.IndexMergerV9
  * @see org.apache.druid.segment.serde.Serializer
- * @see org.apache.druid.segment.column.ColumnDescriptor
+ * @see ColumnDescriptor
  * @see SegmentFileMapper
  */
 public interface SegmentFileBuilder extends Closeable
 {
+  /**
+   * Add a column to the metadata of this segment file
+   */
+  void addColumn(String name, ColumnDescriptor columnDescriptor);
+
   /**
    * Add a {@link File} to the segment file as the specified name
    */
@@ -53,4 +60,15 @@ public interface SegmentFileBuilder extends Closeable
    * to write the amount of data specified by the size parameter.
    */
   SegmentFileChannel addWithChannel(String name, long size) throws IOException;
+
+  /**
+   * Allow adding data to an 'external' segment container file which will be built in the same directory as this
+   * segment file. Legacy implementations of this method just return the same builder since they do not support this
+   * concept. This allows column implementations to use these methods, but also still work with older segment formats
+   * (assuming the older format otherwise supports the contents).
+   */
+  default SegmentFileBuilder getExternalBuilder(String externalFile)
+  {
+    return this;
+  }
 }

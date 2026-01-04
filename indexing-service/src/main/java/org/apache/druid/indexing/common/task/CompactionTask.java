@@ -89,6 +89,7 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -1134,7 +1135,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (metadata != null && metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
         projections = new HashMap<>();
         for (AggregateProjectionMetadata projectionMetadata : metadata.getProjections()) {
-          final AggregateProjectionMetadata.Schema schema = projectionMetadata.getSchema();
+          final AggregateProjectionSchema schema = projectionMetadata.getSchema();
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );
