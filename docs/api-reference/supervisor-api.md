@@ -3662,9 +3662,8 @@ Content-Type: application/json
 <details>
   <summary>202 Accepted</summary>
 
-```json
-{}
-```
+*Empty response*
+
 </details>
 
 ### Shut down a supervisor

@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,7 +64,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     verifyRowCount(totalRecords);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterOverlordRestart(boolean useTransactions) throws Exception
   {
@@ -107,7 +106,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
   {
@@ -121,7 +120,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
   {
@@ -149,7 +148,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(mapper, Map.of("taskGroupIds", List.of(0, 1))),
-        new TypeReference<>() {}
+        null
     );
 
     // Wait for the handoff notice to be processed

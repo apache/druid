@@ -87,6 +87,7 @@ public class FaultyClusterTest extends KafkaTestBase
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
     kafkaServer.deleteTopic(topic);
 
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     verifyRowCount(recordCount);
 
     // Verify that pending segments are not cleaned up
