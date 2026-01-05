@@ -37,6 +37,9 @@
 
   "jetty/numOpenConnections" : { "dimensions" : [], "type" : "gauge", "help": "Number of open jetty connections."},
   "jetty/threadPool/total" : { "dimensions" : [], "type" : "gauge", "help": "Number of total workable threads allocated."},
+  "jetty/threadPool/ready" : { "dimensions" : [], "type" : "gauge", "help": "Number of threads that are ready to serve requests."},
+  "jetty/threadPool/utilized" : { "dimensions" : [], "type" : "gauge", "help": "Number of threads currently in use to serve requests."},
+  "jetty/threadPool/utilizationRate" : { "dimensions" : [], "type" : "gauge", "help": "Fraction of thread pool capacity currently in use to serve requests."},
   "jetty/threadPool/idle" : { "dimensions" : [], "type" : "gauge", "help": "Number of idle threads."},
   "jetty/threadPool/busy" : { "dimensions" : [], "type" : "gauge", "help": "Number of busy threads that has work to do from the worker queue."},
   "jetty/threadPool/isLowOnThreads" : { "dimensions" : [], "type" : "gauge", "help": "A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue."},
