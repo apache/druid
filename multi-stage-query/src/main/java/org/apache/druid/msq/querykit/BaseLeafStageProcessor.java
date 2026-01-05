@@ -228,7 +228,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
    * that drives query processing.
    *
    * The returned {@link ReadableInputQueue} does not need to be closed, because it has not started loading any
-   * segments. Once {@link ReadableInputQueue#nextInput()} or {@link ReadableInputQueue#startLoadaheadIfNeeded()} is called,
+   * segments. Once {@link ReadableInputQueue#nextInput()} or {@link ReadableInputQueue#start()} is called,
    * the queue must be closed when done being used.
    */
   private static ReadableInputQueue makeBaseInputQueue(

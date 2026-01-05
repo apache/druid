@@ -41,7 +41,6 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
-import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -51,6 +50,7 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -73,7 +73,7 @@ public class DartWorkerContext implements WorkerContext
   private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
@@ -100,7 +100,7 @@ public class DartWorkerContext implements WorkerContext
       final DruidProcessingConfig processingConfig,
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
-      final DataSegmentProvider dataSegmentProvider,
+      final SegmentManager segmentManager,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
       final Outbox<ControllerMessage> outbox,
@@ -122,7 +122,7 @@ public class DartWorkerContext implements WorkerContext
     this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
     this.groupingEngine = groupingEngine;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
@@ -237,7 +237,7 @@ public class DartWorkerContext implements WorkerContext
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
         groupingEngine,
-        dataSegmentProvider,
+        segmentManager,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         memoryParameters,
         storageParameters,

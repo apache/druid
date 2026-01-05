@@ -226,6 +226,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     return Lists.transform(segments, completeSegment -> completeSegment.dataSegment);
   }
 
+  public List<CompleteSegment> getCompleteSegments()
+  {
+    return segments;
+  }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {

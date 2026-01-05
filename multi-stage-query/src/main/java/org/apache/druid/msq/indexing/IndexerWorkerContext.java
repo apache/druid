@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
@@ -30,7 +31,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
-import org.apache.druid.msq.exec.DataSegmentProviderImpl;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.MSQMetricEventBuilder;
@@ -46,7 +46,6 @@ import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.client.IndexerControllerClient;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
-import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -64,6 +63,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class IndexerWorkerContext implements WorkerContext
@@ -76,7 +76,9 @@ public class IndexerWorkerContext implements WorkerContext
   private final OverlordClient overlordClient;
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
@@ -95,7 +97,8 @@ public class IndexerWorkerContext implements WorkerContext
       final OverlordClient overlordClient,
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
-      final DataSegmentProvider dataSegmentProvider,
+      final SegmentManager segmentManager,
+      @Nullable final CoordinatorClient coordinatorClient,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -107,7 +110,8 @@ public class IndexerWorkerContext implements WorkerContext
     this.overlordClient = overlordClient;
     this.controllerLocator = controllerLocator;
     this.indexIO = indexIO;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
@@ -161,7 +165,8 @@ public class IndexerWorkerContext implements WorkerContext
         overlordClient,
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
-        new DataSegmentProviderImpl(segmentManager, toolbox.getCoordinatorClient()),
+        segmentManager,
+        toolbox.getCoordinatorClient(),
         serviceClientFactory,
         memoryIntrospector,
         processingBuffersProvider,
@@ -282,7 +287,8 @@ public class IndexerWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         indexIO,
-        dataSegmentProvider,
+        segmentManager,
+        coordinatorClient,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         dataServerQueryHandlerFactory,
         memoryParameters,

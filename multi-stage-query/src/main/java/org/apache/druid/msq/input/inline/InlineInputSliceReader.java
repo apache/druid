@@ -22,6 +22,7 @@ package org.apache.druid.msq.input.inline;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.input.AdaptedLoadableSegment;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -69,7 +70,7 @@ public class InlineInputSliceReader implements InputSliceReader
 
     for (final Segment segment : segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY)) {
       segments.add(
-          LoadableSegment.forSegment(
+          AdaptedLoadableSegment.create(
               segment,
               Intervals.ETERNITY,
               "inline data",

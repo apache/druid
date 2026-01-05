@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.exec;
+package org.apache.druid.msq.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
@@ -82,25 +81,36 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-class DataSegmentProviderImplTest extends InitializedNullHandlingTest
+/**
+ * Tests for {@link RegularLoadableSegment}.
+ */
+class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "foo";
   private static final int NUM_SEGMENTS = 10;
   private static final int THREADS = 8;
   private static File SEGMENT_ZIP_FILE;
+
   @TempDir
   public Path tempDir;
+
   private List<DataSegment> segments;
   private File cacheDir;
-  private DataSegmentProviderImpl provider;
+  private File preLoadCacheDir;
+  private SegmentManager segmentManagerDynamic;
+  private SegmentManager segmentManagerPreLoad;
   private ListeningExecutorService exec;
 
   @BeforeAll
   public static void setupStatic(@TempDir Path tempDir) throws IOException
   {
-    File segDir = tempDir.resolve("segment").toFile();
-    File segmentFile = TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.getDefault(), segDir);
-    File zipPath = tempDir.resolve("zip").toFile();
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    final File segmentFile = TestIndex.persist(
+        TestIndex.getIncrementalTestIndex(),
+        IndexSpec.getDefault(),
+        tempDir.resolve("segment").toFile()
+    );
+    final File zipPath = tempDir.resolve("zip").toFile();
     FileUtils.mkdirp(zipPath);
     SEGMENT_ZIP_FILE = new File(zipPath, "index.zip");
     CompressionUtils.zip(segmentFile, SEGMENT_ZIP_FILE);
@@ -109,9 +119,7 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
-
-    final ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(TestLoadSpec.class);
     jsonMapper.registerModule(new SegmentizerModule());
     jsonMapper.setInjectableValues(
@@ -125,7 +133,7 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
     segments = new ArrayList<>();
 
     for (int i = 0; i < NUM_SEGMENTS; i++) {
-      // Two segments per interval; helps verify that direction creation + deletion does not include races.
+      // Two segments per interval; helps verify that directory creation + deletion does not include races.
       final DateTime startTime = DateTimes.of("2000").plusDays(i / 2);
       final int partitionNum = i % 2;
 
@@ -151,24 +159,35 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
       );
     }
 
+    // SegmentManager with virtualStorage for dynamically-loaded data tests
     cacheDir = tempDir.resolve("cache").toFile();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
         .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
         .setVirtualStorage(true, true);
-    final List<StorageLocation> locations = loaderConfig.toStorageLocations();
-    final SegmentManager segmentManager = new SegmentManager(
+    final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
+    segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
-            locations,
-            loaderConfig,
-            new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+            virtualLocations,
+            virtualLoaderConfig,
+            new LeastBytesUsedStorageLocationSelectorStrategy(virtualLocations),
             TestIndex.INDEX_IO,
             jsonMapper
         )
     );
 
-    provider = new DataSegmentProviderImpl(
-        segmentManager,
-        new TestCoordinatorClientImpl()
+    // SegmentManager without virtualStorage for pre-loaded data tests
+    preLoadCacheDir = tempDir.resolve("localCache").toFile();
+    final SegmentLoaderConfig localLoaderConfig = new SegmentLoaderConfig()
+        .setLocations(ImmutableList.of(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null)));
+    final List<StorageLocation> localLocations = localLoaderConfig.toStorageLocations();
+    segmentManagerPreLoad = new SegmentManager(
+        new SegmentLocalCacheManager(
+            localLocations,
+            localLoaderConfig,
+            new LeastBytesUsedStorageLocationSelectorStrategy(localLocations),
+            TestIndex.INDEX_IO,
+            jsonMapper
+        )
     );
 
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(THREADS, getClass().getSimpleName() + "-%s"));
@@ -179,28 +198,41 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
   {
     if (exec != null) {
       exec.shutdownNow();
-      exec.awaitTermination(1, TimeUnit.MINUTES);
+      if (!exec.awaitTermination(1, TimeUnit.MINUTES)) {
+        throw new ISE("exec termination timed out");
+      }
     }
   }
 
   @Test
-  public void testConcurrency()
+  public void test_concurrency_dynamic()
   {
     final int iterations = 1000;
     final List<ListenableFuture<Boolean>> testFutures = new ArrayList<>();
+    final TestCoordinatorClientImpl coordinatorClient = new TestCoordinatorClientImpl();
 
     for (int i = 0; i < iterations; i++) {
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
-      final ListenableFuture<LoadableSegment> f =
-          exec.submit(() -> provider.getLoadableSegment(segment.getId(), segment.toDescriptor(), null, false));
+
+      // Create RegularLoadableSegment with CoordinatorClient (no local timeline)
+      final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+          segmentManagerDynamic,
+          segment.getId(),
+          segment.toDescriptor(),
+          null,
+          coordinatorClient,
+          false
+      );
+
+      final ListenableFuture<LoadableSegment> f = exec.submit(() -> loadableSegment);
 
       testFutures.add(
           FutureUtils.transform(
               FutureUtils.transformAsync(
                   f,
-                  loadableSegment -> {
-                    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+                  ls -> {
+                    final AcquireSegmentAction acquireAction = ls.acquire();
                     return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
                   }
               ),
@@ -210,13 +242,12 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
                     acquireResult.getReferenceProvider().acquireReference();
                 Assertions.assertTrue(acquiredSegmentOptional.isPresent());
 
-                try (final AcquireSegmentAction ignored = pair.lhs; // Close action after this try block
+                try (final AcquireSegmentAction ignored = pair.lhs;
                      final Segment acquiredSegment = acquiredSegmentOptional.get()) {
                   Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
                   PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
                   Assertions.assertNotNull(gadget);
                   Assertions.assertEquals(1209, gadget.getNumRows());
-                  acquiredSegment.close();
                   return true;
                 }
                 catch (IOException e) {
@@ -241,14 +272,160 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetLoadableSegment() throws IOException
+  public void test_concurrency_preLoaded() throws SegmentLoadingException, IOException
+  {
+    // First, add all segments to the SegmentManager's timeline
+    for (DataSegment segment : segments) {
+      segmentManagerPreLoad.loadSegment(segment);
+    }
+
+    final int iterations = 1000;
+    final List<ListenableFuture<Boolean>> testFutures = new ArrayList<>();
+
+    for (int i = 0; i < iterations; i++) {
+      final int expectedSegmentNumber = i % NUM_SEGMENTS;
+      final DataSegment segment = segments.get(expectedSegmentNumber);
+
+      // Create RegularLoadableSegment without CoordinatorClient (using local timeline)
+      final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+          segmentManagerPreLoad,
+          segment.getId(),
+          segment.toDescriptor(),
+          null,
+          null,
+          false
+      );
+
+      final ListenableFuture<LoadableSegment> f = exec.submit(() -> loadableSegment);
+
+      testFutures.add(
+          FutureUtils.transform(
+              FutureUtils.transformAsync(
+                  f,
+                  ls -> {
+                    final AcquireSegmentAction acquireAction = ls.acquire();
+                    return FutureUtils.transform(acquireAction.getSegmentFuture(), f2 -> Pair.of(acquireAction, f2));
+                  }
+              ),
+              pair -> {
+                final AcquireSegmentResult acquireResult = pair.rhs;
+                final Optional<Segment> acquiredSegmentOptional =
+                    acquireResult.getReferenceProvider().acquireReference();
+                Assertions.assertTrue(acquiredSegmentOptional.isPresent());
+
+                try (final AcquireSegmentAction ignored = pair.lhs;
+                     final Segment acquiredSegment = acquiredSegmentOptional.get()) {
+                  Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+                  PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+                  Assertions.assertNotNull(gadget);
+                  Assertions.assertEquals(1209, gadget.getNumRows());
+                  return true;
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+          )
+      );
+    }
+
+    Assertions.assertEquals(iterations, testFutures.size());
+    for (int i = 0; i < iterations; i++) {
+      ListenableFuture<Boolean> testFuture = testFutures.get(i);
+      Assertions.assertTrue(FutureUtils.getUnchecked(testFuture, false), "Test iteration #" + i);
+    }
+
+    // Drop all segments from the SegmentManager
+    for (DataSegment segment : segments) {
+      segmentManagerPreLoad.dropSegment(segment);
+    }
+
+    // Cache dir should exist, but be (mostly) empty, since we've dropped all segments.
+    Assertions.assertTrue(preLoadCacheDir.exists());
+    Assertions.assertEquals(List.of("info_dir", "__drop"), Arrays.asList(preLoadCacheDir.list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(preLoadCacheDir, "__drop").list()));
+    Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(preLoadCacheDir, "info_dir").list()));
+  }
+
+  /**
+   * Tests acquireIfCached() with locally-cached DataSegment.
+   */
+  @Test
+  public void test_acquireIfCached_preLoaded() throws SegmentLoadingException, IOException
   {
     final DataSegment segment = segments.get(0);
-    final LoadableSegment loadableSegment =
-        provider.getLoadableSegment(segment.getId(), segment.toDescriptor(), null, false);
 
-    // Verify that the DataSegment is set properly.
-    Assertions.assertEquals(segment, loadableSegment.dataSegment());
+    // Load segment into SegmentManager's timeline
+    segmentManagerPreLoad.loadSegment(segment);
+
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerPreLoad,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        null,
+        false
+    );
+
+    // acquireIfCached should return a segment since it's loaded
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    Assertions.assertTrue(cachedSegment.isPresent());
+
+    try (final Segment acquiredSegment = cachedSegment.get()) {
+      Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      Assertions.assertNotNull(gadget);
+      Assertions.assertEquals(1209, gadget.getNumRows());
+    }
+
+    segmentManagerPreLoad.dropSegment(segment);
+  }
+
+  /**
+   * Tests acquireIfCached() when DataSegment is not in local timeline.
+   */
+  @Test
+  public void test_acquireIfCached_dynamic()
+  {
+    final DataSegment segment = segments.get(0);
+    final TestCoordinatorClientImpl coordinatorClient = new TestCoordinatorClientImpl();
+
+    // Don't load segment into SegmentManager's timeline
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        coordinatorClient,
+        false
+    );
+
+    // acquireIfCached should return empty since it's not loaded locally
+    final Optional<Segment> cachedSegment = loadableSegment.acquireIfCached();
+    Assertions.assertFalse(cachedSegment.isPresent());
+  }
+
+  /**
+   * Tests fetching a single segment with CoordinatorClient.
+   */
+  @Test
+  public void test_fetchSegment_dynamic() throws IOException
+  {
+    final DataSegment segment = segments.get(0);
+    final TestCoordinatorClientImpl coordinatorClient = new TestCoordinatorClientImpl();
+
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerDynamic,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        coordinatorClient,
+        false
+    );
+
+    // Verify that dataSegmentFuture() returns the correct DataSegment
+    final DataSegment fetchedDataSegment = FutureUtils.getUnchecked(loadableSegment.dataSegmentFuture(), false);
+    Assertions.assertEquals(segment, fetchedDataSegment);
 
     // Verify segment acquisition works.
     final AcquireSegmentAction acquireAction = loadableSegment.acquire();
@@ -263,6 +440,47 @@ class DataSegmentProviderImplTest extends InitializedNullHandlingTest
       Assertions.assertNotNull(gadget);
       Assertions.assertEquals(1209, gadget.getNumRows());
     }
+  }
+
+  /**
+   * Tests fetching a single segment with locally-cached DataSegment.
+   */
+  @Test
+  public void test_fetchSegment_preLoaded() throws IOException, SegmentLoadingException
+  {
+    final DataSegment segment = segments.get(0);
+
+    // Load segment into SegmentManager's timeline
+    segmentManagerPreLoad.loadSegment(segment);
+
+    final RegularLoadableSegment loadableSegment = new RegularLoadableSegment(
+        segmentManagerPreLoad,
+        segment.getId(),
+        segment.toDescriptor(),
+        null,
+        null,
+        false
+    );
+
+    // Verify that dataSegmentFuture() returns the correct DataSegment
+    final DataSegment fetchedDataSegment = FutureUtils.getUnchecked(loadableSegment.dataSegmentFuture(), false);
+    Assertions.assertEquals(segment, fetchedDataSegment);
+
+    // Verify segment acquisition works.
+    final AcquireSegmentAction acquireAction = loadableSegment.acquire();
+    final AcquireSegmentResult acquireResult = FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), false);
+    final Optional<Segment> acquiredSegmentOptional = acquireResult.getReferenceProvider().acquireReference();
+    Assertions.assertTrue(acquiredSegmentOptional.isPresent());
+
+    try (final AcquireSegmentAction ignored = acquireAction;
+         final Segment acquiredSegment = acquiredSegmentOptional.get()) {
+      Assertions.assertEquals(segment.getId(), acquiredSegment.getId());
+      final PhysicalSegmentInspector gadget = acquiredSegment.as(PhysicalSegmentInspector.class);
+      Assertions.assertNotNull(gadget);
+      Assertions.assertEquals(1209, gadget.getNumRows());
+    }
+
+    segmentManagerPreLoad.dropSegment(segment);
   }
 
   @JsonTypeName("test")

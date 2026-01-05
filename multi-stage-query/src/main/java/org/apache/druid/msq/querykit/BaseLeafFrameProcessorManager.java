@@ -112,7 +112,7 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
       // Prior call would have returned empty Optional.
       throw new NoSuchElementException();
     } else {
-      baseInputQueue.startLoadaheadIfNeeded();
+      baseInputQueue.start();
     }
 
     final ListenableFuture<ReadableInput> nextInput = baseInputQueue.nextInput();

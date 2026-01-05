@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -32,25 +31,20 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.input.LoadableSegment;
-import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -63,8 +57,8 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.timeline.SegmentId;
-import org.easymock.EasyMock;
+import org.apache.druid.test.utils.TestSegmentManager;
+import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.util.List;
@@ -83,8 +77,6 @@ public class CalciteMSQTestsHelper
     {
       binder.bind(AppenderatorsManager.class).toProvider(() -> null);
 
-      // Requirements of JoinableFactoryModule
-      binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
 
       binder.bind(new TypeLiteral<Set<NodeRole>>()
       {
@@ -112,16 +104,18 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
-    public MSQTestSegmentManager provideMSQTestSegmentManager(SegmentCacheManager segmentCacheManager)
+    public TestSegmentManager provideTestSegmentManager()
     {
-      return new MSQTestSegmentManager(segmentCacheManager);
+      return new TestSegmentManager();
     }
 
     @Provides
-    public DataSegmentPusher provideDataSegmentPusher(LocalDataSegmentPusherConfig config,
-        MSQTestSegmentManager segmentManager)
+    public DataSegmentPusher provideDataSegmentPusher(
+        LocalDataSegmentPusherConfig config,
+        TestSegmentManager testSegmentManager
+    )
     {
-      return new MSQTestDelegateDataSegmentPusher(new LocalDataSegmentPusher(config), segmentManager);
+      return new MSQTestDelegateDataSegmentPusher(new LocalDataSegmentPusher(config), testSegmentManager);
     }
 
     @Provides
@@ -131,34 +125,20 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
-    @LazySingleton
-    public DataSegmentProvider provideDataSegmentProvider(LocalDataSegmentProvider localDataSegmentProvider)
+    public SegmentManager provideSegmentManager(
+        TestSegmentManager testSegmentManager,
+        SpecificSegmentsQuerySegmentWalker walker
+    )
     {
-      return localDataSegmentProvider;
-    }
-
-    @LazySingleton
-    static class LocalDataSegmentProvider implements DataSegmentProvider
-    {
-      private SpecificSegmentsQuerySegmentWalker walker;
-
-      @Inject
-      public LocalDataSegmentProvider(SpecificSegmentsQuerySegmentWalker walker)
-      {
-        this.walker = walker;
+      // Sync segments from the walker to TestSegmentManager so that
+      // RegularLoadableSegment can find them via SegmentManager.getTimeline()
+      for (DataSegment dataSegment : walker.getSegments()) {
+        SpecificSegmentsQuerySegmentWalker.CompleteSegment cs = walker.getSegment(dataSegment.getId());
+        testSegmentManager.addSegment(cs.dataSegment, cs.segment);
       }
 
-      @Override
-      public LoadableSegment getLoadableSegment(
-          SegmentId segmentId,
-          SegmentDescriptor descriptor,
-          ChannelCounters inputCounters,
-          boolean isReindex
-      )
-      {
-        final SpecificSegmentsQuerySegmentWalker.CompleteSegment a = walker.getSegment(segmentId);
-        return LoadableSegment.forSegment(a.segment, descriptor.getInterval(), null, inputCounters);
-      }
+      // Return the underlying SegmentManager which has the timeline properly populated
+      return testSegmentManager.getSegmentManager();
     }
 
     @Provides

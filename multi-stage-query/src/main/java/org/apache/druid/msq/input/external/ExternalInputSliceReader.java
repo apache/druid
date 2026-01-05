@@ -36,6 +36,7 @@ import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.CountableInputSourceReader;
+import org.apache.druid.msq.input.AdaptedLoadableSegment;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -104,7 +105,7 @@ public class ExternalInputSliceReader implements InputSliceReader
           warningPublisher
       );
       loadableSegments.add(
-          LoadableSegment.forSegment(
+          AdaptedLoadableSegment.create(
               segment,
               Intervals.ETERNITY,
               StringUtils.format("external[%s]", inputSource.toString()),

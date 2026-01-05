@@ -20,7 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.msq.input.table.DataSegmentProvider;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -29,7 +29,9 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.server.SegmentManager;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 
@@ -49,7 +51,17 @@ public interface FrameContext extends Closeable
 
   RowIngestionMeters rowIngestionMeters();
 
-  DataSegmentProvider dataSegmentProvider();
+  /**
+   * Returns the segment manager for loading and caching segments.
+   */
+  SegmentManager segmentManager();
+
+  /**
+   * Returns the coordinator client for fetching DataSegment metadata when not available locally.
+   * May be null if no coordinator client is available (e.g., in Dart workers).
+   */
+  @Nullable
+  CoordinatorClient coordinatorClient();
 
   DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 

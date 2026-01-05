@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.input.table;
 
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -29,9 +30,12 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.msq.input.RegularLoadableSegment;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -41,13 +45,16 @@ import java.util.function.Consumer;
  */
 public class SegmentsInputSliceReader implements InputSliceReader
 {
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final boolean isReindex;
 
   public SegmentsInputSliceReader(final FrameContext frameContext, final boolean isReindex)
   {
-    this.dataSegmentProvider = frameContext.dataSegmentProvider();
+    this.segmentManager = frameContext.segmentManager();
+    this.coordinatorClient = frameContext.coordinatorClient();
     this.dataServerQueryHandlerFactory = frameContext.dataServerQueryHandlerFactory();
     this.isReindex = isReindex;
   }
@@ -73,7 +80,16 @@ public class SegmentsInputSliceReader implements InputSliceReader
           descriptor.getVersion(),
           descriptor.getPartitionNumber()
       );
-      loadableSegments.add(dataSegmentProvider.getLoadableSegment(segmentId, descriptor, inputCounters, isReindex));
+      loadableSegments.add(
+          new RegularLoadableSegment(
+              segmentManager,
+              segmentId,
+              descriptor,
+              inputCounters,
+              coordinatorClient,
+              isReindex
+          )
+      );
     }
 
     if (segmentsInputSlice.getQueryableServers() != null) {

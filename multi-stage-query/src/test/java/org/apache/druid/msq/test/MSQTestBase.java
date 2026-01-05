@@ -108,8 +108,8 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.input.AdaptedLoadableSegment;
 import org.apache.druid.msq.input.LoadableSegment;
-import org.apache.druid.msq.input.table.DataSegmentProvider;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryKitSpecFactory;
@@ -162,6 +162,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.test.utils.TestSegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -214,7 +215,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.easymock.EasyMock;
 import org.hamcrest.Matcher;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -229,6 +229,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -347,7 +348,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // Mocks the return of data from data servers
   protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
 
-  private MSQTestSegmentManager segmentManager;
+  private TestSegmentManager testSegmentManager;
   private SegmentCacheManager segmentCacheManager;
 
   private TestGroupByBuffers groupByBuffers;
@@ -440,7 +441,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // injector that has the MSQ dependencies. This allows the test to create a
   // "shadow" statement factory that is used for tests. It works... kinda.
   @BeforeEach
-  public void setUp2() throws Exception
+  public void setUp2()
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
 
@@ -451,7 +452,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     segmentCacheManager =
         new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), true);
-    segmentManager = new MSQTestSegmentManager(segmentCacheManager);
+
+    testSegmentManager = new TestSegmentManager();
+
+    // Sync segments from the walker to TestSegmentManager so that RegularLoadableSegment
+    // can find them via SegmentManager.getTimeline()
+    // Also populate loadedSegmentsMetadata so CoordinatorClient.fetchSegment() can find them for reindex operations
+    for (DataSegment dataSegment : qf.walker().getSegments()) {
+      SpecificSegmentsQuerySegmentWalker.CompleteSegment cs = qf.walker().getSegment(dataSegment.getId());
+      testSegmentManager.addSegment(cs.dataSegment, cs.segment);
+      loadedSegmentsMetadata.add(new ImmutableSegmentLoadInfo(cs.dataSegment, Collections.emptySet()));
+    }
 
     List<Module> modules = ImmutableList.of(
         binder -> {
@@ -491,10 +502,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(SegmentWriteOutMediumFactory.class)
                 .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
-          binder.bind(DataSegmentProvider.class).toInstance(
-              (segmentId, descriptor, channelCounters, isReindex) ->
-                  getLoadableSegment(this::newTempFolder, segmentId, descriptor, channelCounters)
-          );
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
@@ -503,7 +510,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           config.storageDirectory = newTempFolder("storageDir");
           binder.bind(DataSegmentPusher.class).toInstance(new MSQTestDelegateDataSegmentPusher(
               new LocalDataSegmentPusher(config),
-              segmentManager
+              testSegmentManager
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(false);
@@ -533,8 +540,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         },
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
-        // Requirement of JoinableFactoryModule
-        binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)),
+        binder -> binder.bind(SegmentManager.class).toInstance(testSegmentManager.getSegmentManager()),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         Modules.override(new MSQSqlModule()).with(
@@ -682,7 +688,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
       ChannelCounters counters
   )
   {
-    if (segmentManager.getSegment(segmentId) == null) {
+    Segment acquiredSegment = testSegmentManager.getSegment(segmentId);
+    if (acquiredSegment == null) {
       final QueryableIndex index;
       switch (segmentId.getDataSource()) {
         case DATASOURCE1:
@@ -770,9 +777,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         {
         }
       };
-      segmentManager.addSegment(segment);
+      DataSegment dataSegment = TestSegmentManager.createDataSegmentForTest(segmentId);
+      testSegmentManager.addSegment(dataSegment, segment);
+      acquiredSegment = testSegmentManager.getSegment(segmentId);
     }
-    return LoadableSegment.forSegment(segmentManager.getSegment(segmentId), descriptor.getInterval(), null, counters);
+    return AdaptedLoadableSegment.create(acquiredSegment, descriptor.getInterval(), null, counters);
   }
 
   public SelectTester testSelectQuery()
@@ -1348,17 +1357,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
         log.info(
             "found generated segments: %s",
-            segmentManager.getAllTestGeneratedDataSegments().stream().map(s -> s.toString()).collect(
+            testSegmentManager.getGeneratedSegments().stream().map(s -> s.toString()).collect(
                 Collectors.joining("\n"))
         );
         // check if segments are created
         if (!expectedResultRows.isEmpty()) {
-          Assert.assertNotEquals(0, segmentManager.getAllTestGeneratedDataSegments().size());
+          Assert.assertNotEquals(0, testSegmentManager.getGeneratedSegments().size());
         }
 
         String foundDataSource = null;
         SortedMap<SegmentId, List<List<Object>>> segmentIdVsOutputRowsMap = new TreeMap<>();
-        for (DataSegment dataSegment : segmentManager.getAllTestGeneratedDataSegments()) {
+        for (DataSegment dataSegment : testSegmentManager.getGeneratedSegments()) {
 
           //Assert shard spec class
           Assert.assertEquals(expectedShardSpec, dataSegment.getShardSpec().getClass());

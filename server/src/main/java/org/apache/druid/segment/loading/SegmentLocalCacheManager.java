@@ -325,6 +325,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
+      FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
           segmentInfoCacheFile,
           out -> {
@@ -398,7 +399,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     final AcquireSegmentAction acquireExisting = acquireExistingSegment(identifier);
