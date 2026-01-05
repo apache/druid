@@ -1643,7 +1643,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.13.0
+version: 5.18.1
 libraries:
   - net.java.dev.jna: jna
 
@@ -1868,7 +1868,7 @@ name: Apache Log4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.25.3
 libraries:
   - org.apache.logging.log4j: log4j-1.2-api
   - org.apache.logging.log4j: log4j-api
@@ -3851,7 +3851,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.7.14
+version: 1.7.14.1
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:
@@ -4796,7 +4796,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.13.0
+version: 5.18.1
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:

@@ -38,7 +38,7 @@
   "query/cache/total/timeouts" : { "dimensions" : [], "type" : "gauge" },
   "query/cache/total/errors" : { "dimensions" : [], "type" : "gauge" },
 
-  "ingest/events/thrownAway" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/thrownAway" : { "dimensions" : ["dataSource", "reason"], "type" : "count" },
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },

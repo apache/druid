@@ -54,7 +54,8 @@
   "query/cache/total/timeouts": [],
   "query/cache/total/errors": [],
   "ingest/events/thrownAway": [
-    "dataSource"
+    "dataSource",
+    "reason"
   ],
   "ingest/events/unparseable": [
     "dataSource"

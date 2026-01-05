@@ -57,7 +57,6 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -143,48 +142,39 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public JvmMonitor getJvmMonitor(
-      TaskHolder taskHolder
-  )
+  public JvmMonitor getJvmMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
-    return new JvmMonitor(dimensions);
+    return new JvmMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmCpuMonitor getJvmCpuMonitor(
-      TaskHolder taskHolder
-  )
+  public JvmCpuMonitor getJvmCpuMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
-    return new JvmCpuMonitor(dimensions);
+    return new JvmCpuMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmThreadsMonitor getJvmThreadsMonitor(TaskHolder taskHolder)
+  public JvmThreadsMonitor getJvmThreadsMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
-    return new JvmThreadsMonitor(dimensions);
+    return new JvmThreadsMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(TaskHolder taskHolder, @Self Set<NodeRole> nodeRoles)
+  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
-      return new SysMonitor(dimensions);
+      return new SysMonitor();
     }
   }
 
   @Provides
   @ManageLifecycle
   public OshiSysMonitor getOshiSysMonitor(
-      TaskHolder taskHolder,
       @Self Set<NodeRole> nodeRoles,
       OshiSysMonitorConfig oshiSysConfig
   )
@@ -192,8 +182,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
-      return new OshiSysMonitor(dimensions, oshiSysConfig);
+      return new OshiSysMonitor(oshiSysConfig);
     }
   }
 

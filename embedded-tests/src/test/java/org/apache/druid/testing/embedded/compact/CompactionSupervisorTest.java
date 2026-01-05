@@ -29,11 +29,6 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -90,15 +85,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                    "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
                                )
                                .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
-                               .addExtensions(
-                                   CatalogClientModule.class,
-                                   CatalogCoordinatorModule.class,
-                                   IndexerMemoryManagementModule.class,
-                                   MSQDurableStorageModule.class,
-                                   MSQIndexingModule.class,
-                                   MSQSqlModule.class,
-                                   SqlTaskModule.class
-                               )
+                               .addExtensions(CatalogClientModule.class, CatalogCoordinatorModule.class)
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)

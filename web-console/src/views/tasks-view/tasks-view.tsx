@@ -188,6 +188,7 @@ ORDER BY
           return await queryDruidSql(
             {
               query: TasksView.TASK_SQL,
+              context: { engine: 'native' },
             },
             signal,
           );

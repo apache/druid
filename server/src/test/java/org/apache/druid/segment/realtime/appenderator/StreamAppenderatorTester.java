@@ -115,7 +115,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       final ServiceEmitter serviceEmitter,
       final PolicyEnforcer policyEnforcer,
       final boolean releaseLocksOnHandoff,
-      final TaskIntervalUnlocker taskIntervalUnlocker
+      final TaskIntervalUnlocker taskIntervalUnlocker,
+      final SegmentGenerationMetrics segmentGenerationMetrics
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -165,7 +166,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         releaseLocksOnHandoff
     );
 
-    metrics = new SegmentGenerationMetrics();
+    metrics = segmentGenerationMetrics == null ? new SegmentGenerationMetrics() : segmentGenerationMetrics;
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     IndexIO indexIO = new IndexIO(
@@ -364,6 +365,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
     private boolean releaseLocksOnHandoff;
     private TaskIntervalUnlocker taskIntervalUnlocker = interval -> {};
+    private SegmentGenerationMetrics segmentGenerationMetrics;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -386,6 +388,12 @@ public class StreamAppenderatorTester implements AutoCloseable
     public Builder enablePushFailure(final boolean enablePushFailure)
     {
       this.enablePushFailure = enablePushFailure;
+      return this;
+    }
+
+    public Builder segmentGenerationMetrics(final SegmentGenerationMetrics segmentGenerationMetrics)
+    {
+      this.segmentGenerationMetrics = segmentGenerationMetrics;
       return this;
     }
 
@@ -446,7 +454,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
 
@@ -468,7 +477,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
   }

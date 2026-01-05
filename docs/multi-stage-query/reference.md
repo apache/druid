@@ -414,6 +414,8 @@ The following table lists the context parameters for the MSQ task engine:
 | `removeNullBytes` | SELECT, INSERT or REPLACE<br /><br /> The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
 | `includeAllCounters` | SELECT, INSERT or REPLACE<br /><br />Whether to include counters that were added in Druid 31 or later. This is a backwards compatibility option that must be set to `false` during a rolling update from versions prior to Druid 31. | `true` |
 | `maxFrameSize` | SELECT, INSERT or REPLACE<br /><br />Size of frames used for data transfer within the MSQ engine. You generally do not need to change this unless you have very large rows. | `1000000` (1 MB) |
+| `maxInputFilesPerWorker` | SELECT, INSERT, REPLACE<br /><br />Maximum number of input files or segments per worker. If a single worker would need to read more than this number of files, the query fails with a `TooManyInputFiles` error. In this case, you should either increase this limit if your tasks have enough memory to handle more files, add more workers by increasing `maxNumTasks`, or split your query into smaller queries that process fewer files. | 10,000 |
+| `maxPartitions` | SELECT, INSERT, REPLACE<br /><br />Maximum number of output partitions for any single stage. For INSERT or REPLACE queries, this controls the maximum number of segments that can be generated. If the query would exceed this limit, it fails with a `TooManyPartitions` error. You can increase this limit if needed, break your query into smaller queries, or use a larger target segment size (via `rowsPerSegment`). | 25,000 |
 | `maxThreads` | SELECT, INSERT or REPLACE<br /><br />Maximum number of threads to use for processing. This only has an effect if it is greater than zero and less than the default thread count based on system configuration. Otherwise, it is ignored, and workers use the default thread count. | Not set (use default thread count) |
 
 ## Joins
@@ -571,10 +573,10 @@ The following table lists query limits:
 
 | Limit | Value | Error if exceeded |
 |---|---|---|
-| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. | 1 MB | `RowTooLarge` |
+| Size of an individual row written to a frame. Row size when written to a frame may differ from the original row size. Configurable with [`maxFrameSize`](#context). | 1 MB | `RowTooLarge` |
 | Number of segment-granular time chunks encountered during ingestion. | 5,000 | `TooManyBuckets`|
-| Number of input files/segments per worker. | 10,000 | `TooManyInputFiles`|
-| Number of output partitions for any one stage. Number of segments generated during ingestion. |25,000 | `TooManyPartitions`|
+| Number of input files/segments per worker. Configurable with [`maxInputFilesPerWorker`](#context). | 10,000 | `TooManyInputFiles`|
+| Number of output partitions for any one stage. Number of segments generated during ingestion. Configurable with [`maxPartitions`](#context). | 25,000 | `TooManyPartitions`|
 | Number of output columns for any one stage. | 2,000 | `TooManyColumns`|
 | Number of cluster by columns that can appear in a stage | 1,500 | `TooManyClusteredByColumns` |
 | Number of workers for any one stage. | Hard limit is 1,000. Memory-dependent soft limit may be lower. | `TooManyWorkers`|

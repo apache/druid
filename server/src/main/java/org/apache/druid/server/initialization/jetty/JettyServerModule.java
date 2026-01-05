@@ -48,14 +48,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.server.metrics.MonitorsConfig;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
@@ -92,7 +89,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -517,27 +513,17 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public JettyMonitor getJettyMonitor(TaskHolder taskHolder)
+  public JettyMonitor getJettyMonitor()
   {
-    return new JettyMonitor(
-        MonitorsConfig.mapOfTaskHolderDimensions(taskHolder)
-    );
+    return new JettyMonitor();
   }
 
   public static class JettyMonitor extends AbstractMonitor
   {
-    private final Map<String, String[]> dimensions;
-
-    public JettyMonitor(Map<String, String[]> dimensions)
-    {
-      this.dimensions = dimensions;
-    }
-
     @Override
     public boolean doMonitor(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.setMetric("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       if (jettyServerThreadPool != null) {
         emitter.emit(builder.setMetric("jetty/threadPool/total", jettyServerThreadPool.getThreads()));

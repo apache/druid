@@ -141,6 +141,8 @@ public class MultiStageQueryContext
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
+  public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
+  public static final String CTX_MAX_PARTITIONS = "maxPartitions";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -324,6 +326,34 @@ public class MultiStageQueryContext
         CTX_MAX_INPUT_BYTES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
+  }
+
+  public static int getMaxInputFilesPerWorker(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_INPUT_FILES_PER_WORKER);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
+    }
+    if (value <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+    }
+    return value;
+  }
+
+  public static int getMaxPartitions(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_PARTITIONS);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_PARTITIONS;
+    }
+    if (value <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
   }
 
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
