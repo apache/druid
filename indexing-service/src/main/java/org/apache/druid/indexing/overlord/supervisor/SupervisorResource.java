@@ -432,9 +432,7 @@ public class SupervisorResource
         manager -> {
           try {
             if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
-              return Response.status(Response.Status.ACCEPTED)
-                             .entity(Map.of()) // empty json object to allow deserialization by the client
-                             .build();
+              return Response.status(Response.Status.ACCEPTED).build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
                              .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
