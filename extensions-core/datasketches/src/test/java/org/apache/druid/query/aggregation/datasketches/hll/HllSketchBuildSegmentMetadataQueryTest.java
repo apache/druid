@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.SketchBuildSegmentMetadataQueryTestBase;
+import org.apache.druid.query.aggregation.datasketches.BaseSketchBuildSegmentMetadataQueryTest;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
-public class HllSketchBuildSegmentMetadataQueryTest extends SketchBuildSegmentMetadataQueryTestBase
+public class HllSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSegmentMetadataQueryTest
 {
   @Override
   protected void registerSerdeAndModules(ObjectMapper jsonMapper)

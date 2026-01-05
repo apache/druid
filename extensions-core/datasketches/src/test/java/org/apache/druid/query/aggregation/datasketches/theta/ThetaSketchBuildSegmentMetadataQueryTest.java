@@ -21,11 +21,11 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.SketchBuildSegmentMetadataQueryTestBase;
+import org.apache.druid.query.aggregation.datasketches.BaseSketchBuildSegmentMetadataQueryTest;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
-public class ThetaSketchBuildSegmentMetadataQueryTest extends SketchBuildSegmentMetadataQueryTestBase
+public class ThetaSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSegmentMetadataQueryTest
 {
   @Override
   protected void registerSerdeAndModules(ObjectMapper jsonMapper)
@@ -65,5 +65,3 @@ public class ThetaSketchBuildSegmentMetadataQueryTest extends SketchBuildSegment
     Assert.assertNull("errorBoundsStdDev should be null", thetaAggregator.getErrorBoundsStdDev());
   }
 }
-
-
