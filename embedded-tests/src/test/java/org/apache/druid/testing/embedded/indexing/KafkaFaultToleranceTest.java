@@ -106,7 +106,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterSuspendResume(boolean useTransactions)
   {
@@ -120,7 +120,7 @@ public class KafkaFaultToleranceTest extends KafkaTestBase
     totalRecords += publish1kRecords(topic, useTransactions);
   }
 
-  @ParameterizedTest
+  @ParameterizedTest(name = "useTransactions={0}")
   @ValueSource(booleans = {true, false})
   public void test_supervisorRecovers_afterChangeInTopicPartitions(boolean useTransactions)
   {
