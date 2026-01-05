@@ -957,71 +957,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
-  public void test_dynamicAllocationNotice_skipsScalingAndEmitsReason_ifTasksArePublishing() throws InterruptedException
-  {
-    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
-    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
-    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
-    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
-    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.replay(spec);
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
-    EasyMock.replay(ingestionSchema);
-
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.replay(taskMaster);
-
-    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
-
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
-        supervisor,
-        DATASOURCE,
-        mapper.convertValue(
-            getScaleOutProperties(2),
-            LagBasedAutoScalerConfig.class
-        ),
-        spec,
-        dynamicActionEmitter
-    );
-
-    supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        0,
-        ImmutableMap.of("0", "0"),
-        null,
-        null,
-        Set.of("dummyTask"),
-        Collections.emptySet()
-    );
-
-    supervisor.start();
-    autoScaler.start();
-
-    supervisor.runInternal();
-    Thread.sleep(1000); // ensure a dynamic allocation notice completes
-
-    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount().intValue());
-    Assert.assertTrue(
-        dynamicActionEmitter
-            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
-            .stream()
-            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
-            .filter(Objects::nonNull)
-            .anyMatch("There are tasks pending completion"::equals)
-    );
-
-    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
-    autoScaler.reset();
-    autoScaler.stop();
-  }
-
-  @Test
   public void testSeekableStreamSupervisorSpecWithNoScalingOnIdleSupervisor() throws InterruptedException
   {
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
@@ -1066,110 +1001,6 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
-
-    autoScaler.reset();
-    autoScaler.stop();
-  }
-
-  @Test
-  public void test_dynamicAllocationNotice_skips_whenSupervisorSuspended() throws InterruptedException
-  {
-    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
-    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-
-    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
-    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
-    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
-    // Suspended → DynamicAllocationTasksNotice should return early and not scale
-    EasyMock.expect(spec.isSuspended()).andReturn(true).anyTimes();
-    EasyMock.replay(spec);
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
-    EasyMock.replay(ingestionSchema);
-
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.replay(taskMaster);
-
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
-        supervisor,
-        DATASOURCE,
-        mapper.convertValue(
-            getScaleOutProperties(2),
-            LagBasedAutoScalerConfig.class
-        ),
-        spec,
-        emitter
-    );
-
-    supervisor.start();
-    autoScaler.start();
-    supervisor.runInternal();
-
-    int before = supervisor.getIoConfig().getTaskCount();
-    Thread.sleep(1000);
-    int after = supervisor.getIoConfig().getTaskCount();
-    // No scaling expected because supervisor is suspended
-    Assert.assertEquals(before, after);
-
-    autoScaler.reset();
-    autoScaler.stop();
-  }
-
-  @Test
-  public void test_changeTaskCountInIOConfig_handlesExceptionAndStillUpdatesTaskCount() throws InterruptedException
-  {
-    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
-    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-
-    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
-    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
-    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
-    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.replay(spec);
-
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
-    EasyMock.replay(ingestionSchema);
-
-    // SupervisorManager present but metadata insert fails → should be handled
-    SupervisorManager sm = EasyMock.createMock(SupervisorManager.class);
-    MetadataSupervisorManager msm = EasyMock.createMock(MetadataSupervisorManager.class);
-    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(sm)).anyTimes();
-    EasyMock.expect(sm.getMetadataSupervisorManager()).andReturn(msm).anyTimes();
-    msm.insert(EasyMock.anyString(), EasyMock.anyObject());
-    EasyMock.expectLastCall().andThrow(new RuntimeException("boom")).anyTimes();
-    EasyMock.replay(taskMaster, sm, msm);
-
-    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
-    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
-        supervisor,
-        DATASOURCE,
-        mapper.convertValue(
-            getScaleOutProperties(2),
-            LagBasedAutoScalerConfig.class
-        ),
-        spec,
-        emitter
-    );
-
-    supervisor.start();
-    autoScaler.start();
-    supervisor.runInternal();
-
-    int before = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, before);
-    Thread.sleep(1000); // allow one dynamic allocation cycle
-    int after = supervisor.getIoConfig().getTaskCount();
-    // Even though metadata insert failed, taskCount should still be updated in ioConfig
-    Assert.assertEquals(2, after);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1794,6 +1625,175 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     // Happy path test
     originalSpec.validateSpecUpdateTo(proposedSpecSameSource);
+  }
+
+  @Test
+  public void test_dynamicAllocationNotice_skipsScalingAndEmitsReason_ifTasksArePublishing() throws InterruptedException
+  {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        dynamicActionEmitter
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        0,
+        ImmutableMap.of("0", "0"),
+        null,
+        null,
+        Set.of("dummyTask"),
+        Collections.emptySet()
+    );
+
+    supervisor.start();
+    autoScaler.start();
+
+    supervisor.runInternal();
+    Thread.sleep(1000); // ensure a dynamic allocation notice completes
+
+    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertTrue(
+        dynamicActionEmitter
+            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .stream()
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("There are tasks pending completion"::equals)
+    );
+
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
+  public void test_dynamicAllocationNotice_skips_whenSupervisorSuspended() throws InterruptedException
+  {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    // Suspended → DynamicAllocationTasksNotice should return early and not scale
+    EasyMock.expect(spec.isSuspended()).andReturn(true).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(3);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        emitter
+    );
+
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+
+    int before = supervisor.getIoConfig().getTaskCount();
+    Thread.sleep(1000);
+    int after = supervisor.getIoConfig().getTaskCount();
+    // No scaling expected because supervisor is suspended
+    Assert.assertEquals(before, after);
+
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
+  public void test_changeTaskCountInIOConfig_handlesExceptionAndStillUpdatesTaskCount() throws InterruptedException
+  {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    // SupervisorManager present but metadata insert fails → should be handled
+    SupervisorManager sm = EasyMock.createMock(SupervisorManager.class);
+    MetadataSupervisorManager msm = EasyMock.createMock(MetadataSupervisorManager.class);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(sm)).anyTimes();
+    EasyMock.expect(sm.getMetadataSupervisorManager()).andReturn(msm).anyTimes();
+    msm.insert(EasyMock.anyString(), EasyMock.anyObject());
+    EasyMock.expectLastCall().andThrow(new RuntimeException("boom")).anyTimes();
+    EasyMock.replay(taskMaster, sm, msm);
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        emitter
+    );
+
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+
+    int before = supervisor.getIoConfig().getTaskCount();
+    Assert.assertEquals(1, before);
+    Thread.sleep(1000); // allow one dynamic allocation cycle
+    int after = supervisor.getIoConfig().getTaskCount();
+    // Even though metadata insert failed, taskCount should still be updated in ioConfig
+    Assert.assertEquals(2, after);
+
+    autoScaler.reset();
+    autoScaler.stop();
   }
 
   @Test
