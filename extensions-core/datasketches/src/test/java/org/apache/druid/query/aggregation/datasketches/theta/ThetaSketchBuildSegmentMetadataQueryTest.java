@@ -17,58 +17,53 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.hll;
+package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.datasketches.hll.TgtHllType;
-import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchBuildSegmentMetadataQueryTestBase;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
-public class HllSketchBuildSegmentMetadataQueryTest extends SketchBuildSegmentMetadataQueryTestBase
+public class ThetaSketchBuildSegmentMetadataQueryTest extends SketchBuildSegmentMetadataQueryTestBase
 {
   @Override
   protected void registerSerdeAndModules(ObjectMapper jsonMapper)
   {
-    HllSketchModule.registerSerde();
-    jsonMapper.registerModules(new HllSketchModule().getJacksonModules());
+    SketchModule.registerSerde();
+    jsonMapper.registerModules(new SketchModule().getJacksonModules());
   }
 
   @Override
   protected AggregatorFactory buildSketchAggregatorFactory(String sketchColumn, String inputFieldName)
   {
-    return new HllSketchBuildAggregatorFactory(sketchColumn, inputFieldName, null, null, null, false, false);
+    // shouldFinalize=false so the aggregator represents a sketch (not a double estimate)
+    // isInputThetaSketch=false to force "build" intermediate type
+    return new SketchMergeAggregatorFactory(sketchColumn, inputFieldName, null, false, false, null);
   }
 
   @Override
   protected ColumnType expectedCanonicalColumnType()
   {
-    return ColumnType.ofComplex(HllSketchModule.TYPE_NAME);
+    return ColumnType.ofComplex(SketchModule.THETA_SKETCH);
   }
 
   @Override
   protected void assertMergedSketchAggregator(AggregatorFactory aggregator, String sketchColumn)
   {
     Assert.assertTrue(
-        "Sketch aggregator should be HllSketchMergeAggregatorFactory but was " + aggregator.getClass().getName(),
-        aggregator instanceof HllSketchMergeAggregatorFactory
+        "Sketch aggregator should be SketchMergeAggregatorFactory but was " + aggregator.getClass().getName(),
+        aggregator instanceof SketchMergeAggregatorFactory
     );
 
-    HllSketchMergeAggregatorFactory hllAggregator = (HllSketchMergeAggregatorFactory) aggregator;
-    Assert.assertEquals("Aggregator name should match", sketchColumn, hllAggregator.getName());
-    Assert.assertEquals("Field name should match", sketchColumn, hllAggregator.getFieldName());
-    Assert.assertEquals("lgK should be default value", HllSketchAggregatorFactory.DEFAULT_LG_K, hllAggregator.getLgK());
-    Assert.assertEquals(
-        "tgtHllType should be default value",
-        TgtHllType.HLL_4.name(),
-        hllAggregator.getTgtHllType()
-    );
-    Assert.assertEquals(
-        "stringEncoding should be default value",
-        StringEncoding.UTF16LE,
-        hllAggregator.getStringEncoding()
-    );
+    SketchMergeAggregatorFactory thetaAggregator = (SketchMergeAggregatorFactory) aggregator;
+    Assert.assertEquals("Aggregator name should match", sketchColumn, thetaAggregator.getName());
+    Assert.assertEquals("Field name should match", sketchColumn, thetaAggregator.getFieldName());
+    Assert.assertEquals("size should be default value", SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE, thetaAggregator.getSize());
+    Assert.assertFalse("shouldFinalize should be false", thetaAggregator.getShouldFinalize());
+    Assert.assertFalse("isInputThetaSketch should be false", thetaAggregator.getIsInputThetaSketch());
+    Assert.assertNull("errorBoundsStdDev should be null", thetaAggregator.getErrorBoundsStdDev());
   }
 }
+
+
