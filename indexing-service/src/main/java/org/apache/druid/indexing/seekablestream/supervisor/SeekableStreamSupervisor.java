@@ -3444,7 +3444,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       activelyReadingTaskGroups.remove(groupId);
     }
 
-    maybeScaleUpDuringTaskRollover();
+    maybeScaleDuringTaskRollover();
   }
 
   /**
@@ -3453,7 +3453,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * This method is invoked to determine whether a task count adjustment is needed
    * during a task rollover based on the recommendations from the task auto-scaler.
  */
-  private void maybeScaleUpDuringTaskRollover()
+  @VisibleForTesting
+  void maybeScaleDuringTaskRollover()
   {
     if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
       int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
