@@ -159,6 +159,9 @@
 
   "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/ready": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/utilized": { "dimensions" : [], "type" : "gauge" },
+  "jetty/threadPool/utilizationRate": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/idle": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/busy": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/isLowOnThreads": { "dimensions" : [], "type" : "gauge" },
