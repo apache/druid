@@ -50,6 +50,11 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class DartControllerRegistry
 {
+  /**
+   * Minimum frequency for checking if {@link #cleanupExpiredReports()} needs to be run.
+   */
+  private static final long MIN_CLEANUP_CHECK_MILLIS = 10_000;
+
   private final DartControllerConfig config;
 
   /**
@@ -90,7 +95,10 @@ public class DartControllerRegistry
     // Schedule periodic cleanup of expired reports.
     if (!config.getMaxRetainedReportDuration().equals(Period.ZERO)) {
       final String threadNameFormat = StringUtils.format("%s-ReportCleanupExec-%%s", getClass().getSimpleName());
-      final long cleanupPeriodMs = config.getMaxRetainedReportDuration().toStandardDuration().getMillis() / 10;
+      final long cleanupPeriodMs = Math.max(
+          MIN_CLEANUP_CHECK_MILLIS,
+          config.getMaxRetainedReportDuration().toStandardDuration().getMillis() / 10
+      );
       cleanupExec = Execs.scheduledSingleThreaded(threadNameFormat);
       cleanupExec.scheduleAtFixedRate(
           this::cleanupExpiredReports,
@@ -161,6 +169,9 @@ public class DartControllerRegistry
             )
         );
       }
+    } else if (didRemove) {
+      // Report not retained, but controller was removed; clean up the SQL query ID mapping.
+      sqlQueryIdToDartQueryId.remove(holder.getSqlQueryId(), dartQueryId);
     }
   }
 
