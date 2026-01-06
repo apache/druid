@@ -582,6 +582,7 @@ export class WorkbenchQuery {
     if (engine === 'sql-msq-dart') {
       apiQuery.context.engine = 'msq-dart';
       apiQuery.context.fullReport ??= true;
+      apiQuery.context.liveReportCounters ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {
