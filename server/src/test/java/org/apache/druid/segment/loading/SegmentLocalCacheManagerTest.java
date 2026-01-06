@@ -1178,6 +1178,94 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetSegmentVirtualStorageFabricEvictImmediately() throws Exception
+  {
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
+    final File infoDir = tmpFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return ImmutableList.of(locationConfig);
+      }
+
+      @Override
+      public boolean isVirtualStorage()
+      {
+        return true;
+      }
+
+      @Override
+      public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
+      {
+        return true;
+      }
+
+      @Override
+      public File getInfoDir()
+      {
+        return infoDir;
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    final SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    createSegmentZipInLocation(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+
+    // Acquire the segment (load() is not allowed with evictImmediately)
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
+    AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
+    Assert.assertTrue(theSegment.isPresent());
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertEquals(segmentToLoad.getId(), theSegment.get().getId());
+
+    // Info file should exist
+    final File infoFile = new File(infoDir, segmentToLoad.getId().toString());
+    Assert.assertTrue(infoFile.exists());
+
+    // Drop the segment while still holding
+    manager.drop(segmentToLoad);
+
+    // Segment files and info file should still exist because we still have a hold
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertTrue(infoFile.exists());
+
+    // Release the hold - with evictImmediately, the segment should be evicted immediately
+    theSegment.get().close();
+    segmentAction.close();
+
+    // Both segment files and info file should be deleted
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertFalse(infoFile.exists());
+
+    // Verify the segment can be loaded again if needed
+    AcquireSegmentAction segmentActionAfterEvict = manager.acquireSegment(segmentToLoad);
+    AcquireSegmentResult resultAfterEvict = segmentActionAfterEvict.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterEvict = resultAfterEvict.getReferenceProvider().acquireReference();
+    Assert.assertTrue(theSegmentAfterEvict.isPresent());
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertEquals(segmentToLoad.getId(), theSegmentAfterEvict.get().getId());
+
+    // Info file should exist again
+    Assert.assertTrue(infoFile.exists());
+
+    theSegmentAfterEvict.get().close();
+    segmentActionAfterEvict.close();
+
+    // After final release, info file should be deleted again
+    Assert.assertFalse(infoFile.exists());
+  }
+
+  @Test
   public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException
   {
     final DataSegment tombstone = DataSegment.builder()

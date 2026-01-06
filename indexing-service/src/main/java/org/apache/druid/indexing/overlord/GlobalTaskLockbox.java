@@ -277,14 +277,11 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Cleans up pending segments associated with the given task, if any.
+   * Creates a new {@link TaskLockbox} for the given datasource.
    */
-  protected void cleanupPendingSegments(Task task)
+  protected TaskLockbox createLockbox(String dataSource)
   {
-    executeForTask(
-        task,
-        lockbox -> lockbox.cleanupPendingSegments(task)
-    );
+    return new TaskLockbox(dataSource, taskStorage, metadataStorageCoordinator);
   }
 
   /**
@@ -484,9 +481,7 @@ public class GlobalTaskLockbox
         (ds, existingResource) -> {
           final DatasourceLockboxResource resource = Objects.requireNonNullElseGet(
               existingResource,
-              () -> new DatasourceLockboxResource(
-                  new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
-              )
+              () -> new DatasourceLockboxResource(createLockbox(datasource))
           );
 
           // Verify sync is complete before acquiring the resource

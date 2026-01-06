@@ -17,22 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.supervisor.autoscaler;
+package org.apache.druid.segment.loading;
 
-public interface SupervisorTaskAutoScaler
+import org.junit.Assert;
+import org.junit.Test;
+
+public class SegmentLoaderConfigTest
 {
-  void start();
-  void stop();
-  void reset();
-
-  /**
-   * Computes the optimal task count during task rollover, allowing a non-disruptive scale-down.
-   * Must be called by the supervisor when tasks are ending their duration.
-   *
-   * @return optimal task count for scale-down, or -1 if no change needed
-   */
-  default int computeTaskCountForRollover()
+  @Test
+  public void testSetVirtualStorage()
   {
-    return -1;
+    final SegmentLoaderConfig config = new SegmentLoaderConfig();
+
+    // Verify default values
+    Assert.assertFalse(config.isVirtualStorage());
+    Assert.assertFalse(config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease());
+
+    // Set both to true
+    config.setVirtualStorage(true, true);
+
+    // Verify both fields are set
+    Assert.assertTrue(config.isVirtualStorage());
+    Assert.assertTrue(config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease());
   }
 }

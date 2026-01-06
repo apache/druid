@@ -58,14 +58,15 @@ public class WeightedCostFunction
    * </ul>
    * <p>
    * Formula: {@code lagWeight * lagRecoveryTime + idleWeight * idlenessCost}.
-   * This approach directly connects costs to operational metricsю
+   * This approach directly connects costs to operational metrics.
    *
-   * @return cost score in seconds, or {@link Double#POSITIVE_INFINITY} for invalid inputs
+   * @return CostResult containing totalCost, lagCost, and idleCost,
+   * or result with {@link Double#POSITIVE_INFINITY} for invalid inputs
    */
-  public double computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
+  public CostResult computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
-      return Double.POSITIVE_INFINITY;
+      return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
     }
 
     final double avgProcessingRate = metrics.getAvgProcessingRate();
@@ -74,9 +75,9 @@ public class WeightedCostFunction
       // Metrics are unavailable - favor maintaining the current task count.
       // We're conservative about scale up, but won't let an unlikey scale down to happen.
       if (proposedTaskCount == metrics.getCurrentTaskCount()) {
-        return 0.01d;
+        return new CostResult(0.01d, 0.0, 0.0);
       } else {
-        return Double.POSITIVE_INFINITY;
+        return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
       }
     } else {
       // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
@@ -86,19 +87,21 @@ public class WeightedCostFunction
 
     final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount);
     final double idleCost = proposedTaskCount * metrics.getTaskDurationSeconds() * predictedIdleRatio;
-    final double cost = config.getLagWeight() * lagRecoveryTime + config.getIdleWeight() * idleCost;
+    final double lagCost = config.getLagWeight() * lagRecoveryTime;
+    final double weightedIdleCost = config.getIdleWeight() * idleCost;
+    final double cost = lagCost + weightedIdleCost;
 
     log.debug(
-        "Cost for taskCount[%d]: lagRecoveryTime[%.2fs], idleCost[%.2fs], "
+        "Cost for taskCount[%d]: lagCost[%.2fs], idleCost[%.2fs], "
         + "predictedIdle[%.3f], finalCost[%.2fs]",
         proposedTaskCount,
-        lagRecoveryTime,
-        idleCost,
+        lagCost,
+        weightedIdleCost,
         predictedIdleRatio,
         cost
     );
 
-    return cost;
+    return new CostResult(cost, lagCost, weightedIdleCost);
   }
 
 
