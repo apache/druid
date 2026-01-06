@@ -56,10 +56,15 @@ public class DartSqlClientFactoryImpl implements DartSqlClientFactory
     final ServiceClient client = clientFactory.makeClient(
         StringUtils.format("%s[dart-sql]", node.getHostAndPortToUse()),
         new FixedServiceLocator(ServiceLocation.fromDruidNode(node)
-                                               .withBasePath(SqlResource.PATH.replaceAll("/$", ""))),
+                                               .withBasePath(removeTrailingSlash(SqlResource.PATH))),
         StandardRetryPolicy.noRetries()
     );
 
     return new DartSqlClientImpl(client, jsonMapper);
+  }
+
+  private static String removeTrailingSlash(String path)
+  {
+    return path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
   }
 }

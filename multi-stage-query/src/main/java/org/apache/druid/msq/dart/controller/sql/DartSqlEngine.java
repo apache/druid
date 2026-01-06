@@ -64,8 +64,8 @@ import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.GetReportResponse;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
