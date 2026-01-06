@@ -60,7 +60,6 @@ public class TableProjectionSchema implements BaseTableProjectionSchema
 
   private final VirtualColumns virtualColumns;
   private final List<String> columnNames;
-  @Nullable
   private final AggregatorFactory[] aggregators;
   private final List<OrderBy> ordering;
 
@@ -113,7 +112,7 @@ public class TableProjectionSchema implements BaseTableProjectionSchema
   @Override
   public List<String> getColumnNames()
   {
-    List<String> columns = new ArrayList<>(columnNames.size() + (aggregators != null ? aggregators.length : 0));
+    List<String> columns = new ArrayList<>(columnNames.size() + aggregators.length);
     columns.addAll(columnNames);
     for (AggregatorFactory aggregator : aggregators) {
       columns.add(aggregator.getName());

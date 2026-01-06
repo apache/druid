@@ -1042,6 +1042,9 @@ public class IndexIO
         final String smooshName = Projections.getProjectionSmooshFileName(projectionSpec.getSchema(), column);
         final ByteBuffer colBuffer = segmentFileMapper.mapFile(smooshName);
         final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
+        if (columnDescriptor == null) {
+          continue;
+        }
 
         final BaseColumnHolder parentColumn;
         if (parentColumns.containsKey(column)) {

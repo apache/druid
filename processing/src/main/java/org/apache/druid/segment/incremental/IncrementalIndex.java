@@ -98,7 +98,6 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -237,7 +236,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   /**
    * Metadata to be persisted along with this index, when it is eventually persisted.
    */
-  private final Supplier<Metadata> metadataSupplier;
+  private final Metadata metadata;
   protected final boolean preserveExistingMetrics;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -357,30 +356,16 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
 
-    // Set metadata last, so dimensionOrder is populated if dimensions are fixed, or compute on demand if not
-    if (dimensionsSpec.hasFixedDimensions()) {
-      final Metadata metadata = new Metadata(
-          null,
-          getCombiningAggregators(metrics),
-          incrementalIndexSchema.getTimestampSpec(),
-          this.queryGranularity,
-          this.rollup,
-          getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
-          Collections.emptyList()
-      );
-      this.metadataSupplier = () -> metadata;
-    } else {
-      // if dimensions are not fixed, stuff changes over time, so recompute metadata on demand
-      this.metadataSupplier = () -> new Metadata(
-          null,
-          getCombiningAggregators(metrics),
-          incrementalIndexSchema.getTimestampSpec(),
-          this.queryGranularity,
-          this.rollup,
-          getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
-          Collections.emptyList()
-      );
-    }
+    // Set metadata last, so dimensionOrder is populated
+    this.metadata = new Metadata(
+        null,
+        getCombiningAggregators(metrics),
+        incrementalIndexSchema.getTimestampSpec(),
+        this.queryGranularity,
+        this.rollup,
+        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        Collections.emptyList()
+    );
   }
 
   @Nullable
@@ -775,7 +760,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   @Override
   public List<OrderBy> getOrdering()
   {
-    return metadataSupplier.get().getOrdering();
+    return metadata.getOrdering();
   }
 
   @Override
@@ -913,7 +898,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
 
   public Metadata getMetadata()
   {
-    return metadataSupplier.get();
+    return metadata;
   }
 
   @Override

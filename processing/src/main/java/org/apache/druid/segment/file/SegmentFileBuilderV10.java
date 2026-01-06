@@ -147,29 +147,29 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
     final byte[] metadataBytes = jsonMapper.writeValueAsBytes(segmentFileMetadata);
 
-    final FileOutputStream outputStream = new FileOutputStream(new File(baseDir, outputFileName));
+    try (final FileOutputStream outputStream = new FileOutputStream(new File(baseDir, outputFileName))) {
+      // still need to make compression work... probably need to store both compressed and uncompressed lengths? no harm
+      // if so, since on reader side we can just check for other compression and read the extra int or whatever
+      outputStream.write(new byte[]{IndexIO.V10_VERSION, CompressionStrategy.NONE.getId()});
+      ByteBuffer intBuffer = ByteBuffer.allocate(4);
+      intBuffer.order(ByteOrder.LITTLE_ENDIAN);
+      intBuffer.putInt(metadataBytes.length);
+      intBuffer.flip();
 
-    // still need to make compression work... probably need to store both compressed and uncompressed lengths? no harm
-    // if so, since on reader side we can just check for other compression and read the extra int or whatever
-    outputStream.write(new byte[]{IndexIO.V10_VERSION, CompressionStrategy.NONE.getId()});
-    ByteBuffer intBuffer = ByteBuffer.allocate(4);
-    intBuffer.order(ByteOrder.LITTLE_ENDIAN);
-    intBuffer.putInt(metadataBytes.length);
-    intBuffer.flip();
+      outputStream.write(intBuffer.array());
+      outputStream.write(metadataBytes);
 
-    outputStream.write(intBuffer.array());
-    outputStream.write(metadataBytes);
-
-    for (File f : smoosher.getOutFiles()) {
-      try (FileInputStream fis = new FileInputStream(f)) {
-        byte[] buffer = new byte[4096];
-        int bytesRead;
-        while ((bytesRead = fis.read(buffer)) != -1) {
-          outputStream.write(buffer, 0, bytesRead);
+      for (File f : smoosher.getOutFiles()) {
+        try (FileInputStream fis = new FileInputStream(f)) {
+          byte[] buffer = new byte[4096];
+          int bytesRead;
+          while ((bytesRead = fis.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+          }
         }
+        // delete all the old 00000.smoosh
+        f.delete();
       }
-      // delete all the old 00000.smoosh
-      f.delete();
     }
   }
 }

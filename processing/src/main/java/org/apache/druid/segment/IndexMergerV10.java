@@ -230,8 +230,7 @@ public class IndexMergerV10 extends IndexMergerBase
         if (!merger.hasOnlyNulls()) {
           ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
           makeColumn(v10Smoosher, basePrefix + mergedDimensions.get(i), columnDesc);
-        } else if (dimensionsSpecInspector.shouldStore(mergedDimensions.get(i))) {
-          // shouldStore AND hasOnlyNulls
+        } else {
           ColumnDescriptor columnDesc = ColumnDescriptor
               .builder()
               .setValueType(dimFormats.get(i).getLogicalType().getType())
@@ -265,10 +264,10 @@ public class IndexMergerV10 extends IndexMergerBase
       List<ProjectionMetadata> projections = new ArrayList<>();
       // ingestion current builds v9 metadata... translate v9 metadata and projection stuff to v10 format
       projections.add(
-          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensions, finalMetadata)
+          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensionsWithTime, finalMetadata)
       );
       // convert v9 projections to v10 projections
-      for (AggregateProjectionMetadata aggMeta : segmentMetadata.getProjections()) {
+      for (AggregateProjectionMetadata aggMeta : finalMetadata.getProjections()) {
         projections.add(new ProjectionMetadata(aggMeta.getNumRows(), aggMeta.getSchema()));
       }
 

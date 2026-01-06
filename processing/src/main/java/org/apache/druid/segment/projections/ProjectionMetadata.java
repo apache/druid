@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
-import com.google.common.collect.Lists;
 import org.apache.druid.segment.Metadata;
 
 import java.util.List;
@@ -39,14 +38,10 @@ public class ProjectionMetadata
   public static ProjectionMetadata forBaseTable(int numRows, List<String> dims, Metadata metadata)
   {
     final ProjectionSchema schema;
-    List<String> dimsWithTime = Lists.newArrayListWithCapacity(dims.size() + 1);
-    for (int i = 0; i < dims.size() + 1; i++) {
-      dimsWithTime.add(metadata.getOrdering().get(i).getColumnName());
-    }
     if (Boolean.TRUE.equals(metadata.isRollup())) {
-      schema = RollupTableProjectionSchema.fromMetadata(dimsWithTime, metadata);
+      schema = RollupTableProjectionSchema.fromMetadata(dims, metadata);
     } else {
-      schema = TableProjectionSchema.fromMetadata(dimsWithTime, metadata);
+      schema = TableProjectionSchema.fromMetadata(dims, metadata);
     }
     return new ProjectionMetadata(
         numRows,
