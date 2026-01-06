@@ -1005,7 +1005,8 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Collections.singletonList(2L), rowList.get(3).metricValues());
 
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimA").hasBitmapIndexes());
-    Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimB").hasBitmapIndexes());
+    // we always have an "index" for a column with all null values (since everything matches or doesnt)
+    Assert.assertTrue(adapter.getCapabilities("dimB").hasBitmapIndexes());
     Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimC").hasBitmapIndexes());
 
     if (useBitmapIndexes) {
