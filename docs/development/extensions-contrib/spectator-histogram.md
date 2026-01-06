@@ -79,8 +79,6 @@ Also see the [limitations](#limitations] of this extension.
 * Supports positive long integer values within the range of [0, 2^53). Negatives are
 coerced to 0.
 * Does not support decimals.
-* Does not support Druid SQL queries, only native queries.
-* Does not support vectorized queries.
 * Generates 276 fixed buckets with increasing bucket widths. In practice, the observed error of computed percentiles ranges from 0.1% to 3%, exclusive. See [Bucket boundaries](#histogram-bucket-boundaries) for the full list of bucket boundaries.
 
 :::tip
@@ -134,7 +132,11 @@ To use SpectatorHistogram, make sure you [include](../../configuration/extension
 druid.extensions.loadList=["druid-spectator-histogram"]
 ```
 
-## Aggregators
+## Native Query Components
+
+The following sections describe the aggregators and post-aggregators for use with [native Druid queries](../../querying/querying.md).
+
+### Aggregators
 
 The result of the aggregation is a histogram that is built by ingesting numeric values from
 the raw data, or from combining pre-aggregated histograms. The result is represented in 
@@ -207,9 +209,9 @@ To get the population size (count of events contributing to the histogram):
 | name      | A String for the output (result) name of the aggregation.                      | yes       |
 | fieldName | A String for the name of the input field containing pre-aggregated histograms. | yes       |
 
-## Post Aggregators
+### Post Aggregators
 
-### Percentile (singular)
+#### Percentile (singular)
 This returns a single percentile calculation based on the distribution of the values in the aggregated histogram.
 
 ```
@@ -231,7 +233,7 @@ This returns a single percentile calculation based on the distribution of the va
 | field      | A field reference pointing to the aggregated histogram.     | yes       |
 | percentile | A single decimal percentile between 0.0 and 100.0           | yes       |
 
-### Percentiles (multiple)
+#### Percentiles (multiple)
 This returns an array of percentiles corresponding to those requested.
 
 ```
@@ -271,6 +273,134 @@ array of percentiles.
 | name        | A String for the output (result) name of the calculation.    | yes       |
 | field       | A field reference pointing to the aggregated histogram.      | yes       |
 | percentiles | Non-empty array of decimal percentiles between 0.0 and 100.0 | yes       |
+
+#### Count Post-Aggregator
+
+This returns the total count of observations (data points) that were recorded in the histogram.
+This is useful for understanding the population size without needing a separate count metric.
+
+```json
+{
+  "type": "countSpectatorHistogram",
+  "name": "<output name>",
+  "field": {
+    "type": "fieldAccess",
+    "fieldName": "<name of aggregated SpectatorHistogram>"
+  }
+}
+```
+
+| Property | Description                                                | Required? |
+|----------|------------------------------------------------------------|-----------|
+| type     | This String should always be "countSpectatorHistogram"     | yes       |
+| name     | A String for the output (result) name of the calculation.  | yes       |
+| field    | A field reference pointing to the aggregated histogram.    | yes       |
+
+## SQL Functions
+
+In addition to the native query aggregators and post-aggregators, this extension provides SQL functions for easier use in Druid SQL queries.
+
+### SPECTATOR_COUNT
+
+Returns the total count of observations (data points) in a Spectator histogram.
+
+**Syntax:**
+```sql
+SPECTATOR_COUNT(expr)
+```
+
+**Arguments:**
+- `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
+
+**Returns:** BIGINT - the total number of observations.
+
+**Example:**
+```sql
+SELECT
+  SPECTATOR_COUNT(hist_added) AS total_count,
+  SPECTATOR_COUNT(added) AS total_count_from_raw
+FROM wikipedia
+```
+
+### SPECTATOR_PERCENTILE
+
+Computes approximate percentile values from a Spectator histogram. This function supports two forms: a single percentile or multiple percentiles.
+
+#### Single Percentile
+
+**Syntax:**
+```sql
+SPECTATOR_PERCENTILE(expr, percentile)
+```
+
+**Arguments:**
+- `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
+- `percentile`: A numeric value between 0 and 100 representing the desired percentile.
+
+**Returns:** DOUBLE - the approximate value at the specified percentile.
+
+**Example:**
+```sql
+SELECT
+  SPECTATOR_PERCENTILE(hist_added, 50) AS median_added,
+  SPECTATOR_PERCENTILE(hist_added, 99) AS p99_added,
+  SPECTATOR_PERCENTILE(added, 95) AS p95_from_raw
+FROM wikipedia
+```
+
+#### Multiple Percentiles (Array)
+
+**Syntax:**
+```sql
+SPECTATOR_PERCENTILE(expr, ARRAY[p1, p2, ...])
+```
+
+**Arguments:**
+- `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
+- `ARRAY[p1, p2, ...]`: An array of numeric values between 0 and 100 representing the desired percentiles.
+
+**Returns:** DOUBLE ARRAY - an array of approximate values at the specified percentiles, in the same order as requested.
+
+**Example:**
+```sql
+SELECT
+  SPECTATOR_PERCENTILE(hist_added, ARRAY[25, 50, 75, 99]) AS percentiles
+FROM wikipedia
+```
+
+This returns an array like `[200.5, 341.0, 468.5, 675.9]` representing the 25th, 50th, 75th, and 99th percentiles.
+
+Using the array form is more efficient than calling `SPECTATOR_PERCENTILE` multiple times for different percentiles, as the underlying histogram is only aggregated once.
+
+### Combined Example
+
+You can use both functions together in a single query. Multiple aggregations on the same column share the underlying histogram aggregator for efficiency:
+
+```sql
+SELECT
+  countryName,
+  SPECTATOR_COUNT(hist_added) AS observation_count,
+  SPECTATOR_PERCENTILE(hist_added, 50) AS median_added,
+  SPECTATOR_PERCENTILE(hist_added, 90) AS p90_added,
+  SPECTATOR_PERCENTILE(hist_added, 99) AS p99_added
+FROM wikipedia
+GROUP BY countryName
+ORDER BY observation_count DESC
+LIMIT 10
+```
+
+Or using the array form to get multiple percentiles in a single column:
+
+```sql
+SELECT
+  countryName,
+  SPECTATOR_COUNT(hist_added) AS observation_count,
+  SPECTATOR_PERCENTILE(hist_added, ARRAY[50, 90, 99]) AS percentiles
+FROM wikipedia
+GROUP BY countryName
+ORDER BY observation_count DESC
+LIMIT 10
+```
 
 ## Examples
 
