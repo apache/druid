@@ -306,7 +306,7 @@ public class DartQueryMaker implements QueryMaker
         }
       }
       finally {
-        controllerRegistry.deregister(controllerHolder, retVal != null ? retVal.get(MSQTaskReport.REPORT_KEY) : null);
+        controllerRegistry.deregister(controllerHolder, retVal);
         Thread.currentThread().setName(threadName);
       }
 
@@ -436,7 +436,9 @@ public class DartQueryMaker implements QueryMaker
             taskReport = null;
           }
 
-          controllerRegistry.deregister(controllerHolder, taskReport);
+          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
+          controllerRegistry.deregister(controllerHolder, reportMap);
           Thread.currentThread().setName(threadName);
         }
       });

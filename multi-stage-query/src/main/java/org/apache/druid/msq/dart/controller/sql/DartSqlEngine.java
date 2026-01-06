@@ -344,7 +344,7 @@ public class DartSqlEngine implements SqlEngine
         if (otherReport != null && otherReport.getQueryInfo() != null) {
           infoAndReport = new QueryInfoAndReport(
               (DartQueryInfo) otherReport.getQueryInfo(),
-              otherReport.getReport(),
+              otherReport.getReportMap(),
               DateTimes.utc(0)
           );
           break;
@@ -358,12 +358,12 @@ public class DartSqlEngine implements SqlEngine
 
     if (stateReadAuthorization.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see any report.
-      return new GetReportResponse(infoAndReport.getQueryInfo(), infoAndReport.getReport());
+      return new GetReportResponse(infoAndReport.getQueryInfo(), infoAndReport.getReportMap());
     } else {
       // User cannot READ STATE, so they can see only their own queries, without authentication details.
       final DartQueryInfo queryInfo = infoAndReport.getQueryInfo();
       if (isOwnQuery(authenticationResult, queryInfo)) {
-        return new GetReportResponse(queryInfo.withoutAuthenticationResult(), infoAndReport.getReport());
+        return new GetReportResponse(queryInfo.withoutAuthenticationResult(), infoAndReport.getReportMap());
       } else {
         return null;
       }

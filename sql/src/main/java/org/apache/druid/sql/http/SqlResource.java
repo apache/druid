@@ -178,7 +178,7 @@ public class SqlResource
    * @param request    http request.
    */
   @GET
-  @Path("/queries/{sqlQueryId}/report")
+  @Path("/queries/{sqlQueryId}/reports")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetQueryReport(
       @PathParam("sqlQueryId") final String sqlQueryId,

@@ -20,14 +20,21 @@
 package org.apache.druid.testing.embedded.msq;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.guice.SleepModule;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.http.GetReportResponse;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -44,10 +51,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Embedded test for the Dart report API at /druid/v2/sql/queries/{id}/report.
+ * Embedded test for the Dart report API at {@code /druid/v2/sql/queries/{id}/reports}.
  * Uses batch ingestion to avoid dependency on Kafka/Docker.
  */
 public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
@@ -98,7 +106,8 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
                                .addServer(broker1)
                                .addServer(broker2)
                                .addServer(indexer)
-                               .addServer(historical);
+                               .addServer(historical)
+                               .addExtension(SleepModule.class);
   }
 
   @BeforeAll
@@ -152,7 +161,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
     Assertions.assertNotNull(reportResponse.getQueryInfo(), "Query info should not be null");
-    Assertions.assertNotNull(reportResponse.getReport(), "Report should not be null");
+    Assertions.assertNotNull(reportResponse.getReportMap(), "Report should not be null");
 
     // Verify the query info
     final DartQueryInfo queryInfo = (DartQueryInfo) reportResponse.getQueryInfo();
@@ -161,7 +170,8 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertNotNull(queryInfo.getDartQueryId());
 
     // Verify the report is an MSQTaskReport
-    Assertions.assertInstanceOf(MSQTaskReport.class, reportResponse.getReport(), "Report should be an MSQTaskReport");
+    Assertions.assertInstanceOf(TaskReport.ReportMap.class, reportResponse.getReportMap());
+    Assertions.assertInstanceOf(MSQTaskReport.class, reportResponse.getReportMap().get(MSQTaskReport.REPORT_KEY));
   }
 
   @Test
@@ -220,7 +230,111 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
       Assertions.assertEquals(sql, queryInfo.getSql());
       Assertions.assertNotNull(queryInfo.getDartQueryId());
-      Assertions.assertInstanceOf(MSQTaskReport.class, report.getReport());
+      Assertions.assertInstanceOf(TaskReport.ReportMap.class, report.getReportMap());
+      Assertions.assertInstanceOf(MSQTaskReport.class, report.getReportMap().get(MSQTaskReport.REPORT_KEY));
     }
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_getQueryReport_forRunningAndCanceledQuery()
+  {
+    final String sqlQueryId = UUID.randomUUID().toString();
+
+    // Use SLEEP to make the query run for a while.
+    // Need to use a non-constant expression to make this happen at runtime rather than planning time.
+    final String sql =
+        StringUtils.format("SELECT SLEEP(TIMESTAMP_TO_MILLIS(__time) * 0 + 60) FROM \"%s\"", ingestedDataSource);
+
+    // Step 1: Issue the query asynchronously.
+    final ListenableFuture<String> queryFuture =
+        msqApis.submitDartSqlAsync(sql, Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId), broker1);
+
+    // Step 2: Get the report.
+    final GetReportResponse runningReport = waitForReport(sqlQueryId);
+
+    Assertions.assertNotNull(runningReport, "Report should be available for running query");
+    Assertions.assertNotNull(runningReport.getQueryInfo(), "Query info should not be null");
+    Assertions.assertNotNull(runningReport.getReportMap(), "Report should not be null");
+
+    // Verify the query info
+    final DartQueryInfo runningQueryInfo = (DartQueryInfo) runningReport.getQueryInfo();
+    Assertions.assertEquals(sql, runningQueryInfo.getSql());
+    Assertions.assertEquals(sqlQueryId, runningQueryInfo.getSqlQueryId());
+
+    // Verify the report is an MSQTaskReport with RUNNING status
+    final MSQTaskReport runningMsqReport =
+        (MSQTaskReport) runningReport.getReportMap().get(MSQTaskReport.REPORT_KEY);
+    Assertions.assertNotNull(runningMsqReport, "MSQ report should not be null");
+
+    final MSQTaskReportPayload runningPayload = runningMsqReport.getPayload();
+    Assertions.assertNotNull(runningPayload, "Payload should not be null");
+    Assertions.assertNotNull(runningPayload.getStatus(), "Status should not be null");
+    Assertions.assertEquals(
+        TaskState.RUNNING,
+        runningPayload.getStatus().getStatus(),
+        "Query should be in RUNNING state"
+    );
+
+    // Step 3: Cancel the query
+    final boolean canceled = msqApis.cancelDartQuery(sqlQueryId, broker1);
+    Assertions.assertTrue(canceled, "Query cancellation should be accepted");
+
+    // Step 4: Wait for the sqlQuery/time metric to be emitted (signals query completion)
+    final LatchableEmitter emitter = broker1.latchableEmitter();
+    emitter.waitForEvent(
+        event -> event.hasMetricName("sqlQuery/time")
+                      .hasDimension("id", sqlQueryId)
+    );
+
+    // Step 5: Fetch the report again - should now be in FAILED state
+    final GetReportResponse canceledReport = msqApis.getDartQueryReport(sqlQueryId, broker1);
+
+    Assertions.assertNotNull(canceledReport, "Report should be available for canceled query");
+    Assertions.assertNotNull(canceledReport.getReportMap(), "Report map should not be null");
+
+    final MSQTaskReport canceledMsqReport =
+        (MSQTaskReport) canceledReport.getReportMap().get(MSQTaskReport.REPORT_KEY);
+    Assertions.assertNotNull(canceledMsqReport, "MSQ report should not be null for canceled query");
+
+    final MSQTaskReportPayload canceledPayload = canceledMsqReport.getPayload();
+    Assertions.assertNotNull(canceledPayload, "Payload should not be null for canceled query");
+    Assertions.assertNotNull(canceledPayload.getStatus(), "Status should not be null for canceled query");
+    Assertions.assertEquals(
+        TaskState.FAILED,
+        canceledPayload.getStatus().getStatus(),
+        "canceled query should be in FAILED state"
+    );
+
+    // The query future should complete with an error due to cancellation
+    try {
+      queryFuture.get();
+      Assertions.fail("Query should have failed due to cancellation");
+    }
+    catch (Exception ignored) {
+      // Expected - query was canceled
+    }
+  }
+
+  /**
+   * Polls the report API until a report is available.
+   */
+  private GetReportResponse waitForReport(String sqlQueryId)
+  {
+    final long timeout = 30_000;
+    final long deadline = System.currentTimeMillis() + timeout;
+    while (System.currentTimeMillis() < deadline) {
+      final GetReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker1);
+      if (report != null) {
+        return report;
+      }
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    throw new ISE("Timed out after[%,d] ms waiting for query to be in RUNNING state", timeout);
   }
 }

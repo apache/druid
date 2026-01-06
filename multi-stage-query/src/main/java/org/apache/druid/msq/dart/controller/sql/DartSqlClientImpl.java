@@ -74,7 +74,7 @@ public class DartSqlClientImpl implements DartSqlClient
   public ListenableFuture<GetReportResponse> getQueryReport(String sqlQueryId, boolean selfOnly)
   {
     try {
-      URIBuilder builder = new URIBuilder(StringUtils.format("/queries/%s/report", StringUtils.urlEncode(sqlQueryId)));
+      URIBuilder builder = new URIBuilder(StringUtils.format("/queries/%s/reports", StringUtils.urlEncode(sqlQueryId)));
       if (selfOnly) {
         builder.addParameter("selfOnly", null);
       }

@@ -21,8 +21,10 @@ package org.apache.druid.testing.embedded.msq;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -49,6 +51,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -179,6 +182,52 @@ public class EmbeddedMSQApis
   {
     final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
     return fetchReportFromBrokerClient(sqlQueryId, brokerClient, targetBroker.bindings().jsonMapper());
+  }
+
+  /**
+   * Submits a Dart SQL query asynchronously to a specific broker.
+   *
+   * @param sql          the SQL query
+   * @param context      additional context parameters
+   * @param targetBroker the broker to submit the query to
+   *
+   * @return a future that resolves when the query completes
+   */
+  public ListenableFuture<String> submitDartSqlAsync(
+      String sql,
+      Map<String, Object> context,
+      EmbeddedBroker targetBroker
+  )
+  {
+    final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
+    final Map<String, Object> fullContext = new HashMap<>(context);
+    fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
+
+    return brokerClient.submitSqlQuery(
+        new ClientSqlQuery(
+            sql,
+            ResultFormat.CSV.name(),
+            false,
+            false,
+            false,
+            fullContext,
+            null
+        )
+    );
+  }
+
+  /**
+   * Cancels a Dart SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId   the SQL query ID to cancel
+   * @param targetBroker the broker where the query is running
+   *
+   * @return true if the cancellation was accepted
+   */
+  public boolean cancelDartQuery(String sqlQueryId, EmbeddedBroker targetBroker)
+  {
+    final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
+    return FutureUtils.getUnchecked(brokerClient.cancelSqlQuery(sqlQueryId), true);
   }
 
   /**

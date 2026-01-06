@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -135,7 +134,7 @@ public class DartControllerRegistry
    * time afterwards, based on {@link DartControllerConfig#getMaxRetainedReportCount()} and
    * {@link DartControllerConfig#getMaxRetainedReportDuration()}.
    */
-  public void deregister(ControllerHolder holder, @Nullable TaskReport completeReport)
+  public void deregister(ControllerHolder holder, @Nullable TaskReport.ReportMap completeReport)
   {
     final String dartQueryId = holder.getController().queryId();
 
@@ -203,10 +202,9 @@ public class DartControllerRegistry
     if (runningController != null) {
       final TaskReport.ReportMap liveReportMap = runningController.getController().liveReports();
       if (liveReportMap != null) {
-        final TaskReport report = liveReportMap.get(MSQTaskReport.REPORT_KEY);
         return new QueryInfoAndReport(
             DartQueryInfo.fromControllerHolder(runningController),
-            report,
+            liveReportMap,
             DateTimes.nowUtc()
         );
       } else {

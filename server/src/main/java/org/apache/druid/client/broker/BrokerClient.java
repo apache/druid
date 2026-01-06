@@ -75,4 +75,13 @@ public interface BrokerClient
    * @return JSON response from the report API
    */
   ListenableFuture<String> getQueryReport(String sqlQueryId, boolean selfOnly);
+
+  /**
+   * Cancels a SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId the SQL query ID to cancel
+   *
+   * @return true if the cancellation was accepted
+   */
+  ListenableFuture<Boolean> cancelSqlQuery(String sqlQueryId);
 }

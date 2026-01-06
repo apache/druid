@@ -31,16 +31,16 @@ import java.util.Objects;
 public class GetReportResponse
 {
   private final QueryInfo queryInfo;
-  private final TaskReport report;
+  private final TaskReport.ReportMap reportMap;
 
   @JsonCreator
   public GetReportResponse(
       @JsonProperty("query") QueryInfo queryInfo,
-      @JsonProperty("report") TaskReport report
+      @JsonProperty("report") TaskReport.ReportMap reportMap
   )
   {
     this.queryInfo = queryInfo;
-    this.report = report;
+    this.reportMap = reportMap;
   }
 
   @JsonProperty("query")
@@ -49,10 +49,10 @@ public class GetReportResponse
     return queryInfo;
   }
 
-  @JsonProperty
-  public TaskReport getReport()
+  @JsonProperty("report")
+  public TaskReport.ReportMap getReportMap()
   {
-    return report;
+    return reportMap;
   }
 
   @Override
@@ -62,13 +62,13 @@ public class GetReportResponse
       return false;
     }
     GetReportResponse that = (GetReportResponse) o;
-    return Objects.equals(queryInfo, that.queryInfo) && Objects.equals(report, that.report);
+    return Objects.equals(queryInfo, that.queryInfo) && Objects.equals(reportMap, that.reportMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryInfo, report);
+    return Objects.hash(queryInfo, reportMap);
   }
 
   @Override
@@ -76,7 +76,7 @@ public class GetReportResponse
   {
     return "GetReportResponse{" +
            "queryInfo=" + queryInfo +
-           ", report=" + report +
+           ", report=" + reportMap +
            '}';
   }
 }

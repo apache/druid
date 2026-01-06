@@ -33,13 +33,13 @@ public class QueryInfoAndReport
 {
   private final DartQueryInfo queryInfo;
   @Nullable
-  private final TaskReport report;
+  private final TaskReport.ReportMap reportMap;
   private final DateTime timestamp;
 
-  public QueryInfoAndReport(DartQueryInfo queryInfo, @Nullable TaskReport report, DateTime timestamp)
+  public QueryInfoAndReport(DartQueryInfo queryInfo, @Nullable TaskReport.ReportMap reportMap, DateTime timestamp)
   {
     this.queryInfo = queryInfo;
-    this.report = report;
+    this.reportMap = reportMap;
     this.timestamp = timestamp;
   }
 
@@ -49,9 +49,9 @@ public class QueryInfoAndReport
   }
 
   @Nullable
-  public TaskReport getReport()
+  public TaskReport.ReportMap getReportMap()
   {
-    return report;
+    return reportMap;
   }
 
   /**
@@ -71,14 +71,14 @@ public class QueryInfoAndReport
     }
     QueryInfoAndReport that = (QueryInfoAndReport) o;
     return Objects.equals(queryInfo, that.queryInfo)
-           && Objects.equals(report, that.report)
+           && Objects.equals(reportMap, that.reportMap)
            && Objects.equals(timestamp, that.timestamp);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryInfo, report, timestamp);
+    return Objects.hash(queryInfo, reportMap, timestamp);
   }
 
   @Override
@@ -86,7 +86,7 @@ public class QueryInfoAndReport
   {
     return "QueryInfoAndReport{" +
            "queryInfo=" + queryInfo +
-           ", report=" + report +
+           ", report=" + reportMap +
            ", timestamp=" + timestamp +
            '}';
   }

@@ -108,8 +108,10 @@ public class DartControllerRegistryTest
     final ControllerHolder holder = makeControllerHolder("dart1", "sql1", "user1");
     final TaskReport report = new MSQTaskReport("dart1", reportPayload);
 
+    final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+    reportMap.put(MSQTaskReport.REPORT_KEY, report);
     registry.register(holder);
-    registry.deregister(holder, report);
+    registry.deregister(holder, reportMap);
 
     // Controller is removed
     Assertions.assertEquals(0, registry.getAllControllers().size());
@@ -119,7 +121,7 @@ public class DartControllerRegistryTest
     final QueryInfoAndReport infoAndReport = registry.getQueryInfoAndReport("dart1");
     Assertions.assertNotNull(infoAndReport);
     Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
-    Assertions.assertSame(report, infoAndReport.getReport());
+    Assertions.assertSame(report, infoAndReport.getReportMap());
 
     // And can be looked up by SQL query ID
     final QueryInfoAndReport infoAndReportBySql = registry.getQueryInfoAndReportBySqlQueryId("sql1");
@@ -135,8 +137,10 @@ public class DartControllerRegistryTest
     final ControllerHolder holder = makeControllerHolder("dart1", "sql1", "user1");
     final TaskReport report = new MSQTaskReport("dart1", reportPayload);
 
+    final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+    reportMap.put(MSQTaskReport.REPORT_KEY, report);
     registry.register(holder);
-    registry.deregister(holder, report);
+    registry.deregister(holder, reportMap);
 
     Assertions.assertNull(registry.getQueryInfoAndReport("dart1"));
     Assertions.assertNull(registry.getQueryInfoAndReportBySqlQueryId("sql1"));
@@ -216,9 +220,10 @@ public class DartControllerRegistryTest
     // Register and deregister 3 queries with reports
     for (int i = 1; i <= 3; i++) {
       final ControllerHolder holder = makeControllerHolder("dart" + i, "sql" + i, "user1");
-      final TaskReport report = new MSQTaskReport("dart" + i, reportPayload);
+      final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+      reportMap.put(MSQTaskReport.REPORT_KEY, new MSQTaskReport("dart" + i, reportPayload));
       registry.register(holder);
-      registry.deregister(holder, report);
+      registry.deregister(holder, reportMap);
     }
 
     // Only the last 2 reports should be retained

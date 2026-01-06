@@ -110,6 +110,31 @@ public class CounterSnapshotsTree
   }
 
   @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final CounterSnapshotsTree that = (CounterSnapshotsTree) o;
+    synchronized (snapshotsMap) {
+      synchronized (that.snapshotsMap) {
+        return snapshotsMap.equals(that.snapshotsMap);
+      }
+    }
+  }
+
+  @Override
+  public int hashCode()
+  {
+    synchronized (snapshotsMap) {
+      return snapshotsMap.hashCode();
+    }
+  }
+
+  @Override
   public String toString()
   {
     synchronized (snapshotsMap) {
