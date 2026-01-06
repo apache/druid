@@ -140,7 +140,7 @@ public class AggregateProjectionSchema implements ProjectionSchema
         orderingWithTimeSubstitution.add(new OrderBy(ColumnHolder.TIME_COLUMN_NAME, orderBy.getOrder()));
         foundTimePosition = i;
         timeColumnName = this.groupingColumns.get(foundTimePosition);
-        final VirtualColumn vc = this.virtualColumns.getVirtualColumn(groupingColumns.get(foundTimePosition));
+        final VirtualColumn vc = this.virtualColumns.getVirtualColumn(this.groupingColumns.get(foundTimePosition));
         if (vc != null) {
           granularity = Granularities.fromVirtualColumn(vc);
         } else {
