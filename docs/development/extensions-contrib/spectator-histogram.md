@@ -335,7 +335,7 @@ SPECTATOR_PERCENTILE(expr, percentile)
 
 **Arguments:**
 - `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
-- `percentile`: A numeric value between 0 and 100 representing the desired percentile.
+- `percentile`: A decimal value between 0 and 100 representing the desired percentile.
 
 **Returns:** DOUBLE - the approximate value at the specified percentile.
 
@@ -357,7 +357,7 @@ SPECTATOR_PERCENTILE(expr, ARRAY[p1, p2, ...])
 
 **Arguments:**
 - `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
-- `ARRAY[p1, p2, ...]`: An array of numeric values between 0 and 100 representing the desired percentiles.
+- `ARRAY[p1, p2, ...]`: An array of decimal values between 0 and 100 representing the desired percentiles.
 
 **Returns:** DOUBLE ARRAY - an array of approximate values at the specified percentiles, in the same order as requested.
 

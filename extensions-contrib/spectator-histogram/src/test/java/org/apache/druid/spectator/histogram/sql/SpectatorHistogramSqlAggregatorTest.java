@@ -337,7 +337,7 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
     // Test that multiple aggregations on the same column share a single aggregator
     testQuery(
         "SELECT SPECTATOR_COUNT(histogram_metric), SPECTATOR_PERCENTILE(histogram_metric, 50), "
-        + "SPECTATOR_PERCENTILE(histogram_metric, 99) FROM foo",
+        + "SPECTATOR_PERCENTILE(histogram_metric, 99.99) FROM foo",
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -359,15 +359,15 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
                       new SpectatorHistogramPercentilePostAggregator(
                           "a2",
                           new FieldAccessPostAggregator("a0:agg", "a0:agg"),
-                          99.0
+                          99.99
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            // p50 = 341.0, p99 = 675.9 (interpolated value near max)
-            new Object[]{6L, 341.0, 675.9}
+            // p50 = 341.0, p99.99 = 680.949 (interpolated value near max)
+            new Object[]{6L, 341.0, 680.949}
         )
     );
   }
@@ -472,6 +472,79 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{"e", "[468.5,510.15]"},
             new Object[]{"f", "[638.5,680.15]"}
         )
+    );
+  }
+
+  @Test
+  public void testSpectatorFunctionsOnEmptyHistogram()
+  {
+    // Use a filter that matches no rows to get an empty/null histogram aggregation result
+    // Both COUNT and PERCENTILE return null for empty histogram (same as native behavior)
+    testQuery(
+        "SELECT SPECTATOR_COUNT(histogram_metric), SPECTATOR_PERCENTILE(histogram_metric, 50) "
+        + "FROM foo WHERE dim1 = 'nonexistent'",
+        Collections.singletonList(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .filters(equality("dim1", "nonexistent", ColumnType.STRING))
+                  .aggregators(ImmutableList.of(
+                      new SpectatorHistogramAggregatorFactory("a0:agg", "histogram_metric")
+                  ))
+                  .postAggregators(
+                      new SpectatorHistogramCountPostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg")
+                      ),
+                      new SpectatorHistogramPercentilePostAggregator(
+                          "a1",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          50.0
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{null, null})
+    );
+  }
+
+  @Test
+  public void testSpectatorFunctionsOnNullHistogram()
+  {
+    // Both COUNT and PERCENTILE return null for null histogram (same as native behavior)
+    testQuery(
+        "SELECT SPECTATOR_COUNT(null), SPECTATOR_PERCENTILE(null, 99.9), SPECTATOR_PERCENTILE(null, ARRAY[90, 99.9]) FROM foo",
+        Collections.singletonList(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(expressionVirtualColumn("v0", "null", ColumnType.DOUBLE))
+                  .aggregators(ImmutableList.of(
+                      new SpectatorHistogramAggregatorFactory("a0:agg", "v0")
+                  ))
+                  .postAggregators(
+                      new SpectatorHistogramCountPostAggregator(
+                          "a0",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg")
+                      ),
+                      new SpectatorHistogramPercentilePostAggregator(
+                          "a1",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          99.9
+                      ),
+                      new SpectatorHistogramPercentilesPostAggregator(
+                          "a2",
+                          new FieldAccessPostAggregator("a0:agg", "a0:agg"),
+                          new double[]{90.0, 99.9}
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{null, null, null})
     );
   }
 }
