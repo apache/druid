@@ -276,8 +276,7 @@ array of percentiles.
 
 #### Count Post-Aggregator
 
-This returns the total count of observations (data points) that were recorded in the histogram.
-This is useful for understanding the population size without needing a separate count metric.
+This returns the total count of observations (data points) that were recorded in the histogram. This is useful for understanding the population size without needing a separate count metric.
 
 ```json
 {
@@ -312,7 +311,7 @@ SPECTATOR_COUNT(expr)
 **Arguments:**
 - `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
 
-**Returns:** BIGINT - the total number of observations.
+**Returns:** BIGINT - the total number of observations or `NULL` if the histogram is null or empty.
 
 **Example:**
 ```sql
@@ -337,7 +336,7 @@ SPECTATOR_PERCENTILE(expr, percentile)
 - `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
 - `percentile`: A decimal value between 0 and 100 representing the desired percentile.
 
-**Returns:** DOUBLE - the approximate value at the specified percentile.
+**Returns:** DOUBLE - the approximate value at the specified percentile or `NULL` if the histogram is null or empty.
 
 **Example:**
 ```sql
@@ -359,7 +358,7 @@ SPECTATOR_PERCENTILE(expr, ARRAY[p1, p2, ...])
 - `expr`: A numeric column to aggregate into a histogram, or a pre-aggregated Spectator histogram column.
 - `ARRAY[p1, p2, ...]`: An array of decimal values between 0 and 100 representing the desired percentiles.
 
-**Returns:** DOUBLE ARRAY - an array of approximate values at the specified percentiles, in the same order as requested.
+**Returns:** DOUBLE ARRAY - an array of approximate values at the specified percentiles, in the same order as requested or `NULL` if the histogram is null or empty.
 
 **Example:**
 ```sql

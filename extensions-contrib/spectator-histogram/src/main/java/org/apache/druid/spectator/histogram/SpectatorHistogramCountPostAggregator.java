@@ -132,7 +132,7 @@ public class SpectatorHistogramCountPostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, field);
+    return name.hashCode() * 31 + field.hashCode();
   }
 
   @Override

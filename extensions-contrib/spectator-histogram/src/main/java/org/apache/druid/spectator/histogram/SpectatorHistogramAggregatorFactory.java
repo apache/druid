@@ -284,7 +284,7 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName);
+    return name.hashCode() * 31 + fieldName.hashCode();
   }
 
   @Override
