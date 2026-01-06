@@ -55,7 +55,8 @@ public class DartSqlClientFactoryImpl implements DartSqlClientFactory
   {
     final ServiceClient client = clientFactory.makeClient(
         StringUtils.format("%s[dart-sql]", node.getHostAndPortToUse()),
-        new FixedServiceLocator(ServiceLocation.fromDruidNode(node).withBasePath(SqlResource.PATH)),
+        new FixedServiceLocator(ServiceLocation.fromDruidNode(node)
+                                               .withBasePath(SqlResource.PATH.replaceAll("/$", ""))),
         StandardRetryPolicy.noRetries()
     );
 

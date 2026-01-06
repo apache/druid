@@ -163,11 +163,59 @@ public class SqlResource
 
     // Get running queries from all engines that support it.
     for (SqlEngine sqlEngine : engines) {
-      queries.addAll(sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess));
+      queries.addAll(sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess).getQueries());
     }
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok().entity(new GetQueriesResponse(queries)).build();
+  }
+
+  /**
+   * API to get query reports, for all engines that support such reports.
+   *
+   * @param sqlQueryId SQL query ID
+   * @param selfOnly   if true, check reports from this server only. If false, check reports on all servers.
+   * @param request    http request.
+   */
+  @GET
+  @Path("/queries/{sqlQueryId}/report")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response doGetQueryReport(
+      @PathParam("sqlQueryId") final String sqlQueryId,
+      @QueryParam("selfOnly") final String selfOnly,
+      @Context final HttpServletRequest request
+  )
+  {
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+    final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        authorizerMapper
+    );
+
+    final Collection<SqlEngine> engines = sqlEngineRegistry.getAllEngines();
+
+    // Get task report from the first engine that recognizes the SQL query ID.
+    GetReportResponse retVal = null;
+    for (SqlEngine sqlEngine : engines) {
+      retVal = sqlEngine.getQueryReport(
+          sqlQueryId,
+          selfOnly != null,
+          authenticationResult,
+          stateReadAccess
+      );
+
+      if (retVal != null) {
+        break;
+      }
+    }
+
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
+    if (retVal == null) {
+      return Response.status(Status.NOT_FOUND).entity(new GetReportResponse(null, null)).build();
+    } else {
+      return Response.ok().entity(retVal).build();
+    }
   }
 
   /**

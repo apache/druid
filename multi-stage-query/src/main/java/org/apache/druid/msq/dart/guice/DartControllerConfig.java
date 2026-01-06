@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.joda.time.Period;
 
 /**
  * Runtime configuration for controllers (which run on Brokers).
@@ -42,6 +43,12 @@ public class DartControllerConfig
   @JsonProperty("heapFraction")
   private double heapFraction = DEFAULT_HEAP_FRACTION;
 
+  @JsonProperty("maxRetainedReportCount")
+  private int maxRetainedReportCount = 0;
+
+  @JsonProperty("maxRetainedReportDuration")
+  private Period maxRetainedReportDuration = Period.ZERO;
+
   public int getConcurrentQueries()
   {
     return concurrentQueries;
@@ -55,5 +62,15 @@ public class DartControllerConfig
   public double getHeapFraction()
   {
     return heapFraction;
+  }
+
+  public int getMaxRetainedReportCount()
+  {
+    return maxRetainedReportCount;
+  }
+
+  public Period getMaxRetainedReportDuration()
+  {
+    return maxRetainedReportDuration;
   }
 }
