@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@link SegmentFileMapper} implementation for V10 segment files.
  * <p>
  * V10 file format:
- * | version (byte) | meta compression (byte) | meta length (int) | meta json | chunk 0 | chunk 1 | ... | chunk n |
+ * | version (byte) | meta compression (byte) | meta length (int) | meta json | container 0 | ... | container n |
  */
 public class SegmentFileMapperV10 implements SegmentFileMapper
 {
@@ -137,7 +137,7 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
       // maintain an open channel (which could be closed during an interrupt for example)
       try (RandomAccessFile f = new RandomAccessFile(segmentFile, "r");
            FileChannel channel = f.getChannel()) {
-        for (SmooshContainerMetadata containerMetadata : metadata.getContainers()) {
+        for (SegmentFileContainerMetadata containerMetadata : metadata.getContainers()) {
           containers.add(
               channel.map(
                   FileChannel.MapMode.READ_ONLY,
@@ -200,7 +200,7 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
   public ByteBuffer mapFile(String name) throws IOException
   {
     checkClosed();
-    final SmooshFileMetadata fileMetadata = segmentFileMetadata.getFiles().get(name);
+    final SegmentInternalFileMetadata fileMetadata = segmentFileMetadata.getFiles().get(name);
     if (fileMetadata == null) {
       return null;
     }

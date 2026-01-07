@@ -48,6 +48,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -107,7 +108,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.cacheConfig,
         bob.cachePopulatorStats,
         bob.indexMergerV9Factory,
-        null,
+        bob.indexMergerV10Factory,
         bob.druidNodeAnnouncer,
         bob.druidNode,
         bob.lookupNodeService,
@@ -154,7 +155,16 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
-    private IndexMergerV9Factory indexMergerV9Factory = new IndexMergerV9Factory(jsonMapper, indexIO, OnHeapMemorySegmentWriteOutMediumFactory.instance());
+    private IndexMergerV9Factory indexMergerV9Factory = new IndexMergerV9Factory(
+        jsonMapper,
+        indexIO,
+        OnHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
+    private IndexMergerV10Factory indexMergerV10Factory = new IndexMergerV10Factory(
+        jsonMapper,
+        indexIO,
+        OnHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
     private DruidNodeAnnouncer druidNodeAnnouncer;
     private DruidNode druidNode;
     private LookupNodeService lookupNodeService;

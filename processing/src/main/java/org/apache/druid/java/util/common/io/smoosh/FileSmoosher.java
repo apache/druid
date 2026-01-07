@@ -35,8 +35,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
-import org.apache.druid.segment.file.SmooshContainerMetadata;
-import org.apache.druid.segment.file.SmooshFileMetadata;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
+import org.apache.druid.segment.file.SegmentInternalFileMetadata;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -152,24 +152,24 @@ public class FileSmoosher implements SegmentFileBuilder
     return outFiles;
   }
 
-  public List<SmooshContainerMetadata> getContainers()
+  public List<SegmentFileContainerMetadata> getContainers()
   {
-    List<SmooshContainerMetadata> smooshContainers = new ArrayList<>();
+    List<SegmentFileContainerMetadata> smooshContainers = new ArrayList<>();
     long offset = 0;
     for (File f : outFiles) {
-      smooshContainers.add(new SmooshContainerMetadata(offset, f.length()));
+      smooshContainers.add(new SegmentFileContainerMetadata(offset, f.length()));
       offset += f.length();
     }
     return smooshContainers;
   }
 
-  public Map<String, SmooshFileMetadata> getInternalFiles()
+  public Map<String, SegmentInternalFileMetadata> getInternalFiles()
   {
-    Map<String, SmooshFileMetadata> smooshFileMetadata = new TreeMap<>();
+    Map<String, SegmentInternalFileMetadata> smooshFileMetadata = new TreeMap<>();
     for (Map.Entry<String, Metadata> entry : internalFiles.entrySet()) {
       smooshFileMetadata.put(
           entry.getKey(),
-          new SmooshFileMetadata(
+          new SegmentInternalFileMetadata(
               entry.getValue().getFileNum(),
               entry.getValue().getStartOffset(),
               entry.getValue().getEndOffset() - entry.getValue().getStartOffset()

@@ -114,6 +114,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -176,6 +177,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9Factory INDEX_MERGER_V9_FACTORY;
+  private static final IndexMergerV10Factory INDEX_MERGER_V10_FACTORY;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
 
@@ -183,6 +185,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
     INDEX_MERGER_V9_FACTORY = TEST_UTILS.getIndexMergerV9Factory();
+    INDEX_MERGER_V10_FACTORY = TEST_UTILS.getIndexMergerV10Factory();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
 
@@ -599,7 +602,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new CacheConfig(),
         new CachePopulatorStats(),
         INDEX_MERGER_V9_FACTORY,
-        null,
+        INDEX_MERGER_V10_FACTORY,
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

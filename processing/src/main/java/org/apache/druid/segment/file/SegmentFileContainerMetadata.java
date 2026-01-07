@@ -23,30 +23,22 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Relative starting offset and size of an internal 'file' of a {@link SmooshContainerMetadata}
+ * Starting offset and size of a 'container' stored in a V10 segment file; think the V10 equivalent of V9's external
+ * 'smoosh' files, e.g. 00000.smoosh.
  */
-public class SmooshFileMetadata
+public class SegmentFileContainerMetadata
 {
-  private final int container;
   private final long startOffset;
   private final long size;
 
   @JsonCreator
-  public SmooshFileMetadata(
-      @JsonProperty("container") int container,
+  public SegmentFileContainerMetadata(
       @JsonProperty("startOffset") long startOffset,
       @JsonProperty("size") long size
   )
   {
-    this.container = container;
     this.startOffset = startOffset;
     this.size = size;
-  }
-
-  @JsonProperty
-  public int getContainer()
-  {
-    return container;
   }
 
   @JsonProperty

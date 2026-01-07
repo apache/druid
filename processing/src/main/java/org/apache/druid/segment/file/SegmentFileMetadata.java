@@ -35,7 +35,10 @@ import java.util.Map;
  * is used by {@link SegmentFileMapperV10} to do its magic to turn these file bytes into segments.
  * <p>
  * V10 file format:
- * | version (byte) | meta compression (byte) | meta length (int) | meta json | chunk 0 | chunk 1 | ... | chunk n |
+ * | version (byte) | meta compression (byte) | meta length (int) | meta json | container 0 | ... | container n |
+ * <p>
+ * where this class is the 'meta json' in ^ which describes the positions and possibly how to read the contents of the
+ * containers which follow and any files contained within them.
  * <p>
  * {@link #containers} and {@link #files} will always be present in a segment file, since a V10 segment file always
  * contains one or more internal files which are concatenated together, organized into containers (at least as long as
@@ -53,39 +56,39 @@ import java.util.Map;
  */
 public class SegmentFileMetadata
 {
-  private final List<SmooshContainerMetadata> containers;
-  private final Map<String, SmooshFileMetadata> files;
-  private final Map<String, ColumnDescriptor> columnDescriptors;
+  private final List<SegmentFileContainerMetadata> containers;
+  private final Map<String, SegmentInternalFileMetadata> files;
   private final String interval;
-  private final BitmapSerdeFactory bitmapEncoding;
+  private final Map<String, ColumnDescriptor> columnDescriptors;
   private final List<ProjectionMetadata> projections;
+  private final BitmapSerdeFactory bitmapEncoding;
 
   @JsonCreator
   public SegmentFileMetadata(
-      @JsonProperty("containers") List<SmooshContainerMetadata> containers,
-      @JsonProperty("files") Map<String, SmooshFileMetadata> files,
+      @JsonProperty("containers") List<SegmentFileContainerMetadata> containers,
+      @JsonProperty("files") Map<String, SegmentInternalFileMetadata> files,
       @JsonProperty("interval") @Nullable String interval,
-      @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
       @JsonProperty("columnDescriptors") @Nullable Map<String, ColumnDescriptor> columnDescriptors,
-      @JsonProperty("projections") @Nullable List<ProjectionMetadata> projections
+      @JsonProperty("projections") @Nullable List<ProjectionMetadata> projections,
+      @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
   )
   {
     this.containers = containers;
     this.files = files;
-    this.columnDescriptors = columnDescriptors;
     this.interval = interval;
-    this.bitmapEncoding = bitmapEncoding;
+    this.columnDescriptors = columnDescriptors;
     this.projections = projections;
+    this.bitmapEncoding = bitmapEncoding;
   }
 
   @JsonProperty
-  public List<SmooshContainerMetadata> getContainers()
+  public List<SegmentFileContainerMetadata> getContainers()
   {
     return containers;
   }
 
   @JsonProperty
-  public Map<String, SmooshFileMetadata> getFiles()
+  public Map<String, SegmentInternalFileMetadata> getFiles()
   {
     return files;
   }

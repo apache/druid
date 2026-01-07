@@ -728,7 +728,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         new CacheConfig(),
         new CachePopulatorStats(),
         testUtils.getIndexMergerV9Factory(),
-        null,
+        testUtils.getIndexMergerV10Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),

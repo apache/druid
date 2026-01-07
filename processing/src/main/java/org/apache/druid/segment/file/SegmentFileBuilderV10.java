@@ -45,7 +45,7 @@ import java.util.TreeMap;
  * consolidated segment file after the header and {@link SegmentFileMetadata} is written.
  * <p>
  * V10 file format:
- * | version (byte) | meta compression (byte) | meta length (int) | meta json | chunk 0 | chunk 1 | ... | chunk n |
+ * | version (byte) | meta compression (byte) | meta length (int) | meta json | container 0 | ... | container n |
  */
 public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
@@ -140,9 +140,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
         smoosher.getContainers(),
         smoosher.getInternalFiles(),
         interval,
-        bitmapEncoding,
         columns.isEmpty() ? null : columns,
-        projections
+        projections,
+        bitmapEncoding
     );
 
     final byte[] metadataBytes = jsonMapper.writeValueAsBytes(segmentFileMetadata);
