@@ -561,6 +561,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             }
         ),
         new ExpressionModule(),
+        new MSQIndexingModule(),
         new MSQExternalDataSourceModule(),
         new LookylooModule(),
         new SegmentWranglerModule(),

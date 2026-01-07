@@ -17,25 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.java.util.metrics;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
- * Provides identifying information for a task. Implementations return {@code null}
- * when used in server processes that are not {@code CliPeon}.
+ * A TaskHolder implementation for all servers that are not {@code CliPeon}.
+ *
+ * <p>This holder does not provide task information and will return null from
+ * all its methods.</p>
  */
-public interface TaskHolder
+public class NoopTaskHolder implements TaskHolder
 {
-  /**
-   * @return the datasource name for the task, or {@code null} if called from a server that is not {@code CliPeon}.
-   */
   @Nullable
-  String getDataSource();
+  @Override
+  public String getDataSource()
+  {
+    return null;
+  }
 
-  /**
-   * @return the taskId, or {@code null} if called from a server that is not {@code CliPeon}.
-   */
   @Nullable
-  String getTaskId();
+  @Override
+  public String getTaskId()
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public String getTaskType()
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public String getGroupId()
+  {
+    return null;
+  }
+
+  @Override
+  public Map<String, String> getMetricDimensions()
+  {
+    return Map.of();
+  }
 }

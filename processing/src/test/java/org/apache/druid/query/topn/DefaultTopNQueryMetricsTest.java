@@ -49,7 +49,7 @@ public class DefaultTopNQueryMetricsTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultTopNQueryMetricsQuery()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
@@ -73,8 +73,8 @@ public class DefaultTopNQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(17, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();

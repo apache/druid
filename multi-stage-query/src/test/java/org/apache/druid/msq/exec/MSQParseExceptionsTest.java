@@ -30,13 +30,11 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
-import org.apache.druid.msq.querykit.scan.ExternalColumnSelectorFactory;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
@@ -316,9 +314,9 @@ public class MSQParseExceptionsTest extends MSQTestBase
   }
 
   @Test
-  public void testMultiValueStringWithIncorrectType() throws IOException
+  public void testCannotParseJson() throws IOException
   {
-    final File toRead = getResourceAsTemporaryFile("/unparseable-mv-string-array.json");
+    final File toRead = getResourceAsTemporaryFile("/not-json.txt");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -337,25 +335,20 @@ public class MSQParseExceptionsTest extends MSQTestBase
 
     testSelectQuery()
         .setSql("WITH\n"
-                + "kttm_data AS (\n"
+                + "ext AS (\n"
                 + "SELECT * FROM TABLE(\n"
                 + "  EXTERN(\n"
                 + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
                 + "    '{\"type\":\"json\"}',\n"
-                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"agent_category\",\"type\":\"string\"},{\"name\":\"agent_type\",\"type\":\"string\"},{\"name\":\"browser\",\"type\":\"string\"},{\"name\":\"browser_version\",\"type\":\"string\"},{\"name\":\"city\",\"type\":\"string\"},{\"name\":\"continent\",\"type\":\"string\"},{\"name\":\"country\",\"type\":\"string\"},{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"event_type\",\"type\":\"string\"},{\"name\":\"event_subtype\",\"type\":\"string\"},{\"name\":\"loaded_image\",\"type\":\"string\"},{\"name\":\"adblock_list\",\"type\":\"string\"},{\"name\":\"forwarded_for\",\"type\":\"string\"},{\"name\":\"language\",\"type\":\"string\"},{\"name\":\"number\",\"type\":\"long\"},{\"name\":\"os\",\"type\":\"string\"},{\"name\":\"path\",\"type\":\"string\"},{\"name\":\"platform\",\"type\":\"string\"},{\"name\":\"referrer\",\"type\":\"string\"},{\"name\":\"referrer_host\",\"type\":\"string\"},{\"name\":\"region\",\"type\":\"string\"},{\"name\":\"remote_address\",\"type\":\"string\"},{\"name\":\"screen\",\"type\":\"string\"},{\"name\":\"session\",\"type\":\"string\"},{\"name\":\"session_length\",\"type\":\"long\"},{\"name\":\"timezone\",\"type\":\"string\"},{\"name\":\"timezone_offset\",\"type\":\"long\"},{\"name\":\"window\",\"type\":\"string\"}]'\n"
+                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"thisRow\",\"type\":\"string\"}]'\n"
                 + "  )\n"
                 + "))\n"
                 + "\n"
                 + "SELECT\n"
-                + "  FLOOR(TIME_PARSE(\"timestamp\") TO MINUTE) AS __time,\n"
-                + "  MV_TO_ARRAY(\"language\") AS \"language\"\n"
-                + "FROM kttm_data")
+                + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+                + "  thisRow\n"
+                + "FROM ext")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1566691200000L, ImmutableList.of("en")},
-            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-MX")},
-            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-US")}
-        ))
         .setExpectedMSQSpec(
             LegacyMSQSpec
                 .builder()
@@ -370,14 +363,8 @@ public class MSQParseExceptionsTest extends MSQTestBase
                 .build())
         .setExpectedMSQFault(
             new CannotParseExternalDataFault(
-                ExternalColumnSelectorFactory
-                    .createException(
-                        new Exception("dummy"),
-                        "v1",
-                        new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                        new SimpleAscendingOffset(Integer.MAX_VALUE)
-                    )
-                    .getMessage()
+                "Unable to parse row [this row is not json] "
+                + "(Path: file:" + toRead.getAbsolutePath() + ", Record: 3, Line: 3)"
             )
         )
         .setQueryContext(DEFAULT_MSQ_CONTEXT)

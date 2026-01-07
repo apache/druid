@@ -42,37 +42,6 @@ jobs:
             core:
               - '!extension*/**'
 
-  integration-index-tests-middleManager:
-    needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, realtime-index]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      override_config_path: ./environment-configs/test-groups/prepopulated-data
-      use_indexer: middleManager
-      group: ${{ matrix.testing_group }}
-
-  integration-index-tests-indexer:
-    needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [kafka-index]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      use_indexer: indexer
-      group: ${{ matrix.testing_group }}
-
   integration-query-tests-middleManager:
     needs: changes
     strategy:

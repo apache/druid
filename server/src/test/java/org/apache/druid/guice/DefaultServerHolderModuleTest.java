@@ -23,10 +23,10 @@ import com.google.inject.ConfigurationException;
 import com.google.inject.Injector;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.java.util.metrics.NoopTaskHolder;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NoopTaskHolder;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.junit.Assert;
 import org.junit.Test;
 

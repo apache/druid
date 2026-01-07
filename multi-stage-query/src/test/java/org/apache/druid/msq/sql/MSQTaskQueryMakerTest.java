@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -219,7 +220,8 @@ public class MSQTaskQueryMakerTest
         new LifecycleModule(),
         new ConfigModule(),
         new SegmentWranglerModule(),
-        new LookylooModule()
+        new LookylooModule(),
+        new MSQIndexingModule()
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper);

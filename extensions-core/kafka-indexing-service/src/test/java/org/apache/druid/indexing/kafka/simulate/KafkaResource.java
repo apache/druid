@@ -23,8 +23,11 @@ import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.CreatePartitionsResult;
+import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
@@ -119,6 +122,26 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
+  /**
+   * Increases the number of partitions in the given Kakfa topic. The topic must
+   * already exist. This method waits until the increase in the partition count
+   * has started (but not necessarily finished).
+   */
+  public void increasePartitionsInTopic(String topic, int newPartitionCount)
+  {
+    try (Admin admin = newAdminClient()) {
+      final CreatePartitionsResult result = admin.createPartitions(
+          Map.of(topic, NewPartitions.increaseTo(newPartitionCount))
+      );
+
+      // Wait for the partitioning to start
+      result.values().get(topic).get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public void produceRecordsToTopic(
       List<ProducerRecord<byte[], byte[]>> records,
       Map<String, Object> extraProducerProperties
@@ -143,6 +166,25 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
     produceRecordsToTopic(records, null);
+  }
+
+  /**
+   * Produces records to a topic of this embedded Kafka server without using
+   * Kafka transactions.
+   */
+  public void produceRecordsWithoutTransaction(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    final Map<String, Object> props = producerProperties();
+    props.remove(ProducerConfig.TRANSACTIONAL_ID_CONFIG);
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = new KafkaProducer<>(props)) {
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record);
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public Map<String, Object> producerProperties()

@@ -155,6 +155,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
@@ -715,7 +716,7 @@ public class ControllerImpl implements Controller
           legacyQuery,
           context.jsonMapper(),
           queryKitSpecFactory.makeQueryKitSpec(
-              QueryKitBasedMSQPlanner.makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()),
+              context.injector().getInstance(MultiQueryKit.class),
               context.queryId(),
               querySpec.getTuningConfig(),
               querySpec.getContext()
