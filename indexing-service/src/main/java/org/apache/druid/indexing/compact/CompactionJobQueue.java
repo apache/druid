@@ -256,16 +256,26 @@ public class CompactionJobQueue
     return List.copyOf(queue);
   }
 
+  /**
+   * Intervals for the given datasource that are already fully compacted.
+   */
   public List<CompactionCandidate> getFullyCompactedIntervals(String dataSource)
   {
     return snapshotBuilder.getFullyCompactedIntervals(dataSource);
   }
 
+  /**
+   * Intervals that were skipped from compaction. Some of the segments in these
+   * intervals may already be compacted.
+   */
   public List<CompactionCandidate> getSkippedIntervals(String dataSource)
   {
     return snapshotBuilder.getSkippedIntervals(dataSource);
   }
 
+  /**
+   * Search policy used to build this queue.
+   */
   public CompactionCandidateSearchPolicy getSearchPolicy()
   {
     return searchPolicy;

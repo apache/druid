@@ -142,7 +142,7 @@ public class CompactionSnapshotBuilder
    */
   private static class DatasourceSnapshotBuilder
   {
-    static final DatasourceSnapshotBuilder EMPTY = new DatasourceSnapshotBuilder("");
+    static final DatasourceSnapshotBuilder EMPTY = new DatasourceSnapshotBuilder(".");
 
     final AutoCompactionSnapshot.Builder stats;
     final List<CompactionCandidate> completed = new ArrayList<>();
