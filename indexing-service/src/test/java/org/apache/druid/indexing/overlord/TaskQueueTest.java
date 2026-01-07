@@ -504,69 +504,53 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testGetTaskStatus()
+  public void testGetTaskStatus_successfulTask()
   {
-    final TaskRunner taskRunner = EasyMock.createMock(TaskRunner.class);
-    final TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    final TestTask task = new TestTask("successfulTask", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(task);
 
-    final String newTask = "newTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(newTask))
-            .andReturn(null);
-    EasyMock.expect(taskStorage.getStatus(newTask))
-            .andReturn(Optional.of(TaskStatus.running(newTask)));
+    // Active task: status should come from activeTasks map
+    final Optional<TaskStatus> activeStatus = taskQueue.getTaskStatus(task.getId());
+    Assert.assertTrue(activeStatus.isPresent());
+    Assert.assertEquals(TaskState.RUNNING, activeStatus.get().getStatusCode());
+    Assert.assertEquals(task.getId(), activeStatus.get().getId());
 
-    final String waitingTask = "waitingTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(waitingTask))
-            .andReturn(RunnerTaskState.WAITING);
-    EasyMock.expect(taskRunner.getTaskLocation(waitingTask))
-            .andReturn(TaskLocation.unknown());
+    // Run the task so it completes
+    taskQueue.manageQueuedTasks();
+    waitForTaskToExit(task);
 
-    final String pendingTask = "pendingTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(pendingTask))
-            .andReturn(RunnerTaskState.PENDING);
-    EasyMock.expect(taskRunner.getTaskLocation(pendingTask))
-            .andReturn(TaskLocation.unknown());
+    final Optional<TaskStatus> completedStatus = taskQueue.getTaskStatus(task.getId());
+    Assert.assertTrue(completedStatus.isPresent());
+    Assert.assertEquals(TaskState.SUCCESS, completedStatus.get().getStatusCode());
+  }
 
-    final String runningTask = "runningTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(runningTask))
-            .andReturn(RunnerTaskState.RUNNING);
-    EasyMock.expect(taskRunner.getTaskLocation(runningTask))
-            .andReturn(TaskLocation.create("host", 8100, 8100));
+  @Test
+  public void testGetTaskStatus_failedTask()
+  {
+    final TestTask task = new TestTask("failedTask", Intervals.of("2021-01-01/P1D"))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        super.done = true;
+        return TaskStatus.failure(getId(), "intentional failure");
+      }
+    };
+    taskQueue.add(task);
+    taskQueue.manageQueuedTasks();
+    waitForTaskToExit(task);
 
-    final String successfulTask = "successfulTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(successfulTask))
-            .andReturn(RunnerTaskState.NONE);
-    EasyMock.expect(taskStorage.getStatus(successfulTask))
-            .andReturn(Optional.of(TaskStatus.success(successfulTask)));
+    final Optional<TaskStatus> failedStatus = taskQueue.getTaskStatus(task.getId());
+    Assert.assertTrue(failedStatus.isPresent());
+    Assert.assertEquals(TaskState.FAILED, failedStatus.get().getStatusCode());
+    Assert.assertEquals("intentional failure", failedStatus.get().getErrorMsg());
+  }
 
-    final String failedTask = "failedTask";
-    EasyMock.expect(taskRunner.getRunnerTaskState(failedTask))
-            .andReturn(RunnerTaskState.NONE);
-    EasyMock.expect(taskStorage.getStatus(failedTask))
-            .andReturn(Optional.of(TaskStatus.failure(failedTask, failedTask)));
-
-    EasyMock.replay(taskRunner, taskStorage);
-
-    final TaskQueue taskQueue = new TaskQueue(
-        new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null, null),
-        new DefaultTaskConfig(),
-        taskStorage,
-        taskRunner,
-        actionClientFactory,
-        getLockbox(),
-        serviceEmitter,
-        getObjectMapper(),
-        new NoopTaskContextEnricher()
-    );
-    taskQueue.setActive(true);
-
-    Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
-    Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
-    Assert.assertEquals(TaskStatus.running(pendingTask), taskQueue.getTaskStatus(pendingTask).get());
-    Assert.assertEquals(TaskStatus.running(runningTask), taskQueue.getTaskStatus(runningTask).get());
-    Assert.assertEquals(TaskStatus.success(successfulTask), taskQueue.getTaskStatus(successfulTask).get());
-    Assert.assertEquals(TaskStatus.failure(failedTask, failedTask), taskQueue.getTaskStatus(failedTask).get());
+  @Test
+  public void testGetTaskStatus_unknownTask()
+  {
+    final Optional<TaskStatus> unknownStatus = taskQueue.getTaskStatus("unknownTask");
+    Assert.assertFalse(unknownStatus.isPresent());
   }
 
   @Test
