@@ -309,6 +309,29 @@ export class WorkbenchQuery {
     return SqlSetStatement.getContextFromText(this.queryString);
   }
 
+  public getEffectiveContext(): QueryContext {
+    let effectiveContext = this.queryContext;
+    if (this.isJsonLike()) {
+      try {
+        const query = Hjson.parse(this.queryString);
+        effectiveContext = { ...effectiveContext, ...query.context };
+        if (typeof query.query === 'string') {
+          effectiveContext = {
+            ...effectiveContext,
+            ...SqlSetStatement.getContextFromText(query.query),
+          };
+        }
+      } catch {}
+    } else {
+      effectiveContext = {
+        ...effectiveContext,
+        ...SqlSetStatement.getContextFromText(this.queryString),
+      };
+    }
+
+    return effectiveContext;
+  }
+
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), queryContext });
   }
@@ -340,6 +363,12 @@ export class WorkbenchQuery {
   public getEffectiveEngine(): DruidEngine {
     const { engine } = this;
     if (engine) return engine;
+
+    // If an engine is set explicity in the config then respect it
+    const contextEngine = this.getEffectiveContext().engine;
+    if (contextEngine === 'native') return 'sql-native';
+    if (contextEngine === 'msq-dart') return 'sql-msq-dart';
+
     const enabledEngines = WorkbenchQuery.getQueryEngines();
     if (this.isJsonLike()) {
       if (this.isSqlInJson()) {
@@ -463,7 +492,7 @@ export class WorkbenchQuery {
   }
 
   public getMaxNumTasks(): number | undefined {
-    return this.getQueryStringContext().maxNumTasks ?? this.queryContext.maxNumTasks;
+    return this.getEffectiveContext().maxNumTasks;
   }
 
   public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
