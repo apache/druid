@@ -17,7 +17,7 @@
 
 set -e
 set -x
-
+set
 echo 'Running Maven install...'
 mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -T1C
 mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true
