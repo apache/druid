@@ -448,7 +448,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
     cannotVectorizeUnlessFallback();
     testQuery(
-        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
+        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x), MIN(x)\n"
         + "FROM (\n"
         + "    SELECT\n"
         + "        FLOOR(__time to hour) as \"date\",\n"
@@ -480,11 +480,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .addDimension(new DefaultDimensionSpec("v0", "_d0"))
                         .addAggregator(new LongSumAggregatorFactory("_a0", "a0"))
+                        .addAggregator(new LongMinAggregatorFactory("_a1", "a0"))
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"2000-01", 3L},
-            new Object[]{"2001-01", 3L}
+            new Object[]{"2000-01", 3L, 1L},
+            new Object[]{"2001-01", 3L, 1L}
         )
     );
   }
