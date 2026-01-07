@@ -108,7 +108,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addExtension(KafkaEmitterModule.class)
            .addExtension(LatchableEmitterModule.class)
-           .useDefaultTimeoutForLatchableEmitter(180)
+           .useDefaultTimeoutForLatchableEmitter(60)
            .addCommonProperty("druid.emitter", "composing")
            .addCommonProperty("druid.emitter.composing.emitters", "[\"latching\",\"kafka\"]")
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
@@ -279,8 +279,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(1)
     );
-
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("stuff"));
 
     // Revert the cluster compaction config and coordinator dynamic config
     cluster.callApi().onLeaderOverlord(
