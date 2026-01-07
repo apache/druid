@@ -25,7 +25,9 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,40 +39,61 @@ public class CompactionSnapshotBuilder
   private final CoordinatorRunStats stats;
   private final Map<String, AutoCompactionSnapshot.Builder> datasourceToBuilder = new HashMap<>();
 
+  private final List<CompactionCandidate> completed = new ArrayList<>();
+  private final List<CompactionCandidate> skipped = new ArrayList<>();
+
   public CompactionSnapshotBuilder(CoordinatorRunStats runStats)
   {
     this.stats = runStats;
+  }
+
+  public List<CompactionCandidate> getCompleted()
+  {
+    return completed;
+  }
+
+  public List<CompactionCandidate> getSkipped()
+  {
+    return skipped;
   }
 
   public void addToComplete(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
         .incrementCompactedStats(candidate.getStats());
+    completed.add(candidate);
   }
 
   public void addToPending(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
-        .incrementWaitingStats(candidate.getStats());
+        .incrementWaitingStats(getUncompactedStats(candidate));
+
+    final CompactionStatistics compactedStats = candidate.getCompactedStats();
+    if (compactedStats != null) {
+      getBuilderForDatasource(candidate.getDataSource())
+          .incrementCompactedStats(compactedStats);
+    }
   }
 
   public void addToSkipped(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
-        .incrementSkippedStats(candidate.getStats());
+        .incrementSkippedStats(getUncompactedStats(candidate));
+    skipped.add(candidate);
   }
 
   public void moveFromPendingToSkipped(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
-        .decrementWaitingStats(candidate.getStats());
+        .decrementWaitingStats(getUncompactedStats(candidate));
     addToSkipped(candidate);
   }
 
   public void moveFromPendingToCompleted(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
-        .decrementWaitingStats(candidate.getStats());
+        .decrementWaitingStats(getUncompactedStats(candidate));
     addToComplete(candidate);
   }
 
@@ -84,6 +107,17 @@ public class CompactionSnapshotBuilder
     });
 
     return datasourceToSnapshot;
+  }
+
+  /**
+   * Gets the stats for uncompacted segments in the given candidate.
+   * If details of uncompacted segments is not available, all segments within the
+   * candidate are considered to be uncompacted.
+   */
+  private CompactionStatistics getUncompactedStats(CompactionCandidate candidate)
+  {
+    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
+    return uncompacted == null ? candidate.getStats() : uncompacted;
   }
 
   private AutoCompactionSnapshot.Builder getBuilderForDatasource(String dataSource)

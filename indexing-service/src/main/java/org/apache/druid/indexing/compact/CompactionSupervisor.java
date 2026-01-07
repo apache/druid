@@ -27,10 +27,14 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Supervisor for compaction of a single datasource.
@@ -105,7 +109,7 @@ public class CompactionSupervisor implements Supervisor
   }
 
   @Override
-  public SupervisorReport<AutoCompactionSnapshot> getStatus()
+  public SupervisorReport<Map<String, Object>> getStatus()
   {
     final AutoCompactionSnapshot snapshot;
     if (supervisorSpec.isSuspended()) {
@@ -123,7 +127,8 @@ public class CompactionSupervisor implements Supervisor
       snapshot = scheduler.getCompactionSnapshot(dataSource);
     }
 
-    return new SupervisorReport<>(supervisorSpec.getId(), DateTimes.nowUtc(), snapshot);
+    final Map<String, Object> statusMap = Map.of("stats", snapshot, "jobs", getCompactionJobsMap());
+    return new SupervisorReport<>(supervisorSpec.getId(), DateTimes.nowUtc(), statusMap);
   }
 
   @Override
@@ -144,6 +149,14 @@ public class CompactionSupervisor implements Supervisor
   public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
   {
     // do nothing
+  }
+
+  private Map<CompactionStatus.State, Table> getCompactionJobsMap()
+  {
+    return CollectionUtils.mapValues(
+        scheduler.getJobsByStatus(dataSource),
+        CompactionJobTable::create
+    );
   }
 
   public enum State implements SupervisorStateManager.State

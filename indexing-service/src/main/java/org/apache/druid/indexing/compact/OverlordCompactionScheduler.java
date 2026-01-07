@@ -22,10 +22,12 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -44,9 +46,13 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -58,9 +64,12 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -105,11 +114,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ConcurrentHashMap<String, CompactionSupervisor> activeSupervisors;
 
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> datasourceToCompactionSnapshot;
-  private final AtomicBoolean shouldRecomputeJobsForAnyDatasource = new AtomicBoolean(false);
+  private final AtomicBoolean isJobRefreshPending = new AtomicBoolean(false);
 
   /**
    * Compaction job queue built in the last invocation of {@link #resetCompactionJobQueue()}.
+   * This is guarded to ensure that the operations performed on the queue are thread-safe.
    */
+  @GuardedBy("this")
   private final AtomicReference<CompactionJobQueue> latestJobQueue;
 
   /**
@@ -159,7 +170,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     final long segmentPollPeriodMillis =
         segmentManagerConfig.getPollDuration().toStandardDuration().getMillis();
-    this.schedulePeriodMillis = Math.min(DEFAULT_SCHEDULE_PERIOD_MILLIS, segmentPollPeriodMillis);
+    this.schedulePeriodMillis = Math.min(DEFAULT_SCHEDULE_PERIOD_MILLIS, 10 * segmentPollPeriodMillis);
 
     this.segmentManager = segmentManager;
     this.emitter = emitter;
@@ -175,7 +186,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
     this.brokerClient = brokerClient;
     this.activeSupervisors = new ConcurrentHashMap<>();
-    this.datasourceToCompactionSnapshot = new AtomicReference<>();
+    this.datasourceToCompactionSnapshot = new AtomicReference<>(Map.of());
     this.latestJobQueue = new AtomicReference<>();
 
     this.taskActionClientFactory = taskActionClientFactory;
@@ -198,8 +209,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       public void statusChanged(String taskId, TaskStatus status)
       {
         if (status.isComplete()) {
-          onTaskFinished(taskId, status);
-          launchPendingJobs();
+          scheduleOnExecutor(() -> onTaskFinished(taskId, status), 0L);
         }
       }
     };
@@ -254,15 +264,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public void startCompaction(String dataSourceName, CompactionSupervisor supervisor)
   {
-    // Track active supervisors even if scheduler has not started yet because
-    // SupervisorManager is started before the scheduler
-    if (isEnabled()) {
-      activeSupervisors.put(dataSourceName, supervisor);
+    // Track active supervisors even if scheduler is disabled or stopped,
+    // so that the supervisors may be used if the scheduler is enabled later.
+    activeSupervisors.put(dataSourceName, supervisor);
 
-      if (started.get()) {
-        shouldRecomputeJobsForAnyDatasource.set(true);
-        scheduleOnExecutor(() -> recreateJobs(dataSourceName, supervisor), 0L);
-      }
+    if (isEnabled() && started.get()) {
+      isJobRefreshPending.set(true);
+      scheduleOnExecutor(() -> refreshJobs(dataSourceName, supervisor), 0L);
     }
   }
 
@@ -272,6 +280,87 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     activeSupervisors.remove(dataSourceName);
     updateQueueIfComputed(queue -> queue.removeJobs(dataSourceName));
     statusTracker.removeDatasource(dataSourceName);
+  }
+
+  @Override
+  public Map<CompactionStatus.State, List<CompactionJobStatus>> getJobsByStatus(String dataSource)
+  {
+    // Get the state of all the jobs from the queue
+    final List<CompactionJob> allQueuedJobs = new ArrayList<>();
+    final List<CompactionCandidate> fullyCompactedIntervals = new ArrayList<>();
+    final List<CompactionCandidate> skippedIntervals = new ArrayList<>();
+
+    final AtomicReference<CompactionCandidateSearchPolicy> searchPolicy = new AtomicReference<>();
+    updateQueueIfComputed(queue -> {
+      allQueuedJobs.addAll(queue.getQueuedJobs());
+      fullyCompactedIntervals.addAll(queue.getFullyCompactedIntervals());
+      skippedIntervals.addAll(queue.getSkippedIntervals());
+
+      searchPolicy.set(queue.getSearchPolicy());
+    });
+
+    // Search policy would be null only if queue has not been computed yet
+    if (searchPolicy.get() == null) {
+      return Map.of();
+    }
+
+    // Sort and filter out the jobs for the required datasource
+    final TreeSet<CompactionJob> sortedJobs = new TreeSet<>(
+        (o1, o2) -> searchPolicy.get().compareCandidates(o1.getCandidate(), o2.getCandidate())
+    );
+    sortedJobs.addAll(allQueuedJobs);
+
+    final Map<CompactionStatus.State, List<CompactionJobStatus>> jobsByStatus = new HashMap<>();
+
+    int jobPositionInQueue = 0;
+    for (CompactionJob job : sortedJobs) {
+      if (job.getDataSource().equals(dataSource)) {
+        final CompactionStatus currentStatus =
+            statusTracker.computeCompactionStatus(job.getCandidate(), searchPolicy.get());
+        jobsByStatus.computeIfAbsent(currentStatus.getState(), s -> new ArrayList<>())
+                    .add(new CompactionJobStatus(job, currentStatus, jobPositionInQueue));
+      }
+      ++jobPositionInQueue;
+    }
+
+    // Add skipped jobs
+    for (CompactionCandidate candidate : skippedIntervals) {
+      final CompactionJob dummyJob = new CompactionJob(createDummyTask("", candidate), candidate, -1);
+      final CompactionStatus currentStatus =
+          statusTracker.computeCompactionStatus(candidate, searchPolicy.get());
+      jobsByStatus.computeIfAbsent(currentStatus.getState(), s -> new ArrayList<>())
+                  .add(new CompactionJobStatus(dummyJob, currentStatus, jobPositionInQueue));
+    }
+
+    // Add recently completed jobs
+    for (CompactionCandidate candidate : fullyCompactedIntervals) {
+      final CompactionTaskStatus taskStatus = statusTracker.getLatestTaskStatus(candidate);
+      final String taskId = taskStatus == null ? "" : taskStatus.getTaskId();
+      final CompactionJob dummyJob = new CompactionJob(createDummyTask(taskId, candidate), candidate, -1);
+
+      final CompactionStatus currentStatus = CompactionStatus.COMPLETE;
+      jobsByStatus.computeIfAbsent(currentStatus.getState(), s -> new ArrayList<>())
+                  .add(new CompactionJobStatus(dummyJob, currentStatus, jobPositionInQueue));
+    }
+
+    return jobsByStatus;
+  }
+
+  private static ClientCompactionTaskQuery createDummyTask(String taskId, CompactionCandidate candidate)
+  {
+    return new ClientCompactionTaskQuery(
+        taskId,
+        candidate.getDataSource(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   /**
@@ -343,6 +432,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       }
       scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     } else {
+      // Schedule run again in case compaction supervisors get enabled
       cleanupState();
       scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     }
@@ -375,7 +465,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     // Jobs for all active supervisors are being freshly created
     // recomputation will not be needed
-    shouldRecomputeJobsForAnyDatasource.set(false);
+    isJobRefreshPending.set(false);
     activeSupervisors.forEach(this::createAndEnqueueJobs);
 
     launchPendingJobs();
@@ -387,22 +477,25 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    * Launches pending compaction jobs if compaction task slots become available.
    * This method uses the jobs created by the last invocation of {@link #resetCompactionJobQueue()}.
    */
-  private synchronized void launchPendingJobs()
+  private void launchPendingJobs()
   {
     updateQueueIfComputed(queue -> {
       queue.runReadyJobs();
-      updateCompactionSnapshots(queue);
+      datasourceToCompactionSnapshot.set(queue.getSnapshots());
     });
   }
 
-  private synchronized void recreateJobs(String dataSource, CompactionSupervisor supervisor)
+  /**
+   * Refreshes compaction jobs for the given datasource if required.
+   */
+  private void refreshJobs(String dataSource, CompactionSupervisor supervisor)
   {
-    if (shouldRecomputeJobsForAnyDatasource.get()) {
+    if (isJobRefreshPending.get()) {
       createAndEnqueueJobs(dataSource, supervisor);
     }
   }
 
-  private synchronized void createAndEnqueueJobs(String dataSource, CompactionSupervisor supervisor)
+  private void createAndEnqueueJobs(String dataSource, CompactionSupervisor supervisor)
   {
     updateQueueIfComputed(
         queue -> queue.createAndEnqueueJobs(
@@ -413,10 +506,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   /**
-   * Performs an operation on the {@link #latestJobQueue} if it has been already
-   * computed.
+   * Performs a thread-safe read or write operation on the {@link #latestJobQueue}
+   * if it has already been computed.
    */
-  private void updateQueueIfComputed(Consumer<CompactionJobQueue> operation)
+  private synchronized void updateQueueIfComputed(Consumer<CompactionJobQueue> operation)
   {
     final CompactionJobQueue queue = latestJobQueue.get();
     if (queue != null) {
@@ -430,13 +523,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     updateQueueIfComputed(queue -> {
       queue.onTaskFinished(taskId, taskStatus);
-      updateCompactionSnapshots(queue);
+      datasourceToCompactionSnapshot.set(queue.getSnapshots());
     });
-  }
 
-  private void updateCompactionSnapshots(CompactionJobQueue queue)
-  {
-    datasourceToCompactionSnapshot.set(queue.getSnapshots());
+    launchPendingJobs();
   }
 
   @Override

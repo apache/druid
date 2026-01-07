@@ -17,48 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
+package org.apache.druid.indexing.compact;
 
-import org.apache.druid.indexer.TaskState;
-import org.joda.time.DateTime;
+import org.apache.druid.server.compaction.CompactionStatus;
 
-public class CompactionTaskStatus
+/**
+ * Latest status of a compaction job.
+ */
+public class CompactionJobStatus
 {
-  private final String taskId;
-  private final TaskState state;
-  private final DateTime updatedTime;
-  private final int numConsecutiveFailures;
+  private final CompactionJob job;
+  private final CompactionStatus currentStatus;
+  private final int positionInQueue;
 
-  public CompactionTaskStatus(
-      String taskId,
-      TaskState state,
-      DateTime updatedTime,
-      int numConsecutiveFailures
-  )
-  {
-    this.taskId = taskId;
-    this.state = state;
-    this.updatedTime = updatedTime;
-    this.numConsecutiveFailures = numConsecutiveFailures;
+  public CompactionJobStatus(CompactionJob job, CompactionStatus currentStatus, int positionInQueue) {
+    this.job = job;
+    this.currentStatus = currentStatus;
+    this.positionInQueue = positionInQueue;
   }
 
-  public String getTaskId()
+  public CompactionJob getJob()
   {
-    return taskId;
+    return job;
   }
 
-  public TaskState getState()
+  public CompactionStatus getCurrentStatus()
   {
-    return state;
+    return currentStatus;
   }
 
-  public DateTime getUpdatedTime()
+  public int getPositionInQueue()
   {
-    return updatedTime;
-  }
-
-  public int getNumConsecutiveFailures()
-  {
-    return numConsecutiveFailures;
+    return positionInQueue;
   }
 }

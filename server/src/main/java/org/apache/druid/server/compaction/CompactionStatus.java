@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
  */
 public class CompactionStatus
 {
-  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
+  public static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
 
   public enum State
   {
