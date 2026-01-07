@@ -19,7 +19,9 @@
 
 package org.apache.druid.server.compaction;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nullable;
@@ -30,6 +32,7 @@ import java.util.Objects;
  * Base implementation of {@link CompactionCandidateSearchPolicy} that can have
  * a {@code priorityDatasource}.
  */
+@SubclassesMustOverrideEqualsAndHashCode
 public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSearchPolicy
 {
   private final String priorityDatasource;
@@ -52,6 +55,7 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public final String getPriorityDatasource()
   {
     return priorityDatasource;

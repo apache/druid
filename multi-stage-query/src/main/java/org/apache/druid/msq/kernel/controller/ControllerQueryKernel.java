@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ExtraInfoHolder;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -183,14 +182,18 @@ public class ControllerQueryKernel
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
       final FrameType rowBasedFrameType,
-      final long maxInputBytesPerWorker
+      final int maxInputFilesPerWorker,
+      final long maxInputBytesPerWorker,
+      final int maxPartitions
   )
   {
     createNewKernels(
         slicerFactory,
         assignmentStrategy,
         rowBasedFrameType,
-        maxInputBytesPerWorker
+        maxInputFilesPerWorker,
+        maxInputBytesPerWorker,
+        maxPartitions
     );
 
     return stageTrackers.values()
@@ -289,6 +292,7 @@ public class ControllerQueryKernel
    */
   public Int2ObjectMap<WorkOrder> createWorkOrders(
       final int stageNumber,
+      final int maxInputFilesPerWorker,
       @Nullable final Int2ObjectMap<Object> extraInfos
   )
   {
@@ -318,16 +322,14 @@ public class ControllerQueryKernel
       );
 
       final int numInputFiles = Ints.checkedCast(workOrder.getInputs().stream().mapToLong(InputSlice::fileCount).sum());
-      fault = fault || IntMath.divide(numInputFiles, Limits.MAX_INPUT_FILES_PER_WORKER, RoundingMode.CEILING) > 1;
+      fault = fault || IntMath.divide(numInputFiles, maxInputFilesPerWorker, RoundingMode.CEILING) > 1;
       totalFileCount += numInputFiles;
       workerToWorkOrder.put(workerNumber, workOrder);
     }
 
-    final int requiredWorkers = IntMath.divide(totalFileCount, Limits.MAX_INPUT_FILES_PER_WORKER, RoundingMode.CEILING);
+    final int requiredWorkers = IntMath.divide(totalFileCount, maxInputFilesPerWorker, RoundingMode.CEILING);
     if (fault) {
-      throw new MSQException(
-          new TooManyInputFilesFault(totalFileCount, Limits.MAX_INPUT_FILES_PER_WORKER, requiredWorkers)
-      );
+      throw new MSQException(new TooManyInputFilesFault(totalFileCount, maxInputFilesPerWorker, requiredWorkers));
     }
     stageWorkOrders.put(new StageId(queryDef.getQueryId(), stageNumber), workerToWorkOrder);
     return workerToWorkOrder;
@@ -337,7 +339,9 @@ public class ControllerQueryKernel
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
       final FrameType rowBasedFrameType,
-      final long maxInputBytesPerWorker
+      final int maxInputFilesPerWorker,
+      final long maxInputBytesPerWorker,
+      final int maxPartitions
   )
   {
     StageGroup stageGroup;
@@ -357,7 +361,9 @@ public class ControllerQueryKernel
                   slicerFactory,
                   assignmentStrategy,
                   rowBasedFrameType,
-                  maxInputBytesPerWorker
+                  maxInputFilesPerWorker,
+                  maxInputBytesPerWorker,
+                  maxPartitions
               )
           );
 
@@ -380,7 +386,9 @@ public class ControllerQueryKernel
       final InputSpecSlicerFactory slicerFactory,
       final WorkerAssignmentStrategy assignmentStrategy,
       final FrameType rowBasedFrameType,
-      final long maxInputBytesPerWorker
+      final int maxInputFilesPerWorker,
+      final long maxInputBytesPerWorker,
+      final int maxPartitions
   )
   {
     final Int2IntMap stageWorkerCountMap = new Int2IntAVLTreeMap();
@@ -410,7 +418,9 @@ public class ControllerQueryKernel
         assignmentStrategy,
         rowBasedFrameType,
         config.getMaxRetainedPartitionSketchBytes(),
-        maxInputBytesPerWorker
+        maxInputFilesPerWorker,
+        maxInputBytesPerWorker,
+        maxPartitions
     );
   }
 
@@ -571,7 +581,8 @@ public class ControllerQueryKernel
 
   /**
    * Checks if the stage can be started, delegates call to {@link ControllerStageTracker#start()} for internal phase
-   * transition and registers the transition in this queryKernel. Work orders need to be created via {@link ControllerQueryKernel#createWorkOrders(int, Int2ObjectMap)} before calling this method.
+   * transition and registers the transition in this queryKernel. Work orders need to be created via
+   * {@link ControllerQueryKernel#createWorkOrders(int, int, Int2ObjectMap)} before calling this method.
    */
   public void startStage(final StageId stageId)
   {

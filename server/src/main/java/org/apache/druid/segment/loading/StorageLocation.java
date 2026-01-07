@@ -106,9 +106,7 @@ public class StorageLocation
   @GuardedBy("lock")
   private WeakCacheEntry hand;
 
-  /**
-   * Current total size of files in bytes, including weak entries.
-   */
+  private volatile boolean evictImmediatelyOnHoldRelease = false;
 
   /**
    * Current total size of files in bytes, including weak entries.
@@ -169,6 +167,14 @@ public class StorageLocation
   public File getPath()
   {
     return path;
+  }
+
+  /**
+   * Sets whether weak cache entries should be immediately evicted once all holds are released.
+   */
+  public void setEvictImmediatelyOnHoldRelease(final boolean evictImmediatelyOnHoldRelease)
+  {
+    this.evictImmediatelyOnHoldRelease = evictImmediatelyOnHoldRelease;
   }
 
   public <T extends CacheEntry> T getStaticCacheEntry(CacheEntryIdentifier entryId)
@@ -340,7 +346,10 @@ public class StorageLocation
       if (existingEntry != null && existingEntry.hold()) {
         existingEntry.visited = true;
         weakStats.getAndUpdate(WeakStats::hit);
-        return new ReservationHold<>((T) existingEntry.cacheEntry, existingEntry::release);
+        return new ReservationHold<>(
+            (T) existingEntry.cacheEntry,
+            createWeakEntryReleaseRunnable(existingEntry, false)
+        );
       }
       return null;
     }
@@ -374,7 +383,10 @@ public class StorageLocation
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
         weakStats.getAndUpdate(WeakStats::hit);
-        return new ReservationHold<>((T) retryExistingEntry.cacheEntry, retryExistingEntry::release);
+        return new ReservationHold<>(
+            (T) retryExistingEntry.cacheEntry,
+            createWeakEntryReleaseRunnable(retryExistingEntry, false)
+        );
       }
       final CacheEntry newEntry = entrySupplier.get();
       final ReclaimResult reclaimResult = canHandleWeak(newEntry);
@@ -388,28 +400,7 @@ public class StorageLocation
         weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
-            () -> {
-              newWeakEntry.release();
-              lock.writeLock().lock();
-              try {
-                weakCacheEntries.computeIfPresent(
-                    newEntry.getId(),
-                    (cacheEntryIdentifier, weakCacheEntry) -> {
-                      if (!weakCacheEntry.cacheEntry.isMounted()) {
-                        // if we never successfully mounted, go ahead and remove so we don't have a dead entry
-                        unlinkWeakEntry(weakCacheEntry);
-                        // we call unmount anyway to terminate the phaser
-                        weakCacheEntry.unmount();
-                        return null;
-                      }
-                      return weakCacheEntry;
-                    }
-                );
-              }
-              finally {
-                lock.writeLock().unlock();
-              }
-            }
+            createWeakEntryReleaseRunnable(newWeakEntry, true)
         );
       } else {
         weakStats.getAndUpdate(WeakStats::reject);
@@ -442,6 +433,52 @@ public class StorageLocation
     finally {
       lock.writeLock().unlock();
     }
+  }
+
+  /**
+   * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
+   * If {@link #evictImmediately} is true and there are no more holds after releasing, the entry is immediately
+   * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.
+   */
+  private Runnable createWeakEntryReleaseRunnable(
+      final WeakCacheEntry weakEntry,
+      final boolean isNewEntry
+  )
+  {
+    return () -> {
+      weakEntry.release();
+
+      if (!isNewEntry && !evictImmediatelyOnHoldRelease) {
+        // No need to consider removal from weakCacheEntries on hold release.
+        return;
+      }
+
+      lock.writeLock().lock();
+      try {
+        weakCacheEntries.computeIfPresent(
+            weakEntry.cacheEntry.getId(),
+            (cacheEntryIdentifier, weakCacheEntry) -> {
+              // If we never successfully mounted, go ahead and remove so we don't have a dead entry.
+              // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
+              final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+              if ((isNewEntry && !isMounted)
+                  || (evictImmediatelyOnHoldRelease && !weakCacheEntry.isHeld())) {
+                unlinkWeakEntry(weakCacheEntry);
+                weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
+                if (isMounted) {
+                  weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+                }
+                return null;
+              } else {
+                return weakCacheEntry;
+              }
+            }
+        );
+      }
+      finally {
+        lock.writeLock().unlock();
+      }
+    };
   }
 
   /**

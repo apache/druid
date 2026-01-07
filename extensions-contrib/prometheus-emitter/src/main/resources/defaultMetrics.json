@@ -37,6 +37,9 @@
 
   "jetty/numOpenConnections" : { "dimensions" : [], "type" : "gauge", "help": "Number of open jetty connections."},
   "jetty/threadPool/total" : { "dimensions" : [], "type" : "gauge", "help": "Number of total workable threads allocated."},
+  "jetty/threadPool/ready" : { "dimensions" : [], "type" : "gauge", "help": "Number of threads that are ready to serve requests."},
+  "jetty/threadPool/utilized" : { "dimensions" : [], "type" : "gauge", "help": "Number of threads currently in use to serve requests."},
+  "jetty/threadPool/utilizationRate" : { "dimensions" : [], "type" : "gauge", "help": "Fraction of thread pool capacity currently in use to serve requests."},
   "jetty/threadPool/idle" : { "dimensions" : [], "type" : "gauge", "help": "Number of idle threads."},
   "jetty/threadPool/busy" : { "dimensions" : [], "type" : "gauge", "help": "Number of busy threads that has work to do from the worker queue."},
   "jetty/threadPool/isLowOnThreads" : { "dimensions" : [], "type" : "gauge", "help": "A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue."},
@@ -104,7 +107,7 @@
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events successfully processed per emission period." },
   "ingest/events/processedWithError" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events processed with some partial errors per emission period." },
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because the events are unparseable." },
-  "ingest/events/thrownAway" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because they are outside the windowPeriod."},
+  "ingest/events/thrownAway" : { "dimensions" : ["dataSource", "reason"], "type" : "count", "help": "Number of events rejected because they are null, filtered by transformSpec, or outside the message rejection periods. The `reason` dimension indicates why the event was thrown away."},
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because the events are duplicated."},
   "ingest/input/bytes" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of bytes read from input sources, after decompression but prior to parsing." },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of Druid rows persisted."},

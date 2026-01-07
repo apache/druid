@@ -149,10 +149,13 @@ to represent the task ID are deprecated and will be removed in a future release.
 |Metric|Description|Normal value|
 |------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
-|`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to `threadPoolNumIdleThreads` + `threadPoolNumBusyThreads`.|
-|`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to `threadPoolNumTotalThreads`. Non zero number means there is less work to do than configured capacity.|
-|`jetty/threadPool/busy`|Number of busy threads that has work to do from the worker queue.|Less than or equal to `threadPoolNumTotalThreads`.|
-|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue.|0|
+|`jetty/threadPool/total`|Number of total threads allocated. This includes internal threads and threads that are ready to serve requests.|Equals the total number of threads in the Jetty thread pool. i.e., `jetty/threadPool/ready` + `jetty/threadPool/utilized` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/ready`|Number of threads that are ready to serve requests.|Equals the total number of usable threads in the Jetty thread pool to serve requests. i.e., `jetty/threadPool/idle` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/utilized`|Number of threads currently in use by the thread pool to serve requests.|Value < `jetty/threadPool/ready`.|
+|`jetty/threadPool/utilizationRate`|Fraction of thread pool capacity currently in use to serve requests.|0.0 ≤ Value ≤ 1. A value of 0.0 means that the thread pool is not utilized, while a value of 1.0 means that the thread pool is fully utilized.|
+|`jetty/threadPool/idle`|Number of idle threads.|Value ≤ (`jetty/threadPool/ready` - any reserved threads for internal Jetty usage). A non-zero value means there is less work to do than configured capacity.|
+|`jetty/threadPool/busy`|Number of busy threads that have work to do from the worker queue.|Value ≤ (`jetty/threadPool/utilized` + any reserved threads for internal Jetty usage).|
+|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether the number of total workable threads allocated is enough to handle the work in the work queue.|0|
 |`jetty/threadPool/min`|Number of minimum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/max`|Number of maximum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than `druid.server.http.queueSize`.|
@@ -270,7 +273,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/events/processed`|Number of events processed per emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Equal to the number of events per emission period.|
 |`ingest/events/processedWithError`|Number of events processed with some partial errors per emission period. Events processed with partial errors are counted towards both this metric and `ingest/events/processed`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
-|`ingest/events/thrownAway`|Number of events rejected because they are null, or filtered by `transformSpec`, or outside one of `lateMessageRejectionPeriod`, `earlyMessageRejectionPeriod`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
+|`ingest/events/thrownAway`|Number of events rejected because they are null, or filtered by `transformSpec`, or outside one of `lateMessageRejectionPeriod`, `earlyMessageRejectionPeriod`. The `reason` dimension indicates why the event was thrown away.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `reason`|0|
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/input/bytes`|Number of bytes read from input sources, after decompression but prior to parsing. This covers all data read, including data that does not end up being fully processed and ingested. For example, this includes data that ends up being rejected for being unparseable or filtered out.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the amount of data read.|
 |`ingest/rows/output`|Number of Druid rows persisted.|`dataSource`, `taskId`, `taskType`, `groupId`|Your number of events with rollup.|

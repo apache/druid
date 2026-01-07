@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -69,6 +69,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -586,6 +587,7 @@ public class BatchAppenderator implements Appenderator
             log.info("No indexes will be persisted");
           }
           final Stopwatch persistStopwatch = Stopwatch.createStarted();
+          final long startPersistCpuNanos = JvmUtils.safeGetThreadCpuTime();
           try {
             for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
               metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
@@ -615,9 +617,10 @@ public class BatchAppenderator implements Appenderator
             throw e;
           }
           finally {
-            metrics.incrementNumPersists();
-            long persistMillis = persistStopwatch.elapsed(TimeUnit.MILLISECONDS);
+            metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
+            final long persistMillis = persistStopwatch.millisElapsed();
             metrics.incrementPersistTimeMillis(persistMillis);
+            metrics.incrementNumPersists();
             persistStopwatch.stop();
             // make sure no push can start while persisting:
             log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
@@ -629,7 +632,7 @@ public class BatchAppenderator implements Appenderator
         }
     );
 
-    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    final long startDelay = runExecStopwatch.millisElapsed();
     metrics.incrementPersistBackPressureMillis(startDelay);
     if (startDelay > PERSIST_WARN_DELAY) {
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
@@ -794,8 +797,9 @@ public class BatchAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final long mergeFinishTime;
-      final long startTime = System.nanoTime();
+      final Stopwatch mergeStopwatch = Stopwatch.createStarted();
+      final long mergeTimeMillis;
+      final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       long rowsinMergedSegment = 0L;
       Closer closer = Closer.create();
@@ -824,10 +828,13 @@ public class BatchAppenderator implements Appenderator
             tuningConfig.getMaxColumnsToMerge()
         );
 
-        mergeFinishTime = System.nanoTime();
         metrics.incrementMergedRows(rowsinMergedSegment);
 
-        log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
+        metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        mergeTimeMillis = mergeStopwatch.millisElapsed();
+        metrics.setMergeTime(mergeTimeMillis);
+
+        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -835,6 +842,8 @@ public class BatchAppenderator implements Appenderator
       finally {
         closer.close();
       }
+
+      final Stopwatch pushStopwatch = Stopwatch.createStarted();
 
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
       final DataSegment segment = dataSegmentPusher.push(
@@ -864,7 +873,7 @@ public class BatchAppenderator implements Appenderator
       // cleanup, sink no longer needed
       removeDirectory(computePersistDir(identifier));
 
-      final long pushFinishTime = System.nanoTime();
+      final long pushTimeMillis = pushStopwatch.millisElapsed();
       metrics.incrementPushedRows(rowsinMergedSegment);
 
       log.info(
@@ -875,8 +884,8 @@ public class BatchAppenderator implements Appenderator
           identifier,
           segment.getSize(),
           indexes.size(),
-          (mergeFinishTime - startTime) / 1000000,
-          (pushFinishTime - mergeFinishTime) / 1000000,
+          mergeTimeMillis,
+          pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 

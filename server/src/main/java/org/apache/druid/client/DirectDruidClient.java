@@ -437,11 +437,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         private void checkTotalBytesLimit(long bytes)
         {
-          if (maxScatterGatherBytes < Long.MAX_VALUE && totalBytesGathered.addAndGet(bytes) > maxScatterGatherBytes) {
+          final long currentTotalBytesGathered = totalBytesGathered.addAndGet(bytes);
+          if (currentTotalBytesGathered > maxScatterGatherBytes) {
             String msg = StringUtils.format(
-                "Query[%s] url[%s] max scatter-gather bytes limit reached.",
+                "Query[%s] url[%s] total bytes gathered[%,d] exceeds maxScatterGatherBytes[%,d]",
                 query.getId(),
-                url
+                url,
+                currentTotalBytesGathered,
+                maxScatterGatherBytes
             );
             setupResponseReadFailure(msg, null);
             throw new ResourceLimitExceededException(msg);

@@ -339,7 +339,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const orderByClause = sortedToOrderByClause(effectiveSorted);
 
           let queryParts: string[];
-          const sqlQueryContext: QueryContext = {};
+          const sqlQueryContext: QueryContext = { engine: 'native' };
           if (groupByInterval) {
             const innerQuery = compact([
               `SELECT "start", "end"`,
@@ -352,7 +352,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               page ? `OFFSET ${page * pageSize}` : undefined,
             ]).join('\n');
 
-            const intervals: string = (await queryDruidSql({ query: innerQuery }))
+            const intervals: string = (
+              await queryDruidSql({ query: innerQuery, context: { engine: 'native' } })
+            )
               .map(({ start, end }) => `'${start}/${end}'`)
               .join(', ');
 
@@ -403,6 +405,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               await queryDruidSql<{ cnt: number }>(
                 {
                   query: sqlQuery,
+                  context: { engine: 'native' },
                 },
                 signal,
               )
@@ -1165,7 +1168,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               getIntervalActionButton={(start, end, datasource, realtime) => {
                 return (
                   <Button
-                    text="Apply fitler to table"
+                    text="Apply filter to table"
                     small
                     rightIcon={IconNames.ARROW_DOWN}
                     onClick={() => {

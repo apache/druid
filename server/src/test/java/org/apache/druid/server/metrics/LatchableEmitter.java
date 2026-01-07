@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
@@ -72,9 +73,9 @@ public class LatchableEmitter extends StubServiceEmitter
   /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host, LatchableEmitterConfig config)
+  public LatchableEmitter(String service, String host, LatchableEmitterConfig config, TaskHolder taskHolder)
   {
-    super(service, host);
+    super(service, host, taskHolder);
     this.defaultWaitTimeoutMillis = config.getDefaultWaitTimeoutMillis();
   }
 
@@ -126,7 +127,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for event");
+        throw new ISE("Timed out waiting for event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {
@@ -152,7 +153,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for next event");
+        throw new ISE("Timed out waiting for next event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {

@@ -20,13 +20,10 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
-
-import java.util.Map;
 
 /**
  * Monitor that reports memory usage stats by reading `memory.*` files reported by cgroupv2
@@ -37,32 +34,24 @@ public class CgroupV2MemoryMonitor extends FeedDefiningMonitor
   private static final String MEMORY_USAGE_FILE = "memory.current";
   private static final String MEMORY_LIMIT_FILE = "memory.max";
   private final CgroupDiscoverer cgroupDiscoverer;
-  private final Map<String, String[]> dimensions;
 
   @VisibleForTesting
-  CgroupV2MemoryMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  CgroupV2MemoryMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
   }
 
 
-  public CgroupV2MemoryMonitor(final Map<String, String[]> dimensions, String feed)
+  public CgroupV2MemoryMonitor(String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class), dimensions, feed);
-  }
-
-  public CgroupV2MemoryMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class), feed);
   }
 
   public CgroupV2MemoryMonitor()
   {
-    this(ImmutableMap.of());
+    this(DEFAULT_METRICS_FEED);
   }
-
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
@@ -70,7 +59,6 @@ public class CgroupV2MemoryMonitor extends FeedDefiningMonitor
     return CgroupMemoryMonitor.parseAndEmit(
         emitter,
         cgroupDiscoverer,
-        dimensions,
         MEMORY_USAGE_FILE,
         MEMORY_LIMIT_FILE,
         this

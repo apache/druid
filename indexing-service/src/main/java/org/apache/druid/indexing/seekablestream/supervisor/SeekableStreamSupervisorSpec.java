@@ -43,16 +43,18 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
-  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE = "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
-                                                                   + "%nTo perform the update safely, follow these steps:"
-                                                                   + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-                                                                   + "%n(2) Create a new supervisor with the new input source stream."
-                                                                   + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
+  protected static final String ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE =
+      "Update of the input source stream from [%s] to [%s] is not supported for a running supervisor."
+      + "%nTo perform the update safely, follow these steps:"
+      + "%n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+      + "%n(2) Create a new supervisor with the new input source stream."
+      + "%nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too.";
 
   private static SeekableStreamSupervisorIngestionSpec checkIngestionSchema(
       SeekableStreamSupervisorIngestionSpec ingestionSchema
@@ -183,6 +185,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   /**
    * An autoScaler instance will be returned depending on the autoScalerConfig. In case autoScalerConfig is null or autoScaler is disabled then NoopTaskAutoScaler will be returned.
+   *
    * @param supervisor
    * @return autoScaler
    */
@@ -232,6 +235,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
    * <li>You cannot migrate between types of supervisors.</li>
    * <li>You cannot change the input source stream of a running supervisor.</li>
    * </ul>
+   *
    * @param proposedSpec the proposed supervisor spec
    * @throws DruidException if the proposed spec update is not allowed
    */
@@ -240,7 +244,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   {
     if (!(proposedSpec instanceof SeekableStreamSupervisorSpec)) {
       throw InvalidInput.exception(
-          "Cannot update supervisor spec from type[%s] to type[%s]", getClass().getSimpleName(), proposedSpec.getClass().getSimpleName()
+          "Cannot update supervisor spec from type[%s] to type[%s]",
+          getClass().getSimpleName(),
+          proposedSpec.getClass().getSimpleName()
       );
     }
     SeekableStreamSupervisorSpec other = (SeekableStreamSupervisorSpec) proposedSpec;
@@ -252,6 +258,33 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
     if (!this.getSource().equals(other.getSource())) {
       throw InvalidInput.exception(ILLEGAL_INPUT_SOURCE_UPDATE_ERROR_MESSAGE, this.getSource(), other.getSource());
+    }
+  }
+
+  @Override
+  public void merge(@NotNull SupervisorSpec existingSpec)
+  {
+    AutoScalerConfig thisAutoScalerConfig = this.getIoConfig().getAutoScalerConfig();
+    // Either if autoscaler is absent or taskCountStart is specified - just return.
+    if (thisAutoScalerConfig == null || thisAutoScalerConfig.getTaskCountStart() != null) {
+      return;
+    }
+
+    // Use a switch expression with pattern matching when we move to Java 21 as a minimum requirement.
+    if (existingSpec instanceof SeekableStreamSupervisorSpec) {
+      SeekableStreamSupervisorSpec spec = (SeekableStreamSupervisorSpec) existingSpec;
+      AutoScalerConfig autoScalerConfig = spec.getIoConfig().getAutoScalerConfig();
+      if (autoScalerConfig == null) {
+        return;
+      }
+      // provided `taskCountStart` > provided `taskCount` > existing `taskCount` > provided `taskCountMin`.
+      int taskCount = thisAutoScalerConfig.getTaskCountMin();
+      if (this.getIoConfig().getTaskCount() != null) {
+        taskCount = this.getIoConfig().getTaskCount();
+      } else if (spec.getIoConfig().getTaskCount() != null) {
+        taskCount = spec.getIoConfig().getTaskCount();
+      }
+      this.getIoConfig().setTaskCount(taskCount);
     }
   }
 

@@ -56,6 +56,7 @@ import {
   formatBytesCompact,
   formatDate,
   formatDurationWithMsIfNeeded,
+  formatInteger,
   getApiArray,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
@@ -67,6 +68,7 @@ import {
   QueryManager,
   QueryState,
   ResultWithAuxiliaryWork,
+  twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
 import { TableFilter, TableFilters } from '../../utils/table-filters';
@@ -87,6 +89,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'Available processors',
+    'Total memory',
     'Labels',
     'Detail',
   ],
@@ -150,6 +154,8 @@ interface ServiceResultRow {
   readonly start_time: string;
   readonly version: string;
   readonly labels: string | null;
+  readonly available_processors: number;
+  readonly total_memory: number;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -252,7 +258,9 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "is_leader",
   "start_time",
   "version",
-  "labels"
+  "labels",
+  "available_processors",
+  "total_memory"
 FROM sys.servers
 ORDER BY
   (
@@ -284,7 +292,10 @@ ORDER BY
       processQuery: async ({ capabilities, visibleColumns }, signal) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, signal);
+          services = await queryDruidSql(
+            { query: ServicesView.SERVICE_SQL, context: { engine: 'native' } },
+            signal,
+          );
         } else if (capabilities.hasCoordinatorAccess()) {
           services = (await getApiArray('/druid/coordinator/v1/servers?simple', signal)).map(
             (s: any): ServiceResultRow => {
@@ -303,6 +314,8 @@ ORDER BY
                 is_leader: 0,
                 version: '',
                 labels: null,
+                available_processors: -1,
+                total_memory: -1,
               };
             },
           );
@@ -662,6 +675,37 @@ ORDER BY
           width: 200,
           Cell: this.renderFilterableCell('version'),
           Aggregated: () => '',
+        },
+        {
+          Header: twoLines('Available', 'processors'),
+          show: visibleColumns.shown('Available processors'),
+          accessor: 'available_processors',
+          className: 'padded',
+          filterable: false,
+          width: 100,
+          Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            return totalAvailableProcessors;
+          },
+        },
+        {
+          Header: 'Total memory',
+          show: visibleColumns.shown('Total memory'),
+          accessor: 'total_memory',
+          className: 'padded',
+          width: 120,
+          filterable: false,
+          Cell: ({ value }) => {
+            if (value === null) return '';
+            return formatBytes(value, true);
+          },
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalMemory = sum(originalRows, s => s.total_memory);
+            return formatBytes(totalMemory, true);
+          },
         },
         {
           Header: 'Labels',

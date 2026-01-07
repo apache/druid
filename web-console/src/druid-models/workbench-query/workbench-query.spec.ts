@@ -287,6 +287,7 @@ describe('WorkbenchQuery', () => {
         engine: 'sql-native',
         query: {
           context: {
+            engine: 'native',
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
             sqlStringifyArrays: false,
@@ -315,6 +316,7 @@ describe('WorkbenchQuery', () => {
         engine: 'sql-native',
         query: {
           context: {
+            engine: 'native',
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
             sqlStringifyArrays: false,
@@ -354,6 +356,7 @@ describe('WorkbenchQuery', () => {
         engine: 'sql-native',
         query: {
           context: {
+            engine: 'native',
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
             sqlStringifyArrays: false,
@@ -395,10 +398,39 @@ describe('WorkbenchQuery', () => {
         engine: 'sql-native',
         query: {
           context: {
+            engine: 'native',
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
             sqlStringifyArrays: false,
             x: 1,
+          },
+          header: true,
+          query: 'SELECT * FROM wikipedia',
+          resultFormat: 'array',
+          sqlTypesHeader: true,
+          typesHeader: true,
+        },
+        prefixLines: 0,
+      });
+    });
+
+    it('works with sql (preserves explicit engine context)', () => {
+      const sql = `SELECT * FROM wikipedia`;
+
+      const workbenchQuery = WorkbenchQuery.blank()
+        .changeQueryString(sql)
+        .changeQueryContext({ engine: 'msq-task' });
+
+      const apiQuery = workbenchQuery.getApiQuery(makeQueryId);
+      expect(apiQuery).toEqual({
+        cancelQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+        engine: 'sql-native',
+        query: {
+          context: {
+            engine: 'msq-task',
+            sqlOuterLimit: 1001,
+            sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
           },
           header: true,
           query: 'SELECT * FROM wikipedia',
