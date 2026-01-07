@@ -552,13 +552,21 @@ export class WorkbenchQuery {
       ...queryContext,
     };
 
+    // Effective context lets us see the context which can also include the set statements from the SetStatements
+    const effectiveContext = {
+      ...apiQuery.context,
+      ...SqlSetStatement.getContextFromText(apiQuery.query || ''),
+    };
+
     if (engine === 'sql-native') {
-      apiQuery.context.engine ??= 'native';
+      if (typeof effectiveContext.engine === 'undefined') {
+        apiQuery.context.engine = 'native';
+      }
     }
 
     let cancelQueryId: string | undefined;
     if (engine === 'sql-native' || engine === 'sql-msq-dart') {
-      cancelQueryId = apiQuery.context.sqlQueryId;
+      cancelQueryId = effectiveContext.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
         apiQuery.context.sqlQueryId = cancelQueryId = makeQueryId();
@@ -566,23 +574,40 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-task') {
-      apiQuery.context.executionMode ??= 'async';
+      if (typeof effectiveContext.executionMode === 'undefined') {
+        apiQuery.context.executionMode = 'async';
+      }
+
       if (ingestQuery) {
         // Alter these defaults for ingest queries if unset
-        apiQuery.context.finalizeAggregations ??= false;
-        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
-        apiQuery.context.waitUntilSegmentsLoad ??= true;
+        if (typeof effectiveContext.finalizeAggregations === 'undefined') {
+          apiQuery.context.finalizeAggregations = false;
+        }
+        if (typeof effectiveContext.groupByEnableMultiValueUnnesting === 'undefined') {
+          apiQuery.context.groupByEnableMultiValueUnnesting = false;
+        }
+        if (typeof effectiveContext.waitUntilSegmentsLoad === 'undefined') {
+          apiQuery.context.waitUntilSegmentsLoad = true;
+        }
       }
     }
 
     if (engine === 'sql-native' || engine === 'sql-msq-task') {
-      apiQuery.context.sqlStringifyArrays ??= false;
+      if (typeof effectiveContext.sqlStringifyArrays === 'undefined') {
+        apiQuery.context.sqlStringifyArrays = false;
+      }
     }
 
     if (engine === 'sql-msq-dart') {
-      apiQuery.context.engine = 'msq-dart';
-      apiQuery.context.fullReport ??= true;
-      apiQuery.context.liveReportCounters ??= true;
+      if (typeof effectiveContext.engine === 'undefined') {
+        apiQuery.context.engine = 'msq-dart';
+      }
+      if (typeof effectiveContext.fullReport === 'undefined') {
+        apiQuery.context.fullReport = true;
+      }
+      if (typeof effectiveContext.liveReportCounters === 'undefined') {
+        apiQuery.context.liveReportCounters = true;
+      }
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {
