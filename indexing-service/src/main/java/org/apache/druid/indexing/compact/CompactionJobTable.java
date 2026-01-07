@@ -28,12 +28,15 @@ import java.util.List;
 
 public class CompactionJobTable extends Table
 {
-  public static CompactionJobTable create(List<CompactionJobStatus> jobs)
+  public static CompactionJobTable create(List<CompactionJobStatus> jobs, int maxRows)
   {
     final CompactionJobTable table = new CompactionJobTable(
         List.of("Interval", "Task Id", "Compacted segments", "Compacted bytes", "Position in job queue")
     );
-    jobs.forEach(table::addJobRow);
+
+    for (int i = 0; i < maxRows && i < jobs.size(); ++i) {
+      table.addJobRow(jobs.get(i));
+    }
     return table;
   }
 

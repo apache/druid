@@ -112,22 +112,27 @@ public class CompactionSupervisor implements Supervisor
   public SupervisorReport<Map<String, Object>> getStatus()
   {
     final AutoCompactionSnapshot snapshot;
+    String message = "";
     if (supervisorSpec.isSuspended()) {
       snapshot = AutoCompactionSnapshot.builder(dataSource)
                                        .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                                        .build();
     } else if (!supervisorSpec.getValidationResult().isValid()) {
-      snapshot = AutoCompactionSnapshot.builder(dataSource)
-                                       .withMessage(StringUtils.format(
-                                           "Compaction supervisor spec is invalid. Reason[%s].",
-                                           supervisorSpec.getValidationResult().getReason()
-                                       ))
-                                       .build();
+      snapshot = AutoCompactionSnapshot.builder(dataSource).build();
+      message = StringUtils.format(
+          "Compaction supervisor spec is invalid. Reason[%s].",
+          supervisorSpec.getValidationResult().getReason()
+      );
     } else {
       snapshot = scheduler.getCompactionSnapshot(dataSource);
     }
 
-    final Map<String, Object> statusMap = Map.of("stats", snapshot, "jobs", getCompactionJobsMap());
+    final Map<String, Object> statusMap = Map.of(
+        "state", getState(),
+        "stats", snapshot,
+        "jobs", getCompactionJobsMap(),
+        "message", message
+    );
     return new SupervisorReport<>(supervisorSpec.getId(), DateTimes.nowUtc(), statusMap);
   }
 
@@ -155,7 +160,7 @@ public class CompactionSupervisor implements Supervisor
   {
     return CollectionUtils.mapValues(
         scheduler.getJobsByStatus(dataSource),
-        CompactionJobTable::create
+        jobs -> CompactionJobTable.create(jobs, 100)
     );
   }
 

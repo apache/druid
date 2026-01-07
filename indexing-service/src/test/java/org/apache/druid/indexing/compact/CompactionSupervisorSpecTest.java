@@ -88,11 +88,12 @@ public class CompactionSupervisorSpecTest
     Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
            .thenReturn(CompactionConfigValidationResult.failure("bad spec"));
     Assert.assertEquals(
-        "Compaction supervisor spec is invalid. Reason[bad spec].", new CompactionSupervisorSpec(
+        "Compaction supervisor spec is invalid. Reason[bad spec].",
+        new CompactionSupervisorSpec(
             new InlineSchemaDataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
             false,
             scheduler
-        ).createSupervisor().getStatus().getPayload().getMessage()
+        ).createSupervisor().getStatus().getPayload().get("message")
     );
   }
 
