@@ -969,10 +969,7 @@ public class TaskQueue
   {
     final TaskEntry activeTaskEntry = activeTasks.get(taskId);
     if (activeTaskEntry != null) {
-      return Optional.of(
-          TaskStatus.fromCode(taskId, activeTaskEntry.taskInfo.getStatus().getStatusCode())
-                    .withLocation(taskRunner.getTaskLocation(taskId))
-      );
+      return Optional.of(activeTaskEntry.taskInfo.getStatus().withLocation(taskRunner.getTaskLocation(taskId)));
     } else {
       return taskStorage.getStatus(taskId);
     }
