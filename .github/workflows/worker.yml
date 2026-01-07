@@ -98,6 +98,7 @@ jobs:
           fail_on_failure: true
           check_retries: true
           truncate_stack_traces: false
+          job_summary: false
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
