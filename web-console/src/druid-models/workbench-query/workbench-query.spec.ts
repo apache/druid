@@ -843,4 +843,269 @@ describe('WorkbenchQuery', () => {
       });
     });
   });
+
+  describe('#getEffectiveEngine', () => {
+    beforeEach(() => {
+      // Reset to default engines before each test
+      WorkbenchQuery.setQueryEngines(['native', 'sql-native', 'sql-msq-task']);
+    });
+
+    describe('when engine is explicitly set', () => {
+      it('returns the explicitly set engine', () => {
+        const workbenchQuery = WorkbenchQuery.blank()
+          .changeQueryString('SELECT * FROM wikipedia')
+          .changeEngine('sql-msq-task');
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('returns explicit engine even if query suggests different engine', () => {
+        const workbenchQuery = WorkbenchQuery.blank()
+          .changeQueryString('INSERT INTO wiki SELECT * FROM wikipedia')
+          .changeEngine('sql-native');
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('returns explicit engine for JSON queries', () => {
+        const workbenchQuery = WorkbenchQuery.blank()
+          .changeQueryString('{"queryType": "topN", "dataSource": "test"}')
+          .changeEngine('sql-native');
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+    });
+
+    describe('when query is JSON-like', () => {
+      it('returns sql-native for SQL-in-JSON when sql-native is enabled', () => {
+        const sqlInJson = sane`
+          {
+            "query": "SELECT * FROM wikipedia",
+            "context": {}
+          }
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sqlInJson);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('returns native for native JSON query when native is enabled', () => {
+        const nativeJson = sane`
+          {
+            "queryType": "topN",
+            "dataSource": "wikipedia",
+            "dimension": "page",
+            "threshold": 10,
+            "intervals": ["2015-09-12/2015-09-13"],
+            "granularity": "all",
+            "aggregations": [
+              {"type": "count", "name": "count"}
+            ]
+          }
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(nativeJson);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('native');
+      });
+
+      it('falls through for SQL-in-JSON when sql-native is not enabled', () => {
+        WorkbenchQuery.setQueryEngines(['native', 'sql-msq-task']);
+
+        const sqlInJson = sane`
+          {
+            "query": "SELECT * FROM wikipedia",
+            "context": {}
+          }
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sqlInJson);
+
+        // Falls through JSON-like check, task engine check (no INSERT/EXTERN), sql-native check (not enabled),
+        // and returns first enabled engine which is 'native'
+        expect(workbenchQuery.getEffectiveEngine()).toBe('native');
+      });
+
+      it('falls through for native JSON when native is not enabled', () => {
+        WorkbenchQuery.setQueryEngines(['sql-native', 'sql-msq-task']);
+
+        const nativeJson = sane`
+          {
+            "queryType": "topN",
+            "dataSource": "wikipedia"
+          }
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(nativeJson);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+    });
+
+    describe('when query needs task engine', () => {
+      it('returns sql-msq-task for INSERT query when sql-msq-task is enabled', () => {
+        const insertQuery = 'INSERT INTO wiki SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(insertQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('returns sql-msq-task for REPLACE query when sql-msq-task is enabled', () => {
+        const replaceQuery = 'REPLACE INTO wiki OVERWRITE ALL SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(replaceQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('returns sql-msq-task for EXTERN query when sql-msq-task is enabled', () => {
+        const externQuery = sane`
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{"type":"http","uris":["https://example.com/data.json"]}',
+              '{"type":"json"}'
+            )
+          )
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(externQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('falls through when sql-msq-task is not enabled for task engine query', () => {
+        WorkbenchQuery.setQueryEngines(['native', 'sql-native']);
+
+        const insertQuery = 'INSERT INTO wiki SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(insertQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+    });
+
+    describe('fallback behavior', () => {
+      it('falls back to sql-native for regular SQL query', () => {
+        const regularQuery = 'SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(regularQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('falls back to sql-native when it is in enabled engines', () => {
+        WorkbenchQuery.setQueryEngines(['native', 'sql-msq-task', 'sql-native']);
+
+        const regularQuery = "SELECT * FROM wikipedia WHERE channel = 'en'";
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(regularQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('falls back to first enabled engine when sql-native is not available', () => {
+        WorkbenchQuery.setQueryEngines(['native', 'sql-msq-task']);
+
+        const regularQuery = 'SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(regularQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('native');
+      });
+
+      it('falls back to sql-native when no engines are enabled', () => {
+        WorkbenchQuery.setQueryEngines([]);
+
+        const regularQuery = 'SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(regularQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+    });
+
+    describe('complex scenarios', () => {
+      it('prioritizes explicit engine over task engine detection', () => {
+        const insertQuery = 'INSERT INTO wiki SELECT * FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank()
+          .changeQueryString(insertQuery)
+          .changeEngine('sql-native');
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('handles SQL query with different enabled engines order', () => {
+        WorkbenchQuery.setQueryEngines(['sql-msq-task', 'native', 'sql-native']);
+
+        const regularQuery = 'SELECT COUNT(*) FROM wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(regularQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('returns sql-msq-task for task query even when sql-native is enabled', () => {
+        WorkbenchQuery.setQueryEngines(['sql-native', 'sql-msq-task', 'native']);
+
+        const insertQuery = sane`
+          INSERT INTO wiki
+          SELECT * FROM wikipedia
+          PARTITIONED BY DAY
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(insertQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('handles empty query string', () => {
+        const workbenchQuery = WorkbenchQuery.blank();
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('handles query with only whitespace', () => {
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString('   \n\t  ');
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-native');
+      });
+
+      it('handles malformed JSON query', () => {
+        const malformedJson = '{ "queryType": "topN"';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(malformedJson);
+
+        // Malformed JSON will be treated as JSON-like (starts with {) but will fail isSqlInJson check,
+        // falling into the native JSON branch which returns 'native' since it's enabled
+        expect(workbenchQuery.getEffectiveEngine()).toBe('native');
+      });
+
+      it('correctly identifies case-insensitive INSERT keyword', () => {
+        const insertQuery = 'insert into wiki select * from wikipedia';
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(insertQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+
+      it('correctly identifies case-insensitive EXTERN keyword', () => {
+        const externQuery = sane`
+          SELECT * FROM TABLE(
+            extern(
+              '{"type":"http","uris":["https://example.com/data.json"]}',
+              '{"type":"json"}'
+            )
+          )
+        `;
+
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(externQuery);
+
+        expect(workbenchQuery.getEffectiveEngine()).toBe('sql-msq-task');
+      });
+    });
+  });
 });
