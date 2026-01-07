@@ -364,7 +364,7 @@ export class WorkbenchQuery {
     const { engine } = this;
     if (engine) return engine;
 
-    // If an engine is set explicity in the config then respect it
+    // If an engine is set explicitly in the config then respect it
     const contextEngine = this.getEffectiveContext().engine;
     if (contextEngine === 'native') return 'sql-native';
     if (contextEngine === 'msq-dart') return 'sql-msq-dart';

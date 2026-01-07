@@ -62,10 +62,8 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, signal) => {
-      return (
-        (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
-          .queries as DartQueryEntry[]
-      ).filter(q => q.engine === 'msq-dart');
+      return (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
+        .queries as DartQueryEntry[];
     },
   });
 
@@ -133,9 +131,12 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
                 <div onDoubleClick={() => setShowSql(w.sql)}>
-                  <div className="line1">
+                  <div
+                    className="line1"
+                    data-tooltip={`Engine: ${w.engine}\nSQL ID: ${w.sqlQueryId}`}
+                  >
                     <Icon
-                      className={'status-icon ' + w.state.toLowerCase()}
+                      className={`status-icon ${w.state.toLowerCase()}`}
                       icon={icon}
                       style={{ color }}
                       data-tooltip={`State: ${w.state}`}
