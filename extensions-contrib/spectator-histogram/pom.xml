@@ -38,7 +38,7 @@
     <dependency>
       <groupId>com.netflix.spectator</groupId>
       <artifactId>spectator-api</artifactId>
-      <version>1.7.0</version>
+      <version>1.9.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
