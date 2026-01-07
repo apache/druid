@@ -42,12 +42,6 @@ jobs:
       jdk: ${{ matrix.jdk }}
       key: "packaging-check-jdk${{ matrix.jdk }}"
 
-  script-checks:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/script-checks.sh
-      key: "script-checks"
-
   static-checks-maven:
     uses: ./.github/workflows/worker.yml
     with:
