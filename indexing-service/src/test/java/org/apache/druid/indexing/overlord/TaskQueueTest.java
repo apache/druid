@@ -144,7 +144,7 @@ public class TaskQueueTest extends IngestionTestBase
     taskQueue.setActive(true);
   }
 
-  @Test
+  @Test(timeout = 30_000)
   public void testManageQueuedTasksReleaseLockWhenTaskIsNotReady() throws Exception
   {
     // task1 emulates a case when there is a task that was issued before task2 and acquired locks conflicting
@@ -164,16 +164,20 @@ public class TaskQueueTest extends IngestionTestBase
     final TestTask task3 = new TestTask("t3", Intervals.of("2021-02-01/P1M"));
     taskQueue.add(task3);
     taskQueue.manageQueuedTasks();
+
+    // Wait for task3 to exit.
+    waitForTaskToExit(task3);
+
     Assert.assertFalse(task2.isDone());
     Assert.assertTrue(task3.isDone());
     Assert.assertTrue(getLockbox().findLocksForTask(task2).isEmpty());
 
-    // Shut down task1 and task3 and release their locks.
+    // Shut down task1 and release its locks.
     shutdownTask(task1);
-    taskQueue.shutdown(task3.getId(), "Emulating shutdown of task3");
 
     // Now task2 should run.
     taskQueue.manageQueuedTasks();
+    waitForTaskToExit(task2);
     Assert.assertTrue(task2.isDone());
 
     // Sleep to allow all metrics to be emitted
@@ -783,6 +787,18 @@ public class TaskQueueTest extends IngestionTestBase
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         serviceEmitter
     );
+  }
+
+  private void waitForTaskToExit(final Task task)
+  {
+    while (taskQueue.getActiveTasksForDatasource(task.getDataSource()).containsKey(task.getId())) {
+      try {
+        Thread.sleep(10);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   private static void verifySuccessfulTaskCount(final TaskQueue taskQueue, int successCount)
