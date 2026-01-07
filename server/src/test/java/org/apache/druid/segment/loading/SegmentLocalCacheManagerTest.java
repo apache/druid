@@ -1197,7 +1197,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean isVirtualStorageFabricEvictImmediately()
+      public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
       {
         return true;
       }

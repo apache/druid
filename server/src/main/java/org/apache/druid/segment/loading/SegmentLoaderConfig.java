@@ -77,8 +77,13 @@ public class SegmentLoaderConfig
   @JsonProperty("virtualStorageLoadThreads")
   private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
-  @JsonProperty("virtualStorageFabricEvictImmediately")
-  private boolean virtualStorageFabricEvictImmediately = false;
+  /**
+   * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
+   * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
+   * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
+   */
+  @JsonProperty("virtualStorageFabricEvictImmediatelyOnHoldRelease")
+  private boolean virtualStorageFabricEvictImmediatelyOnHoldRelease = false;
 
   private long combinedMaxSize = 0;
 
@@ -157,9 +162,9 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
-  public boolean isVirtualStorageFabricEvictImmediately()
+  public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
   {
-    return virtualStorageFabricEvictImmediately;
+    return virtualStorageFabricEvictImmediatelyOnHoldRelease;
   }
 
   public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
@@ -168,10 +173,16 @@ public class SegmentLoaderConfig
     return this;
   }
 
-  public SegmentLoaderConfig setVirtualStorage(boolean virtualStorage, boolean virtualStorageFabricEvictImmediately)
+  /**
+   * Sets {@link #virtualStorage} and {@link #virtualStorageFabricEvictImmediatelyOnHoldRelease}.
+   */
+  public SegmentLoaderConfig setVirtualStorage(
+      boolean virtualStorage,
+      boolean virtualStorageFabricEvictImmediatelyOnHoldRelease
+  )
   {
     this.virtualStorage = virtualStorage;
-    this.virtualStorageFabricEvictImmediately = virtualStorageFabricEvictImmediately;
+    this.virtualStorageFabricEvictImmediatelyOnHoldRelease = virtualStorageFabricEvictImmediatelyOnHoldRelease;
     return this;
   }
 
@@ -207,7 +218,7 @@ public class SegmentLoaderConfig
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", useVirtualStorageFabric=" + virtualStorage +
            ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
-           ", virtualStorageFabricEvictImmediately=" + virtualStorageFabricEvictImmediately +
+           ", virtualStorageFabricEvictImmediatelyOnHoldRelease=" + virtualStorageFabricEvictImmediatelyOnHoldRelease +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

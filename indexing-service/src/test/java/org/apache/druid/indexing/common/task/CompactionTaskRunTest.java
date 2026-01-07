@@ -2073,7 +2073,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       }
 
       @Override
-      public boolean isVirtualStorageFabricEvictImmediately()
+      public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
       {
         return true;
       }
