@@ -36,7 +36,6 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -963,14 +962,17 @@ public class TaskQueue
   }
 
   /**
-   * Gets the current status of this task either from the {@link TaskRunner}
-   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   * Gets the current status of this task either from {@link #activeTasks} and {@link #taskRunner}, if active,
+   * or otherwise from the {@link TaskStorage}.
    */
   public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
-    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
-    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
-      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    final TaskEntry activeTaskEntry = activeTasks.get(taskId);
+    if (activeTaskEntry != null) {
+      return Optional.of(
+          TaskStatus.fromCode(taskId, activeTaskEntry.taskInfo.getStatus().getStatusCode())
+                    .withLocation(taskRunner.getTaskLocation(taskId))
+      );
     } else {
       return taskStorage.getStatus(taskId);
     }
