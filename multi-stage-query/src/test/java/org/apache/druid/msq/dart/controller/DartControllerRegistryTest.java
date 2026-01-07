@@ -121,7 +121,7 @@ public class DartControllerRegistryTest
     final QueryInfoAndReport infoAndReport = registry.getQueryInfoAndReport("dart1");
     Assertions.assertNotNull(infoAndReport);
     Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
-    Assertions.assertSame(report, infoAndReport.getReportMap());
+    Assertions.assertSame(report, infoAndReport.getReportMap().get(MSQTaskReport.REPORT_KEY));
 
     // And can be looked up by SQL query ID
     final QueryInfoAndReport infoAndReportBySql = registry.getQueryInfoAndReportBySqlQueryId("sql1");
