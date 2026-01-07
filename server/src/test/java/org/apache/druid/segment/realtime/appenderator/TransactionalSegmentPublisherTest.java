@@ -20,10 +20,13 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -34,19 +37,31 @@ import java.util.function.Function;
 public class TransactionalSegmentPublisherTest
 {
   @Test(timeout = 60_000L)
-  public void testPublishSegments_retriesUpto5Times_ifFailureIsRetryable() throws IOException
+  public void testPublishSegments_retriesUpto12Times_ifFailureIsRetryable() throws IOException
   {
-    final AtomicInteger attemptCount = new AtomicInteger(0);
-    final TransactionalSegmentPublisher publisher = createPublisher(
-        SegmentPublishResult.retryableFailure("this error is retryable"),
-        attemptCount
-    );
+    // Mock RetryUtils.awaitNextRetry to skip sleep delays for faster test execution
+    try (MockedStatic<RetryUtils> retryUtilsMock = Mockito.mockStatic(RetryUtils.class)) {
+      // Make awaitNextRetry() do nothing (skip the sleep)
+      retryUtilsMock.when(() -> RetryUtils.awaitNextRetry(
+              Mockito.any(),
+              Mockito.anyString(),
+              Mockito.anyInt(),
+              Mockito.anyInt(),
+              Mockito.anyBoolean()
+      )).thenAnswer(invocation -> null);
 
-    Assert.assertEquals(
-        SegmentPublishResult.retryableFailure("this error is retryable"),
-        publisher.publishSegments(null, Set.of(), Function.identity(), null, null)
-    );
-    Assert.assertEquals(6, attemptCount.get());
+      final AtomicInteger attemptCount = new AtomicInteger(0);
+      final TransactionalSegmentPublisher publisher = createPublisher(
+              SegmentPublishResult.retryableFailure("this error is retryable"),
+              attemptCount
+      );
+
+      Assert.assertEquals(
+              SegmentPublishResult.retryableFailure("this error is retryable"),
+              publisher.publishSegments(null, Set.of(), Function.identity(), null, null)
+      );
+      Assert.assertEquals(13, attemptCount.get());
+    }
   }
 
   @Test

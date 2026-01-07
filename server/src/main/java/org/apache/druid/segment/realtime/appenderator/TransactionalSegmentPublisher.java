@@ -34,7 +34,7 @@ import java.util.function.Function;
 public abstract class TransactionalSegmentPublisher
 {
   private static final int QUIET_RETRIES = 3;
-  private static final int MAX_RETRIES = 5;
+  private static final int MAX_RETRIES = 12;
 
   /**
    * Publish segments, along with some commit metadata, in a single transaction.
