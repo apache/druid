@@ -84,6 +84,21 @@ jobs:
         run: ${{ inputs.script }}
         timeout-minutes: 60
 
+      - name: Publish Test Report
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        uses: mikepenz/action-junit-report@v5
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+        with:
+          check_name: "Test Report - ${{ inputs.key }}"
+          report_paths: '**/TEST-*.xml'
+          detailed_summary: true
+          flaky_summary: true
+          annotate_only: true
+          fail_on_failure: true
+          check_retries: true
+          truncate_stack_traces: false
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: ${{ failure() || inputs.artifact_prefix != '' }}
