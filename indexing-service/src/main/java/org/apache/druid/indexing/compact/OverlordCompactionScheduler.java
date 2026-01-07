@@ -285,6 +285,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public Map<CompactionStatus.State, List<CompactionJobStatus>> getJobsByStatus(String dataSource)
   {
+    if (!activeSupervisors.containsKey(dataSource)) {
+      return Map.of();
+    }
+
     // Get the state of all the jobs from the queue
     final List<CompactionJob> allQueuedJobs = new ArrayList<>();
     final List<CompactionCandidate> fullyCompactedIntervals = new ArrayList<>();
@@ -293,8 +297,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     final AtomicReference<CompactionCandidateSearchPolicy> searchPolicy = new AtomicReference<>();
     updateQueueIfComputed(queue -> {
       allQueuedJobs.addAll(queue.getQueuedJobs());
-      fullyCompactedIntervals.addAll(queue.getFullyCompactedIntervals());
-      skippedIntervals.addAll(queue.getSkippedIntervals());
+      fullyCompactedIntervals.addAll(queue.getFullyCompactedIntervals(dataSource));
+      skippedIntervals.addAll(queue.getSkippedIntervals(dataSource));
 
       searchPolicy.set(queue.getSearchPolicy());
     });

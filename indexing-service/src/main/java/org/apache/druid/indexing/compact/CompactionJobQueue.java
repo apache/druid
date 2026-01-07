@@ -256,14 +256,14 @@ public class CompactionJobQueue
     return List.copyOf(queue);
   }
 
-  public List<CompactionCandidate> getFullyCompactedIntervals()
+  public List<CompactionCandidate> getFullyCompactedIntervals(String dataSource)
   {
-    return snapshotBuilder.getCompleted();
+    return snapshotBuilder.getFullyCompactedIntervals(dataSource);
   }
 
-  public List<CompactionCandidate> getSkippedIntervals()
+  public List<CompactionCandidate> getSkippedIntervals(String dataSource)
   {
-    return snapshotBuilder.getSkipped();
+    return snapshotBuilder.getSkippedIntervals(dataSource);
   }
 
   public CompactionCandidateSearchPolicy getSearchPolicy()

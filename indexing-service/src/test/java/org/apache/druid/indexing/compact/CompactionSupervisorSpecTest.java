@@ -36,6 +36,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class CompactionSupervisorSpecTest
 {
@@ -87,14 +88,17 @@ public class CompactionSupervisorSpecTest
   {
     Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
            .thenReturn(CompactionConfigValidationResult.failure("bad spec"));
-    Assert.assertEquals(
-        "Compaction supervisor spec is invalid. Reason[bad spec].",
-        new CompactionSupervisorSpec(
-            new InlineSchemaDataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
-            false,
-            scheduler
-        ).createSupervisor().getStatus().getPayload().get("message")
-    );
+    Mockito.when(scheduler.isRunning()).thenReturn(true);
+
+    final CompactionSupervisor supervisor = new CompactionSupervisorSpec(
+        new InlineSchemaDataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
+        false,
+        scheduler
+    ).createSupervisor();
+
+    final Map<String, Object> report = supervisor.getStatus().getPayload();
+    Assert.assertEquals(CompactionSupervisor.State.INVALID_SPEC, report.get("state"));
+    Assert.assertEquals("Invalid: bad spec", report.get("detailedState"));
   }
 
   @Test

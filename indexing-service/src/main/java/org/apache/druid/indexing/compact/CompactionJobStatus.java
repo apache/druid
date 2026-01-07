@@ -30,7 +30,8 @@ public class CompactionJobStatus
   private final CompactionStatus currentStatus;
   private final int positionInQueue;
 
-  public CompactionJobStatus(CompactionJob job, CompactionStatus currentStatus, int positionInQueue) {
+  public CompactionJobStatus(CompactionJob job, CompactionStatus currentStatus, int positionInQueue)
+  {
     this.job = job;
     this.currentStatus = currentStatus;
     this.positionInQueue = positionInQueue;
