@@ -185,8 +185,9 @@ public abstract class AbstractS3AssumeRoleIndexTest extends AbstractITBatchIndex
       Assert.assertEquals(taskStatusPlus.getStatusCode(), TaskState.FAILED);
       Assert.assertNotNull(taskStatusPlus.getErrorMsg());
       Assert.assertTrue(
-          taskStatusPlus.getErrorMsg().contains("com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException"),
-          "Expect task to fail with AWSSecurityTokenServiceException");
+          taskStatusPlus.getErrorMsg().contains("software.amazon.awssdk.services.sts.model.StsException")
+          || taskStatusPlus.getErrorMsg().contains("StsException"),
+          "Expect task to fail with StsException");
     }
     finally {
       // If the test pass, then there is no datasource to unload
