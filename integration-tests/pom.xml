@@ -239,8 +239,8 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -338,6 +338,20 @@
                     <excludes>
                         <exclude>**/IT*.java</exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- Used in source code but not detected by analyzer -->
+                        <ignoredUnusedDeclaredDependency>javax.validation:validation-api</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                    <ignoredUsedUndeclaredDependencies>
+                        <!-- Used by hibernate-validator bytecode, comes as transitive dep -->
+                        <ignoredUsedUndeclaredDependency>jakarta.validation:jakarta.validation-api</ignoredUsedUndeclaredDependency>
+                    </ignoredUsedUndeclaredDependencies>
                 </configuration>
             </plugin>
             <plugin>

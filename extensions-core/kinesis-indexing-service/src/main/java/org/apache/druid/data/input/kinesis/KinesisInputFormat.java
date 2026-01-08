@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
@@ -30,6 +29,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.DateTimes;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nullable;
 
@@ -37,12 +37,13 @@ import java.io.File;
 import java.util.Objects;
 
 /**
- * Kinesis aware InputFormat. Allows for reading kinesis specific values that are stored in the {@link Record}. At
- * this time, this input format only supports reading data from the following record components
+ * Kinesis aware InputFormat. Allows for reading kinesis specific values that are stored in the
+ * {@link KinesisClientRecord}. At this time, this input format only supports reading data from the following
+ * record components:
  * <p>
- * - {@link Record#data}
- * - {@link Record#approximateArrivalTimestamp}
- * - {@link Record#partitionKey}
+ * - {@link KinesisClientRecord#data}
+ * - {@link KinesisClientRecord#approximateArrivalTimestamp}
+ * - {@link KinesisClientRecord#partitionKey}
  * <p>
  * This class can be extended easily to read other fields available in the kinesis record.
  */

@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
-import com.amazonaws.services.kinesis.model.Record;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -65,18 +63,15 @@ import software.amazon.awssdk.services.kinesis.model.StreamDescription;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.kinesis.retrieval.AggregatorUtil;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -253,24 +248,25 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
 
           // list will come back empty if there are no records
           for (software.amazon.awssdk.services.kinesis.model.Record kinesisRecord : recordsResult.records()) {
-            final List<KinesisRecordEntity> data;
+            final List<KinesisRecordEntity> data = new ArrayList<>();
 
-            if (deaggregateHandle == null || getDataHandle == null) {
-              throw new ISE("deaggregateHandle or getDataHandle is null!");
-            }
+            // Convert SDK v2 Record to KinesisClientRecord for KCL v2 deaggregation
+            KinesisClientRecord clientRecord = KinesisClientRecord.builder()
+                .sequenceNumber(kinesisRecord.sequenceNumber())
+                .partitionKey(kinesisRecord.partitionKey())
+                .data(kinesisRecord.data().asByteBuffer())
+                .approximateArrivalTimestamp(kinesisRecord.approximateArrivalTimestamp())
+                .build();
 
-            data = new ArrayList<>();
-
-            // Convert v2 Record to v1 Record for KCL deaggregation
-            Record v1Record = convertToV1Record(kinesisRecord);
-            final List<UserRecord> userRecords = (List<UserRecord>) deaggregateHandle.invokeExact(
-                Collections.singletonList(v1Record)
+            // Deaggregate using KCL v2's AggregatorUtil
+            final List<KinesisClientRecord> userRecords = aggregatorUtil.deaggregate(
+                Collections.singletonList(clientRecord)
             );
 
             int recordSize = 0;
-            for (UserRecord userRecord : userRecords) {
+            for (KinesisClientRecord userRecord : userRecords) {
               KinesisRecordEntity kinesisRecordEntity = new KinesisRecordEntity(userRecord);
-              recordSize += kinesisRecordEntity.getBuffer().array().length;
+              recordSize += kinesisRecordEntity.getBuffer().remaining();
               data.add(kinesisRecordEntity);
             }
 
@@ -401,11 +397,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     }
   }
 
-  // used for deaggregate
-  private final MethodHandle deaggregateHandle;
-  private final MethodHandle getDataHandle;
-
   private final KinesisClient kinesis;
+  private final AggregatorUtil aggregatorUtil = new AggregatorUtil();
   private final int fetchDelayMillis;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
@@ -448,28 +441,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
-
-    // The deaggregate function is implemented by the amazon-kinesis-client, whose license was formerly not compatible
-    // with Apache. The code here avoids the license issue by using reflection, but is no longer necessary since
-    // amazon-kinesis-client is now Apache-licensed and is now a dependency of Druid. This code could safely be
-    // modified to use regular calls rather than reflection.
-    try {
-      Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
-      MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-
-      Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
-      Method getDataMethod = kclUserRecordclass.getMethod("getData");
-
-      deaggregateHandle = lookup.unreflect(deaggregateMethod);
-      getDataHandle = lookup.unreflect(getDataMethod);
-    }
-    catch (ClassNotFoundException e) {
-      throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-                       + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
 
     if (backgroundFetchEnabled) {
       log.info(
@@ -563,25 +534,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       }
     }
     return null;
-  }
-
-  /**
-   * Convert a v2 SDK Record to a v1 SDK Record for compatibility with KCL's UserRecord.deaggregate().
-   * The KCL deaggregation library still uses v1 SDK Record objects.
-   */
-  private static Record convertToV1Record(software.amazon.awssdk.services.kinesis.model.Record v2Record)
-  {
-    Record v1Record = new Record();
-    v1Record.setData(ByteBuffer.wrap(v2Record.data().asByteArray()));
-    v1Record.setSequenceNumber(v2Record.sequenceNumber());
-    v1Record.setPartitionKey(v2Record.partitionKey());
-    if (v2Record.approximateArrivalTimestamp() != null) {
-      v1Record.setApproximateArrivalTimestamp(Date.from(v2Record.approximateArrivalTimestamp()));
-    }
-    if (v2Record.encryptionType() != null) {
-      v1Record.setEncryptionType(v2Record.encryptionType().toString());
-    }
-    return v1Record;
   }
 
   @VisibleForTesting

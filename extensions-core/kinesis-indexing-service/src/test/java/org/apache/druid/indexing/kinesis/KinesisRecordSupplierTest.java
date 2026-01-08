@@ -19,12 +19,10 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -51,9 +49,11 @@ import software.amazon.awssdk.services.kinesis.model.ListShardsRequest;
 import software.amazon.awssdk.services.kinesis.model.ListShardsResponse;
 import software.amazon.awssdk.services.kinesis.model.Shard;
 import software.amazon.awssdk.services.kinesis.model.StreamDescription;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -80,50 +80,40 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private static Map<String, Long> SHARDS_LAG_MILLIS_EMPTY =
           ImmutableMap.of(SHARD_ID0, SHARD0_LAG_MILLIS, SHARD_ID1, SHARD1_LAG_MILLIS_EMPTY);
 
-  // v1 Record for test data creation (used by KinesisRecordEntity through KCL deaggregation)
-  private static final List<Record> SHARD0_RECORDS = ImmutableList.of(
-      new Record().withData(jb("2008", "a", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(jb("2009", "b", "y", "10", "20.0", "1.0")).withSequenceNumber("1")
+  // SDK v2 Records for API responses
+  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD0_RECORDS_V2 = ImmutableList.of(
+      buildV2Record(jb("2008", "a", "y", "10", "20.0", "1.0"), "0"),
+      buildV2Record(jb("2009", "b", "y", "10", "20.0", "1.0"), "1")
   );
-  private static final List<Record> SHARD1_RECORDS_EMPTY = ImmutableList.of();
-  private static final List<Record> SHARD1_RECORDS = ImmutableList.of(
-      new Record().withData(jb("2011", "d", "y", "10", "20.0", "1.0")).withSequenceNumber("0"),
-      new Record().withData(jb("2011", "e", "y", "10", "20.0", "1.0")).withSequenceNumber("1"),
-      new Record().withData(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")).withSequenceNumber("2"),
-      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable"))).withSequenceNumber("3"),
-      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2"))).withSequenceNumber("4"),
-      new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))).withSequenceNumber("5"),
-      new Record().withData(jb("2013", "f", "y", "10", "20.0", "1.0")).withSequenceNumber("6"),
-      new Record().withData(jb("2049", "f", "y", "notanumber", "20.0", "1.0")).withSequenceNumber("7"),
-      new Record().withData(jb("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
-      new Record().withData(jb("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
+  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_EMPTY_V2 = ImmutableList.of();
+  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_V2 = ImmutableList.of(
+      buildV2Record(jb("2011", "d", "y", "10", "20.0", "1.0"), "0"),
+      buildV2Record(jb("2011", "e", "y", "10", "20.0", "1.0"), "1"),
+      buildV2Record(jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"), "2"),
+      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")), "3"),
+      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("unparseable2")), "4"),
+      buildV2Record(ByteBuffer.wrap(StringUtils.toUtf8("{}")), "5"),
+      buildV2Record(jb("2013", "f", "y", "10", "20.0", "1.0"), "6"),
+      buildV2Record(jb("2049", "f", "y", "notanumber", "20.0", "1.0"), "7"),
+      buildV2Record(jb("2012", "g", "y", "10", "20.0", "1.0"), "8"),
+      buildV2Record(jb("2011", "h", "y", "10", "20.0", "1.0"), "9")
   );
-
-  // v2 Record lists for API responses
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD0_RECORDS_V2 =
-      SHARD0_RECORDS.stream().map(KinesisRecordSupplierTest::toV2Record).collect(Collectors.toList());
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_V2 =
-      SHARD1_RECORDS.stream().map(KinesisRecordSupplierTest::toV2Record).collect(Collectors.toList());
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD1_RECORDS_EMPTY_V2 =
-      Collections.emptyList();
 
   private static final List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> ALL_RECORDS = ImmutableList.<OrderedPartitionableRecord<String, String, KinesisRecordEntity>>builder()
-      .addAll(SHARD0_RECORDS.stream()
+      .addAll(SHARD0_RECORDS_V2.stream()
           .map(x -> new OrderedPartitionableRecord<>(
               STREAM,
               SHARD_ID0,
-              x.getSequenceNumber(),
-              Collections.singletonList(new KinesisRecordEntity(new Record().withData(new ByteEntity(x.getData()).getBuffer())))
+              x.sequenceNumber(),
+              Collections.singletonList(new KinesisRecordEntity(toKinesisClientRecord(x)))
           ))
-          .collect(
-              Collectors
-                  .toList()))
-      .addAll(SHARD1_RECORDS.stream()
+          .collect(Collectors.toList()))
+      .addAll(SHARD1_RECORDS_V2.stream()
           .map(x -> new OrderedPartitionableRecord<>(
               STREAM,
               SHARD_ID1,
-              x.getSequenceNumber(),
-              Collections.singletonList(new KinesisRecordEntity(new Record().withData(new ByteEntity(x.getData()).getBuffer())))
+              x.sequenceNumber(),
+              Collections.singletonList(new KinesisRecordEntity(toKinesisClientRecord(x)))
           ))
           .collect(Collectors.toList()))
       .build();
@@ -148,12 +138,23 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
   }
 
-  private static software.amazon.awssdk.services.kinesis.model.Record toV2Record(Record v1Record)
+  private static software.amazon.awssdk.services.kinesis.model.Record buildV2Record(ByteBuffer data, String sequenceNumber)
   {
     return software.amazon.awssdk.services.kinesis.model.Record.builder()
-        .data(SdkBytes.fromByteBuffer(v1Record.getData().duplicate()))
-        .sequenceNumber(v1Record.getSequenceNumber())
-        .partitionKey(v1Record.getPartitionKey() != null ? v1Record.getPartitionKey() : "key")
+        .data(SdkBytes.fromByteBuffer(data.duplicate()))
+        .sequenceNumber(sequenceNumber)
+        .partitionKey("key")
+        .approximateArrivalTimestamp(Instant.now())
+        .build();
+  }
+
+  private static KinesisClientRecord toKinesisClientRecord(software.amazon.awssdk.services.kinesis.model.Record v2Record)
+  {
+    return KinesisClientRecord.builder()
+        .data(v2Record.data().asByteBuffer())
+        .sequenceNumber(v2Record.sequenceNumber())
+        .partitionKey(v2Record.partitionKey())
+        .approximateArrivalTimestamp(v2Record.approximateArrivalTimestamp())
         .build();
   }
 
@@ -473,8 +474,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     );
 
     recordSupplier.assign(partitions);
-    recordSupplier.seek(shard1Partition, SHARD1_RECORDS.get(2).getSequenceNumber());
-    recordSupplier.seek(shard0Partition, SHARD0_RECORDS.get(1).getSequenceNumber());
+    recordSupplier.seek(shard1Partition, SHARD1_RECORDS_V2.get(2).sequenceNumber());
+    recordSupplier.seek(shard0Partition, SHARD0_RECORDS_V2.get(1).sequenceNumber());
     recordSupplier.start();
 
     for (int i = 0; i < 10 && recordSupplier.bufferSize() < 9; i++) {
