@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
-import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
@@ -42,8 +41,6 @@ public class AutoCompactionSnapshot
   private final String dataSource;
   @JsonProperty
   private final ScheduleStatus scheduleStatus;
-  @JsonProperty
-  private final String message;
   @JsonProperty
   private final long bytesAwaitingCompaction;
   @JsonProperty
@@ -72,7 +69,6 @@ public class AutoCompactionSnapshot
   public AutoCompactionSnapshot(
       @JsonProperty("dataSource") @NotNull String dataSource,
       @JsonProperty("scheduleStatus") @NotNull AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
-      @JsonProperty("message") @Nullable String message,
       @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
       @JsonProperty("bytesCompacted") long bytesCompacted,
       @JsonProperty("bytesSkipped") long bytesSkipped,
@@ -86,7 +82,6 @@ public class AutoCompactionSnapshot
   {
     this.dataSource = dataSource;
     this.scheduleStatus = scheduleStatus;
-    this.message = message;
     this.bytesAwaitingCompaction = bytesAwaitingCompaction;
     this.bytesCompacted = bytesCompacted;
     this.bytesSkipped = bytesSkipped;
@@ -108,12 +103,6 @@ public class AutoCompactionSnapshot
   public AutoCompactionSnapshot.ScheduleStatus getScheduleStatus()
   {
     return scheduleStatus;
-  }
-
-  @Nullable
-  public String getMessage()
-  {
-    return message;
   }
 
   public long getBytesAwaitingCompaction()
@@ -181,8 +170,7 @@ public class AutoCompactionSnapshot
            intervalCountCompacted == that.intervalCountCompacted &&
            intervalCountSkipped == that.intervalCountSkipped &&
            dataSource.equals(that.dataSource) &&
-           scheduleStatus == that.scheduleStatus &&
-           Objects.equals(message, that.message);
+           scheduleStatus == that.scheduleStatus;
   }
 
   @Override
@@ -191,7 +179,6 @@ public class AutoCompactionSnapshot
     return Objects.hash(
         dataSource,
         scheduleStatus,
-        message,
         bytesAwaitingCompaction,
         bytesCompacted,
         bytesSkipped,
@@ -210,7 +197,6 @@ public class AutoCompactionSnapshot
     return "AutoCompactionSnapshot{" +
            "dataSource='" + dataSource + '\'' +
            ", scheduleStatus=" + scheduleStatus +
-           ", message='" + message + '\'' +
            ", bytesAwaitingCompaction=" + bytesAwaitingCompaction +
            ", bytesCompacted=" + bytesCompacted +
            ", bytesSkipped=" + bytesSkipped +
@@ -227,7 +213,6 @@ public class AutoCompactionSnapshot
   {
     private final String dataSource;
     private ScheduleStatus scheduleStatus;
-    private String message;
 
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
@@ -246,12 +231,6 @@ public class AutoCompactionSnapshot
     public Builder withStatus(ScheduleStatus status)
     {
       this.scheduleStatus = Preconditions.checkNotNull(status, "scheduleStatus cannot be null");
-      return this;
-    }
-
-    public Builder withMessage(String message)
-    {
-      this.message = message;
       return this;
     }
 
@@ -280,7 +259,6 @@ public class AutoCompactionSnapshot
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
-          message,
           waitingStats.getTotalBytes(),
           compactedStats.getTotalBytes(),
           skippedStats.getTotalBytes(),

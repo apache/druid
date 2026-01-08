@@ -29,7 +29,6 @@ public class AutoCompactionSnapshotTest
   public void testAutoCompactionSnapshotBuilder()
   {
     final String expectedDataSource = "data";
-    final String expectedMessage = "message";
     final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
     // Increment every stat twice
@@ -39,7 +38,7 @@ public class AutoCompactionSnapshotTest
       builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
     }
 
-    final AutoCompactionSnapshot actual = builder.withMessage(expectedMessage).build();
+    final AutoCompactionSnapshot actual = builder.build();
 
     Assert.assertNotNull(actual);
     Assert.assertEquals(26, actual.getSegmentCountSkipped());
@@ -53,12 +52,10 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
     Assert.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
-    Assert.assertEquals(expectedMessage, actual.getMessage());
 
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
         AutoCompactionSnapshot.ScheduleStatus.RUNNING,
-        expectedMessage,
         26,
         26,
         26,
