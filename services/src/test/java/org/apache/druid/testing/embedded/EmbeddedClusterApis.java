@@ -126,6 +126,19 @@ public class EmbeddedClusterApis implements EmbeddedResource
     return client.onAnyBroker(brokerApi);
   }
 
+  public <T> T onTargetBroker(EmbeddedBroker targetBroker, Function<BrokerClient, ListenableFuture<T>> brokerApi)
+  {
+    return client.onTargetBroker(targetBroker, brokerApi);
+  }
+
+  public <T> ListenableFuture<T> onTargetBrokerAsync(
+      EmbeddedBroker targetBroker,
+      Function<BrokerClient, ListenableFuture<T>> brokerApi
+  )
+  {
+    return client.onTargetBrokerAsync(targetBroker, brokerApi);
+  }
+
   /**
    * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
    * of the cluster.
