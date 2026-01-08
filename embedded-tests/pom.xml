@@ -553,17 +553,19 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-kinesis</artifactId>
-      <version>${aws.sdk.version}</version>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>auth</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <!-- aws-java-sdk-core is provided by Druid core. -->
-        <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-core</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sdk-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>regions</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
