@@ -19,12 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -41,6 +35,12 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -85,16 +85,17 @@ public class S3DataSegmentMover implements DataSegmentMover
 
       if (s3Path.endsWith("/")) {
         // segment is not compressed, list objects and move them all
-        final ListObjectsV2Result list = s3ClientSupplier.get().listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Bucket)
-                                      .withPrefix(s3Path + "/")
-        );
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+            .bucket(s3Bucket)
+            .prefix(s3Path + "/")
+            .build();
+        final ListObjectsV2Response list = s3ClientSupplier.get().listObjectsV2(request);
         targetS3Path = S3Utils.constructSegmentBasePath(
             targetS3BaseKey,
             DataSegmentPusher.getDefaultStorageDir(segment, false)
         );
-        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
-          final String fileName = Paths.get(objectSummary.getKey()).getFileName().toString();
+        for (S3Object objectSummary : list.contents()) {
+          final String fileName = Paths.get(objectSummary.key()).getFileName().toString();
           if (targetS3Bucket.isEmpty()) {
             throw new SegmentLoadingException("Target S3 bucket is not specified");
           }
@@ -140,7 +141,7 @@ public class S3DataSegmentMover implements DataSegmentMover
                       .build()
       );
     }
-    catch (AmazonServiceException e) {
+    catch (S3Exception e) {
       throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getId(), e);
     }
   }
@@ -166,7 +167,7 @@ public class S3DataSegmentMover implements DataSegmentMover
               selfCheckingMove(s3Bucket, targetS3Bucket, s3Path, targetS3Path, copyMsg);
               return null;
             }
-            catch (AmazonServiceException | IOException | SegmentLoadingException e) {
+            catch (S3Exception | IOException | SegmentLoadingException e) {
               log.info(e, "Error while trying to move " + copyMsg);
               throw e;
             }
@@ -174,7 +175,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       );
     }
     catch (Exception e) {
-      Throwables.propagateIfInstanceOf(e, AmazonServiceException.class);
+      Throwables.propagateIfInstanceOf(e, S3Exception.class);
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
       throw new RuntimeException(e);
     }
@@ -200,36 +201,40 @@ public class S3DataSegmentMover implements DataSegmentMover
     }
     final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
     if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
-      final ListObjectsV2Result listResult = s3Client.listObjectsV2(
-          new ListObjectsV2Request()
-              .withBucketName(s3Bucket)
-              .withPrefix(s3Path)
-              .withMaxKeys(1)
-      );
-      // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
-      // it is observed that even though the getObjectSummaries returns some data
+      ListObjectsV2Request request = ListObjectsV2Request.builder()
+          .bucket(s3Bucket)
+          .prefix(s3Path)
+          .maxKeys(1)
+          .build();
+      final ListObjectsV2Response listResult = s3Client.listObjectsV2(request);
+      // Using contents().size() instead of keyCount as, in some cases
+      // it is observed that even though the contents returns some data
       // keyCount is still zero.
-      if (listResult.getObjectSummaries().size() == 0) {
+      if (listResult.contents().size() == 0) {
         // should never happen
         throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
       }
-      final S3ObjectSummary objectSummary = listResult.getObjectSummaries().get(0);
-      if (objectSummary.getStorageClass() != null &&
-          StorageClass.fromValue(StringUtils.toUpperCase(objectSummary.getStorageClass())).equals(StorageClass.Glacier)) {
-        throw new AmazonServiceException(
-            StringUtils.format(
+      final S3Object objectSummary = listResult.contents().get(0);
+      if (objectSummary.storageClass() != null &&
+          objectSummary.storageClass().equals(StorageClass.GLACIER)) {
+        throw S3Exception.builder()
+            .message(StringUtils.format(
                 "Cannot move file[s3://%s/%s] of storage class glacier, skipping.",
                 s3Bucket,
                 s3Path
-            )
-        );
+            ))
+            .build();
       } else {
         log.info("Moving file %s", copyMsg);
-        final CopyObjectRequest copyRequest = new CopyObjectRequest(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
+        CopyObjectRequest.Builder copyRequestBuilder = CopyObjectRequest.builder()
+            .sourceBucket(s3Bucket)
+            .sourceKey(s3Path)
+            .destinationBucket(targetS3Bucket)
+            .destinationKey(targetS3Path);
         if (!config.getDisableAcl()) {
-          copyRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(s3Client, targetS3Bucket));
+          copyRequestBuilder.grantFullControl(S3Utils.grantFullControlToBucketOwner(s3Client, targetS3Bucket).grantee().id());
         }
-        s3Client.copyObject(copyRequest);
+        s3Client.copyObject(copyRequestBuilder);
         if (!s3Client.doesObjectExist(targetS3Bucket, targetS3Path)) {
           throw new IOE(
               "After copy was reported as successful the file doesn't exist in the target location [%s]",

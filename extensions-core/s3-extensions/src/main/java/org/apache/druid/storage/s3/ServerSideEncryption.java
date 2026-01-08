@@ -19,18 +19,20 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 /**
  * Server-side encryption decorator for Amazon S3.
+ * AWS SDK v2 uses immutable request objects with builders, so the decorator
+ * pattern works with builders rather than modifying requests in place.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -41,34 +43,34 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface ServerSideEncryption
 {
-  default PutObjectRequest decorate(PutObjectRequest request)
+  default PutObjectRequest.Builder decorate(PutObjectRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
-  default GetObjectRequest decorate(GetObjectRequest request)
+  default GetObjectRequest.Builder decorate(GetObjectRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
-  default GetObjectMetadataRequest decorate(GetObjectMetadataRequest request)
+  default HeadObjectRequest.Builder decorate(HeadObjectRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
-  default CopyObjectRequest decorate(CopyObjectRequest request)
+  default CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
-  default InitiateMultipartUploadRequest decorate(InitiateMultipartUploadRequest request)
+  default CreateMultipartUploadRequest.Builder decorate(CreateMultipartUploadRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
-  default UploadPartRequest decorate(UploadPartRequest request)
+  default UploadPartRequest.Builder decorate(UploadPartRequest.Builder builder)
   {
-    return request;
+    return builder;
   }
 
 }

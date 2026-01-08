@@ -19,9 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.RetryUtils;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -32,43 +30,24 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Iterator class used by {@link S3Utils#objectSummaryIterator}.
- *
- * As required by the specification of that method, this iterator is computed incrementally in batches of
- * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
+ * Iterator that returns S3 objects along with their bucket names.
+ * This is needed because AWS SDK v2's S3Object doesn't include the bucket name.
  */
-public class ObjectSummaryIterator implements Iterator<S3Object>
+public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3ObjectWithBucket>
 {
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
+  private final int maxRetries;
 
   private String currentBucket;
   private String currentPrefix;
   private String continuationToken;
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
-  private S3Object currentObjectSummary;
-  private int maxRetries; // this is made available for testing mostly
+  private S3Utils.S3ObjectWithBucket currentObjectSummary;
 
-
-  ObjectSummaryIterator(
-      final ServerSideEncryptingAmazonS3 s3Client,
-      final Iterable<URI> prefixes,
-      final int maxListingLength
-  )
-  {
-    this.s3Client = s3Client;
-    this.prefixesIterator = prefixes.iterator();
-    this.maxListingLength = maxListingLength;
-    maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
-
-    constructorPostProcessing();
-
-  }
-
-  @VisibleForTesting
-  ObjectSummaryIterator(
+  ObjectSummaryWithBucketIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
       final Iterable<URI> prefixes,
       final int maxListingLength,
@@ -80,13 +59,6 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     this.maxListingLength = maxListingLength;
     this.maxRetries = maxRetries;
 
-    constructorPostProcessing();
-
-  }
-
-  // helper to factor out stuff that happens in constructor after members are set
-  private void constructorPostProcessing()
-  {
     prepareNextRequest();
     fetchNextBatch();
     advanceObjectSummary();
@@ -99,13 +71,13 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
   }
 
   @Override
-  public S3Object next()
+  public S3Utils.S3ObjectWithBucket next()
   {
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
 
-    final S3Object retVal = currentObjectSummary;
+    final S3Utils.S3ObjectWithBucket retVal = currentObjectSummary;
     advanceObjectSummary();
     return retVal;
   }
@@ -151,16 +123,14 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     }
   }
 
-  /**
-   * Advance objectSummaryIterator to the next non-placeholder, updating "currentObjectSummary".
-   */
   private void advanceObjectSummary()
   {
     while (objectSummaryIterator.hasNext() || result.isTruncated() || prefixesIterator.hasNext()) {
       while (objectSummaryIterator.hasNext()) {
-        currentObjectSummary = objectSummaryIterator.next();
+        S3Object s3Object = objectSummaryIterator.next();
         // skips directories and empty objects
-        if (!isDirectoryPlaceholder(currentObjectSummary) && currentObjectSummary.size() > 0) {
+        if (!isDirectoryPlaceholder(s3Object) && s3Object.size() > 0) {
+          currentObjectSummary = new S3Utils.S3ObjectWithBucket(currentBucket, s3Object);
           return;
         }
       }
@@ -178,13 +148,6 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     currentObjectSummary = null;
   }
 
-  /**
-   * Checks if a given object is a directory placeholder and should be ignored.
-   *
-   * Adapted from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder(). Does not include the check for
-   * legacy JetS3t directory placeholder objects, since it is based on content-type, which isn't available in an
-   * S3Object.
-   */
   private static boolean isDirectoryPlaceholder(final S3Object objectSummary)
   {
     // Recognize "standard" directory place-holder indications used by Amazon's AWS Console and Panic's Transmit.

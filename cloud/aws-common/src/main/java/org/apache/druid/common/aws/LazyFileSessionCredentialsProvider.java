@@ -19,12 +19,12 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
-public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider
+public class LazyFileSessionCredentialsProvider implements AwsCredentialsProvider
 {
   private final AWSCredentialsConfig config;
 
@@ -61,14 +61,8 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
   }
 
   @Override
-  public AWSCredentials getCredentials()
+  public AwsCredentials resolveCredentials()
   {
-    return getUnderlyingProvider().getCredentials();
-  }
-
-  @Override
-  public void refresh()
-  {
-    getUnderlyingProvider().refresh();
+    return getUnderlyingProvider().resolveCredentials();
   }
 }

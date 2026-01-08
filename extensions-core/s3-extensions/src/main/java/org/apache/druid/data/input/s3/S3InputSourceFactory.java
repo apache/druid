@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -33,6 +32,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -46,7 +46,7 @@ public class S3InputSourceFactory implements InputSourceFactory
   private final ServerSideEncryptingAmazonS3.Builder s3ClientBuilder;
   private final S3InputSourceConfig s3InputSourceConfig;
   private final S3InputDataConfig inputDataConfig;
-  private final AWSCredentialsProvider awsCredentialsProvider;
+  private final AwsCredentialsProvider awsCredentialsProvider;
   private final AWSProxyConfig awsProxyConfig;
   private final AWSClientConfig awsClientConfig;
   private final AWSEndpointConfig awsEndpointConfig;
@@ -56,7 +56,7 @@ public class S3InputSourceFactory implements InputSourceFactory
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
       @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
       @JacksonInject S3InputDataConfig inputDataConfig,
-      @JacksonInject AWSCredentialsProvider awsCredentialsProvider,
+      @JacksonInject AwsCredentialsProvider awsCredentialsProvider,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,

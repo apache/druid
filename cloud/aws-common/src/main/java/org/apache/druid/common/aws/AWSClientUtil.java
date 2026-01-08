@@ -19,12 +19,10 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.collect.ImmutableSet;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import java.io.IOException;
 import java.util.Set;
@@ -32,13 +30,10 @@ import java.util.Set;
 public class AWSClientUtil
 {
   /**
-   * This list of error code come from {@link RetryUtils}, and
-   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">...</a>. At the moment, aws sdk
-   * does not expose a good way of retrying
-   * {@link com.amazonaws.services.s3.AmazonS3#deleteObjects(DeleteObjectsRequest)} requests. This request is used in
-   * org.apache.druid.storage.s3.S3DataSegmentKiller to delete a batch of segments from deep storage.
+   * This list of error codes come from AWS SDK retry utils and
+   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">...</a>.
    */
-  private static final Set<String> RECOVERABLE_ERROR_CODES = ImmutableSet.of(
+  public static final Set<String> RECOVERABLE_ERROR_CODES = ImmutableSet.of(
       "503 SlowDown",
       "AuthFailure",
       "BandwidthLimitExceeded",
@@ -67,40 +62,50 @@ public class AWSClientUtil
   );
 
   /**
-   * Checks whether an exception can be retried or not. Implementation is copied
-   * from {@link com.amazonaws.retry.PredefinedRetryPolicies.SDKDefaultRetryCondition} except deprecated methods
-   * have been replaced with their recent versions.
+   * Checks whether an exception can be retried or not for AWS SDK v2.
    */
-  public static boolean isClientExceptionRecoverable(AmazonClientException exception)
+  public static boolean isClientExceptionRecoverable(SdkException exception)
   {
     // Always retry on client exceptions caused by IOException
     if (exception.getCause() instanceof IOException) {
       return true;
     }
 
-    // A special check carried forwarded from previous implementation.
-    if (exception instanceof AmazonServiceException
-        && "RequestTimeout".equals(((AmazonServiceException) exception).getErrorCode())) {
+    // Check if the SDK marks it as retryable
+    if (exception.retryable()) {
       return true;
     }
 
-    // This will retry for 5xx errors.
-    if (RetryUtils.isRetryableServiceException(exception)) {
-      return true;
+    // Check for service exceptions with specific error codes
+    if (exception instanceof AwsServiceException) {
+      AwsServiceException serviceException = (AwsServiceException) exception;
+
+      // Retry on 5xx errors
+      if (serviceException.statusCode() >= 500) {
+        return true;
+      }
+
+      // Retry on 429 (Too Many Requests)
+      if (serviceException.statusCode() == 429) {
+        return true;
+      }
+
+      // Check for specific error codes
+      if (serviceException.awsErrorDetails() != null) {
+        String errorCode = serviceException.awsErrorDetails().errorCode();
+        if (errorCode != null && RECOVERABLE_ERROR_CODES.contains(errorCode)) {
+          return true;
+        }
+      }
     }
 
-    if (RetryUtils.isThrottlingException(exception)) {
-      return true;
-    }
-
-    if (RetryUtils.isClockSkewError(exception)) {
-      return true;
-    }
-
-    if (exception instanceof MultiObjectDeleteException) {
-      MultiObjectDeleteException multiObjectDeleteException = (MultiObjectDeleteException) exception;
-      for (MultiObjectDeleteException.DeleteError error : multiObjectDeleteException.getErrors()) {
-        if (RECOVERABLE_ERROR_CODES.contains(error.getCode())) {
+    // Check for SdkClientException specific messages
+    if (exception instanceof SdkClientException) {
+      String message = exception.getMessage();
+      if (message != null) {
+        if (message.contains("Unable to execute HTTP request") ||
+            message.contains("Data read has a different length than the expected") ||
+            message.contains("Unable to find a region")) {
           return true;
         }
       }

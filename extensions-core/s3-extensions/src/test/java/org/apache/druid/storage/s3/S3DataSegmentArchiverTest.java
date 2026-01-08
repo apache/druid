@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -36,6 +35,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.Map;
 
@@ -75,7 +75,7 @@ public class S3DataSegmentArchiverTest
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
   private static final Supplier<ServerSideEncryptingAmazonS3> S3_SERVICE = Suppliers.ofInstance(
       new ServerSideEncryptingAmazonS3(
-          EasyMock.createStrictMock(AmazonS3Client.class),
+          EasyMock.createStrictMock(S3Client.class),
           new NoopServerSideEncryption(),
           new S3TransferConfig()
       )

@@ -19,29 +19,20 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class S3ServerSideEncryption implements ServerSideEncryption
 {
   @Override
-  public PutObjectRequest decorate(PutObjectRequest request)
+  public PutObjectRequest.Builder decorate(PutObjectRequest.Builder builder)
   {
-    final ObjectMetadata objectMetadata = request.getMetadata() == null ?
-                                          new ObjectMetadata() :
-                                          request.getMetadata().clone();
-    objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-    return request.withMetadata(objectMetadata);
+    return builder.serverSideEncryption(software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256);
   }
 
   @Override
-  public CopyObjectRequest decorate(CopyObjectRequest request)
+  public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
   {
-    final ObjectMetadata objectMetadata = request.getNewObjectMetadata() == null ?
-                                          new ObjectMetadata() :
-                                          request.getNewObjectMetadata().clone();
-    objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-    return request.withNewObjectMetadata(objectMetadata);
+    return builder.serverSideEncryption(software.amazon.awssdk.services.s3.model.ServerSideEncryption.AES256);
   }
 }
