@@ -28,13 +28,13 @@ import java.util.Objects;
 /**
  * Class returned by {@link SqlResource#doGetQueryReport}, the "get query report" API.
  */
-public class GetReportResponse
+public class GetQueryReportResponse
 {
   private final QueryInfo queryInfo;
   private final TaskReport.ReportMap reportMap;
 
   @JsonCreator
-  public GetReportResponse(
+  public GetQueryReportResponse(
       @JsonProperty("query") QueryInfo queryInfo,
       @JsonProperty("report") TaskReport.ReportMap reportMap
   )
@@ -61,7 +61,7 @@ public class GetReportResponse
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GetReportResponse that = (GetReportResponse) o;
+    GetQueryReportResponse that = (GetQueryReportResponse) o;
     return Objects.equals(queryInfo, that.queryInfo) && Objects.equals(reportMap, that.reportMap);
   }
 

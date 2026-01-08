@@ -35,7 +35,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.metrics.LatchableEmitter;
-import org.apache.druid.sql.http.GetReportResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -156,7 +156,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", result);
 
     // Now fetch the report using the SQL query ID
-    final GetReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker1);
 
     // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
@@ -179,7 +179,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
   public void test_getQueryReport_notFound()
   {
     // Try to get a report for a non-existent query
-    final GetReportResponse reportResponse = msqApis.getDartQueryReport("nonexistent-query-id", broker1);
+    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport("nonexistent-query-id", broker1);
 
     // Verify the response is null (not found)
     Assertions.assertNull(reportResponse, "Report response should be null for non-existent query");
@@ -220,11 +220,11 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, sqlClients2.getAllClients().size(), "Broker2 should have 1 client (broker1)");
 
     // Fetch the report from both brokers, to verify cross-broker lookup is working
-    final GetReportResponse reportFromBroker1 = msqApis.getDartQueryReport(sqlQueryId, broker1);
-    final GetReportResponse reportFromBroker2 = msqApis.getDartQueryReport(sqlQueryId, broker2);
+    final GetQueryReportResponse reportFromBroker1 = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse reportFromBroker2 = msqApis.getDartQueryReport(sqlQueryId, broker2);
 
     // Verify the report content
-    for (GetReportResponse report : Arrays.asList(reportFromBroker1, reportFromBroker2)) {
+    for (GetQueryReportResponse report : Arrays.asList(reportFromBroker1, reportFromBroker2)) {
       Assertions.assertNotNull(report);
       final DartQueryInfo queryInfo = (DartQueryInfo) report.getQueryInfo();
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
@@ -251,7 +251,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
         msqApis.submitDartSqlAsync(sql, Map.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId), broker1);
 
     // Step 2: Get the report.
-    final GetReportResponse runningReport = waitForReport(sqlQueryId);
+    final GetQueryReportResponse runningReport = waitForReport(sqlQueryId);
 
     Assertions.assertNotNull(runningReport, "Report should be available for running query");
     Assertions.assertNotNull(runningReport.getQueryInfo(), "Query info should not be null");
@@ -288,7 +288,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     );
 
     // Step 5: Fetch the report again - should now be in FAILED state
-    final GetReportResponse canceledReport = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse canceledReport = msqApis.getDartQueryReport(sqlQueryId, broker1);
 
     Assertions.assertNotNull(canceledReport, "Report should be available for canceled query");
     Assertions.assertNotNull(canceledReport.getReportMap(), "Report map should not be null");
@@ -319,12 +319,12 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
   /**
    * Polls the report API until a report is available.
    */
-  private GetReportResponse waitForReport(String sqlQueryId)
+  private GetQueryReportResponse waitForReport(String sqlQueryId)
   {
     final long timeout = 30_000;
     final long deadline = System.currentTimeMillis() + timeout;
     while (System.currentTimeMillis() < deadline) {
-      final GetReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker1);
+      final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, broker1);
       if (report != null) {
         return report;
       }

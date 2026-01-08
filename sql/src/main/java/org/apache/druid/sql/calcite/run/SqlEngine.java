@@ -31,7 +31,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.GetReportResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.QueryInfo;
 
 import javax.annotation.Nullable;
@@ -162,7 +162,7 @@ public interface SqlEngine
    *                               should allow all queries to be visible
    */
   @Nullable
-  default GetReportResponse getQueryReport(
+  default GetQueryReportResponse getQueryReport(
       String sqlQueryId,
       boolean selfOnly,
       AuthenticationResult authenticationResult,

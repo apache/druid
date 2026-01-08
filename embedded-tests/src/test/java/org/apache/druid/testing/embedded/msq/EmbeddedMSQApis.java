@@ -22,12 +22,7 @@ package org.apache.druid.testing.embedded.msq;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.broker.BrokerClientImpl;
-import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.StringUtils;
@@ -37,12 +32,8 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.HttpResponseException;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.ServiceLocation;
-import org.apache.druid.rpc.StandardRetryPolicy;
-import org.apache.druid.sql.http.GetReportResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -171,17 +162,31 @@ public class EmbeddedMSQApis
 
   /**
    * Gets the query report for a Dart query by its SQL query ID, fetching from a specific broker.
-   * Creates a {@link BrokerClient} that targets the specific broker using a {@link FixedServiceLocator}.
    * Returns null if the query is not found.
    *
    * @param sqlQueryId   the SQL query ID
    * @param targetBroker the broker to fetch the report from
    */
   @Nullable
-  public GetReportResponse getDartQueryReport(String sqlQueryId, EmbeddedBroker targetBroker)
+  public GetQueryReportResponse getDartQueryReport(String sqlQueryId, EmbeddedBroker targetBroker)
   {
-    final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
-    return fetchReportFromBrokerClient(sqlQueryId, brokerClient, targetBroker.bindings().jsonMapper());
+    try {
+      final String responseJson = cluster.callApi().onTargetBroker(
+          targetBroker,
+          b -> b.getQueryReport(sqlQueryId, false /* allow cross-broker forwarding */)
+      );
+      return parseReportResponse(responseJson, targetBroker.bindings().jsonMapper());
+    }
+    catch (RuntimeException e) {
+      // Check if this is a 404 Not Found response
+      final Throwable cause = e.getCause();
+      if (cause instanceof HttpResponseException) {
+        if (((HttpResponseException) cause).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+          return null;
+        }
+      }
+      throw e;
+    }
   }
 
   /**
@@ -199,19 +204,21 @@ public class EmbeddedMSQApis
       EmbeddedBroker targetBroker
   )
   {
-    final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
     final Map<String, Object> fullContext = new HashMap<>(context);
     fullContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
 
-    return brokerClient.submitSqlQuery(
-        new ClientSqlQuery(
-            sql,
-            ResultFormat.CSV.name(),
-            false,
-            false,
-            false,
-            fullContext,
-            null
+    return cluster.callApi().onTargetBrokerAsync(
+        targetBroker,
+        b -> b.submitSqlQuery(
+            new ClientSqlQuery(
+                sql,
+                ResultFormat.CSV.name(),
+                false,
+                false,
+                false,
+                fullContext,
+                null
+            )
         )
     );
   }
@@ -226,63 +233,13 @@ public class EmbeddedMSQApis
    */
   public boolean cancelDartQuery(String sqlQueryId, EmbeddedBroker targetBroker)
   {
-    final BrokerClient brokerClient = createBrokerClientForBroker(targetBroker);
-    return FutureUtils.getUnchecked(brokerClient.cancelSqlQuery(sqlQueryId), true);
+    return cluster.callApi().onTargetBroker(targetBroker, b -> b.cancelSqlQuery(sqlQueryId));
   }
 
-  /**
-   * Creates a {@link BrokerClient} that targets a specific broker using a {@link FixedServiceLocator}.
-   */
-  private static BrokerClient createBrokerClientForBroker(EmbeddedBroker targetBroker)
-  {
-    final ServiceLocation brokerLocation = ServiceLocation.fromDruidNode(targetBroker.bindings().selfNode());
-    final ServiceClientFactory clientFactory =
-        targetBroker.bindings().getInstance(ServiceClientFactory.class, EscalatedGlobal.class);
-    return new BrokerClientImpl(
-        clientFactory.makeClient(
-            NodeRole.BROKER.getJsonName(),
-            new FixedServiceLocator(brokerLocation),
-            StandardRetryPolicy.noRetries()
-        ),
-        targetBroker.bindings().jsonMapper()
-    );
-  }
-
-  /**
-   * Fetches a query report using a {@link BrokerClient}, handling 404 responses.
-   *
-   * @param sqlQueryId   the SQL query ID to look up
-   * @param brokerClient the broker client to use
-   * @param jsonMapper   the JSON mapper for parsing the response
-   */
-  @Nullable
-  private static GetReportResponse fetchReportFromBrokerClient(
-      final String sqlQueryId,
-      final BrokerClient brokerClient,
-      final ObjectMapper jsonMapper
-  )
-  {
-    final String responseJson;
-    try {
-      responseJson = brokerClient.getQueryReport(sqlQueryId, false /* allow cross-broker forwarding */).get();
-    }
-    catch (Exception e) {
-      // Check if this is a 404 Not Found response
-      final Throwable cause = e.getCause();
-      if (cause instanceof HttpResponseException) {
-        if (((HttpResponseException) cause).getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-          return null;
-        }
-      }
-      throw new RuntimeException(e);
-    }
-    return parseReportResponse(responseJson, jsonMapper);
-  }
-
-  private static GetReportResponse parseReportResponse(String responseJson, ObjectMapper jsonMapper)
+  private static GetQueryReportResponse parseReportResponse(String responseJson, ObjectMapper jsonMapper)
   {
     try {
-      return jsonMapper.readValue(responseJson, GetReportResponse.class);
+      return jsonMapper.readValue(responseJson, GetQueryReportResponse.class);
     }
     catch (JsonProcessingException e) {
       throw DruidException.defensive(e, "Failed to parse query report response[%s]", responseJson);

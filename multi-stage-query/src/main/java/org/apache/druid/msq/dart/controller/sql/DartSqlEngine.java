@@ -63,7 +63,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.GetReportResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -322,7 +322,7 @@ public class DartSqlEngine implements SqlEngine
 
   @Override
   @Nullable
-  public GetReportResponse getQueryReport(
+  public GetQueryReportResponse getQueryReport(
       final String sqlQueryId,
       final boolean selfOnly,
       final AuthenticationResult authenticationResult,
@@ -332,14 +332,14 @@ public class DartSqlEngine implements SqlEngine
     QueryInfoAndReport infoAndReport = controllerRegistry.getQueryInfoAndReportBySqlQueryId(sqlQueryId);
 
     if (infoAndReport == null && !selfOnly) {
-      final List<GetReportResponse> otherReports = FutureUtils.getUnchecked(
+      final List<GetQueryReportResponse> otherReports = FutureUtils.getUnchecked(
           Futures.successfulAsList(
               Iterables.transform(sqlClients.getAllClients(), client -> client.getQueryReport(sqlQueryId, true))
           ),
           true
       );
 
-      for (final GetReportResponse otherReport : otherReports) {
+      for (final GetQueryReportResponse otherReport : otherReports) {
         // Check for non-null report with non-null content (a 404 response returns GetReportResponse with null fields)
         if (otherReport != null && otherReport.getQueryInfo() != null) {
           infoAndReport = new QueryInfoAndReport(
@@ -358,12 +358,12 @@ public class DartSqlEngine implements SqlEngine
 
     if (stateReadAuthorization.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see any report.
-      return new GetReportResponse(infoAndReport.getQueryInfo(), infoAndReport.getReportMap());
+      return new GetQueryReportResponse(infoAndReport.getQueryInfo(), infoAndReport.getReportMap());
     } else {
       // User cannot READ STATE, so they can see only their own queries, without authentication details.
       final DartQueryInfo queryInfo = infoAndReport.getQueryInfo();
       if (isOwnQuery(authenticationResult, queryInfo)) {
-        return new GetReportResponse(queryInfo.withoutAuthenticationResult(), infoAndReport.getReportMap());
+        return new GetQueryReportResponse(queryInfo.withoutAuthenticationResult(), infoAndReport.getReportMap());
       } else {
         return null;
       }

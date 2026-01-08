@@ -43,9 +43,16 @@ public class DartControllerConfig
   @JsonProperty("heapFraction")
   private double heapFraction = DEFAULT_HEAP_FRACTION;
 
+  /**
+   * Maximum number of retained reports to store in-memory for completed queries.
+   * Set to zero to avoid storing any reports at all.
+   */
   @JsonProperty("maxRetainedReportCount")
   private int maxRetainedReportCount = 0;
 
+  /**
+   * Maximum age of retained reports. Set to zero to disable age-based expiration.
+   */
   @JsonProperty("maxRetainedReportDuration")
   private Period maxRetainedReportDuration = Period.ZERO;
 

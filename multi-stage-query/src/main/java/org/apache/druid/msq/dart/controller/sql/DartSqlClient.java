@@ -21,7 +21,7 @@ package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.sql.http.GetQueriesResponse;
-import org.apache.druid.sql.http.GetReportResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
@@ -50,5 +50,5 @@ public interface DartSqlClient
    *
    * @see SqlResource#doGetQueryReport(String, String, HttpServletRequest) server side
    */
-  ListenableFuture<GetReportResponse> getQueryReport(String sqlQueryId, boolean selfOnly);
+  ListenableFuture<GetQueryReportResponse> getQueryReport(String sqlQueryId, boolean selfOnly);
 }

@@ -196,7 +196,7 @@ public class SqlResource
     final Collection<SqlEngine> engines = sqlEngineRegistry.getAllEngines();
 
     // Get task report from the first engine that recognizes the SQL query ID.
-    GetReportResponse retVal = null;
+    GetQueryReportResponse retVal = null;
     for (SqlEngine sqlEngine : engines) {
       retVal = sqlEngine.getQueryReport(
           sqlQueryId,
@@ -212,7 +212,7 @@ public class SqlResource
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     if (retVal == null) {
-      return Response.status(Status.NOT_FOUND).entity(new GetReportResponse(null, null)).build();
+      return Response.status(Status.NOT_FOUND).entity(new GetQueryReportResponse(null, null)).build();
     } else {
       return Response.ok().entity(retVal).build();
     }
