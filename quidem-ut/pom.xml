@@ -50,11 +50,6 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-producer</artifactId>
-            <version>0.13.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
         </dependency>
@@ -79,28 +74,8 @@
             <artifactId>airline</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-kinesis</artifactId>
-            <version>${aws.sdk.version}</version>
-            <exclusions>
-                <!-- aws-java-sdk-core is provided by Druid core. -->
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -498,11 +473,6 @@
             <groupId>com.github.kgyrtkirk.datasets</groupId>
             <artifactId>kttm-nested</artifactId>
             <version>0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-sts</artifactId>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.datasketches</groupId>

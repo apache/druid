@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,6 +48,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.testcontainers.shaded.com.google.common.io.ByteStreams;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
@@ -278,10 +278,10 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
         queryId
     );
 
-    final List<S3ObjectSummary> queryResultObjects =
+    final List<S3Object> queryResultObjects =
         storageResource.getS3Client()
-                       .listObjects(storageResource.getBucket(), resultsBaseKey)
-                       .getObjectSummaries();
+                       .listObjects(builder -> builder.bucket(storageResource.getBucket()).prefix(resultsBaseKey))
+                       .contents();
 
     final int lastStage = stages.size() - 1;
     Assertions.assertEquals(
@@ -291,7 +291,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
             StringUtils.format("%s/stage_%s/worker_0/taskId_%s-worker0_0/part_0", resultsBaseKey, lastStage, queryId),
             StringUtils.format("%s/stage_%s/worker_1/taskId_%s-worker1_0/part_1", resultsBaseKey, lastStage, queryId)
         ),
-        queryResultObjects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toSet())
+        queryResultObjects.stream().map(S3Object::key).collect(Collectors.toSet())
     );
   }
 

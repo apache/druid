@@ -42,9 +42,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-rds</artifactId>
-      <version>${aws.sdk.version}</version>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>rds</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -57,8 +56,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-core</artifactId>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>auth</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
