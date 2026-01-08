@@ -60,6 +60,7 @@ public class DataSegmentWithLocation extends DataSegment
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
+      @JsonProperty("numRows") Integer numRows,
       @JsonProperty("servers") Set<DruidServerMetadata> servers,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
@@ -76,6 +77,7 @@ public class DataSegmentWithLocation extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
+        numRows,
         pruneSpecsHolder
     );
     this.servers = Preconditions.checkNotNull(servers, "servers");
@@ -98,6 +100,7 @@ public class DataSegmentWithLocation extends DataSegment
         null,
         dataSegment.getBinaryVersion(),
         dataSegment.getSize(),
+        dataSegment.getNumRows(),
         PruneSpecsHolder.DEFAULT
     );
     this.servers = servers;

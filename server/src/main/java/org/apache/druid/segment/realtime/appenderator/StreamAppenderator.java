@@ -938,6 +938,7 @@ public class StreamAppenderator implements Appenderator
       }
 
       final File mergedFile;
+      final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
       final long mergeTimeMillis;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
@@ -970,6 +971,14 @@ public class StreamAppenderator implements Appenderator
         metrics.setMergeTime(mergeTimeMillis);
 
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        QueryableIndex index = indexIO.loadIndex(mergedFile);
+        closer.register(index);
+        mergedSegment =
+            sink.getSegment()
+                .toBuilder()
+                .dimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec()))
+                .numRows(index.getNumRows())
+                .build();
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -979,24 +988,20 @@ public class StreamAppenderator implements Appenderator
       }
 
       final Stopwatch pushStopwatch = Stopwatch.createStarted();
-
-      final DataSegment segmentToPush = sink.getSegment().withDimensions(
-          IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
-      );
-
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
-      final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, mergedSegment, useUniquePath);
 
       final long pushTimeMillis = pushStopwatch.millisElapsed();
       objectMapper.writeValue(descriptorFile, segment);
 
       log.info(
-          "Segment[%s] of %,d bytes "
+          "Segment[%s] of %,d bytes and %,d rows "
           + "built from %d incremental persist(s) in %,dms; "
           + "pushed to deep storage in %,dms. "
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
+          segment.getNumRows(),
           indexes.size(),
           mergeTimeMillis,
           pushTimeMillis,
@@ -1802,11 +1807,17 @@ public class StreamAppenderator implements Appenderator
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
         Sink sink = sinkEntry.getValue();
-        currentSinkSignatureMap.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSignature(), sink.getNumRows()));
+        currentSinkSignatureMap.put(
+            segmentIdWithShardSpec.asSegmentId(),
+            Pair.of(sink.getSignature(), sink.getNumRows())
+        );
       }
 
       Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSignatureMap);
-      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSignatureMap, currentSinkSignatureMap);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(
+          previousSinkSignatureMap,
+          currentSinkSignatureMap
+      );
 
       // update previous reference
       previousSinkSignatureMap = currentSinkSignatureMap;

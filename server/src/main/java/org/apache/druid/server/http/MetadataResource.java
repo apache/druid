@@ -227,15 +227,19 @@ public class MetadataResource
           Integer replicationFactor = isOvershadowed ? (Integer) 0
                                                      : coordinator.getReplicationFactor(segment.getId());
 
-          Long numRows = null;
-          if (coordinatorSegmentMetadataCache != null) {
+          final Long numRows;
+          if (segment.getNumRows() != null) {
+            // the recent version of DataSegment stores numRows
+            numRows = segment.getNumRows().longValue();
+          } else if (coordinatorSegmentMetadataCache != null) {
+            // if centralized schema is enabled, SchemaPayloadPlus stores numRows
             AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
                 segment.getDataSource(),
                 segment.getId()
             );
-            if (null != availableSegmentMetadata) {
-              numRows = availableSegmentMetadata.getNumRows();
-            }
+            numRows = availableSegmentMetadata == null ? null : availableSegmentMetadata.getNumRows();
+          } else {
+            numRows = null;
           }
           segmentAlreadySeen.add(segment.getId());
           return new SegmentStatusInCluster(

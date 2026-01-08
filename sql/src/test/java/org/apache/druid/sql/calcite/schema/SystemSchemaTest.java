@@ -294,99 +294,70 @@ public class SystemSchemaTest extends CalciteTestBase
       null
   );
 
-  private final DataSegment publishedCompactedSegment1 = new DataSegment(
-      "wikipedia1",
-      Intervals.of("2007/2008"),
-      "version1",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      expectedCompactionState,
-      1,
-      53000L
-  );
-  private final DataSegment publishedCompactedSegment2 = new DataSegment(
-      "wikipedia2",
-      Intervals.of("2008/2009"),
-      "version2",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      expectedCompactionState,
-      1,
-      83000L
-  );
-  private final DataSegment publishedUncompactedSegment3 = DataSegment.builder(SegmentId.of(
-                                                                          "wikipedia3",
-                                                                          Intervals.of("2009/2010"),
-                                                                          "version3",
-                                                                          null
-                                                                      ))
-                                                                      .dimensions(ImmutableList.of("dim1", "dim2"))
-                                                                      .metrics(ImmutableList.of("met1", "met2"))
-                                                                      .projections(ImmutableList.of())
-                                                                      .binaryVersion(1)
-                                                                      .size(47000L)
-                                                                      .build();
+  private final DataSegment publishedCompactedSegment1 =
+      DataSegment.builder(SegmentId.of("wikipedia1", Intervals.of("2007/2008"), "version1", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .lastCompactionState(expectedCompactionState)
+                 .binaryVersion(1)
+                 .size(53000L)
+                 .build();
+  private final DataSegment publishedCompactedSegment2 =
+      DataSegment.builder(SegmentId.of("wikipedia2", Intervals.of("2008/2009"), "version2", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .lastCompactionState(expectedCompactionState)
+                 .binaryVersion(1)
+                 .size(83000L)
+                 .build();
+  private final DataSegment publishedUncompactedSegment3 =
+      DataSegment.builder(SegmentId.of("wikipedia3", Intervals.of("2009/2010"), "version3", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .projections(ImmutableList.of())
+                 .binaryVersion(1)
+                 .size(47000L)
+                 .build();
 
-  private final DataSegment segment1 = DataSegment.builder(SegmentId.of(
-                                                      "test1",
-                                                      Intervals.of("2010/2011"),
-                                                      "version1",
-                                                      null
-                                                  ))
-                                                  .dimensions(ImmutableList.of("dim1", "dim2"))
-                                                  .metrics(ImmutableList.of("met1", "met2"))
-                                                  .projections(ImmutableList.of("proj1", "proj2"))
-                                                  .binaryVersion(1)
-                                                  .size(100L)
-                                                  .build();
-  private final DataSegment segment2 = new DataSegment(
-      "test2",
-      Intervals.of("2011/2012"),
-      "version2",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      1,
-      100L
-  );
-  private final DataSegment segment3 = new DataSegment(
-      "test3",
-      Intervals.of("2012/2013"),
-      "version3",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      new NumberedShardSpec(2, 3),
-      1,
-      100L
-  );
-  private final DataSegment segment4 = new DataSegment(
-      "test4",
-      Intervals.of("2014/2015"),
-      "version4",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      1,
-      100L
-  );
-  private final DataSegment segment5 = new DataSegment(
-      "test5",
-      Intervals.of("2015/2016"),
-      "version5",
-      null,
-      ImmutableList.of("dim1", "dim2"),
-      ImmutableList.of("met1", "met2"),
-      null,
-      1,
-      100L
-  );
+  private final DataSegment segment1 =
+      DataSegment.builder(SegmentId.of("test1", Intervals.of("2010/2011"), "version1", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .projections(ImmutableList.of("proj1", "proj2"))
+                 .binaryVersion(1)
+                 .size(100L)
+                 .numRows(100)
+                 .build();
+  private final DataSegment segment2 =
+      DataSegment.builder(SegmentId.of("test2", Intervals.of("2011/2012"), "version2", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .binaryVersion(1)
+                 .size(100L)
+                 .numRows(200)
+                 .build();
+  private final DataSegment segment3 =
+      DataSegment.builder(SegmentId.of("test3", Intervals.of("2012/2013"), "version3", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .shardSpec(new NumberedShardSpec(2, 3))
+                 .binaryVersion(1)
+                 .size(100L)
+                 .build();
+  private final DataSegment segment4 =
+      DataSegment.builder(SegmentId.of("test4", Intervals.of("2014/2015"), "version4", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .binaryVersion(1)
+                 .size(100L)
+                 .build();
+  private final DataSegment segment5 =
+      DataSegment.builder(SegmentId.of("test5", Intervals.of("2015/2016"), "version5", null))
+                 .dimensions(ImmutableList.of("dim1", "dim2"))
+                 .metrics(ImmutableList.of("met1", "met2"))
+                 .binaryVersion(1)
+                 .size(100L)
+                 .build();
 
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
@@ -395,9 +366,9 @@ public class SystemSchemaTest extends CalciteTestBase
   private final long totalMemory = JvmUtils.getTotalMemory();
 
   private final String version = GuavaUtils.firstNonNull(
-          SystemSchemaTest.class.getPackage().getImplementationVersion(),
-          DruidNode.UNKNOWN_VERSION
-      );
+      SystemSchemaTest.class.getPackage().getImplementationVersion(),
+      DruidNode.UNKNOWN_VERSION
+  );
 
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
@@ -414,7 +385,17 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
-      new DruidNode("s2", "localhost", false, 8090, null, null, true, false, ImmutableMap.of("overlordKey", "overlordValue")),
+      new DruidNode(
+          "s2",
+          "localhost",
+          false,
+          8090,
+          null,
+          null,
+          true,
+          false,
+          ImmutableMap.of("overlordKey", "overlordValue")
+      ),
       NodeRole.OVERLORD,
       ImmutableMap.of(),
       startTime
@@ -428,11 +409,17 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
-      new DruidNode("s3", "localhost", false, 8082, null, null, true, false, ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")),
-      NodeRole.BROKER,
-      ImmutableMap.of(),
-      startTime
-  );
+      new DruidNode(
+          "s3",
+          "localhost",
+          false,
+          8082,
+          null,
+          null,
+          true,
+          false,
+          ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")
+      ), NodeRole.BROKER, ImmutableMap.of(), startTime);
 
   private final DiscoveryDruidNode broker2 = new DiscoveryDruidNode(
       new DruidNode("s3", "brokerHost", false, 8082, null, true, false),
@@ -605,12 +592,12 @@ public class SystemSchemaTest extends CalciteTestBase
     // Verify value types.
     verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
 
-    // segments test1, test2  are published and available.
+    // segments test1, test2  are published and available, numRows is based on DataSegment: 100L & 200L.
     Object[] segment1Expected = new Object[]{
         // segment_id, datasource
         "test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", "test1",
         // start, end, size, version, partition_num, num_replicas, numRows
-        "2010-01-01T00:00:00.000Z", "2011-01-01T00:00:00.000Z", 100L, "version1", 0L, 1L, 3L,
+        "2010-01-01T00:00:00.000Z", "2011-01-01T00:00:00.000Z", 100L, "version1", 0L, 1L, 100L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         0L, 1L, 1L, 0L, 1L, MAPPER.writeValueAsString(SHARD_SPEC),
         // dimensions, metrics, projections, last_compaction_state, replication_factor
@@ -621,7 +608,7 @@ public class SystemSchemaTest extends CalciteTestBase
         // segment_id, datasource
         "test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", "test2",
         // start, end, size, version, partition_num, num_replicas, numRows
-        "2011-01-01T00:00:00.000Z", "2012-01-01T00:00:00.000Z", 100L, "version2", 0L, 2L, 3L,
+        "2011-01-01T00:00:00.000Z", "2012-01-01T00:00:00.000Z", 100L, "version2", 0L, 2L, 200L,
         //  is_active, is_published, is_available, is_realtime, is_overshadowed, shard_spec
         1L, 1L, 1L, 0L, 0L, MAPPER.writeValueAsString(SHARD_SPEC),
         // dimensions, metrics, projections, last_compaction_state, replication_factor

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -166,23 +165,28 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ImmutableMap.of("x", "3"),
           segmentsAndCommitMetadata.getCommitMetadata()
       );
-      Assert.assertEquals(
-          IDENTIFIERS.subList(0, 2),
-          sorted(
-              Lists.transform(
-                  segmentsAndCommitMetadata.getSegments(),
-                  new Function<DataSegment, SegmentIdWithShardSpec>()
-                  {
-                    @Override
-                    public SegmentIdWithShardSpec apply(DataSegment input)
-                    {
-                      return SegmentIdWithShardSpec.fromDataSegment(input);
-                    }
-                  }
-              )
-          )
+      final List<String> segments = Lists.transform(
+          sorted(segmentsAndCommitMetadata.getSegments()),
+          DataSegment::toString
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
+      Assert.assertEquals(
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .numRows(2)
+                         .build()
+                         .toString(),
+              DataSegment.builder(IDENTIFIERS.get(1).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(1).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .numRows(1)
+                         .build()
+                         .toString()
+          ), segments);
+      Assert.assertEquals(Lists.transform(sorted(tester.getPushedSegments()), DataSegment::toString), segments);
 
       SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
       Assert.assertEquals(2, segmentGenerationMetrics.numPersists());

@@ -50,9 +50,9 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -94,103 +94,65 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
              .map(server -> new WorkerId("http", server.getHost(), QUERY_ID).toString())
              .collect(Collectors.toList());
 
+  private static final DataSegment.Builder SEGMENT_BUILDER =
+      DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 0)).size(BYTES_PER_SEGMENT);
   /**
    * Segment that is one of two in a range-partitioned time chunk.
    */
-  private static final DataSegment SEGMENT1 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(ImmutableList.of(PARTITION_DIM), null, new StringTuple(new String[]{"foo"}), 0, 2),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2000/2001"))
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                             ImmutableList.of(PARTITION_DIM),
+                                                             null,
+                                                             new StringTuple(new String[]{"foo"}),
+                                                             0,
+                                                             2
+                                                         ))
+                                                         .build();
 
   /**
    * Segment that is one of two in a range-partitioned time chunk.
    */
-  private static final DataSegment SEGMENT2 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(ImmutableList.of("dim"), new StringTuple(new String[]{"foo"}), null, 1, 2),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2000/2001"))
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                             ImmutableList.of(PARTITION_DIM),
+                                                             null,
+                                                             new StringTuple(new String[]{"foo"}),
+                                                             1,
+                                                             2
+                                                         )).build();
 
   /**
    * Segment that is alone in a time chunk. It is not served by any server, and such segments are assigned to the
    * existing servers round-robin. Because this is the only "not served by any server" segment, it should
    * be assigned to the first server.
    */
-  private static final DataSegment SEGMENT3 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2001/2002"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2001/2002"))
+                                                         .build();
 
   /**
    * Segment that should be ignored because it's a tombstone.
    */
-  private static final DataSegment SEGMENT4 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2002/2003"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      TombstoneShardSpec.INSTANCE,
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT4 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2002/2003"))
+                                                         .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                         .build();
 
   /**
    * Segment that's realtime-only.
    */
-  private static final DataSegment SEGMENT5 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2003/2004"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT5 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2003/2004"))
+                                                         .build();
 
   /**
    * Segment that's realtime and located at the same host as segment 5
    */
-  private static final DataSegment SEGMENT6 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2004/2005"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT6 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2004/2005"))
+                                                         .build();
 
   /**
    * Mapping of segment to servers (indexes in {@link #SERVERS}).

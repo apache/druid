@@ -53,7 +53,8 @@ public class LoadableDataSegment extends DataSegment
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
-      @JsonProperty("size") long size
+      @JsonProperty("size") long size,
+      @JsonProperty("numRows") Integer numRows
   )
   {
     super(
@@ -68,6 +69,7 @@ public class LoadableDataSegment extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
+        numRows,
         PruneSpecsHolder.DEFAULT
     );
   }

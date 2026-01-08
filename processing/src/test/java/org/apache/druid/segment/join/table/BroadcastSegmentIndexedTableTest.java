@@ -58,6 +58,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -131,18 +132,25 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
     SegmentizerFactory factory = mapper.readValue(factoryJson, SegmentizerFactory.class);
     Assert.assertTrue(factory instanceof MMappedQueryableSegmentizerFactory);
 
-    DataSegment dataSegment = new DataSegment(
-        DATASOURCE,
-        testInterval,
-        DateTimes.nowUtc().toString(),
-        ImmutableMap.of(),
-        columnNames,
-        ImmutableList.of(),
-        null,
-        null,
-        segment.getTotalSpace()
+    DataSegment dataSegment = DataSegment.builder(SegmentId.of(
+                                             DATASOURCE,
+                                             testInterval,
+                                             DateTimes.nowUtc().toString(),
+                                             null
+                                         ))
+                                         .loadSpec(ImmutableMap.of())
+                                         .dimensions(columnNames)
+                                         .metrics(ImmutableList.of())
+                                         .binaryVersion(null)
+                                         .size(segment.getTotalSpace())
+                                         .numRows(1)
+                                         .build();
+    backingSegment = (QueryableIndexSegment) factory.factorize(
+        dataSegment,
+        segment,
+        false,
+        SegmentLazyLoadFailCallback.NOOP
     );
-    backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false, SegmentLazyLoadFailCallback.NOOP);
     columnNames = new QueryableIndexCursorFactory(backingSegment.as(QueryableIndex.class)).getRowSignature()
                                                                                           .getColumnNames();
     broadcastTable = new BroadcastSegmentIndexedTable(backingSegment, keyColumns, dataSegment.getVersion());

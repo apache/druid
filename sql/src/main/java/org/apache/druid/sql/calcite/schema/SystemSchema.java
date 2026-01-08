@@ -332,22 +332,29 @@ public class SystemSchema extends AbstractSchema
             final AvailableSegmentMetadata availableSegmentMetadata =
                 availableMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
             segmentsAlreadySeen.add(segment.getId());
-            long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
 
+            long numReplicas = 0L, isAvailable = 0L;
             if (availableSegmentMetadata != null) {
               numReplicas = availableSegmentMetadata.getNumReplicas();
               isAvailable = availableSegmentMetadata.getNumReplicas() > 0 ? IS_AVAILABLE_TRUE : IS_ACTIVE_FALSE;
-              numRows = availableSegmentMetadata.getNumRows();
             }
 
-            // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
-            // broker might have outdated or no information regarding numRows and rowSignature for a segment.
-            // In that case, we should use {@code numRows} from the segment polled from the coordinator.
-            if (null != val.getNumRows()) {
+            final long numRows;
+            if (segment.getNumRows() != null) {
+              // the recent version of DataSegment stores numRows
+              numRows = segment.getNumRows().longValue();
+            } else if (val.getNumRows() != null) {
+              // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
+              // broker might have outdated or no information regarding numRows and rowSignature for a segment.
+              // In that case, we should use {@code numRows} from the segment polled from the coordinator.
               numRows = val.getNumRows();
+            } else if (availableSegmentMetadata != null) {
+              numRows = availableSegmentMetadata.getNumRows();
+            } else {
+              numRows = 0L;
             }
 
-            isRealtime = val.isRealtime() ? 1 : 0;
+            long isRealtime = val.isRealtime() ? 1 : 0;
 
             // set of segments returned from Coordinator include published and realtime segments
             // so realtime segments are not published and vice versa
@@ -401,7 +408,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
                 val.getNumReplicas(),
-                val.getNumRows(),
+                segment.getNumRows() != null ? segment.getNumRows() : val.getNumRows(),
                 // is_active is true for unpublished segments iff they are realtime
                 val.isRealtime() /* is_active */,
                 // is_published is false for unpublished segments
