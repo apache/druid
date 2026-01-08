@@ -2982,11 +2982,11 @@ libraries:
 
 name: Kinesis Client
 license_category: binary
-version: 1.14.4
+version: 2.6.0
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
-  - com.amazonaws: amazon-kinesis-client
+  - software.amazon.kinesis: amazon-kinesis-client
 
 ---
 
