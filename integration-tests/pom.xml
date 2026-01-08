@@ -54,6 +54,14 @@
             <artifactId>kinesis</artifactId>
         </dependency>
         <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>regions</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-orc-extensions</artifactId>
             <version>${project.parent.version}</version>
