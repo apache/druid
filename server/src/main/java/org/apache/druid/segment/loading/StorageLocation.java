@@ -345,7 +345,7 @@ public class StorageLocation
       WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
       if (existingEntry != null && existingEntry.hold()) {
         existingEntry.visited = true;
-        weakStats.getAndUpdate(WeakStats::hit);
+        weakStats.getAndUpdate(s -> s.hit(existingEntry.cacheEntry.getSize()));
         return new ReservationHold<>(
             (T) existingEntry.cacheEntry,
             createWeakEntryReleaseRunnable(existingEntry, false)
@@ -382,7 +382,7 @@ public class StorageLocation
       WeakCacheEntry retryExistingEntry = weakCacheEntries.get(entryId);
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
-        weakStats.getAndUpdate(WeakStats::hit);
+        weakStats.getAndUpdate(s -> s.hit(retryExistingEntry.cacheEntry.getSize()));
         return new ReservationHold<>(
             (T) retryExistingEntry.cacheEntry,
             createWeakEntryReleaseRunnable(retryExistingEntry, false)
@@ -1012,6 +1012,7 @@ public class StorageLocation
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
     private final AtomicLong hitCount = new AtomicLong(0);
+    private final AtomicLong hitBytes = new AtomicLong(0);
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
@@ -1021,9 +1022,10 @@ public class StorageLocation
       this.sizeUsed = sizeUsed;
     }
 
-    public WeakStats hit()
+    public WeakStats hit(long size)
     {
       hitCount.getAndIncrement();
+      hitBytes.getAndAdd(size);
       return this;
     }
 
@@ -1063,6 +1065,12 @@ public class StorageLocation
     public long getHitCount()
     {
       return hitCount.get();
+    }
+
+    @Override
+    public long getHitBytes()
+    {
+      return hitBytes.get();
     }
 
     @Override

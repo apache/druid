@@ -203,6 +203,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_COUNT));
     long hits = emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_COUNT);
     Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
+    if (expectedTotalHits > 0) {
+      emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_BYTES));
+      Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_BYTES) >= 0);
+    }
     emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
     long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
     Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
