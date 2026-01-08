@@ -45,6 +45,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -135,8 +136,9 @@ public class IndexMergerV9 extends IndexMergerBase
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
     Closer closer = Closer.create();
+    final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
     try {
-      final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
+
       FileUtils.mkdirp(outDir);
 
       SegmentWriteOutMediumFactory omf = segmentWriteOutMediumFactory != null ? segmentWriteOutMediumFactory
@@ -296,6 +298,7 @@ public class IndexMergerV9 extends IndexMergerBase
       return outDir;
     }
     catch (Throwable t) {
+      CloseableUtils.closeAndWrapExceptions(v9Smoosher::abort);
       throw closer.rethrow(t);
     }
     finally {

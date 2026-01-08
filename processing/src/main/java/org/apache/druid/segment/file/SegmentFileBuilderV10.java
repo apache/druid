@@ -21,6 +21,9 @@ package org.apache.druid.segment.file;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.io.Channels;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -35,6 +38,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -49,10 +53,27 @@ import java.util.TreeMap;
  */
 public class SegmentFileBuilderV10 implements SegmentFileBuilder
 {
+  public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir)
+  {
+    return create(jsonMapper, baseDir, CompressionStrategy.NONE);
+  }
+
+  public static SegmentFileBuilderV10 create(ObjectMapper jsonMapper, File baseDir, CompressionStrategy metaCompression)
+  {
+    return new SegmentFileBuilderV10(
+        jsonMapper,
+        IndexIO.V10_FILE_NAME,
+        baseDir,
+        Integer.MAX_VALUE,
+        metaCompression
+    );
+  }
+
   private final ObjectMapper jsonMapper;
   private final String outputFileName;
   private final File baseDir;
   private final long maxChunkSize;
+  private final CompressionStrategy metadataCompression;
   private final FileSmoosher smoosher;
   private final Map<String, SegmentFileBuilderV10> externalSegmentFileBuilders;
   private final Map<String, ColumnDescriptor> columns = new TreeMap<>();
@@ -64,17 +85,19 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   @Nullable
   private List<ProjectionMetadata> projections = null;
 
-  public SegmentFileBuilderV10(
+  private SegmentFileBuilderV10(
       ObjectMapper jsonMapper,
       String outputFileName,
       File baseDir,
-      long maxChunkSize
+      long maxChunkSize,
+      CompressionStrategy metadataCompression
   )
   {
     this.jsonMapper = jsonMapper;
     this.outputFileName = outputFileName;
     this.baseDir = baseDir;
     this.maxChunkSize = maxChunkSize;
+    this.metadataCompression = metadataCompression;
     this.smoosher = new FileSmoosher(baseDir, Ints.checkedCast(maxChunkSize), outputFileName);
     this.externalSegmentFileBuilders = new TreeMap<>();
   }
@@ -102,7 +125,7 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   {
     return externalSegmentFileBuilders.computeIfAbsent(
         externalFile,
-        (k) -> new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxChunkSize)
+        (k) -> new SegmentFileBuilderV10(jsonMapper, externalFile, baseDir, maxChunkSize, metadataCompression)
     );
   }
 
@@ -128,6 +151,12 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
   }
 
   @Override
+  public void abort()
+  {
+    smoosher.abort();
+  }
+
+  @Override
   public void close() throws IOException
   {
     for (SegmentFileBuilderV10 externalBuilder : externalSegmentFileBuilders.values()) {
@@ -147,17 +176,41 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
 
     final byte[] metadataBytes = jsonMapper.writeValueAsBytes(segmentFileMetadata);
 
-    try (final FileOutputStream outputStream = new FileOutputStream(new File(baseDir, outputFileName))) {
-      // still need to make compression work... probably need to store both compressed and uncompressed lengths? no harm
-      // if so, since on reader side we can just check for other compression and read the extra int or whatever
-      outputStream.write(new byte[]{IndexIO.V10_VERSION, CompressionStrategy.NONE.getId()});
-      ByteBuffer intBuffer = ByteBuffer.allocate(4);
-      intBuffer.order(ByteOrder.LITTLE_ENDIAN);
+    try (final Closer closer = Closer.create()) {
+      final FileOutputStream outputStream = closer.register(new FileOutputStream(new File(baseDir, outputFileName)));
+      final FileChannel channel = closer.register(outputStream.getChannel());
+      final ByteBuffer intBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+
+      outputStream.write(new byte[]{IndexIO.V10_VERSION, metadataCompression.getId()});
+      // write uncompressed metadata length
       intBuffer.putInt(metadataBytes.length);
       intBuffer.flip();
-
       outputStream.write(intBuffer.array());
-      outputStream.write(metadataBytes);
+
+      if (CompressionStrategy.NONE == metadataCompression) {
+        // no compression, just write the plain metadata bytes
+        outputStream.write(metadataBytes);
+      } else {
+        // compress the data using the strategy, write the compressed length, then the compressed blob
+        final CompressionStrategy.Compressor compressor = metadataCompression.getCompressor();
+        final ByteBuffer inBuffer = compressor.allocateInBuffer(metadataBytes.length, closer)
+                                              .order(ByteOrder.nativeOrder());
+        inBuffer.put(metadataBytes, 0, metadataBytes.length);
+        inBuffer.flip();
+
+        final ByteBuffer outBuffer = compressor.allocateOutBuffer(metadataBytes.length, closer)
+                                               .order(ByteOrder.nativeOrder());
+        final ByteBuffer compressed = compressor.compress(inBuffer, outBuffer);
+
+        // write compression length
+        intBuffer.position(0);
+        intBuffer.putInt(compressed.remaining());
+        intBuffer.flip();
+        outputStream.write(intBuffer.array());
+
+        // write compressed metadata
+        Channels.writeFully(channel, compressed);
+      }
 
       for (File f : smoosher.getOutFiles()) {
         try (FileInputStream fis = new FileInputStream(f)) {
@@ -168,7 +221,9 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
           }
         }
         // delete all the old 00000.smoosh
-        f.delete();
+        if (!f.delete()) {
+          throw DruidException.defensive("Failed to delete temporary file[%s]", f);
+        }
       }
     }
   }

@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -94,6 +96,10 @@ public class IndexMergerV10 extends IndexMergerBase
       final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
+    DruidException.conditionalDefensive(
+        segmentMetadata != null,
+        "Unexpected null Metadata when merging v10 segments"
+    );
     final String basePrefix = Projections.BASE_TABLE_PROJECTION_NAME + "/";
 
     progress.start();
@@ -105,14 +111,13 @@ public class IndexMergerV10 extends IndexMergerBase
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
     Closer closer = Closer.create();
-    try {
-      final SegmentFileBuilderV10 v10Smoosher = new SegmentFileBuilderV10(
-          mapper,
-          IndexIO.V10_FILE_NAME,
-          outDir,
-          Integer.MAX_VALUE
-      );
 
+    final SegmentFileBuilderV10 v10Smoosher = SegmentFileBuilderV10.create(
+        mapper,
+        outDir,
+        indexSpec.getMetadataCompression()
+    );
+    try {
       DateTime minTime = DateTimes.MAX;
       DateTime maxTime = DateTimes.MIN;
 
@@ -170,7 +175,7 @@ public class IndexMergerV10 extends IndexMergerBase
       }
 
       // this part right here does the parent marking
-      if (segmentMetadata != null && segmentMetadata.getProjections() != null) {
+      if (segmentMetadata.getProjections() != null) {
         for (AggregateProjectionMetadata projectionMetadata : segmentMetadata.getProjections()) {
           for (String dimension : projectionMetadata.getSchema().getGroupingColumns()) {
             DimensionMergerV9 merger = mergersMap.get(dimension);
@@ -201,7 +206,7 @@ public class IndexMergerV10 extends IndexMergerBase
       final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
           setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricFormats, indexSpec, basePrefix);
-      IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
+      final IndexMergeResult indexMergeResult = mergeIndexesAndWriteColumns(
           adapters,
           progress,
           timeAndDimsIterator,
@@ -242,12 +247,15 @@ public class IndexMergerV10 extends IndexMergerBase
 
       progress.stopSection(section);
 
-      // Recompute the projections.
-      final Metadata finalMetadata;
-      if (segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
-        finalMetadata = segmentMetadata;
-      } else {
-        finalMetadata = makeProjections(
+      final List<ProjectionMetadata> projections = new ArrayList<>();
+      // ingestion current builds v9 metadata... translate v9 metadata and projection stuff to v10 format
+      projections.add(
+          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensionsWithTime, segmentMetadata)
+      );
+
+      // make the projections
+      if (!CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        final Metadata updatedMetadata = makeProjections(
             v10Smoosher,
             segmentMetadata.getProjections(),
             adapters,
@@ -259,16 +267,10 @@ public class IndexMergerV10 extends IndexMergerBase
             mergersMap,
             segmentMetadata
         );
-      }
-
-      List<ProjectionMetadata> projections = new ArrayList<>();
-      // ingestion current builds v9 metadata... translate v9 metadata and projection stuff to v10 format
-      projections.add(
-          ProjectionMetadata.forBaseTable(indexMergeResult.rowCount, mergedDimensionsWithTime, finalMetadata)
-      );
-      // convert v9 projections to v10 projections
-      for (AggregateProjectionMetadata aggMeta : finalMetadata.getProjections()) {
-        projections.add(new ProjectionMetadata(aggMeta.getNumRows(), aggMeta.getSchema()));
+        // convert v9 projections to v10 projections (projections cannot be null if we got here)
+        for (AggregateProjectionMetadata aggMeta : updatedMetadata.getProjections()) {
+          projections.add(new ProjectionMetadata(aggMeta.getNumRows(), aggMeta.getSchema()));
+        }
       }
 
       v10Smoosher.addProjections(projections);
@@ -280,6 +282,7 @@ public class IndexMergerV10 extends IndexMergerBase
       return outDir;
     }
     catch (Throwable t) {
+      CloseableUtils.closeAndWrapExceptions(v10Smoosher);
       throw closer.rethrow(t);
     }
     finally {

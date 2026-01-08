@@ -71,4 +71,15 @@ public interface SegmentFileBuilder extends Closeable
   {
     return this;
   }
+
+  /**
+   * cleanup any open resources in the event of an exception while building the segment files
+   */
+  void abort();
+
+  /**
+   * Close the segment file builder, writing the file(s) to the destination
+   */
+  @Override
+  void close() throws IOException;
 }

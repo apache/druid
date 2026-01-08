@@ -43,10 +43,7 @@ public class ProjectionMetadata
     } else {
       schema = TableProjectionSchema.fromMetadata(dims, metadata);
     }
-    return new ProjectionMetadata(
-        numRows,
-        schema
-    );
+    return new ProjectionMetadata(numRows, schema);
   }
 
   private final int numRows;

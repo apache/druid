@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -50,7 +51,32 @@ class SegmentFileMapperV10Test
     File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(baseDir);
 
-    try (SegmentFileBuilderV10 builder = new SegmentFileBuilderV10(JSON_MAPPER, IndexIO.V10_FILE_NAME, baseDir, Integer.MAX_VALUE)) {
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      for (int i = 0; i < 20; ++i) {
+        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        Files.write(Ints.toByteArray(i), tmpFile);
+        builder.add(StringUtils.format("%d", i), tmpFile);
+      }
+    }
+
+    File[] files = baseDir.listFiles();
+    File segmentFile = new File(baseDir, IndexIO.V10_FILE_NAME);
+
+    Assert.assertEquals(1, files.length); // v10 format has a single file
+    Assert.assertEquals(segmentFile, files[0]);
+
+    try (SegmentFileMapperV10 mapper = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER)) {
+      validateInternalFiles(mapper);
+    }
+  }
+
+  @Test
+  void testWriteReadCompressed() throws IOException
+  {
+    File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
+    FileUtils.mkdirp(baseDir);
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.ZSTD)) {
       for (int i = 0; i < 20; ++i) {
         File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
@@ -76,7 +102,7 @@ class SegmentFileMapperV10Test
     File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
     FileUtils.mkdirp(baseDir);
 
-    try (SegmentFileBuilderV10 builder = new SegmentFileBuilderV10(JSON_MAPPER, IndexIO.V10_FILE_NAME, baseDir, Integer.MAX_VALUE)) {
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 20; ++i) {
         File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);

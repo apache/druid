@@ -103,33 +103,56 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
   {
     try (FileInputStream fis = new FileInputStream(segmentFile)) {
       // version (byte) | metadata compression (byte) | metadata length (int)
-      byte[] header = new byte[1 + 1 + Integer.BYTES];
+      final byte[] header = new byte[1 + 1 + Integer.BYTES];
       int read = fis.read(header);
       if (read < header.length) {
         throw DruidException.defensive("expected at least [%s] bytes, but only read [%s]", header.length, read);
       }
-      ByteBuffer headerBuffer = ByteBuffer.wrap(header);
-      headerBuffer.order(ByteOrder.LITTLE_ENDIAN);
+      final ByteBuffer headerBuffer = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN);
 
       if (headerBuffer.get(0) != IndexIO.V10_VERSION) {
         throw DruidException.defensive("not v10, got[%s] instead", headerBuffer.get(0));
       }
 
-      // ideally we should make compression work, right now only uncompressed is supported (we probably need to add
-      // another int for compressed length if strategy is to be compressed)
-      byte compression = headerBuffer.get(1);
-      CompressionStrategy compressionStrategy = CompressionStrategy.forId(compression);
-      if (!CompressionStrategy.NONE.equals(compressionStrategy)) {
-        throw DruidException.defensive("compression strategy[%s] not supported", compressionStrategy);
-      }
-      int metaLength = headerBuffer.getInt(2);
+      final byte compression = headerBuffer.get(1);
+      final CompressionStrategy compressionStrategy = CompressionStrategy.forId(compression);
 
-      byte[] meta = new byte[metaLength];
-      read = fis.read(meta);
-      if (read < meta.length) {
-        throw DruidException.defensive("read[%s] which is less than expected metadata length[%s]", read, metaLength);
+      final int metaLength = headerBuffer.getInt(2);
+      final byte[] meta = new byte[metaLength];
+
+      final int startOffset;
+      if (CompressionStrategy.NONE == compressionStrategy) {
+        startOffset = header.length + meta.length;
+        read = fis.read(meta);
+        if (read < meta.length) {
+          throw DruidException.defensive("read[%s] which is less than expected metadata length[%s]", read, metaLength);
+        }
+      } else {
+        final byte[] compressedLengthBytes = new byte[Integer.BYTES];
+        read = fis.read(compressedLengthBytes);
+        if (read != Integer.BYTES) {
+          throw DruidException.defensive("read[%s] which is less than expected [%s]", read, Integer.BYTES);
+        }
+        final ByteBuffer compressedLengthBuffer = ByteBuffer.wrap(compressedLengthBytes).order(ByteOrder.LITTLE_ENDIAN);
+        final int compressedLength = compressedLengthBuffer.getInt(0);
+        startOffset = header.length + Integer.BYTES + compressedLength;
+
+        final byte[] compressed = new byte[compressedLength];
+        read = fis.read(compressed);
+        if (read < compressed.length) {
+          throw DruidException.defensive(
+              "read[%s] which is less than expected compressed metadata length[%s]",
+              read,
+              compressedLength
+          );
+        }
+
+        final ByteBuffer inBuffer = ByteBuffer.wrap(compressed).order(ByteOrder.LITTLE_ENDIAN);
+        final ByteBuffer outBuffer = ByteBuffer.wrap(meta).order(ByteOrder.LITTLE_ENDIAN);
+        final CompressionStrategy.Decompressor decompressor = compressionStrategy.getDecompressor();
+        decompressor.decompress(inBuffer, compressedLength, outBuffer);
       }
-      final int startOffset = header.length + meta.length;
+
       final SegmentFileMetadata metadata = mapper.readValue(meta, SegmentFileMetadata.class);
       final List<MappedByteBuffer> containers = Lists.newArrayListWithCapacity(metadata.getContainers().size());
 

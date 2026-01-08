@@ -37,6 +37,7 @@ import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentInternalFileMetadata;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
@@ -216,6 +217,14 @@ public class FileSmoosher implements SegmentFileBuilder
   public SegmentFileChannel addWithChannel(final String name, final long size) throws IOException
   {
     return addWithSmooshedWriter(name, size);
+  }
+
+  @Override
+  public void abort()
+  {
+    if (currOut != null) {
+      CloseableUtils.closeAndWrapExceptions(currOut);
+    }
   }
 
   public SmooshedWriter addWithSmooshedWriter(final String name, final long size) throws IOException

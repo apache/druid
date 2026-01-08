@@ -85,6 +85,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -2165,6 +2166,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.ZSTD).build())
                        .rows(ROWS);
   }
 
