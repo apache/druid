@@ -512,6 +512,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>auth</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sdk-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>regions</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-protobuf-provider</artifactId>
       <version>6.2.12</version>
