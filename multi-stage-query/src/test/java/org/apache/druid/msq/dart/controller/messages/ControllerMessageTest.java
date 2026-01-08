@@ -22,7 +22,9 @@ package org.apache.druid.msq.dart.controller.messages;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 
 public class ControllerMessageTest
 {
@@ -87,7 +90,24 @@ public class ControllerMessageTest
     EqualsVerifier.forClass(ResultsComplete.class).usingGetClass().verify();
     EqualsVerifier.forClass(WorkerError.class).usingGetClass().verify();
     EqualsVerifier.forClass(WorkerWarning.class).usingGetClass().verify();
-    EqualsVerifier.forClass(PostCounters.class).usingGetClass().verify();
+    EqualsVerifier.forClass(PostCounters.class)
+                  .usingGetClass()
+                  .withPrefabValues(
+                      CounterSnapshotsTree.class,
+                      CounterSnapshotsTree.fromMap(
+                          Map.of(
+                              1,
+                              Map.of(1, new CounterSnapshots(Map.of("foo", NilQueryCounterSnapshot.instance())))
+                          )
+                      ),
+                      CounterSnapshotsTree.fromMap(
+                          Map.of(
+                              1,
+                              Map.of(1, new CounterSnapshots(Map.of("bar", NilQueryCounterSnapshot.instance())))
+                          )
+                      )
+                  )
+                  .verify();
   }
 
   private void assertSerde(final ControllerMessage message) throws IOException
