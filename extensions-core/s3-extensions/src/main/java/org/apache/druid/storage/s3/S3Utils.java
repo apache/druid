@@ -300,6 +300,32 @@ public class S3Utils
         .build();
   }
 
+  /**
+   * Builds the header value for {@code x-amz-grant-full-control}.
+   *
+   * AWS expects this header to include both the grantee type and value, e.g. {@code id="..."}.
+   */
+  @Nullable
+  static String grantFullControlHeaderValue(@Nullable Grant grant)
+  {
+    if (grant == null || grant.grantee() == null) {
+      return null;
+    }
+
+    final Grantee grantee = grant.grantee();
+    if (grantee.id() != null) {
+      return StringUtils.format("id=\"%s\"", grantee.id());
+    }
+    if (grantee.emailAddress() != null) {
+      return StringUtils.format("emailAddress=\"%s\"", grantee.emailAddress());
+    }
+    if (grantee.uri() != null) {
+      return StringUtils.format("uri=\"%s\"", grantee.uri());
+    }
+
+    return null;
+  }
+
   public static String extractS3Key(URI uri)
   {
     return StringUtils.maybeRemoveLeadingSlash(uri.getPath());

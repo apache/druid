@@ -204,7 +204,7 @@ public class ObjectSummaryIteratorTest
       final List<Map.Entry<String, S3Object>> objects
   )
   {
-    return new ServerSideEncryptingAmazonS3(null, null, new S3TransferConfig())
+    return new ServerSideEncryptingAmazonS3(null, null, null, new S3TransferConfig())
     {
       @Override
       public ListObjectsV2Response listObjectsV2(final ListObjectsV2Request request)

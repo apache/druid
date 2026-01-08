@@ -20,9 +20,11 @@
 package org.apache.druid.storage.s3;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -66,6 +68,8 @@ import java.util.function.Supplier;
  */
 public class ServerSideEncryptingAmazonS3
 {
+  private static final Logger log = new Logger(ServerSideEncryptingAmazonS3.class);
+
   public static Builder builder()
   {
     return new Builder();
@@ -75,19 +79,31 @@ public class ServerSideEncryptingAmazonS3
   private final ServerSideEncryption serverSideEncryption;
   @Nullable
   private final S3TransferManager transferManager;
+  @Nullable
+  private final S3AsyncClient s3AsyncClient;
 
   public ServerSideEncryptingAmazonS3(
       S3Client s3Client,
+      @Nullable S3AsyncClient s3AsyncClient,
       ServerSideEncryption serverSideEncryption,
       S3TransferConfig transferConfig
   )
   {
     this.s3Client = s3Client;
+    this.s3AsyncClient = s3AsyncClient;
     this.serverSideEncryption = serverSideEncryption;
-    // Note: S3TransferManager in SDK v2 requires an async client.
-    // For simplicity, we disable transfer manager and use sync uploads.
-    // The transfer manager can be enabled later if async operations are needed.
-    this.transferManager = null;
+
+    if (transferConfig != null && transferConfig.isUseTransferManager() && s3AsyncClient != null) {
+      log.info("Initializing S3TransferManager with async client for multipart uploads");
+      this.transferManager = S3TransferManager.builder()
+          .s3Client(s3AsyncClient)
+          .build();
+    } else {
+      if (transferConfig != null && transferConfig.isUseTransferManager() && s3AsyncClient == null) {
+        log.warn("TransferManager requested but no async client provided, falling back to sync uploads");
+      }
+      this.transferManager = null;
+    }
   }
 
   public S3Client getS3Client()
@@ -230,7 +246,10 @@ public class ServerSideEncryptingAmazonS3
           .bucket(bucket)
           .key(key);
       if (aclGrant != null) {
-        requestBuilder.grantFullControl(aclGrant.grantee().id());
+        final String headerValue = S3Utils.grantFullControlHeaderValue(aclGrant);
+        if (headerValue != null) {
+          requestBuilder.grantFullControl(headerValue);
+        }
       }
       putObject(requestBuilder, RequestBody.fromFile(file));
     } else {
@@ -238,7 +257,10 @@ public class ServerSideEncryptingAmazonS3
           .bucket(bucket)
           .key(key);
       if (aclGrant != null) {
-        requestBuilder.grantFullControl(aclGrant.grantee().id());
+        final String headerValue = S3Utils.grantFullControlHeaderValue(aclGrant);
+        if (headerValue != null) {
+          requestBuilder.grantFullControl(headerValue);
+        }
       }
       PutObjectRequest decoratedRequest = serverSideEncryption.decorate(requestBuilder).build();
 
@@ -255,11 +277,19 @@ public class ServerSideEncryptingAmazonS3
   public static class Builder
   {
     private Supplier<S3Client> s3ClientSupplier;
+    @Nullable
+    private Supplier<S3AsyncClient> s3AsyncClientSupplier;
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
 
     public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
       this.s3ClientSupplier = s3ClientSupplier;
+      return this;
+    }
+
+    public Builder setS3AsyncClientSupplier(@Nullable Supplier<S3AsyncClient> s3AsyncClientSupplier)
+    {
+      this.s3AsyncClientSupplier = s3AsyncClientSupplier;
       return this;
     }
 
@@ -291,8 +321,19 @@ public class ServerSideEncryptingAmazonS3
         throw new RuntimeException(e);
       }
 
+      S3AsyncClient s3AsyncClient = null;
+      if (s3AsyncClientSupplier != null) {
+        try {
+          s3AsyncClient = S3Utils.retryS3Operation(s3AsyncClientSupplier::get);
+        }
+        catch (Exception e) {
+          log.warn(e, "Failed to create S3AsyncClient, falling back to sync uploads");
+        }
+      }
+
       return new ServerSideEncryptingAmazonS3(
           s3Client,
+          s3AsyncClient,
           s3StorageConfig.getServerSideEncryption(),
           s3StorageConfig.getS3TransferConfig()
       );
