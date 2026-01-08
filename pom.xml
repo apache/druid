@@ -402,6 +402,11 @@
                 <version>${aws.sdk.v2.version}</version>
             </dependency>
             <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>netty-nio-client</artifactId>
+                <version>${aws.sdk.v2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
                 <version>1.0.4</version>

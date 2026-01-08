@@ -40,11 +40,15 @@ import org.apache.druid.java.util.common.logger.Logger;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
+import javax.annotation.Nullable;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -134,9 +138,13 @@ public class S3StorageDruidModule implements DruidModule
       S3StorageConfig storageConfig
   )
   {
-    final java.util.function.Supplier<S3Client> s3ClientSupplier = () -> {
-      boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
+    final boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
+    final URI endpointOverride = buildEndpointOverride(endpointConfig, useHttps);
+    final Region region = StringUtils.isNotEmpty(endpointConfig.getSigningRegion())
+        ? Region.of(endpointConfig.getSigningRegion())
+        : null;
 
+    final java.util.function.Supplier<S3Client> s3ClientSupplier = () -> {
       // Build HTTP client with proxy configuration
       ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
           .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
@@ -160,26 +168,59 @@ public class S3StorageDruidModule implements DruidModule
           .serviceConfiguration(s3Configuration)
           .forcePathStyle(clientConfig.isEnablePathStyleAccess());
 
-      if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-        String endpointUrl = endpointConfig.getUrl();
-        // Ensure endpoint URL has a scheme
-        if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
-          endpointUrl = (useHttps ? "https://" : "http://") + endpointUrl;
-        }
-        s3ClientBuilder.endpointOverride(URI.create(endpointUrl));
+      if (endpointOverride != null) {
+        s3ClientBuilder.endpointOverride(endpointOverride);
       }
 
-      if (StringUtils.isNotEmpty(endpointConfig.getSigningRegion())) {
-        s3ClientBuilder.region(Region.of(endpointConfig.getSigningRegion()));
+      if (region != null) {
+        s3ClientBuilder.region(region);
       }
 
       return s3ClientBuilder.build();
     };
 
+    // Create async client supplier for S3TransferManager
+    final java.util.function.Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
+      NettyNioAsyncHttpClient.Builder asyncHttpClientBuilder = NettyNioAsyncHttpClient.builder()
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
+          .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .maxConcurrency(clientConfig.getMaxConnections());
+
+      S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder()
+          .credentialsProvider(provider)
+          .httpClientBuilder(asyncHttpClientBuilder)
+          .forcePathStyle(clientConfig.isEnablePathStyleAccess())
+          .multipartEnabled(true);
+
+      if (endpointOverride != null) {
+        s3AsyncClientBuilder.endpointOverride(endpointOverride);
+      }
+
+      if (region != null) {
+        s3AsyncClientBuilder.region(region);
+      }
+
+      return s3AsyncClientBuilder.build();
+    };
+
     return ServerSideEncryptingAmazonS3.builder()
                                        .setS3ClientSupplier(s3ClientSupplier)
+                                       .setS3AsyncClientSupplier(s3AsyncClientSupplier)
                                        .setS3StorageConfig(storageConfig);
+  }
 
+  @Nullable
+  private static URI buildEndpointOverride(AWSEndpointConfig endpointConfig, boolean useHttps)
+  {
+    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+      String endpointUrl = endpointConfig.getUrl();
+      // Ensure endpoint URL has a scheme
+      if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+        endpointUrl = (useHttps ? "https://" : "http://") + endpointUrl;
+      }
+      return URI.create(endpointUrl);
+    }
+    return null;
   }
 
   // This provides ServerSideEncryptingAmazonS3 built with all default configs from Guice injection
