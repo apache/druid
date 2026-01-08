@@ -100,6 +100,7 @@ public class AvailableSegmentMetadata
   /**
    * @deprecated numRows is now stored in {@link DataSegment}.
    */
+  @Deprecated
   public long getNumRows()
   {
     return numRows;

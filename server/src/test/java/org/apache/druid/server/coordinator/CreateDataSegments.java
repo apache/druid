@@ -206,7 +206,7 @@ public class CreateDataSegments
         lastUpdatedTime,
         used,
         schemaFingerprint,
-        numRows.longValue(),
+        numRows == null ? null : numRows.longValue(),
         upgradedFromSegmentId
     );
   }

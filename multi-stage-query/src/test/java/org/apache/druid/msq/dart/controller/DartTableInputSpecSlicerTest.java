@@ -53,6 +53,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -117,8 +118,8 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
                                                          .interval(Intervals.of("2000/2001"))
                                                          .shardSpec(new DimensionRangeShardSpec(
                                                              ImmutableList.of(PARTITION_DIM),
-                                                             null,
                                                              new StringTuple(new String[]{"foo"}),
+                                                             null,
                                                              1,
                                                              2
                                                          )).build();
@@ -129,6 +130,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * be assigned to the first server.
    */
   private static final DataSegment SEGMENT3 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
                                                          .interval(Intervals.of("2001/2002"))
                                                          .build();
 
@@ -136,14 +138,15 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * Segment that should be ignored because it's a tombstone.
    */
   private static final DataSegment SEGMENT4 = DataSegment.builder(SEGMENT_BUILDER)
-                                                         .interval(Intervals.of("2002/2003"))
                                                          .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                         .interval(Intervals.of("2002/2003"))
                                                          .build();
 
   /**
    * Segment that's realtime-only.
    */
   private static final DataSegment SEGMENT5 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
                                                          .interval(Intervals.of("2003/2004"))
                                                          .build();
 
@@ -151,6 +154,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * Segment that's realtime and located at the same host as segment 5
    */
   private static final DataSegment SEGMENT6 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
                                                          .interval(Intervals.of("2004/2005"))
                                                          .build();
 
