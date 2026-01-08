@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.controller.messages.PostCounters;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
@@ -63,6 +64,12 @@ import java.io.File;
  */
 public class DartWorkerContext implements WorkerContext
 {
+  /**
+   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. Off by default since older Dart controllers
+   * don't understand the {@link PostCounters} message, and because it adds some overhead.
+   */
+  public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = false;
+
   private final String queryId;
   private final String controllerHost;
   private final WorkerId workerId;
@@ -195,7 +202,12 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public ControllerClient makeControllerClient()
   {
-    return new DartControllerClient(outbox, queryId, controllerHost);
+    return new DartControllerClient(
+        outbox,
+        queryId,
+        controllerHost,
+        MultiStageQueryContext.getLiveReportCounters(queryContext, DEFAULT_LIVE_REPORT_COUNTERS)
+    );
   }
 
   @Override

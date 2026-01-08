@@ -340,9 +340,12 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     final Optional<InputStream> streamOptional =
-        overlord.bindings()
-                .getInstance(TaskLogStreamer.class)
-                .streamTaskLog(taskId, 0);
+        cluster.callApi().waitForResult(
+            () -> overlord.bindings()
+                          .getInstance(TaskLogStreamer.class)
+                          .streamTaskLog(taskId, 0),
+            Optional::isPresent
+        ).go();
 
     Assertions.assertTrue(streamOptional.isPresent());
 

@@ -210,6 +210,13 @@ public class MultiStageQueryContext
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
   public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
 
+  /**
+   * Whether workers should send live counter updates to the controller via the message relay. When enabled, workers
+   * periodically send counter snapshots to the controller, allowing the controller to have more up-to-date progress
+   * information.
+   */
+  public static final String CTX_LIVE_REPORT_COUNTERS = "liveReportCounters";
+
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
@@ -521,6 +528,14 @@ public class MultiStageQueryContext
   public static boolean getIncludeAllCounters(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
+  }
+
+  /**
+   * See {@link #CTX_LIVE_REPORT_COUNTERS}.
+   */
+  public static boolean getLiveReportCounters(final QueryContext queryContext, final boolean defaultValue)
+  {
+    return queryContext.getBoolean(CTX_LIVE_REPORT_COUNTERS, defaultValue);
   }
 
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
