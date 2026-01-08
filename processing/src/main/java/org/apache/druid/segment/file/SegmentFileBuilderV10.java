@@ -221,9 +221,11 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
           }
         }
         // delete all the old 00000.smoosh
-        if (!f.delete()) {
-          throw DruidException.defensive("Failed to delete temporary file[%s]", f);
-        }
+        DruidException.conditionalDefensive(
+            f.delete(),
+            "Failed to delete temporary file[%s]",
+            f
+        );
       }
     }
   }
