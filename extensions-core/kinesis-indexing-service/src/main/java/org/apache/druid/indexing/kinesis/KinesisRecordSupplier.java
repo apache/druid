@@ -61,6 +61,7 @@ import software.amazon.awssdk.services.kinesis.model.Shard;
 import software.amazon.awssdk.services.kinesis.model.ShardIteratorType;
 import software.amazon.awssdk.services.kinesis.model.StreamDescription;
 import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.kinesis.retrieval.AggregatorUtil;
@@ -469,6 +470,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
         awsCredentialsConfig
     );
 
+    final Region regionFromEndpoint = parseRegionFromEndpoint(endpoint);
+
     if (awsAssumedRoleArn != null) {
       log.info("Assuming role [%s] with externalId [%s]", awsAssumedRoleArn, awsExternalId);
 
@@ -480,9 +483,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
         assumeRoleBuilder.externalId(awsExternalId);
       }
 
-      StsClient stsClient = StsClient.builder()
-          .credentialsProvider(credentialsProvider)
-          .build();
+      StsClientBuilder stsClientBuilder = StsClient.builder()
+          .credentialsProvider(credentialsProvider);
+
+      if (regionFromEndpoint != null) {
+        stsClientBuilder.region(regionFromEndpoint);
+      }
+
+      StsClient stsClient = stsClientBuilder.build();
 
       credentialsProvider = StsAssumeRoleCredentialsProvider.builder()
           .stsClient(stsClient)
@@ -494,18 +502,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
         .credentialsProvider(credentialsProvider);
 
     if (endpoint != null && !endpoint.isEmpty()) {
-      // Only set endpoint override if it's a valid URI with a scheme
-      URI endpointUri = URI.create(endpoint);
-      if (endpointUri.getScheme() != null) {
-        builder.endpointOverride(endpointUri);
-        // Extract region from endpoint if possible
-        Region region = parseRegionFromEndpoint(endpoint);
-        if (region != null) {
-          builder.region(region);
-        }
-      } else {
-        log.warn("Invalid endpoint URI provided (no scheme): [%s]. Using default endpoint.", endpoint);
-      }
+      // Back-compat: historically this endpoint is often a hostname without a scheme
+      // (e.g. "kinesis.us-east-1.amazonaws.com"). SDK v2 requires a URI for endpointOverride.
+      final String endpointWithScheme = endpoint.contains("://") ? endpoint : "https://" + endpoint;
+      URI endpointUri = URI.create(endpointWithScheme);
+      builder.endpointOverride(endpointUri);
+    }
+
+    // SDK v2 requires a region; when endpoint matches AWS hostname pattern we can infer it.
+    if (regionFromEndpoint != null) {
+      builder.region(regionFromEndpoint);
     }
 
     return builder.build();

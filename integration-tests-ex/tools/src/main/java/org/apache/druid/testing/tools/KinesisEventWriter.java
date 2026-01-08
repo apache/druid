@@ -22,6 +22,7 @@ package org.apache.druid.testing.tools;
 import org.apache.commons.codec.digest.DigestUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.util.AwsHostNameUtils;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
@@ -34,13 +35,11 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class KinesisEventWriter implements StreamEventWriter
 {
-  private static final Pattern REGION_PATTERN = Pattern.compile("kinesis\\.([a-z0-9-]+)\\.amazonaws\\.com");
   private static final int MAX_BATCH_SIZE = 500; // Kinesis limit for PutRecords
 
   private final KinesisClient kinesisClient;
@@ -63,15 +62,15 @@ public class KinesisEventWriter implements StreamEventWriter
     KinesisClientBuilder builder = KinesisClient.builder()
         .credentialsProvider(credentials);
 
+    final Region regionFromEndpoint = parseRegionFromEndpoint(endpoint);
+
     if (endpoint != null && !endpoint.isEmpty()) {
-      URI endpointUri = URI.create(endpoint);
-      if (endpointUri.getScheme() != null) {
-        builder.endpointOverride(endpointUri);
-        Region region = parseRegionFromEndpoint(endpoint);
-        if (region != null) {
-          builder.region(region);
-        }
-      }
+      final String endpointWithScheme = endpoint.contains("://") ? endpoint : "https://" + endpoint;
+      builder.endpointOverride(URI.create(endpointWithScheme));
+    }
+
+    if (regionFromEndpoint != null) {
+      builder.region(regionFromEndpoint);
     }
 
     this.kinesisClient = builder.build();
@@ -84,12 +83,22 @@ public class KinesisEventWriter implements StreamEventWriter
     if (endpoint == null) {
       return null;
     }
-    String lowerEndpoint = endpoint.toLowerCase(Locale.ENGLISH);
-    Matcher matcher = REGION_PATTERN.matcher(lowerEndpoint);
-    if (matcher.find()) {
-      return Region.of(matcher.group(1));
+
+    // Try to parse region using AWS SDK utility
+    String host = endpoint.contains("://")
+        ? URI.create(endpoint).getHost()
+        : endpoint;
+    if (host == null) {
+      host = endpoint;
     }
-    // For LocalStack or custom endpoints
+
+    Optional<Region> region = AwsHostNameUtils.parseSigningRegion(host, "kinesis");
+    if (region.isPresent()) {
+      return region.get();
+    }
+
+    // For LocalStack or custom endpoints, default to US_EAST_1
+    String lowerEndpoint = endpoint.toLowerCase(Locale.ENGLISH);
     if (lowerEndpoint.contains("localhost") || lowerEndpoint.contains("127.0.0.1")) {
       return Region.US_EAST_1;
     }
