@@ -579,8 +579,8 @@ public class DartQueryMaker implements QueryMaker
     public void onQueryComplete(MSQTaskReportPayload report)
     {
       try {
-        this.complete = true;
         this.report = report;
+        this.complete = true;
 
         final MSQStatusReport statusReport = report.getStatus();
 

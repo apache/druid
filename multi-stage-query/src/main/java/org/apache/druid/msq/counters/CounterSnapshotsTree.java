@@ -119,11 +119,7 @@ public class CounterSnapshotsTree
       return false;
     }
     final CounterSnapshotsTree that = (CounterSnapshotsTree) o;
-    synchronized (snapshotsMap) {
-      synchronized (that.snapshotsMap) {
-        return snapshotsMap.equals(that.snapshotsMap);
-      }
-    }
+    return copyMap().equals(that.copyMap());
   }
 
   @Override
