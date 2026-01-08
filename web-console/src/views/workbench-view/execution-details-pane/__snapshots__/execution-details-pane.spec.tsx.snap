@@ -77,8 +77,8 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
       >
         0:00:04
       </Blueprint5.Tag>
+       (starting at
        
-      (starting at 
       <Blueprint5.Tag
         active={false}
         fill={false}
