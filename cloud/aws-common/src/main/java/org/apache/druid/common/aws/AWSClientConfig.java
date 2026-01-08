@@ -19,22 +19,38 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AWSClientConfig
 {
+  // Default values matching AWS SDK v2 defaults
+  private static final boolean DEFAULT_CHUNKED_ENCODING_DISABLED = false;
+  private static final boolean DEFAULT_PATH_STYLE_ACCESS = false;
+  private static final boolean DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED = false;
+  private static final int DEFAULT_CONNECTION_TIMEOUT = 10_000; // 10 seconds
+  private static final int DEFAULT_SOCKET_TIMEOUT = 50_000; // 50 seconds
+  private static final int DEFAULT_MAX_CONNECTIONS = 50;
+
   @JsonProperty
   private String protocol = "https"; // The default of aws-java-sdk
 
   @JsonProperty
-  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
+  private boolean disableChunkedEncoding = DEFAULT_CHUNKED_ENCODING_DISABLED;
 
   @JsonProperty
-  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
+  private boolean enablePathStyleAccess = DEFAULT_PATH_STYLE_ACCESS;
 
   @JsonProperty
-  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+  protected boolean forceGlobalBucketAccessEnabled = DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+
+  @JsonProperty
+  private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+
+  @JsonProperty
+  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
+
+  @JsonProperty
+  private int maxConnections = DEFAULT_MAX_CONNECTIONS;
 
   public String getProtocol()
   {
@@ -56,6 +72,21 @@ public class AWSClientConfig
     return forceGlobalBucketAccessEnabled;
   }
 
+  public int getConnectionTimeout()
+  {
+    return connectionTimeout;
+  }
+
+  public int getSocketTimeout()
+  {
+    return socketTimeout;
+  }
+
+  public int getMaxConnections()
+  {
+    return maxConnections;
+  }
+
   @Override
   public String toString()
   {
@@ -64,6 +95,9 @@ public class AWSClientConfig
            ", disableChunkedEncoding=" + disableChunkedEncoding +
            ", enablePathStyleAccess=" + enablePathStyleAccess +
            ", forceGlobalBucketAccessEnabled=" + forceGlobalBucketAccessEnabled +
+           ", connectionTimeout=" + connectionTimeout +
+           ", socketTimeout=" + socketTimeout +
+           ", maxConnections=" + maxConnections +
            '}';
   }
 }

@@ -19,20 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CanonicalGrantee;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.Owner;
-import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +29,21 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketAclResponse;
+import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.Grantee;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.Owner;
+import software.amazon.awssdk.services.s3.model.Permission;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.Type;
 
 import java.io.File;
 import java.util.HashMap;
@@ -201,7 +202,16 @@ public class S3DataSegmentMoverTest
 
     private MockAmazonS3Client()
     {
-      super(new AmazonS3Client(), new NoopServerSideEncryption(), new S3TransferConfig());
+      super(createMockS3Client(), new NoopServerSideEncryption(), new S3TransferConfig());
+    }
+
+    private static S3Client createMockS3Client()
+    {
+      // Return a minimal mock - actual operations are overridden in this class
+      return S3Client.builder()
+          .region(software.amazon.awssdk.regions.Region.US_EAST_1)
+          .credentialsProvider(software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider.create())
+          .build();
     }
 
     public boolean didMove()
@@ -210,12 +220,24 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public AccessControlList getBucketAcl(String bucketName)
+    public GetBucketAclResponse getBucketAcl(String bucketName)
     {
-      final AccessControlList acl = new AccessControlList();
-      acl.setOwner(new Owner("ownerId", "owner"));
-      acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
-      return acl;
+      Owner owner = Owner.builder()
+          .id("ownerId")
+          .displayName("owner")
+          .build();
+      Grantee grantee = Grantee.builder()
+          .id(owner.id())
+          .type(Type.CANONICAL_USER)
+          .build();
+      Grant grant = Grant.builder()
+          .grantee(grantee)
+          .permission(Permission.FULL_CONTROL)
+          .build();
+      return GetBucketAclResponse.builder()
+          .owner(owner)
+          .grants(grant)
+          .build();
     }
 
     @Override
@@ -226,45 +248,50 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public ListObjectsV2Result listObjectsV2(ListObjectsV2Request listObjectsV2Request)
+    public ListObjectsV2Response listObjectsV2(ListObjectsV2Request listObjectsV2Request)
     {
-      final String bucketName = listObjectsV2Request.getBucketName();
-      final String objectKey = listObjectsV2Request.getPrefix();
+      final String bucketName = listObjectsV2Request.bucket();
+      final String objectKey = listObjectsV2Request.prefix();
       if (doesObjectExist(bucketName, objectKey)) {
-        final S3ObjectSummary objectSummary = new S3ObjectSummary();
-        objectSummary.setBucketName(bucketName);
-        objectSummary.setKey(objectKey);
-        objectSummary.setStorageClass(StorageClass.Standard.name());
+        final S3Object s3Object = S3Object.builder()
+            .key(objectKey)
+            .storageClass(StorageClass.STANDARD.toString())
+            .build();
 
-        final ListObjectsV2Result result = new ListObjectsV2Result();
-        result.setBucketName(bucketName);
-        result.setPrefix(objectKey);
-        result.setKeyCount(1);
-        result.getObjectSummaries().add(objectSummary);
-        result.setTruncated(true);
-        return result;
+        return ListObjectsV2Response.builder()
+            .name(bucketName)
+            .prefix(objectKey)
+            .keyCount(1)
+            .contents(s3Object)
+            .isTruncated(true)
+            .build();
       } else {
-        return new ListObjectsV2Result();
+        return ListObjectsV2Response.builder().build();
       }
     }
 
     @Override
-    public CopyObjectResult copyObject(CopyObjectRequest copyObjectRequest)
+    public CopyObjectResponse copyObject(CopyObjectRequest.Builder requestBuilder)
     {
-      final String sourceBucketName = copyObjectRequest.getSourceBucketName();
-      final String sourceObjectKey = copyObjectRequest.getSourceKey();
-      final String destinationBucketName = copyObjectRequest.getDestinationBucketName();
-      final String destinationObjectKey = copyObjectRequest.getDestinationKey();
+      CopyObjectRequest request = requestBuilder.build();
+      final String sourceBucketName = request.sourceBucket();
+      final String sourceObjectKey = request.sourceKey();
+      final String destinationBucketName = request.destinationBucket();
+      final String destinationObjectKey = request.destinationKey();
       copied = true;
       if (doesObjectExist(sourceBucketName, sourceObjectKey)) {
         storage.computeIfAbsent(destinationBucketName, k -> new HashSet<>())
                .add(destinationObjectKey);
-        return new CopyObjectResult();
+        return CopyObjectResponse.builder().build();
       } else {
-        final AmazonS3Exception exception = new AmazonS3Exception("S3DataSegmentMoverTest");
-        exception.setErrorCode("NoSuchKey");
-        exception.setStatusCode(404);
-        throw exception;
+        throw (S3Exception) S3Exception.builder()
+            .message("S3DataSegmentMoverTest")
+            .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+                .errorCode("NoSuchKey")
+                .errorMessage("S3DataSegmentMoverTest")
+                .build())
+            .statusCode(404)
+            .build();
       }
     }
 
@@ -275,16 +302,16 @@ public class S3DataSegmentMoverTest
       storage.get(bucket).remove(objectKey);
     }
 
-    public PutObjectResult putObject(String bucketName, String key)
+    public PutObjectResponse putObject(String bucketName, String key)
     {
       return putObject(bucketName, key, (File) null);
     }
 
     @Override
-    public PutObjectResult putObject(String bucketName, String key, File file)
+    public PutObjectResponse putObject(String bucketName, String key, File file)
     {
       storage.computeIfAbsent(bucketName, bName -> new HashSet<>()).add(key);
-      return new PutObjectResult();
+      return PutObjectResponse.builder().build();
     }
   }
 }

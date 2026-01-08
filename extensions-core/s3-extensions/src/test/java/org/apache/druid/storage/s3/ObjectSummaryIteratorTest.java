@@ -19,33 +19,37 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.net.URI;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ObjectSummaryIteratorTest
 {
-  private static final ImmutableList<S3ObjectSummary> TEST_OBJECTS =
+  // Store bucket with each object for testing
+  private static final String TEST_BUCKET = "b";
+  private static final ImmutableList<Map.Entry<String, S3Object>> TEST_OBJECTS =
       ImmutableList.of(
-          makeObjectSummary("b", "foo", 10L),
-          makeObjectSummary("b", "foo/", 0L), // directory
-          makeObjectSummary("b", "foo/bar1", 10L),
-          makeObjectSummary("b", "foo/bar2", 10L),
-          makeObjectSummary("b", "foo/bar3", 10L),
-          makeObjectSummary("b", "foo/bar4", 10L),
-          makeObjectSummary("b", "foo/bar5", 0L), // empty object
-          makeObjectSummary("b", "foo/baz", 10L),
-          makeObjectSummary("bucketnotmine", "a/different/bucket", 10L),
-          makeObjectSummary("b", "foo/bar/", 0L) // another directory at the end of list
+          makeObjectEntry(TEST_BUCKET, "foo", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/", 0L), // directory
+          makeObjectEntry(TEST_BUCKET, "foo/bar1", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/bar2", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/bar3", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/bar4", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/bar5", 0L), // empty object
+          makeObjectEntry(TEST_BUCKET, "foo/baz", 10L),
+          makeObjectEntry("bucketnotmine", "a/different/bucket", 10L),
+          makeObjectEntry(TEST_BUCKET, "foo/bar/", 0L) // another directory at the end of list
       );
 
   @Test
@@ -158,21 +162,22 @@ public class ObjectSummaryIteratorTest
       final int maxListingLength
   )
   {
-    final List<S3ObjectSummary> expectedObjects = new ArrayList<>();
+    final List<S3Object> expectedObjects = new ArrayList<>();
 
     // O(N^2) but who cares -- the list is short.
     for (final String uri : expectedUris) {
-      final List<S3ObjectSummary> matches = TEST_OBJECTS.stream()
+      final List<S3Object> matches = TEST_OBJECTS.stream()
                                                         .filter(
-                                                            summary ->
-                                                                S3Utils.summaryToUri(summary).toString().equals(uri)
+                                                            entry ->
+                                                                S3Utils.summaryToUri(entry.getValue(), entry.getKey()).toString().equals(uri)
                                                         )
+                                                        .map(Map.Entry::getValue)
                                                         .collect(Collectors.toList());
 
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }
 
-    final List<S3ObjectSummary> actualObjects = ImmutableList.copyOf(
+    final List<S3Object> actualObjects = ImmutableList.copyOf(
         S3Utils.objectSummaryIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).collect(Collectors.toList()),
@@ -180,10 +185,14 @@ public class ObjectSummaryIteratorTest
         )
     );
 
+    // For comparison, we need to extract bucket from prefix since S3Object doesn't have bucket
+    // Using the first prefix's bucket for comparison
+    final String bucketForComparison = prefixes.isEmpty() ? TEST_BUCKET : URI.create(prefixes.get(0)).getAuthority();
+
     Assert.assertEquals(
         prefixes.toString(),
-        expectedObjects.stream().map(S3Utils::summaryToUri).collect(Collectors.toList()),
-        actualObjects.stream().map(S3Utils::summaryToUri).collect(Collectors.toList())
+        expectedObjects.stream().map(obj -> S3Utils.summaryToUri(obj, bucketForComparison)).collect(Collectors.toList()),
+        actualObjects.stream().map(obj -> S3Utils.summaryToUri(obj, bucketForComparison)).collect(Collectors.toList())
     );
   }
 
@@ -192,29 +201,31 @@ public class ObjectSummaryIteratorTest
    * {@link ObjectSummaryIterator} class.
    */
   private static ServerSideEncryptingAmazonS3 makeMockClient(
-      final List<S3ObjectSummary> objects
+      final List<Map.Entry<String, S3Object>> objects
   )
   {
     return new ServerSideEncryptingAmazonS3(null, null, new S3TransferConfig())
     {
       @Override
-      public ListObjectsV2Result listObjectsV2(final ListObjectsV2Request request)
+      public ListObjectsV2Response listObjectsV2(final ListObjectsV2Request request)
       {
         // Continuation token is an index in the "objects" list.
-        final String continuationToken = request.getContinuationToken();
+        final String continuationToken = request.continuationToken();
         final int startIndex = continuationToken == null ? 0 : Integer.parseInt(continuationToken);
 
         // Find matching objects.
-        final List<S3ObjectSummary> summaries = new ArrayList<>();
+        final List<S3Object> summaries = new ArrayList<>();
         int nextIndex = -1;
 
         for (int i = startIndex; i < objects.size(); i++) {
-          final S3ObjectSummary summary = objects.get(i);
+          final Map.Entry<String, S3Object> entry = objects.get(i);
+          final String bucket = entry.getKey();
+          final S3Object summary = entry.getValue();
 
-          if (summary.getBucketName().equals(request.getBucketName())
-              && summary.getKey().startsWith(request.getPrefix())) {
+          if (bucket.equals(request.bucket())
+              && summary.key().startsWith(request.prefix())) {
 
-            if (summaries.size() == request.getMaxKeys()) {
+            if (summaries.size() == request.maxKeys()) {
               // We reached our max key limit; set nextIndex (which will lead to a result with truncated = true).
               nextIndex = i;
               break;
@@ -226,26 +237,27 @@ public class ObjectSummaryIteratorTest
         }
 
         // Generate the result.
-        final ListObjectsV2Result retVal = new ListObjectsV2Result();
-        retVal.setContinuationToken(continuationToken);
-        retVal.getObjectSummaries().addAll(summaries);
+        ListObjectsV2Response.Builder builder = ListObjectsV2Response.builder()
+            .contents(summaries);
 
         if (nextIndex >= 0) {
-          retVal.setTruncated(true);
-          retVal.setNextContinuationToken(String.valueOf(nextIndex));
+          builder.isTruncated(true);
+          builder.nextContinuationToken(String.valueOf(nextIndex));
+        } else {
+          builder.isTruncated(false);
         }
 
-        return retVal;
+        return builder.build();
       }
     };
   }
 
-  private static S3ObjectSummary makeObjectSummary(final String bucket, final String key, final long size)
+  private static Map.Entry<String, S3Object> makeObjectEntry(final String bucket, final String key, final long size)
   {
-    final S3ObjectSummary summary = new S3ObjectSummary();
-    summary.setBucketName(bucket);
-    summary.setKey(key);
-    summary.setSize(size);
-    return summary;
+    final S3Object summary = S3Object.builder()
+        .key(key)
+        .size(size)
+        .build();
+    return new AbstractMap.SimpleEntry<>(bucket, summary);
   }
 }

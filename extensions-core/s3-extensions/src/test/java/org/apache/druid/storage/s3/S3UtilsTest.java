@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,8 +57,10 @@ public class S3UtilsTest
               if (count.incrementAndGet() >= 2) {
                 return "hey";
               } else {
-                AmazonS3Exception s3Exception = new AmazonS3Exception("a 403 s3 exception");
-                s3Exception.setStatusCode(403);
+                S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                    .message("a 403 s3 exception")
+                    .statusCode(403)
+                    .build();
                 throw new IOException(s3Exception);
               }
             },
@@ -77,8 +79,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "hey";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("a 5xx s3 exception");
-            s3Exception.setStatusCode(500);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("a 5xx s3 exception")
+                .statusCode(500)
+                .build();
             throw new IOException(s3Exception);
           }
         },
@@ -99,8 +103,10 @@ public class S3UtilsTest
               if (count.incrementAndGet() > maxRetries) {
                 return "hey";
               } else {
-                AmazonS3Exception s3Exception = new AmazonS3Exception("a 5xx s3 exception");
-                s3Exception.setStatusCode(500);
+                S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                    .message("a 5xx s3 exception")
+                    .statusCode(500)
+                    .build();
                 throw new IOException(s3Exception);
               }
             },
@@ -120,10 +126,12 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "hey";
           } else {
-            throw new SdkClientException(
-                "Unable to find a region via the region provider chain. "
-                + "Must provide an explicit region in the builder or setup environment to supply a region."
-            );
+            throw SdkClientException.builder()
+                .message(
+                    "Unable to find a region via the region provider chain. "
+                    + "Must provide an explicit region in the builder or setup environment to supply a region."
+                )
+                .build();
           }
         },
         maxRetries
@@ -132,7 +140,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3InternalError() throws Exception
+  public void testRetryWithS3InternalError() throws Exception
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
@@ -141,8 +149,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "donezo";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)");
-            s3Exception.setStatusCode(200);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)")
+                .statusCode(200)
+                .build();
             throw s3Exception;
           }
         },
@@ -152,7 +162,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3SlowDown() throws Exception
+  public void testRetryWithS3SlowDown() throws Exception
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
@@ -161,8 +171,10 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "success";
           } else {
-            AmazonS3Exception s3Exception = new AmazonS3Exception("Please reduce your request rate. SlowDown");
-            s3Exception.setStatusCode(200);
+            S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                .message("Please reduce your request rate. SlowDown")
+                .statusCode(200)
+                .build();
             throw s3Exception;
           }
         },
@@ -172,7 +184,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testNoRetryWithAmazonS3InternalErrorNon200Status()
+  public void testNoRetryWithS3InternalErrorNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -180,8 +192,10 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("InternalError occurred");
-              s3Exception.setStatusCode(403);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("InternalError occurred")
+                  .statusCode(403)
+                  .build();
               throw s3Exception;
             },
             3
@@ -191,7 +205,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testNoRetryWithAmazonS3SlowDownNon200Status()
+  public void testNoRetryWithS3SlowDownNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -199,8 +213,10 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("SlowDown message");
-              s3Exception.setStatusCode(404);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("SlowDown message")
+                  .statusCode(404)
+                  .build();
               throw s3Exception;
             },
             3
@@ -210,7 +226,7 @@ public class S3UtilsTest
   }
 
   @Test
-  public void testRetryWithAmazonS3Status200ButDifferentError()
+  public void testRetryWithS3Status200ButDifferentError()
   {
     final AtomicInteger count = new AtomicInteger();
     Assert.assertThrows(
@@ -218,8 +234,10 @@ public class S3UtilsTest
         () -> S3Utils.retryS3Operation(
             () -> {
               count.incrementAndGet();
-              AmazonS3Exception s3Exception = new AmazonS3Exception("Some other error message");
-              s3Exception.setStatusCode(200);
+              S3Exception s3Exception = (S3Exception) S3Exception.builder()
+                  .message("Some other error message")
+                  .statusCode(200)
+                  .build();
               throw s3Exception;
             },
             3
