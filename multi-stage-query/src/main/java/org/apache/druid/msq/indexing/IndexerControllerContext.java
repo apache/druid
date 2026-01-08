@@ -312,7 +312,7 @@ public class IndexerControllerContext implements ControllerContext
 
     // Worker context is based on overall query context.
     final Map<String, Object> workerContextMap = new LinkedHashMap<>();
-    for (Map.Entry<String, Object> entry : workerContextMap.entrySet()) {
+    for (Map.Entry<String, Object> entry : querySpec.getContext().asMap().entrySet()) {
       if (entry.getValue() != null) {
         workerContextMap.put(entry.getKey(), entry.getValue());
       }
