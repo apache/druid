@@ -20,7 +20,9 @@
 package org.apache.druid.query.metadata;
 
 import com.google.inject.Inject;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -41,13 +43,12 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
-import org.joda.time.Interval;
+import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -67,6 +68,59 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     this.queryWatcher = queryWatcher;
   }
 
+  public QueryRunner<SegmentAnalysis> createRunner(SegmentReference segmentRef)
+  {
+    if (segmentRef.getDataSegment() == null) {
+      throw DruidException.defensive("Missing DataSegment[%s]", segmentRef.getSegmentDescriptor());
+    } else if (segmentRef.getSegmentReference().isEmpty()) {
+      throw DruidException.defensive("Missing Segment[%s]", segmentRef.getDataSegment().getId());
+    }
+
+    Segment segment = segmentRef.getSegmentReference().get();
+    if (!Objects.equals(segmentRef.getDataSegment().getId(), segment.getId())) {
+      throw DruidException.defensive(
+          "SegmentId mismatch in DataSegment[%s] and Segment[%s]",
+          segmentRef.getDataSegment().getId(),
+          segment.getId()
+      );
+    }
+
+    return new QueryRunner<>()
+    {
+      @Override
+      public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, ResponseContext responseContext)
+      {
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) inQ.getQuery()).withFinalizedAnalysisTypes(toolChest.getConfig());
+        final SegmentAnalyzer analyzer = new SegmentAnalyzer(updatedQuery.getAnalysisTypes());
+
+        Integer numRows = segmentRef.getDataSegment().getNumRows();
+        if (numRows == null) {
+          numRows = analyzer.numRows(segment);
+        }
+        long totalSize = analyzer.analyzingSize() ? segmentRef.getDataSegment().getSize() : 0L;
+
+        LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+        ColumnIncluderator includerator = updatedQuery.getToInclude();
+        for (Map.Entry<String, ColumnAnalysis> entry : analyzer.analyze(segment).entrySet()) {
+          final String columnName = entry.getKey();
+          final ColumnAnalysis column = entry.getValue();
+          if (includerator.include(columnName)) {
+            columns.put(columnName, column);
+          }
+        }
+        SegmentAnalysis result = analyze(updatedQuery, segment).columns(columns)
+                                                               .numRows(numRows)
+                                                               .size(totalSize)
+                                                               .build();
+        return Sequences.simple(Collections.singletonList(result));
+      }
+    };
+  }
+
+  /**
+   * @deprecated Use {@link #createRunner(SegmentReference)} instead.
+   */
+  @Deprecated
   @Override
   public QueryRunner<SegmentAnalysis> createRunner(final Segment segment)
   {
@@ -79,7 +133,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             .withFinalizedAnalysisTypes(toolChest.getConfig());
         final SegmentAnalyzer analyzer = new SegmentAnalyzer(updatedQuery.getAnalysisTypes());
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
-        final long numRows = analyzer.numRows(segment);
+        final int numRows = analyzer.numRows(segment);
         long totalSize = 0;
 
         if (analyzer.analyzingSize()) {
@@ -100,88 +154,11 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
-        List<Interval> retIntervals = updatedQuery.analyzingInterval() ?
-                                      Collections.singletonList(segment.getDataInterval()) : null;
-
-        final Map<String, AggregatorFactory> aggregators;
-        Metadata metadata = null;
-        if (updatedQuery.hasAggregators()) {
-          metadata = getMetadata(segment);
-          if (metadata != null && metadata.getAggregators() != null) {
-            aggregators = new HashMap<>();
-            for (AggregatorFactory aggregator : metadata.getAggregators()) {
-              aggregators.put(aggregator.getName(), aggregator);
-            }
-          } else {
-            aggregators = null;
-          }
-        } else {
-          aggregators = null;
-        }
-
-        final Map<String, AggregateProjectionMetadata> projectionsMap;
-        if (updatedQuery.hasProjections()
-            && ((metadata = Objects.isNull(metadata) ? getMetadata(segment) : metadata)) != null
-            && metadata.getProjections() != null) {
-          projectionsMap = metadata.getProjections()
-                                   .stream()
-                                   .collect(Collectors.toUnmodifiableMap(
-                                       projectionMetadata -> projectionMetadata.getSchema().getName(),
-                                       p -> p
-                                   ));
-        } else {
-          projectionsMap = null;
-        }
-
-        final TimestampSpec timestampSpec;
-        if (updatedQuery.hasTimestampSpec()) {
-          if (metadata == null) {
-            metadata = getMetadata(segment);
-          }
-          timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
-        } else {
-          timestampSpec = null;
-        }
-
-        final Granularity queryGranularity;
-        if (updatedQuery.hasQueryGranularity()) {
-          if (metadata == null) {
-            metadata = getMetadata(segment);
-          }
-          queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
-        } else {
-          queryGranularity = null;
-        }
-
-        Boolean rollup = null;
-        if (updatedQuery.hasRollup()) {
-          if (metadata == null) {
-            metadata = getMetadata(segment);
-          }
-          rollup = metadata != null ? metadata.isRollup() : null;
-          if (rollup == null) {
-            // in this case, this segment is built before no-rollup function is coded,
-            // thus it is built with rollup
-            rollup = Boolean.TRUE;
-          }
-        }
-
-        return Sequences.simple(
-            Collections.singletonList(
-                new SegmentAnalysis(
-                    segment.getId().toString(),
-                    retIntervals,
-                    columns,
-                    totalSize,
-                    numRows,
-                    aggregators,
-                    projectionsMap,
-                    timestampSpec,
-                    queryGranularity,
-                    rollup
-                )
-            )
-        );
+        SegmentAnalysis result = analyze(updatedQuery, segment).columns(columns)
+                                                               .numRows(numRows)
+                                                               .size(totalSize)
+                                                               .build();
+        return Sequences.simple(Collections.singletonList(result));
       }
     };
   }
@@ -201,8 +178,73 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     return toolChest;
   }
 
+  private static SegmentAnalysis.Builder analyze(SegmentMetadataQuery updatedQuery, Segment segment)
+  {
+    SegmentAnalysis.Builder builder = new SegmentAnalysis.Builder(segment.getId());
+    builder.intervals(updatedQuery.analyzingInterval() ? Collections.singletonList(segment.getDataInterval()) : null);
+
+    final boolean fetchMetadata = updatedQuery.hasAggregators()
+                                  || updatedQuery.hasProjections()
+                                  || updatedQuery.hasTimestampSpec()
+                                  || updatedQuery.hasQueryGranularity()
+                                  || updatedQuery.hasRollup();
+    final Metadata metadata = fetchMetadata ? getMetadata(segment) : null;
+
+    final Map<String, AggregatorFactory> aggregators;
+    if (updatedQuery.hasAggregators() && metadata != null && metadata.getAggregators() != null) {
+      aggregators = new HashMap<>();
+      for (AggregatorFactory aggregator : metadata.getAggregators()) {
+        aggregators.put(aggregator.getName(), aggregator);
+      }
+    } else {
+      aggregators = null;
+    }
+    builder.aggregators(aggregators);
+
+    final Map<String, AggregateProjectionMetadata> projectionsMap;
+    if (updatedQuery.hasProjections() && metadata != null && metadata.getProjections() != null) {
+      projectionsMap = metadata.getProjections()
+                               .stream()
+                               .collect(Collectors.toUnmodifiableMap(
+                                   projectionMetadata -> projectionMetadata.getSchema().getName(),
+                                   p -> p
+                               ));
+    } else {
+      projectionsMap = null;
+    }
+    builder.projections(projectionsMap);
+
+    final TimestampSpec timestampSpec;
+    if (updatedQuery.hasTimestampSpec() && metadata != null) {
+      timestampSpec = metadata.getTimestampSpec();
+    } else {
+      timestampSpec = null;
+    }
+    builder.timestampSpec(timestampSpec);
+
+    final Granularity queryGranularity;
+    if (updatedQuery.hasQueryGranularity() && metadata != null) {
+      queryGranularity = metadata.getQueryGranularity();
+    } else {
+      queryGranularity = null;
+    }
+    builder.granularity(queryGranularity);
+
+    final Boolean rollup;
+    if (updatedQuery.hasRollup() && metadata != null) {
+      // in this case, this segment is built before no-rollup function is coded,
+      // thus it is built with rollup
+      rollup = GuavaUtils.firstNonNull(metadata.isRollup(), Boolean.TRUE);
+    } else {
+      rollup = null;
+    }
+    builder.rollup(rollup);
+
+    return builder;
+  }
+
   @Nullable
-  private Metadata getMetadata(Segment segment)
+  private static Metadata getMetadata(Segment segment)
   {
     PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
     if (inspector != null) {

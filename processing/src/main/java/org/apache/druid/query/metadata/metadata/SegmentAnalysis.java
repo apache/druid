@@ -222,12 +222,15 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   public static class Builder
   {
     private final String segmentId;
-    private final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
-    private final Map<String, AggregatorFactory> aggregators = new LinkedHashMap<>();
-    private final Map<String, AggregateProjectionMetadata> projections = new LinkedHashMap<>();
 
+    private LinkedHashMap<String, ColumnAnalysis> columns = null;
+    private Map<String, AggregatorFactory> aggregators = null;
+    private Map<String, AggregateProjectionMetadata> projections = null;
+    private TimestampSpec timestampSpec = null;
+    private Granularity queryGranularity = null;
     private List<Interval> intervals = null;
-    private Optional<Integer> size = Optional.empty();
+
+    private Optional<Long> size = Optional.empty();
     private Optional<Integer> numRows = Optional.empty();
     private Optional<Boolean> rollup = Optional.empty();
 
@@ -241,7 +244,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       this.segmentId = segmentId.toString();
     }
 
-    public Builder size(int size)
+    public Builder size(long size)
     {
       if (this.size.isEmpty()) {
         this.size = Optional.of(size);
@@ -251,7 +254,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder numRows(int numRows)
+    public Builder numRows(Integer numRows)
     {
       if (this.numRows.isEmpty()) {
         this.numRows = Optional.of(numRows);
@@ -261,7 +264,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder rollup(boolean rollup)
+    public Builder rollup(Boolean rollup)
     {
       if (this.rollup.isEmpty()) {
         this.rollup = Optional.of(rollup);
@@ -280,9 +283,32 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
+    public Builder intervals(List<Interval> intervals)
+    {
+      if (this.intervals == null) {
+        this.intervals = intervals;
+      } else {
+        throw new IllegalStateException("Intervals is already set: " + this.intervals);
+      }
+      return this;
+    }
+
     public Builder column(String columnName, ColumnAnalysis columnAnalysis)
     {
+      if (this.columns == null) {
+        this.columns = new LinkedHashMap<>();
+      }
       this.columns.put(columnName, columnAnalysis);
+      return this;
+    }
+
+    public Builder columns(LinkedHashMap<String, ColumnAnalysis> columns)
+    {
+      if (this.columns == null) {
+        this.columns = columns;
+      } else {
+        throw new IllegalStateException("Columns is already set: " + this.columns);
+      }
       return this;
     }
 
@@ -292,9 +318,49 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
+    public Builder aggregators(Map<String, AggregatorFactory> aggregators)
+    {
+      if (this.aggregators == null) {
+        this.aggregators = aggregators;
+      } else {
+        throw new IllegalStateException("Aggregators is already set: " + this.aggregators);
+      }
+      return this;
+    }
+
     public Builder projection(String name, AggregateProjectionMetadata projection)
     {
       this.projections.put(name, projection);
+      return this;
+    }
+
+    public Builder projections(Map<String, AggregateProjectionMetadata> projections)
+    {
+      if (this.projections == null) {
+        this.projections = projections;
+      } else {
+        throw new IllegalStateException("Projections is already set: " + this.projections);
+      }
+      return this;
+    }
+
+    public Builder timestampSpec(TimestampSpec timestampSpec)
+    {
+      if (this.timestampSpec == null) {
+        this.timestampSpec = timestampSpec;
+      } else {
+        throw new IllegalStateException("TimstampSpec is already set: " + this.timestampSpec);
+      }
+      return this;
+    }
+
+    public Builder granularity(Granularity queryGranularity)
+    {
+      if (this.queryGranularity == null) {
+        this.queryGranularity = queryGranularity;
+      } else {
+        throw new IllegalStateException("QueryGranularity is already set: " + this.queryGranularity);
+      }
       return this;
     }
 
@@ -304,12 +370,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
           segmentId,
           intervals,
           columns,
-          size.orElse(0),
+          size.orElse(0L),
           numRows.orElse(0),
-          aggregators.isEmpty() ? null : aggregators,
-          projections.isEmpty() ? null : projections,
-          null,
-          null,
+          aggregators,
+          projections,
+          timestampSpec,
+          queryGranularity,
           rollup.orElse(null)
       );
     }
