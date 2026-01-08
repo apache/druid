@@ -19,16 +19,6 @@
 
 package org.apache.druid.testing.embedded.minio;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.Credentials;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -37,6 +27,17 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.MinIOContainer;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.Credentials;
+
+import java.net.URI;
 
 /**
  * A MinIO container resource for use in embedded tests as deep storage.
@@ -52,7 +53,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
   private final String bucket;
   private final String baseKey;
-  private AmazonS3 s3Client;
+  private S3Client s3Client;
 
   public MinIOStorageResource()
   {
@@ -77,7 +78,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
   public void onStarted(EmbeddedDruidCluster cluster)
   {
     s3Client = createS3Client();
-    s3Client.createBucket(bucket);
+    s3Client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
 
     cluster.addExtension(S3StorageDruidModule.class);
     cluster.addExtension(AWSModule.class);
@@ -126,62 +127,67 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     return getContainer().getS3URL();
   }
 
-  public AmazonS3 getS3Client()
+  public S3Client getS3Client()
   {
     ensureRunning();
     return s3Client;
   }
 
   /**
-   * Creates temporary S3 credentials using the {@link AssumeRoleRequest} that
-   * can be used for S3 ingestion.
+   * Creates temporary S3 credentials using the AssumeRole STS API that can be
+   * used for S3 ingestion.
    *
    * @return S3InputSourceConfig with temporary credentials. The
    * {@code assumeRoleArn} and {@code assumeRoleExternalId} fields are set to null
-   * since Min IO does not support them.
+   * since MinIO does not support them.
    */
   public S3InputSourceConfig createTempCredentialsForInputSource()
   {
     ensureRunning();
 
-    final AWSSecurityTokenService stsClient = createSTSClient();
+    final StsClient stsClient = createStsClient();
 
-    // assumeRoleArn and assumeRoleExternalId need not be specified since MinIO ignores them
-    final AssumeRoleRequest assumeRoleRequest = new AssumeRoleRequest()
-        .withRoleSessionName("test-session");
+    // MinIO ignores the role ARN, but SDK v2 requires a non-null value
+    final AssumeRoleRequest assumeRoleRequest = AssumeRoleRequest.builder()
+        .roleArn("arn:aws:iam::000000000000:role/test-role")
+        .roleSessionName("test-session")
+        .build();
 
-    final AssumeRoleResult result = stsClient.assumeRole(assumeRoleRequest);
-    final int statusCode = result.getSdkHttpMetadata().getHttpStatusCode();
-    if (statusCode < 200 || statusCode >= 300) {
-      throw new ISE("AssumeRole request failed with code[%s]: %s", statusCode, result.getAssumedRoleUser());
+    final AssumeRoleResponse result = stsClient.assumeRole(assumeRoleRequest);
+    if (!result.sdkHttpResponse().isSuccessful()) {
+      throw new ISE("AssumeRole request failed with code[%s]", result.sdkHttpResponse().statusCode());
     }
 
-    final Credentials credentials = stsClient.assumeRole(assumeRoleRequest).getCredentials();
+    final Credentials credentials = result.credentials();
     return new S3InputSourceConfig(
-        new DefaultPasswordProvider(credentials.getAccessKeyId()),
-        new DefaultPasswordProvider(credentials.getSecretAccessKey()),
+        new DefaultPasswordProvider(credentials.accessKeyId()),
+        new DefaultPasswordProvider(credentials.secretAccessKey()),
         null,
         null,
-        new DefaultPasswordProvider(credentials.getSessionToken())
+        new DefaultPasswordProvider(credentials.sessionToken())
     );
   }
 
-  private AmazonS3 createS3Client()
+  private S3Client createS3Client()
   {
-    return AmazonS3Client
-        .builder()
-        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(getEndpointUrl(), "us-east-1"))
-        .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getAccessKey(), getSecretKey())))
-        .withPathStyleAccessEnabled(true)
+    return S3Client.builder()
+        .endpointOverride(URI.create(getEndpointUrl()))
+        .region(Region.US_EAST_1)
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(getAccessKey(), getSecretKey())
+        ))
+        .forcePathStyle(true)
         .build();
   }
 
-  private AWSSecurityTokenService createSTSClient()
+  private StsClient createStsClient()
   {
-    return AWSSecurityTokenServiceClientBuilder
-        .standard()
-        .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(getEndpointUrl(), "us-east-1"))
-        .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getAccessKey(), getSecretKey())))
+    return StsClient.builder()
+        .endpointOverride(URI.create(getEndpointUrl()))
+        .region(Region.US_EAST_1)
+        .credentialsProvider(StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(getAccessKey(), getSecretKey())
+        ))
         .build();
   }
 }
