@@ -71,7 +71,7 @@ for commit_id in all_release_commits.splitlines():
             milestone = pr["milestone"]
             if milestone is not None:
                 milestone_found = True
-                print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["number"], pr["milestone"]["url"]))
+                print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["html_url"], pr["milestone"]["url"]))
         if not milestone_found:
             print("NO MILESTONE FOUND FOR COMMIT: {}, CLOSED PRs: {}".format(commit_id, closed_pr_nums))
 
