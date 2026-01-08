@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -70,10 +71,10 @@ public class DartWorkerContext implements WorkerContext
   private final PolicyEnforcer policyEnforcer;
   private final Injector injector;
   private final DartWorkerClient workerClient;
-  private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
@@ -101,6 +102,7 @@ public class DartWorkerContext implements WorkerContext
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
       final SegmentManager segmentManager,
+      final CoordinatorClient coordinatorClient,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
       final Outbox<ControllerMessage> outbox,
@@ -119,10 +121,10 @@ public class DartWorkerContext implements WorkerContext
     this.policyEnforcer = policyEnforcer;
     this.injector = injector;
     this.workerClient = workerClient;
-    this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
     this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
@@ -238,6 +240,7 @@ public class DartWorkerContext implements WorkerContext
         segmentWrangler,
         groupingEngine,
         segmentManager,
+        coordinatorClient,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         memoryParameters,
         storageParameters,

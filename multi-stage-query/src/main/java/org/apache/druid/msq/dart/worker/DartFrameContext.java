@@ -41,7 +41,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.SegmentManager;
 
-import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -54,6 +53,7 @@ public class DartFrameContext implements FrameContext
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
   private final SegmentManager segmentManager;
+  private final CoordinatorClient coordinatorClient;
   private final WorkerContext workerContext;
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
@@ -67,7 +67,8 @@ public class DartFrameContext implements FrameContext
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
       final SegmentManager segmentManager,
-      ResourceHolder<ProcessingBuffers> processingBuffers,
+      final CoordinatorClient coordinatorClient,
+      final ResourceHolder<ProcessingBuffers> processingBuffers,
       final WorkerMemoryParameters memoryParameters,
       final WorkerStorageParameters storageParameters,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
@@ -78,6 +79,7 @@ public class DartFrameContext implements FrameContext
     this.frameWriterSpec = frameWriterSpec;
     this.groupingEngine = groupingEngine;
     this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.workerContext = workerContext;
     this.processingBuffers = processingBuffers;
     this.memoryParameters = memoryParameters;
@@ -116,11 +118,9 @@ public class DartFrameContext implements FrameContext
   }
 
   @Override
-  @Nullable
   public CoordinatorClient coordinatorClient()
   {
-    // Dart workers don't have access to a CoordinatorClient
-    return null;
+    return coordinatorClient;
   }
 
   @Override
