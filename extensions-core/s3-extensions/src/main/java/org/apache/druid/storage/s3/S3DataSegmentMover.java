@@ -38,9 +38,9 @@ import org.apache.druid.timeline.DataSegment;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectStorageClass;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.model.StorageClass;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -216,7 +216,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       }
       final S3Object objectSummary = listResult.contents().get(0);
       if (objectSummary.storageClass() != null &&
-          objectSummary.storageClass().equals(StorageClass.GLACIER)) {
+          objectSummary.storageClass().equals(ObjectStorageClass.GLACIER)) {
         throw S3Exception.builder()
             .message(StringUtils.format(
                 "Cannot move file[s3://%s/%s] of storage class glacier, skipping.",

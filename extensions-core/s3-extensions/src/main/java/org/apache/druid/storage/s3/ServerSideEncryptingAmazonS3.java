@@ -48,7 +48,6 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
@@ -249,7 +248,7 @@ public class ServerSideEncryptingAmazonS3
           .build();
 
       FileUpload fileUpload = transferManager.uploadFile(uploadFileRequest);
-      CompletedFileUpload completedUpload = fileUpload.completionFuture().join();
+      fileUpload.completionFuture().join();
     }
   }
 
