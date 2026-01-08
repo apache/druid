@@ -19,21 +19,6 @@
 
 package org.apache.druid.data.input.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.Module;
@@ -90,10 +75,25 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
@@ -107,11 +107,10 @@ import static org.easymock.EasyMock.expectLastCall;
 public class S3InputSourceTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER = createS3ObjectMapper();
-  public static final AmazonS3Client S3_CLIENT = EasyMock.createMock(AmazonS3Client.class);
-  private static final ClientConfiguration CLIENT_CONFIGURATION = EasyMock.createMock(ClientConfiguration.class);
+  public static final S3Client S3_CLIENT = EasyMock.createMock(S3Client.class);
   public static final ServerSideEncryptingAmazonS3.Builder SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER =
       EasyMock.createMock(ServerSideEncryptingAmazonS3.Builder.class);
-  public static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
+  public static final S3ClientBuilder S3_CLIENT_BUILDER = S3Client.builder();
   public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
       new NoopServerSideEncryption(),
@@ -346,9 +345,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testSerdeWithCloudConfigPropertiesWithKeyAndSecret() throws Exception
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
-            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
-    AMAZON_S3_CLIENT_BUILDER.withClientConfiguration(CLIENT_CONFIGURATION);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -377,9 +375,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public void testSerdeWithCloudConfigPropertiesWithSessionToken() throws Exception
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
-            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
-    AMAZON_S3_CLIENT_BUILDER.withClientConfiguration(CLIENT_CONFIGURATION);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -425,14 +422,14 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null
     );
-    
+
     Assert.assertNotNull(inputSourceWithSessionToken.getS3InputSourceConfig());
     Assert.assertNotNull(inputSourceWithSessionToken.getS3InputSourceConfig().getSessionToken());
     Assert.assertEquals(
         "mySessionToken",
         inputSourceWithSessionToken.getS3InputSourceConfig().getSessionToken().getPassword()
     );
-    
+
     // Test without session token
     final S3InputSource inputSourceWithoutSessionToken = new S3InputSource(
         SERVICE,
@@ -447,7 +444,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null
     );
-    
+
     Assert.assertNotNull(inputSourceWithoutSessionToken.getS3InputSourceConfig());
     Assert.assertNull(inputSourceWithoutSessionToken.getS3InputSourceConfig().getSessionToken());
   }
@@ -463,8 +460,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.replay(S3_CLIENT);
 
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
-            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -507,7 +504,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     // Read data - this exercises the session credentials path
     CloseableIterator<InputRow> iterator = reader.read();
-    
+
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
       Assert.assertEquals(NOW, nextRow.getTimestamp());
@@ -573,12 +570,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.replay(mockAwsProxyConfig);
 
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
-
-    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
-            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
-
-    AMAZON_S3_CLIENT_BUILDER.withClientConfiguration(CLIENT_CONFIGURATION);
-
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -614,6 +607,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
             .andStubReturn(false);
     EasyMock.replay(mockConfigPropertiesWithoutKeyAndSecret);
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.setS3ClientSupplier(EasyMock.anyObject()))
+            .andReturn(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
             .andReturn(SERVICE);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
@@ -1322,39 +1317,46 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
   private static void expectListObjects(URI prefix, List<URI> uris, byte[] content)
   {
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setBucketName(prefix.getAuthority());
-    result.setKeyCount(uris.size());
+    final ListObjectsV2Response.Builder resultBuilder = ListObjectsV2Response.builder();
+    resultBuilder.name(prefix.getAuthority());
+    resultBuilder.keyCount(uris.size());
+    resultBuilder.isTruncated(false);
+
+    List<S3Object> objectSummaries = new java.util.ArrayList<>();
     for (URI uri : uris) {
       final String bucket = uri.getAuthority();
       final String key = S3Utils.extractS3Key(uri);
-      final S3ObjectSummary objectSummary = new S3ObjectSummary();
-      objectSummary.setBucketName(bucket);
-      objectSummary.setKey(key);
-      objectSummary.setSize(content.length);
-      result.getObjectSummaries().add(objectSummary);
+      final S3Object objectSummary = S3Object.builder()
+          .key(key)
+          .size((long) content.length)
+          .build();
+      objectSummaries.add(objectSummary);
     }
+    resultBuilder.contents(objectSummaries);
 
     EasyMock.expect(
         S3_CLIENT.listObjectsV2(matchListObjectsRequest(prefix))
-    ).andReturn(result).once();
+    ).andReturn(resultBuilder.build()).once();
   }
 
   private static void expectGetMetadata(URI uri, byte[] content)
   {
     final CloudObjectLocation location = new CloudObjectLocation(uri);
-    final ObjectMetadata result = new ObjectMetadata();
-    result.setContentLength(content.length);
+    final HeadObjectResponse result = HeadObjectResponse.builder()
+        .contentLength((long) content.length)
+        .build();
 
     EasyMock.expect(
-        S3_CLIENT.getObjectMetadata(matchGetMetadataRequest(location.getBucket(), location.getPath()))
+        S3_CLIENT.headObject(matchHeadObjectRequest(location.getBucket(), location.getPath()))
     ).andReturn(result).once();
   }
 
   private static void expectListObjectsAndThrowAccessDenied(final URI prefix)
   {
-    AmazonS3Exception boom = new AmazonS3Exception("oh dang, you can't list that bucket friend");
-    boom.setStatusCode(403);
+    S3Exception boom = (S3Exception) S3Exception.builder()
+        .message("oh dang, you can't list that bucket friend")
+        .statusCode(403)
+        .build();
     EasyMock.expect(
         S3_CLIENT.listObjectsV2(matchListObjectsRequest(prefix))
     ).andThrow(boom).once();
@@ -1365,11 +1367,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     final String s3Bucket = uri.getAuthority();
     final String key = S3Utils.extractS3Key(uri);
 
-    S3Object someObject = new S3Object();
-    someObject.setBucketName(s3Bucket);
-    someObject.setKey(key);
-    someObject.setObjectContent(new ByteArrayInputStream(CONTENT));
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
+    GetObjectResponse response = GetObjectResponse.builder().build();
+    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
+        response,
+        AbortableInputStream.create(new ByteArrayInputStream(CONTENT))
+    );
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).once();
   }
 
 
@@ -1379,21 +1382,21 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     final String s3Bucket = uri.getAuthority();
     final String key = S3Utils.extractS3Key(uri);
 
-    S3ObjectInputStream someInputStream = EasyMock.createMock(S3ObjectInputStream.class);
-    EasyMock.expect(someInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
-            .andThrow(new SdkClientException("Data read has a different length than the expected")).anyTimes();
-    someInputStream.close();
+    InputStream mockInputStream = EasyMock.createMock(InputStream.class);
+    EasyMock.expect(mockInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+            .andThrow(SdkClientException.builder().message("Data read has a different length than the expected").build()).anyTimes();
+    mockInputStream.close();
     expectLastCall().andVoid().anyTimes();
 
-    S3Object someObject = EasyMock.createMock(S3Object.class);
-    EasyMock.expect(someObject.getBucketName()).andReturn(s3Bucket).anyTimes();
-    EasyMock.expect(someObject.getKey()).andReturn(key).anyTimes();
-    EasyMock.expect(someObject.getObjectContent()).andReturn(someInputStream).anyTimes();
+    GetObjectResponse response = GetObjectResponse.builder().build();
+    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
+        response,
+        AbortableInputStream.create(mockInputStream)
+    );
 
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).anyTimes();
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).anyTimes();
 
-    EasyMock.replay(someObject);
-    EasyMock.replay(someInputStream);
+    EasyMock.replay(mockInputStream);
   }
 
 
@@ -1402,13 +1405,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     final String s3Bucket = uri.getAuthority();
     final String key = S3Utils.extractS3Key(uri);
 
-    S3Object someObject = new S3Object();
-    someObject.setBucketName(s3Bucket);
-    someObject.setKey(key);
     ByteArrayOutputStream gzipped = new ByteArrayOutputStream();
     CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
-    someObject.setObjectContent(new ByteArrayInputStream(gzipped.toByteArray()));
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(someObject).once();
+
+    GetObjectResponse response = GetObjectResponse.builder().build();
+    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
+        response,
+        AbortableInputStream.create(new ByteArrayInputStream(gzipped.toByteArray()))
+    );
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).once();
   }
 
   private static ListObjectsV2Request matchListObjectsRequest(final URI prefixUri)
@@ -1425,8 +1430,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
             }
 
             final ListObjectsV2Request request = (ListObjectsV2Request) argument;
-            return prefixUri.getAuthority().equals(request.getBucketName())
-                   && S3Utils.extractS3Key(prefixUri).equals(request.getPrefix());
+            return prefixUri.getAuthority().equals(request.bucket())
+                   && S3Utils.extractS3Key(prefixUri).equals(request.prefix());
           }
 
           @Override
@@ -1440,7 +1445,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     return null;
   }
 
-  private static GetObjectMetadataRequest matchGetMetadataRequest(final String bucket, final String key)
+  private static HeadObjectRequest matchHeadObjectRequest(final String bucket, final String key)
   {
     // Use an IArgumentMatcher to verify that the request has the correct bucket and key.
     EasyMock.reportMatcher(
@@ -1449,12 +1454,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
           @Override
           public boolean matches(Object argument)
           {
-            if (!(argument instanceof GetObjectMetadataRequest)) {
+            if (!(argument instanceof HeadObjectRequest)) {
               return false;
             }
 
-            final GetObjectMetadataRequest request = (GetObjectMetadataRequest) argument;
-            return request.getBucketName().equals(bucket) && request.getKey().equals(key);
+            final HeadObjectRequest request = (HeadObjectRequest) argument;
+            return request.bucket().equals(bucket) && request.key().equals(key);
           }
 
           @Override
@@ -1477,7 +1482,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         new DruidModule()
         {
           @Provides
-          public AWSCredentialsProvider getAWSCredentialsProvider()
+          public AwsCredentialsProvider getAWSCredentialsProvider()
           {
             return AWSCredentialsUtils.defaultAWSCredentialsProviderChain(null);
           }
@@ -1499,12 +1504,12 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     @Override
     public List<? extends Module> getJacksonModules()
     {
-      // Deserializer is need for AmazonS3Client even though it is injected.
+      // Deserializer is need for S3Client even though it is injected.
       // See https://github.com/FasterXML/jackson-databind/issues/962.
       return ImmutableList.of(
           new SimpleModule()
-              .addDeserializer(AmazonS3.class, new ItemDeserializer<>())
-              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<>())
+              .addDeserializer(S3Client.class, new ItemDeserializer<>())
+              .addDeserializer(S3ClientBuilder.class, new ItemDeserializer<>())
       );
     }
 

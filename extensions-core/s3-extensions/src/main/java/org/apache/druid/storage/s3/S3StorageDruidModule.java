@@ -19,13 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.ClientConfigurationFactory;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
@@ -44,7 +37,16 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 
+import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -122,34 +124,60 @@ public class S3StorageDruidModule implements DruidModule
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
   // However, this builder can then be modified and have configuration(s) inside
-  // AmazonS3ClientBuilder and/or S3StorageConfig overridden before being built.
+  // S3ClientBuilder and/or S3StorageConfig overridden before being built.
   @Provides
   public ServerSideEncryptingAmazonS3.Builder getServerSideEncryptingAmazonS3Builder(
-      AWSCredentialsProvider provider,
+      AwsCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
       AWSClientConfig clientConfig,
       S3StorageConfig storageConfig
   )
   {
-    final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
-    final Protocol protocol = S3Utils.determineProtocol(clientConfig, endpointConfig);
-    final AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client
-        .builder()
-        .withCredentials(provider)
-        .withClientConfiguration(S3Utils.setProxyConfig(configuration, proxyConfig).withProtocol(protocol))
-        .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
-        .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
-        .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
+    final java.util.function.Supplier<S3Client> s3ClientSupplier = () -> {
+      boolean useHttps = S3Utils.useHttps(clientConfig, endpointConfig);
 
-    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      amazonS3ClientBuilder.setEndpointConfiguration(
-          new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
-      );
-    }
+      // Build HTTP client with proxy configuration
+      ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
+          .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
+          .socketTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
+          .maxConnections(clientConfig.getMaxConnections());
+
+      ProxyConfiguration proxyConfiguration = S3Utils.buildProxyConfiguration(proxyConfig);
+      if (proxyConfiguration != null) {
+        httpClientBuilder.proxyConfiguration(proxyConfiguration);
+      }
+
+      // Build S3 configuration
+      // Note: forcePathStyle is configured on the S3ClientBuilder, not in S3Configuration
+      S3Configuration s3Configuration = S3Configuration.builder()
+          .chunkedEncodingEnabled(!clientConfig.isDisableChunkedEncoding())
+          .build();
+
+      S3ClientBuilder s3ClientBuilder = S3Client.builder()
+          .credentialsProvider(provider)
+          .httpClientBuilder(httpClientBuilder)
+          .serviceConfiguration(s3Configuration)
+          .forcePathStyle(clientConfig.isEnablePathStyleAccess());
+
+      if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+        String endpointUrl = endpointConfig.getUrl();
+        // Ensure endpoint URL has a scheme
+        if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+          endpointUrl = (useHttps ? "https://" : "http://") + endpointUrl;
+        }
+        s3ClientBuilder.endpointOverride(URI.create(endpointUrl));
+      }
+
+      if (StringUtils.isNotEmpty(endpointConfig.getSigningRegion())) {
+        s3ClientBuilder.region(Region.of(endpointConfig.getSigningRegion()));
+      }
+
+      return s3ClientBuilder.build();
+    };
 
     return ServerSideEncryptingAmazonS3.builder()
-                                       .setAmazonS3ClientBuilder(amazonS3ClientBuilder)
+                                       .setS3ClientSupplier(s3ClientSupplier)
                                        .setS3StorageConfig(storageConfig);
 
   }
