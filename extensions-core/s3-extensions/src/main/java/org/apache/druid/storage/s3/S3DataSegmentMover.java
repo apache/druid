@@ -232,7 +232,12 @@ public class S3DataSegmentMover implements DataSegmentMover
             .destinationBucket(targetS3Bucket)
             .destinationKey(targetS3Path);
         if (!config.getDisableAcl()) {
-          copyRequestBuilder.grantFullControl(S3Utils.grantFullControlToBucketOwner(s3Client, targetS3Bucket).grantee().id());
+          final String headerValue = S3Utils.grantFullControlHeaderValue(
+              S3Utils.grantFullControlToBucketOwner(s3Client, targetS3Bucket)
+          );
+          if (headerValue != null) {
+            copyRequestBuilder.grantFullControl(headerValue);
+          }
         }
         s3Client.copyObject(copyRequestBuilder);
         if (!s3Client.doesObjectExist(targetS3Bucket, targetS3Path)) {

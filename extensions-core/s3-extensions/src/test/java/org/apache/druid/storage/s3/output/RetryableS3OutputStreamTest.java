@@ -231,7 +231,7 @@ public class RetryableS3OutputStreamTest
 
     private TestAmazonS3(int totalUploadFailures)
     {
-      super(EasyMock.createMock(S3Client.class), new NoopServerSideEncryption(), new S3TransferConfig());
+      super(EasyMock.createMock(S3Client.class), null, new NoopServerSideEncryption(), new S3TransferConfig());
       this.uploadFailuresLeft = totalUploadFailures;
     }
 

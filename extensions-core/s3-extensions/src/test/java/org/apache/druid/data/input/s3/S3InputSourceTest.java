@@ -113,6 +113,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public static final S3ClientBuilder S3_CLIENT_BUILDER = S3Client.builder();
   public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
+      null,
       new NoopServerSideEncryption(),
       new S3TransferConfig()
   );
