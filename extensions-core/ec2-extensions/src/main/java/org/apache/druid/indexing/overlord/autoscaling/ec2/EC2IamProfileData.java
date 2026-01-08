@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
-import com.amazonaws.services.ec2.model.IamInstanceProfileSpecification;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import software.amazon.awssdk.services.ec2.model.IamInstanceProfileSpecification;
 
 public class EC2IamProfileData
 {
@@ -52,10 +52,10 @@ public class EC2IamProfileData
 
   public IamInstanceProfileSpecification toIamInstanceProfileSpecification()
   {
-    final IamInstanceProfileSpecification spec = new IamInstanceProfileSpecification();
-    spec.setName(name);
-    spec.setArn(arn);
-    return spec;
+    return IamInstanceProfileSpecification.builder()
+        .name(name)
+        .arn(arn)
+        .build();
   }
 
   @Override
