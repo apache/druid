@@ -473,7 +473,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`segment/max`|Maximum byte limit available for segments.| |Varies.|
+|`segment/max`|Maximum byte limit available for segments.|`tier`, `priority`|Varies.|
 |`segment/used`|Bytes used for served segments.|`dataSource`, `tier`, `priority`|< max|
 |`segment/usedPercent`|Percentage of space used by served segments.|`dataSource`, `tier`, `priority`|< 100%|
 |`segment/count`|Number of served segments.|`dataSource`, `tier`, `priority`|Varies|
