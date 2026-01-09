@@ -28,7 +28,7 @@ jobs:
         pattern: [ "C*", "D*,H*,N*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
     uses: ./.github/workflows/worker.yml
     with:
-      script: .github/scripts/run_unit-tests -Dtest=!QTest,!SuperSorterTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
       artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
@@ -63,8 +63,6 @@ jobs:
             args: "-Dtest=QTest -Dquidem.split=2/4"
           - name: "QTest 3/4"
             args: "-Dtest=QTest -Dquidem.split=3/4"
-          - name: "long tests"
-            args: "-Dtest=SuperSorterTest"
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
