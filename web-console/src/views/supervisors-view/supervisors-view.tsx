@@ -282,7 +282,7 @@ export class SupervisorsView extends React.PureComponent<
       processQuery: async (
         { capabilities, visibleColumns, filtered, sorted, page, pageSize },
         signal,
-        setIntermediateQuery,
+        { setIntermediateQuery },
       ) => {
         let supervisors: SupervisorQueryResultRow[];
         let count = -1;

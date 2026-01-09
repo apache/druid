@@ -435,7 +435,7 @@ GROUP BY 1, 2`;
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
         signal,
-        setIntermediateQuery,
+        { setIntermediateQuery },
       ) => {
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
