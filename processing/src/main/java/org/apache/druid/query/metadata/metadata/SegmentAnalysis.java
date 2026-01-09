@@ -29,6 +29,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -314,6 +315,9 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 
     public Builder aggregator(String name, AggregatorFactory aggregatorFactory)
     {
+      if (this.aggregators == null) {
+        this.aggregators = new HashMap<>();
+      }
       this.aggregators.put(name, aggregatorFactory);
       return this;
     }
@@ -330,6 +334,9 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 
     public Builder projection(String name, AggregateProjectionMetadata projection)
     {
+      if (this.projections == null) {
+        this.projections = new HashMap<>();
+      }
       this.projections.put(name, projection);
       return this;
     }
@@ -369,7 +376,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return new SegmentAnalysis(
           segmentId,
           intervals,
-          columns,
+          columns == null ? new LinkedHashMap<>() : columns,
           size.orElse(0L),
           numRows.orElse(0),
           aggregators,
