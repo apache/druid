@@ -32,6 +32,7 @@ jobs:
       artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+      execute: ${{ matrix.jdk == '21' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk17') }}
 
   validate-dist:
     uses: ./.github/workflows/worker.yml

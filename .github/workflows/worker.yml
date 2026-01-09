@@ -38,6 +38,11 @@ on:
         required: false
         type: string
         description: "Artifacts to download. For example: 'unit-test-reports-*'"
+      execute:
+        required: false
+        type: boolean
+        default: true
+        description: 'Controls execution of the invocation - this is a workaround for github actions matrix element skip limitation'
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
@@ -54,6 +59,7 @@ jobs:
   execute:
     name: "${{ inputs.key }}"
     runs-on: ubuntu-latest
+    if: ${{ inputs.execute }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
