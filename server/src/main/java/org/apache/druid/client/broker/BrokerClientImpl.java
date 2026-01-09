@@ -128,5 +128,40 @@ public class BrokerClientImpl implements BrokerClient
         }
     );
   }
+
+  @Override
+  public ListenableFuture<String> getQueryReport(String sqlQueryId, boolean selfOnly)
+  {
+    final String path = StringUtils.format(
+        "/druid/v2/sql/queries/%s/reports%s",
+        StringUtils.urlEncode(sqlQueryId),
+        selfOnly ? "?selfOnly" : ""
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        FullResponseHolder::getContent
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> cancelSqlQuery(String sqlQueryId)
+  {
+    final String path = StringUtils.format(
+        "/druid/v2/sql/%s",
+        StringUtils.urlEncode(sqlQueryId)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> holder.getStatus().equals(HttpResponseStatus.ACCEPTED)
+    );
+  }
 }
 

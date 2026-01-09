@@ -25,20 +25,26 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceClientFactoryImpl;
+import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.security.Escalator;
@@ -171,6 +177,50 @@ public class EmbeddedServiceClient
   )
   {
     return makeRequest(request, resultType, brokerServiceClient, getMapper(EmbeddedBroker.class));
+  }
+
+  /**
+   * Executes an API call on a specific broker. Unlike {@link #onAnyBroker(Function)},
+   * this method allows targeting a specific broker instance.
+   *
+   * @param targetBroker the specific broker to target
+   * @param brokerApi    function that receives a {@link BrokerClient} and returns a future
+   */
+  public <T> T onTargetBroker(EmbeddedBroker targetBroker, Function<BrokerClient, ListenableFuture<T>> brokerApi)
+  {
+    return getResult(brokerApi.apply(createBrokerClientForBroker(targetBroker)));
+  }
+
+  /**
+   * Executes an API call on a specific broker asynchronously, returning the future directly.
+   *
+   * @param targetBroker the specific broker to target
+   * @param brokerApi    function that receives a {@link BrokerClient} and returns a future
+   */
+  public <T> ListenableFuture<T> onTargetBrokerAsync(
+      EmbeddedBroker targetBroker,
+      Function<BrokerClient, ListenableFuture<T>> brokerApi
+  )
+  {
+    return brokerApi.apply(createBrokerClientForBroker(targetBroker));
+  }
+
+  /**
+   * Creates a {@link BrokerClient} that targets a specific broker using a {@link FixedServiceLocator}.
+   */
+  private BrokerClient createBrokerClientForBroker(EmbeddedBroker targetBroker)
+  {
+    final ServiceLocation brokerLocation = ServiceLocation.fromDruidNode(targetBroker.bindings().selfNode());
+    final ServiceClientFactory clientFactory =
+        targetBroker.bindings().getInstance(ServiceClientFactory.class, EscalatedGlobal.class);
+    return new BrokerClientImpl(
+        clientFactory.makeClient(
+            NodeRole.BROKER.getJsonName(),
+            new FixedServiceLocator(brokerLocation),
+            StandardRetryPolicy.noRetries()
+        ),
+        targetBroker.bindings().jsonMapper()
+    );
   }
 
   @Nullable

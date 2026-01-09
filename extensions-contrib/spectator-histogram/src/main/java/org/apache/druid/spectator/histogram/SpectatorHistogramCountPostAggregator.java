@@ -22,7 +22,7 @@ package org.apache.druid.spectator.histogram;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Longs;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
@@ -35,30 +35,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SpectatorHistogramPercentilePostAggregator implements PostAggregator
+/**
+ * Post-aggregator that returns the total count of observations in a SpectatorHistogram.
+ * This is the sum of all bucket counts.
+ */
+public class SpectatorHistogramCountPostAggregator implements PostAggregator
 {
-
   private final String name;
   private final PostAggregator field;
 
-  private final double percentile;
-
-  public static final String TYPE_NAME = "percentileSpectatorHistogram";
+  public static final String TYPE_NAME = "countSpectatorHistogram";
 
   @JsonCreator
-  public SpectatorHistogramPercentilePostAggregator(
+  public SpectatorHistogramCountPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("percentile") final double percentile
+      @JsonProperty("field") final PostAggregator field
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
-    Preconditions.checkArgument(
-        percentile >= 0 && percentile <= 100,
-        "Percentile argument not in range (0, 100)"
-    );
-    this.percentile = percentile;
   }
 
   @Override
@@ -71,19 +66,13 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
   @Override
   public ColumnType getType(ColumnInspector signature)
   {
-    return ColumnType.DOUBLE;
+    return ColumnType.LONG;
   }
 
   @JsonProperty
   public PostAggregator getField()
   {
     return field;
-  }
-
-  @JsonProperty
-  public double getPercentile()
-  {
-    return percentile;
   }
 
   @Override
@@ -93,13 +82,13 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
     if (sketch == null) {
       return null;
     }
-    return sketch.getPercentileValue(percentile);
+    return sketch.getSum();
   }
 
   @Override
-  public Comparator<Double> getComparator()
+  public Comparator<Long> getComparator()
   {
-    return Doubles::compare;
+    return Longs::compare;
   }
 
   @Override
@@ -114,17 +103,16 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
     return getClass().getSimpleName() + "{" +
            "name='" + name + '\'' +
            ", field=" + field +
-           ", fraction=" + percentile +
            "}";
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(
-        PostAggregatorIds.SPECTATOR_HISTOGRAM_SKETCH_PERCENTILE_CACHE_TYPE_ID).appendCacheable(field);
-    builder.appendDouble(percentile);
-    return builder.build();
+    return new CacheKeyBuilder(
+        PostAggregatorIds.SPECTATOR_HISTOGRAM_SKETCH_COUNT_CACHE_TYPE_ID)
+        .appendCacheable(field)
+        .build();
   }
 
   @Override
@@ -136,16 +124,15 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SpectatorHistogramPercentilePostAggregator that = (SpectatorHistogramPercentilePostAggregator) o;
-    return Double.compare(that.percentile, percentile) == 0 &&
-           Objects.equals(name, that.name) &&
+    SpectatorHistogramCountPostAggregator that = (SpectatorHistogramCountPostAggregator) o;
+    return Objects.equals(name, that.name) &&
            Objects.equals(field, that.field);
   }
 
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31 + Double.hashCode(percentile);
+    return name.hashCode() * 31 + field.hashCode();
   }
 
   @Override
