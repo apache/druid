@@ -74,3 +74,7 @@ for (( i=0; i<NUM_BUCKETS; i++ )); do
   echo "${bucket_time[$i]}"$'\t'"${bucket_letters[$i]}"$'\t'"bucket-$i"
 done | sort -k 1 -nr
 
+echo -n "suggested pattern: "
+for (( i=0; i<NUM_BUCKETS; i++ )); do
+  echo -n "\"${bucket_letters[$i]}\", "
+done
