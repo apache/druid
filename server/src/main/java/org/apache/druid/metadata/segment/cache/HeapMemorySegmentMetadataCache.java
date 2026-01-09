@@ -1144,7 +1144,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     compactionStateCache.resetCompactionStatesForPublishedSegments(fingerprintToStateMap);
 
     // Emit metrics for the current contents of the cache
-    compactionStateCache.getStats().forEach(this::emitMetric);
+    compactionStateCache.getAndResetStats().forEach(this::emitMetric);
     emitMetric(Metric.RETRIEVE_COMPACTION_STATES_DURATION_MILLIS, compactionStateSyncDuration.millisElapsed());
   }
 

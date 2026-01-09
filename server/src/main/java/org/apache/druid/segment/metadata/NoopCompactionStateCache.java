@@ -62,7 +62,7 @@ public class NoopCompactionStateCache extends CompactionStateCache
   }
 
   @Override
-  public Map<String, Integer> getStats()
+  public Map<String, Integer> getAndResetStats()
   {
     return Collections.emptyMap();
   }

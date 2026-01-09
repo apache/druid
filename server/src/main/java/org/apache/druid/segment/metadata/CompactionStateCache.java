@@ -89,13 +89,13 @@ public class CompactionStateCache
     CompactionState state = publishedCompactionStates.get()
                                                      .fingerprintToStateMap
                                                      .get(fingerprint);
-    if (state != null) {
+    if (state == null) {
+      cacheMissCount.incrementAndGet();
+      return Optional.empty();
+    } else {
       cacheHitCount.incrementAndGet();
       return Optional.of(state);
     }
-
-    cacheMissCount.incrementAndGet();
-    return Optional.empty();
   }
 
   /**
@@ -113,13 +113,13 @@ public class CompactionStateCache
   public void clear()
   {
     publishedCompactionStates.set(PublishedCompactionStates.EMPTY);
-    log.info("Cleared compaction state cache");
+    resetStats();
   }
 
   /**
    * @return Summary stats for metric emission
    */
-  public Map<String, Integer> getStats()
+  public Map<String, Integer> getAndResetStats()
   {
     return Map.of(
         Metric.COMPACTION_STATE_CACHE_HITS, cacheHitCount.getAndSet(0),
@@ -127,6 +127,15 @@ public class CompactionStateCache
         Metric.COMPACTION_STATE_CACHE_FINGERPRINTS,
             publishedCompactionStates.get().fingerprintToStateMap.size()
     );
+  }
+
+  /**
+   * Resets hit/miss stats.
+   */
+  private void resetStats()
+  {
+    cacheHitCount.set(0);
+    cacheMissCount.set(0);
   }
 
   /**

@@ -142,7 +142,7 @@ public class CompactionStateCacheTest
     cache.getCompactionStateByFingerprint("nonexistent1");
     cache.getCompactionStateByFingerprint("nonexistent2");
 
-    Map<String, Integer> stats = cache.getStats();
+    Map<String, Integer> stats = cache.getAndResetStats();
     assertEquals(3, stats.get(Metric.COMPACTION_STATE_CACHE_HITS));
     assertEquals(2, stats.get(Metric.COMPACTION_STATE_CACHE_MISSES));
     assertEquals(1, stats.get(Metric.COMPACTION_STATE_CACHE_FINGERPRINTS));
@@ -161,12 +161,12 @@ public class CompactionStateCacheTest
     cache.getCompactionStateByFingerprint("fingerprint1");
     cache.getCompactionStateByFingerprint("nonexistent");
 
-    Map<String, Integer> stats1 = cache.getStats();
+    Map<String, Integer> stats1 = cache.getAndResetStats();
     assertEquals(1, stats1.get(Metric.COMPACTION_STATE_CACHE_HITS));
     assertEquals(1, stats1.get(Metric.COMPACTION_STATE_CACHE_MISSES));
 
     // Stats should be reset after reading
-    Map<String, Integer> stats2 = cache.getStats();
+    Map<String, Integer> stats2 = cache.getAndResetStats();
     assertEquals(0, stats2.get(Metric.COMPACTION_STATE_CACHE_HITS));
     assertEquals(0, stats2.get(Metric.COMPACTION_STATE_CACHE_MISSES));
     assertEquals(1, stats2.get(Metric.COMPACTION_STATE_CACHE_FINGERPRINTS)); // Fingerprints count doesn't reset
@@ -220,7 +220,7 @@ public class CompactionStateCacheTest
     Optional<CompactionState> afterReset = cache.getCompactionStateByFingerprint("fingerprint1");
     assertFalse(afterReset.isPresent());
 
-    Map<String, Integer> stats = cache.getStats();
+    Map<String, Integer> stats = cache.getAndResetStats();
     assertEquals(0, stats.get(Metric.COMPACTION_STATE_CACHE_FINGERPRINTS));
   }
 
