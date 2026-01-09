@@ -64,6 +64,7 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -355,11 +356,9 @@ public class IndexerControllerContext implements ControllerContext
       final Map<String, Object> controllerTaskContext
   )
   {
-    final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
-
     // Put worker context into the task context. That way, workers can get these context keys either from
     // WorkOrder#getContext or Task#getContext.
-    taskContextOverridesBuilder.putAll(
+    final Map<String, Object> taskContext = new HashMap<>(
         makeWorkerContextMap(
             querySpec,
             queryKernelConfig.isDurableStorage(),
@@ -369,13 +368,13 @@ public class IndexerControllerContext implements ControllerContext
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)
       );
     }
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD)
       );
@@ -385,9 +384,9 @@ public class IndexerControllerContext implements ControllerContext
     @SuppressWarnings("unchecked")
     Map<String, Object> tags = (Map<String, Object>) controllerTaskContext.get(DruidMetrics.TAGS);
     if (tags != null) {
-      taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
+      taskContext.put(DruidMetrics.TAGS, tags);
     }
 
-    return taskContextOverridesBuilder.build();
+    return ImmutableMap.copyOf(taskContext);
   }
 }
