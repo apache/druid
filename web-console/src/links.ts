@@ -17,7 +17,7 @@
  */
 
 // This is set to the latest available version and should be updated to the next version before release
-const DRUID_DOCS_VERSION = 'latest';
+const DRUID_DOCS_VERSION = '36.0.0';
 
 function fillVersion(str: string): string {
   return str.replace(/\{\{VERSION}}/g, DRUID_DOCS_VERSION);
