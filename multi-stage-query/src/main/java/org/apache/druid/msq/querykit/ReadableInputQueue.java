@@ -364,6 +364,10 @@ public class ReadableInputQueue implements Closeable
       for (AcquireSegmentAction acquireSegmentAction : loadingSegments) {
         CloseableUtils.closeAndSuppressExceptions(
             acquireSegmentAction,
+
+            // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
+            // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
+            // one day this will change.
             e -> log.warn(e, "Failed to close loadingSegment[%s]", acquireSegmentAction)
         );
       }

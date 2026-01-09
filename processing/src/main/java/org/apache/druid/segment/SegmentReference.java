@@ -32,10 +32,15 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
- * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}. Closing this object closes
- * both the {@link #segmentReference} and any closeables attached from the process of creating this object, such as
- * from {@link AcquireSegmentAction}
+ * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}. For regular segments, the latter is typically
+ * created by a {@link ReferenceCountedSegmentProvider} that may have a {@link SegmentMapFunction} applied to it.
+ *
+ * If the {@link SegmentMapFunction} you want to apply is not available at the time the {@link SegmentReference}
+ * is created, use {@link #map(SegmentMapFunction)} to apply it.
+ *
+ * Closing this object closes both the {@link #getSegmentReference()} and any closeables attached from the process of
+ * creating this object, such as from {@link AcquireSegmentAction}. The object from {@link #getSegmentReference()}
+ * should not be closed directly by callers.
  */
 public class SegmentReference implements Closeable
 {
