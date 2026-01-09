@@ -21,6 +21,7 @@ package org.apache.druid.data.input.protobuf;
 
 import org.apache.druid.java.util.common.parsers.FlattenerJsonProvider;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -66,6 +67,7 @@ public class ProtobufJsonProvider extends FlattenerJsonProvider
     }
   }
 
+  @Nullable
   @Override
   public Object getMapValue(final Object o, final String s)
   {
