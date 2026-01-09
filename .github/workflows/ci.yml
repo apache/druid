@@ -43,7 +43,7 @@ jobs:
     name: "coverage-jacoco"
     needs: [run-unit-tests, run-separated-tests]
     uses: ./.github/workflows/worker.yml
-    if: ${{ !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
+    if: ${{ success() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-jdk21*"
