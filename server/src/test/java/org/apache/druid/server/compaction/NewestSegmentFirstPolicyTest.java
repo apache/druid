@@ -285,7 +285,7 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap(),
         compactionStateStorage,
         compactionStateCache
-        );
+    );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -519,7 +519,7 @@ public class NewestSegmentFirstPolicyTest
         ),
         compactionStateStorage,
         compactionStateCache
-        );
+    );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -560,7 +560,7 @@ public class NewestSegmentFirstPolicyTest
         ),
         compactionStateStorage,
         compactionStateCache
-        );
+    );
 
     assertCompactSegmentIntervals(
         iterator,
@@ -2067,7 +2067,7 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap(),
         compactionStateStorage,
         compactionStateCache
-        );
+    );
 
     // Verify that the segments of WIKI are preferred even though they are older
     Assert.assertTrue(iterator.hasNext());
@@ -2090,7 +2090,7 @@ public class NewestSegmentFirstPolicyTest
         Collections.emptyMap(),
         compactionStateStorage,
         compactionStateCache
-        );
+    );
   }
 
   private static void assertCompactSegmentIntervals(

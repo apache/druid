@@ -97,9 +97,9 @@ public interface MetadataStorageConnector
   void createSegmentSchemasTable();
 
   /**
-   * CompactionStates table is centralized store for {@link org.apache.druid.timeline.CompactionState} objects.
+   * This table stores {@link org.apache.druid.timeline.CompactionState} objects.
    * <p>
-   * N segments can refer to the same compaction state via its unique fingerprint
+   * Multiple segments can refer to the same compaction state via its unique fingerprint
    * </p>
    */
   void createCompactionStatesTable();
