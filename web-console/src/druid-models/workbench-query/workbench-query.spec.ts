@@ -1576,9 +1576,7 @@ describe('WorkbenchQuery', () => {
 
     describe('edge cases', () => {
       it('handles empty queryContext', () => {
-        const workbenchQuery = WorkbenchQuery.blank().changeQueryString(
-          'SELECT * FROM wikipedia',
-        );
+        const workbenchQuery = WorkbenchQuery.blank().changeQueryString('SELECT * FROM wikipedia');
 
         const effectiveContext = workbenchQuery.getEffectiveContext();
 

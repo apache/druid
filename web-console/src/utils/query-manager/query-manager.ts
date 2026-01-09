@@ -27,7 +27,9 @@ import { ResultWithAuxiliaryWork } from './result-with-auxiliary-work';
 
 export interface ProcessQueryExtra<I = never> {
   setIntermediateQuery: (intermediateQuery: any) => void;
-  setIntermediateStateCallback: (intermediateStateCallback: (signal: AbortSignal) => Promise<I>) => void;
+  setIntermediateStateCallback: (
+    intermediateStateCallback: (signal: AbortSignal) => Promise<I>,
+  ) => void;
 }
 
 export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
