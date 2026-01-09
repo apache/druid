@@ -1114,25 +1114,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
-                + "  id %2$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  fingerprint VARCHAR(255) NOT NULL,\n"
-                + "  payload %3$s NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
-                + "  PRIMARY KEY (id),\n"
-                + "  UNIQUE (fingerprint)\n"
+                + "  PRIMARY KEY (fingerprint)\n"
                 + ")",
-                tableName, getSerialType(), getPayloadType()
+                tableName, getPayloadType()
             )
         )
-    );
-
-    createIndex(
-        tableName,
-        "IDX_%s_FINGERPRINT",
-        List.of("fingerprint")
     );
 
     createIndex(
