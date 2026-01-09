@@ -293,13 +293,17 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (cursor == null) {
-      final SegmentReference segmentReference = closer.register(segmentHolder.getSegmentReferenceOnce());
+      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
       if (segmentReference == null) {
         throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
       }
 
-      final Segment mappedSegment = closer.register(mapSegment(segmentReference));
-      final CursorFactory cursorFactory = mappedSegment.as(CursorFactory.class);
+      final Segment segment = segmentReference.getSegmentReference().orElse(null);
+      if (segment == null) {
+        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
+      }
+
+      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
       if (cursorFactory == null) {
         throw new ISE(
             "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."

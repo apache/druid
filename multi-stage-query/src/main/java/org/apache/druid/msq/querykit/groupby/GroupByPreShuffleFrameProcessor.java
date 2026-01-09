@@ -170,12 +170,16 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentReferenceHolder segmentHolder) throws IOException
   {
     if (resultYielder == null) {
-      final SegmentReference segmentReference = closer.register(segmentHolder.getSegmentReferenceOnce());
+      final SegmentReference segmentReference = closer.register(mapSegment(segmentHolder.getSegmentReferenceOnce()));
       if (segmentReference == null) {
         throw DruidException.defensive("Missing segmentReference for[%s]", segmentHolder.getDescriptor());
       }
 
-      final Segment mappedSegment = closer.register(mapSegment(segmentReference));
+      final Segment segment = segmentReference.getSegmentReference().orElse(null);
+      if (segment == null) {
+        throw DruidException.defensive("Missing segment for[%s]", segmentHolder.getDescriptor());
+      }
+
       if (segmentHolder.getInputCounters() != null) {
         final int rowCount = getSegmentRowCount(segmentReference);
         closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
@@ -184,8 +188,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-              Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
-              mappedSegment.as(TimeBoundaryInspector.class),
+              Objects.requireNonNull(segment.as(CursorFactory.class)),
+              segment.as(TimeBoundaryInspector.class),
               bufferPool,
               null
           );

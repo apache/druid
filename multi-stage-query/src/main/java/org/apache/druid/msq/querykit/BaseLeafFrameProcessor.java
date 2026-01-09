@@ -39,6 +39,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -140,18 +141,14 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    * Helper intended to be used by subclasses. Applies {@link #segmentMapFn}, which applies broadcast joins
    * if applicable to this query.
    */
-  protected Segment mapSegment(final SegmentReference segmentReference)
+  @Nullable
+  protected SegmentReference mapSegment(@Nullable final SegmentReference segmentReference)
   {
-    final Optional<Segment> segment = segmentReference.getSegmentReference();
-    if (!segment.isPresent()) {
-      throw DruidException.defensive("Missing segment[%s]", segmentReference.getSegmentDescriptor());
+    if (segmentReference == null) {
+      return null;
     }
 
-    final Optional<Segment> mappedSegment = segmentMapFn.apply(segment);
-    return mappedSegment.orElseThrow(() -> DruidException.defensive(
-        "Segment[%s] went unexpectedly empty after mapping",
-        segmentReference.getSegmentDescriptor()
-    ));
+    return segmentReference.map(segmentMapFn);
   }
 
   /**
