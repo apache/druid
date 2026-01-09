@@ -42,11 +42,11 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.NoopCompactionStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
-import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.MetadataManager;
 
@@ -65,7 +65,7 @@ import java.util.Set;
  * <li>{@link SegmentMetadataCache}</li>
  * <li>{@link CompactionStateCache} - Overlord only</li>
  * <li>{@link SegmentSchemaCache} - Coordinator only</li>
- * <li>{@link PersistedCompactionStateManager}</li>
+ * <li>{@link SqlCompactionStateStorage}</li>
  * </ul>
  */
 public class MetadataManagerModule implements Module
@@ -107,8 +107,8 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
-    binder.bind(CompactionStateManager.class)
-          .to(PersistedCompactionStateManager.class)
+    binder.bind(CompactionStateStorage.class)
+          .to(SqlCompactionStateStorage.class)
           .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies

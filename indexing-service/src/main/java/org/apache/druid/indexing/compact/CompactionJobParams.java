@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -35,7 +35,7 @@ public class CompactionJobParams
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
-  private final CompactionStateManager compactionStateManager;
+  private final CompactionStateStorage compactionStateStorage;
   private final CompactionStateCache compactionStateCache;
 
   public CompactionJobParams(
@@ -43,7 +43,7 @@ public class CompactionJobParams
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
       CompactionSnapshotBuilder snapshotBuilder,
-      CompactionStateManager compactionStateManager,
+      CompactionStateStorage compactionStateStorage,
       CompactionStateCache compactionStateCache
   )
   {
@@ -51,7 +51,7 @@ public class CompactionJobParams
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
-    this.compactionStateManager = compactionStateManager;
+    this.compactionStateStorage = compactionStateStorage;
     this.compactionStateCache = compactionStateCache;
   }
 
@@ -96,9 +96,9 @@ public class CompactionJobParams
     return snapshotBuilder;
   }
 
-  public CompactionStateManager getCompactionStateManager()
+  public CompactionStateStorage getCompactionStateStorageImpl()
   {
-    return compactionStateManager;
+    return compactionStateStorage;
   }
 
   public CompactionStateCache getCompactionStateCache()

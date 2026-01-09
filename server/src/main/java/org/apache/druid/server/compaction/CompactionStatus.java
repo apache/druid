@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -265,16 +265,16 @@ public class CompactionStatus
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
-      @Nullable CompactionStateManager compactionStateManager,
+      @Nullable CompactionStateStorage compactionStateStorage,
       @Nullable CompactionStateCache compactionStateCache
   )
   {
     final CompactionState expectedState = createCompactionStateFromConfig(config);
     String expectedFingerprint;
-    if (compactionStateManager == null) {
+    if (compactionStateStorage == null) {
       expectedFingerprint = null;
     } else {
-      expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(
+      expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(
           expectedState,
           config.getDataSource()
       );

@@ -23,7 +23,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -51,7 +51,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      CompactionStateManager compactionStateManager,
+      CompactionStateStorage compactionStateStorage,
       CompactionStateCache compactionStateCache
   )
   {
@@ -74,7 +74,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
               searchPolicy,
-              compactionStateManager,
+              compactionStateStorage,
               compactionStateCache
           )
       );

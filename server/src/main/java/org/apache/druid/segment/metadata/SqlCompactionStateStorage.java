@@ -21,67 +21,52 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import org.apache.druid.error.InternalServerError;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.PreparedBatch;
-import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
 
 /**
- * Database-backed implementation of {@link CompactionStateManager}.
+ * Database-backed implementation of {@link CompactionStateStorage}.
  * <p>
  * Manages the persistence and retrieval of {@link CompactionState} objects in the metadata storage.
- * Compaction states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content. A cache
- * of compaction states using the fingerprints as keys is maintained in memory to optimize retrieval performance.
+ * Compaction states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content.
  * </p>
  * <p>
- * A striped locking mechanism is used to ensure thread-safe persistence of compaction states on a per-datasource basis.
+ * This implementation is designed to be called from a single thread (CompactionJobQueue) and relies on
+ * database constraints and the retry mechanism to handle any conflicts. Operations are idempotent - concurrent
+ * upserts for the same fingerprint will either succeed or fail with a constraint violation that is safely ignored.
  * </p>
  */
-@ManageLifecycle
-public class PersistedCompactionStateManager implements CompactionStateManager
+@LazySingleton
+public class SqlCompactionStateStorage implements CompactionStateStorage
 {
-  private static final EmittingLogger log = new EmittingLogger(PersistedCompactionStateManager.class);
-  private static final int DB_ACTION_PARTITION_SIZE = 100;
+  private static final EmittingLogger log = new EmittingLogger(SqlCompactionStateStorage.class);
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper deterministicMapper;
   private final SQLMetadataConnector connector;
-  private final Striped<Lock> datasourceLocks = Striped.lock(128);
 
   @Inject
-  public PersistedCompactionStateManager(
+  public SqlCompactionStateStorage(
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
       @Deterministic @Nonnull ObjectMapper deterministicMapper,
@@ -94,140 +79,93 @@ public class PersistedCompactionStateManager implements CompactionStateManager
     this.connector = connector;
   }
 
-  @LifecycleStart
-  public void start()
-  {
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-  }
-
-  @VisibleForTesting
-  PersistedCompactionStateManager()
-  {
-    this.dbTables = null;
-    this.jsonMapper = null;
-    this.deterministicMapper = null;
-    this.connector = null;
-  }
-
   @Override
-  public void persistCompactionState(
+  public void upsertCompactionState(
       final String dataSource,
-      final Map<String, CompactionState> fingerprintToStateMap,
+      final String fingerprint,
+      final CompactionState compactionState,
       final DateTime updateTime
   )
   {
-    if (fingerprintToStateMap.isEmpty()) {
+    if (compactionState == null || fingerprint == null || fingerprint.isEmpty()) {
       return;
     }
 
-    final Lock lock = datasourceLocks.get(dataSource);
-    lock.lock();
     try {
       connector.retryWithHandle(handle -> {
-        // Fetch already existing compaction state fingerprints
-        final Set<String> existingFingerprints = getExistingFingerprints(
-            handle,
-            fingerprintToStateMap.keySet()
-        );
+        // Check if the fingerprint already exists
+        final boolean fingerprintExists = isExistingFingerprint(handle, fingerprint);
+        final String now = updateTime.toString();
 
-        if (!existingFingerprints.isEmpty()) {
+        if (fingerprintExists) {
+          // Fingerprint exists - update the used flag
           log.info(
-              "Found already existing compaction state in the DB for dataSource[%s]. Fingerprints: %s.",
-              dataSource,
-              existingFingerprints
+              "Found already existing compaction state in DB for fingerprint[%s] in dataSource[%s].",
+              fingerprint,
+              dataSource
           );
-          String setFingerprintsUsedSql = StringUtils.format(
+          String updateSql = StringUtils.format(
               "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
               + "WHERE fingerprint = :fingerprint",
               dbTables.getCompactionStatesTable()
           );
-          PreparedBatch markUsedBatch = handle.prepareBatch(setFingerprintsUsedSql);
-          for (String fingerprint : existingFingerprints) {
-            final String now = updateTime.toString();
-            markUsedBatch.add()
-                         .bind("used", true)
-                         .bind("used_status_last_updated", now)
-                         .bind("fingerprint", fingerprint);
-          }
-          markUsedBatch.execute();
-        }
+          handle.createStatement(updateSql)
+                .bind("used", true)
+                .bind("used_status_last_updated", now)
+                .bind("fingerprint", fingerprint)
+                .execute();
 
-        Map<String, CompactionState> statesToPersist = new HashMap<>();
+          log.info("Updated existing compaction state for datasource[%s].", dataSource);
+        } else {
 
-        for (Map.Entry<String, CompactionState> entry : fingerprintToStateMap.entrySet()) {
-          if (!existingFingerprints.contains(entry.getKey())) {
-            statesToPersist.put(entry.getKey(), entry.getValue());
-          }
-        }
+          // Fingerprint doesn't exist - insert new state
+          log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
 
-        if (statesToPersist.isEmpty()) {
-          log.info("No compaction state to persist for dataSource [%s].", dataSource);
-          return null;
-        }
+          String insertSql = StringUtils.format(
+              "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
+              + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
+              dbTables.getCompactionStatesTable()
+          );
 
-        final List<List<String>> partitionedFingerprints = Lists.partition(
-            new ArrayList<>(statesToPersist.keySet()),
-            DB_ACTION_PARTITION_SIZE
-        );
+          try {
+            handle.createStatement(insertSql)
+                  .bind("created_date", now)
+                  .bind("datasource", dataSource)
+                  .bind("fingerprint", fingerprint)
+                  .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
+                  .bind("used", true)
+                  .bind("used_status_last_updated", now)
+                  .execute();
 
-        String insertSql = StringUtils.format(
-            "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-            + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
-            dbTables.getCompactionStatesTable()
-        );
-
-        // Insert compaction states
-        PreparedBatch stateInsertBatch = handle.prepareBatch(insertSql);
-        for (List<String> partition : partitionedFingerprints) {
-          for (String fingerprint : partition) {
-            final String now = updateTime.toString();
-            try {
-              stateInsertBatch.add()
-                              .bind("created_date", now)
-                              .bind("datasource", dataSource)
-                              .bind("fingerprint", fingerprint)
-                              .bind("payload", jsonMapper.writeValueAsBytes(fingerprintToStateMap.get(fingerprint)))
-                              .bind("used", true)
-                              .bind("used_status_last_updated", now);
-            }
-            catch (JsonProcessingException e) {
-              throw InternalServerError.exception(
-                  e,
-                  "Failed to serialize compaction state for fingerprint[%s]",
-                  fingerprint
-              );
-            }
-          }
-          final int[] affectedRows = stateInsertBatch.execute();
-          final List<String> failedInserts = new ArrayList<>();
-          for (int i = 0; i < partition.size(); ++i) {
-            if (affectedRows[i] != 1) {
-              failedInserts.add(partition.get(i));
-            }
-          }
-          if (failedInserts.isEmpty()) {
             log.info(
-                "Published compaction states %s to DB for datasource[%s].",
-                partition,
+                "Published compaction state for fingerprint[%s] to DB for datasource[%s].",
+                fingerprint,
                 dataSource
             );
-          } else {
-            throw new ISE(
-                "Failed to publish compaction states[%s] to DB for datasource[%s]",
-                failedInserts,
-                dataSource
+          }
+          catch (JsonProcessingException e) {
+            throw InternalServerError.exception(
+                e,
+                "Failed to serialize compaction state for fingerprint[%s]",
+                fingerprint
             );
           }
         }
         return null;
       });
     }
-    finally {
-      lock.unlock();
+    catch (Exception e) {
+      if (isUniqueConstraintViolation(e)) {
+        log.info(
+            "Fingerprints already exist for datasource[%s] (likely concurrent insert). "
+            + "Treating as success since operation is idempotent.",
+            dataSource
+        );
+        // Swallow exception - another thread already persisted the same data
+        return;
+      }
+      // For other exceptions, let them propagate
+      throw e;
     }
   }
 
@@ -327,38 +265,32 @@ public class PersistedCompactionStateManager implements CompactionStateManager
 
 
   /**
-   * Query the metadata DB to filter the fingerprints that already exist.
-   **/
-  private Set<String> getExistingFingerprints(
+   * Checks if a fingerprint already exists in the metadata DB.
+   *
+   * @param handle Database handle
+   * @param fingerprintToCheck The fingerprint to check
+   * @return true if the fingerprint exists, false otherwise
+   */
+  private boolean isExistingFingerprint(
       final Handle handle,
-      final Set<String> fingerprintsToInsert
+      @Nonnull final String fingerprintToCheck
   )
   {
-    if (fingerprintsToInsert.isEmpty()) {
-      return Collections.emptySet();
+    if (fingerprintToCheck.isEmpty()) {
+      return false;
     }
 
-    List<List<String>> partitionedFingerprints = Lists.partition(
-        new ArrayList<>(fingerprintsToInsert),
-        DB_ACTION_PARTITION_SIZE
+    String sql = StringUtils.format(
+        "SELECT COUNT(*) FROM %s WHERE fingerprint = :fingerprint",
+        dbTables.getCompactionStatesTable()
     );
 
-    final Set<String> existingFingerprints = new HashSet<>();
-    for (List<String> fingerprintList : partitionedFingerprints) {
-      Query<?> query = handle.createQuery(
-          StringUtils.format(
-              "SELECT fingerprint FROM %s WHERE fingerprint IN (%s)",
-              dbTables.getCompactionStatesTable(),
-              buildParameterizedInClause("fp", fingerprintList.size())
-          )
-      );
+    Integer count = handle.createQuery(sql)
+                          .bind("fingerprint", fingerprintToCheck)
+                          .mapTo(Integer.class)
+                          .first();
 
-      bindValuesToInClause(fingerprintList, "fp", query);
-
-      query.map((index, r, ctx) -> existingFingerprints.add(r.getString(1)))
-           .list();
-    }
-    return existingFingerprints;
+    return count != null && count > 0;
   }
 
   /**
@@ -397,5 +329,41 @@ public class PersistedCompactionStateManager implements CompactionStateManager
     for (int i = 0; i < values.size(); i++) {
       query.bind(parameterPrefix + i, values.get(i));
     }
+  }
+
+  /**
+   * Checks if an exception is a unique constraint violation.
+   * This is expected when multiple threads try to insert the same fingerprint concurrently.
+   * Since operations are idempotent, these violations can be safely ignored.
+   */
+  private boolean isUniqueConstraintViolation(Exception e)
+  {
+    // Look for SQLException in the cause chain
+    Throwable cause = e;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation codes
+        // 23505 = unique_violation (PostgreSQL, Derby)
+        // 23000 = integrity_constraint_violation (MySQL and others)
+        if ("23505".equals(sqlState) || "23000".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+
+    // Also check exception message as fallback
+    String message = e.getMessage();
+    if (message != null) {
+      String lowerMessage = message.toLowerCase();
+      return lowerMessage.contains("unique constraint")
+          || lowerMessage.contains("duplicate key")
+          || lowerMessage.contains("duplicate entry");
+    }
+
+    return false;
   }
 }

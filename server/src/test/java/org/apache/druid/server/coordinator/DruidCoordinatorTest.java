@@ -46,7 +46,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
+import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -113,7 +113,7 @@ public class DruidCoordinatorTest
   private OverlordClient overlordClient;
   private CompactionStatusTracker statusTracker;
   private LatchableServiceEmitter serviceEmitter;
-  private PersistedCompactionStateManager persistedCompactionStateManager;
+  private SqlCompactionStateStorage sqlCompactionStateStorage;
 
   @Before
   public void setUp() throws Exception
@@ -124,7 +124,7 @@ public class DruidCoordinatorTest
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
     overlordClient = EasyMock.createMock(OverlordClient.class);
-    persistedCompactionStateManager = EasyMock.createMock(PersistedCompactionStateManager.class);
+    sqlCompactionStateStorage = EasyMock.createMock(SqlCompactionStateStorage.class);
 
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -188,7 +188,7 @@ public class DruidCoordinatorTest
         null,
         null,
         NoopSegmentMetadataCache.instance(),
-        persistedCompactionStateManager
+        sqlCompactionStateStorage
     );
   }
 

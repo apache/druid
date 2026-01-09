@@ -45,7 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -141,7 +141,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final boolean shouldPollSegments;
   private final long schedulePeriodMillis;
 
-  private final CompactionStateManager compactionStateManager;
+  private final CompactionStateStorage compactionStateStorage;
   private final CompactionStateCache compactionStateCache;
 
   @Inject
@@ -160,7 +160,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       BrokerClient brokerClient,
       ServiceEmitter emitter,
       ObjectMapper objectMapper,
-      CompactionStateManager compactionStateManager,
+      CompactionStateStorage compactionStateStorage,
       CompactionStateCache compactionStateCache
   )
   {
@@ -187,7 +187,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.druidInputSourceFactory = druidInputSourceFactory;
-    this.compactionStateManager = compactionStateManager;
+    this.compactionStateStorage = compactionStateStorage;
     this.compactionStateCache = compactionStateCache;
     this.taskRunnerListener = new TaskRunnerListener()
     {
@@ -376,7 +376,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         overlordClient,
         brokerClient,
         objectMapper,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
     latestJobQueue.set(queue);

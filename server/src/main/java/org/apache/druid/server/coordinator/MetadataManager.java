@@ -26,7 +26,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.timeline.DataSegment;
 
@@ -43,7 +43,7 @@ public class MetadataManager
   private final IndexerMetadataStorageCoordinator storageCoordinator;
   private final SegmentSchemaManager segmentSchemaManager;
   private final SegmentMetadataCache segmentMetadataCache;
-  private final CompactionStateManager compactionStateManager;
+  private final CompactionStateStorage compactionStateStorage;
 
   @Inject
   public MetadataManager(
@@ -55,7 +55,7 @@ public class MetadataManager
       IndexerMetadataStorageCoordinator storageCoordinator,
       SegmentSchemaManager segmentSchemaManager,
       SegmentMetadataCache segmentMetadataCache,
-      CompactionStateManager compactionStateManager
+      CompactionStateStorage compactionStateStorage
   )
   {
     this.auditManager = auditManager;
@@ -66,7 +66,7 @@ public class MetadataManager
     this.storageCoordinator = storageCoordinator;
     this.segmentSchemaManager = segmentSchemaManager;
     this.segmentMetadataCache = segmentMetadataCache;
-    this.compactionStateManager = compactionStateManager;
+    this.compactionStateStorage = compactionStateStorage;
   }
 
   public void onLeaderStart()
@@ -135,9 +135,9 @@ public class MetadataManager
     return segmentSchemaManager;
   }
 
-  public CompactionStateManager compactionStates()
+  public CompactionStateStorage compactionStates()
   {
-    return compactionStateManager;
+    return compactionStateStorage;
   }
 
   /**

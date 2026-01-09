@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
@@ -43,32 +43,32 @@ import java.util.List;
 public class KillUnreferencedCompactionState extends MetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedCompactionState.class);
-  private final CompactionStateManager compactionStateManager;
+  private final CompactionStateStorage compactionStateStorage;
 
   public KillUnreferencedCompactionState(
       MetadataCleanupConfig config,
-      CompactionStateManager compactionStateManager
+      CompactionStateStorage compactionStateStorage
   )
   {
     super("compactionState", config, Stats.Kill.COMPACTION_STATE);
-    this.compactionStateManager = compactionStateManager;
+    this.compactionStateStorage = compactionStateStorage;
   }
 
   @Override
   protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
     // 1: Mark unreferenced states as unused
-    int unused = compactionStateManager.markUnreferencedCompactionStatesAsUnused();
+    int unused = compactionStateStorage.markUnreferencedCompactionStatesAsUnused();
     log.info("Marked [%s] unreferenced compaction states as unused.", unused);
 
     // 2: Repair - find unused states still referenced by segments
-    List<String> stateFingerprints = compactionStateManager.findReferencedCompactionStateMarkedAsUnused();
+    List<String> stateFingerprints = compactionStateStorage.findReferencedCompactionStateMarkedAsUnused();
     if (!stateFingerprints.isEmpty()) {
-      int numUpdated = compactionStateManager.markCompactionStatesAsUsed(stateFingerprints);
+      int numUpdated = compactionStateStorage.markCompactionStatesAsUsed(stateFingerprints);
       log.info("Marked [%s] unused compaction states referenced by used segments as used.", numUpdated);
     }
 
     // 3: Delete unused states older than threshold
-    return compactionStateManager.deleteUnusedCompactionStatesOlderThan(minCreatedTime.getMillis());
+    return compactionStateStorage.deleteUnusedCompactionStatesOlderThan(minCreatedTime.getMillis());
   }
 }

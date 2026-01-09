@@ -32,18 +32,19 @@ import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * In-memory implementation of {@link CompactionStateManager} that stores
+ * In-memory implementation of {@link CompactionStateStorage} that stores
  * compaction state fingerprints in heap memory without requiring a database.
  * <p>
  * Useful for simulations and unit tests where database persistence is not needed.
  * Database-specific operations (cleanup, unused marking) are no-ops in this implementation.
  */
-public class HeapMemoryCompactionStateManager implements CompactionStateManager
+public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
 {
   private final ConcurrentMap<String, CompactionState> fingerprintToStateMap = new ConcurrentHashMap<>();
   private final ObjectMapper deterministicMapper;
@@ -52,7 +53,7 @@ public class HeapMemoryCompactionStateManager implements CompactionStateManager
    * Creates an in-memory compaction state manager with a default deterministic mapper.
    * This is a convenience constructor for tests and simulations.
    */
-  public HeapMemoryCompactionStateManager()
+  public HeapMemoryCompactionStateStorage()
   {
     this(createDeterministicMapper());
   }
@@ -63,7 +64,7 @@ public class HeapMemoryCompactionStateManager implements CompactionStateManager
    *
    * @param deterministicMapper ObjectMapper configured for deterministic serialization
    */
-  public HeapMemoryCompactionStateManager(ObjectMapper deterministicMapper)
+  public HeapMemoryCompactionStateStorage(ObjectMapper deterministicMapper)
   {
     this.deterministicMapper = deterministicMapper;
   }
@@ -104,14 +105,39 @@ public class HeapMemoryCompactionStateManager implements CompactionStateManager
   }
 
   @Override
-  public void persistCompactionState(
+  public void upsertCompactionState(
       final String dataSource,
-      final Map<String, CompactionState> fingerprintToStateMap,
+      final String fingerprint,
+      final CompactionState compactionState,
       final DateTime updateTime
   )
   {
     // Store in memory for lookup during simulations/tests
-    this.fingerprintToStateMap.putAll(fingerprintToStateMap);
+    this.fingerprintToStateMap.put(fingerprint, compactionState);
+  }
+
+  @Override
+  public int markUnreferencedCompactionStatesAsUnused()
+  {
+    return 0;
+  }
+
+  @Override
+  public List<String> findReferencedCompactionStateMarkedAsUnused()
+  {
+    return List.of();
+  }
+
+  @Override
+  public int markCompactionStatesAsUsed(List<String> stateFingerprints)
+  {
+    return 0;
+  }
+
+  @Override
+  public int deleteUnusedCompactionStatesOlderThan(long timestamp)
+  {
+    return 0;
   }
 
   /**

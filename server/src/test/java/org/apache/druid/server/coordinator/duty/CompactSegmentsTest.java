@@ -79,8 +79,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
-import org.apache.druid.segment.metadata.CompactionStateManager;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -199,7 +199,7 @@ public class CompactSegmentsTest
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
   private final Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
-  private final CompactionStateManager compactionStateManager = new HeapMemoryCompactionStateManager();
+  private final CompactionStateStorage compactionStateStorage = new HeapMemoryCompactionStateStorage();
 
   public CompactSegmentsTest(
       PartitionsSpec partitionsSpec,
@@ -276,7 +276,7 @@ public class CompactSegmentsTest
             .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
             .addValue(OverlordClient.class, overlordClient)
             .addValue(CompactionStatusTracker.class, statusTracker)
-            .addValue(CompactionStateManager.class, compactionStateManager)
+            .addValue(CompactionStateStorage.class, compactionStateStorage)
             .addValue(MetadataCatalog.class, NullMetadataCatalog.INSTANCE)
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );

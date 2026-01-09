@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -107,7 +107,7 @@ public class CompactionJobQueue
       OverlordClient overlordClient,
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
-      CompactionStateManager compactionStateManager,
+      CompactionStateStorage compactionStateStorage,
       CompactionStateCache compactionStateCache
   )
   {
@@ -125,7 +125,7 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
 
@@ -357,14 +357,15 @@ public class CompactionJobQueue
   }
 
   /**
-   * Persist the compaction state associated with the given job with {@link CompactionStateManager}.
+   * Persist the compaction state associated with the given job with {@link CompactionStateStorage}.
    */
   private void persistPendingCompactionState(CompactionJob job)
   {
     if (job.getCompactionState() != null && job.getCompactionStateFingerprint() != null) {
-      jobParams.getCompactionStateManager().persistCompactionState(
+      jobParams.getCompactionStateStorageImpl().upsertCompactionState(
           job.getDataSource(),
-          Map.of(job.getCompactionStateFingerprint(), job.getCompactionState()),
+          job.getCompactionStateFingerprint(),
+          job.getCompactionState(),
           DateTimes.nowUtc()
       );
     }

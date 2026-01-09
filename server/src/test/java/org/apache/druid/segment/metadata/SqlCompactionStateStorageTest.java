@@ -43,15 +43,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class PersistedCompactionStateManagerTest
+public class SqlCompactionStateStorageTest
 {
   @RegisterExtension
   public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
@@ -62,7 +60,7 @@ public class PersistedCompactionStateManagerTest
 
   private static TestDerbyConnector derbyConnector;
   private static MetadataStorageTablesConfig tablesConfig;
-  private PersistedCompactionStateManager manager;
+  private SqlCompactionStateStorage manager;
 
   @BeforeAll
   public static void setUpClass()
@@ -82,22 +80,20 @@ public class PersistedCompactionStateManagerTest
       return null;
     });
 
-    manager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, deterministicMapper, derbyConnector);
+    manager = new SqlCompactionStateStorage(tablesConfig, jsonMapper, deterministicMapper, derbyConnector);
   }
 
   @Test
-  public void test_persistCompactionState_successfullyInsertsIntoDatabase()
+  public void test_upsertCompactionState_successfullyInsertsIntoDatabase()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    Map<String, CompactionState> fingerprintMap = new HashMap<>();
-    fingerprintMap.put(fingerprint, state1);
-
     derbyConnector.retryWithHandle(handle -> {
-      manager.persistCompactionState(
+      manager.upsertCompactionState(
           "testDatasource",
-          fingerprintMap,
+          fingerprint,
+          state1,
           DateTimes.nowUtc()
       );
       return null;
@@ -116,18 +112,16 @@ public class PersistedCompactionStateManagerTest
   }
 
   @Test
-  public void test_persistCompactionState_andThen_markUnreferencedCompactionStateAsUnused_andThen_markCompactionStatesAsUsed()
+  public void test_upsertCompactionState_andThen_markUnreferencedCompactionStateAsUnused_andThen_markCompactionStatesAsUsed()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    Map<String, CompactionState> fingerprintMap = new HashMap<>();
-    fingerprintMap.put(fingerprint, state1);
-
     derbyConnector.retryWithHandle(handle -> {
-      manager.persistCompactionState(
+      manager.upsertCompactionState(
           "testDatasource",
-          fingerprintMap,
+          fingerprint,
+          state1,
           DateTimes.nowUtc()
       );
       return null;
@@ -142,13 +136,11 @@ public class PersistedCompactionStateManagerTest
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    Map<String, CompactionState> fingerprintMap = new HashMap<>();
-    fingerprintMap.put(fingerprint, state1);
-
     derbyConnector.retryWithHandle(handle -> {
-      manager.persistCompactionState(
+      manager.upsertCompactionState(
           "testDatasource",
-          fingerprintMap,
+          fingerprint,
+          state1,
           DateTimes.nowUtc()
       );
       return null;
@@ -185,7 +177,7 @@ public class PersistedCompactionStateManagerTest
   }
 
   @Test
-  public void test_deleteCompactionStatesOlderThan_deletesOnlyOldUnusedStates() throws Exception
+  public void test_deleteCompactionStatesOlderThan_deletesOnlyOldUnusedStates()
   {
     DateTime now = DateTimes.nowUtc();
     DateTime oldTime = now.minusDays(60);
@@ -246,7 +238,7 @@ public class PersistedCompactionStateManagerTest
   }
 
   @Test
-  public void test_persistCompactionState_withEmptyMap_doesNothing()
+  public void test_upsertCompactionState_withNullState_doesNothing()
   {
     // Get initial count
     Integer beforeCount = derbyConnector.retryWithHandle(handle ->
@@ -257,7 +249,7 @@ public class PersistedCompactionStateManagerTest
 
     // Persist empty map
     derbyConnector.retryWithHandle(handle -> {
-      manager.persistCompactionState("ds", new HashMap<>(), DateTimes.nowUtc());
+      manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc());
       return null;
     });
 
@@ -272,16 +264,40 @@ public class PersistedCompactionStateManagerTest
   }
 
   @Test
-  public void test_persistCompactionState_verifyExistingFingerprintMarkedUsed() throws Exception
+  public void test_upsertCompactionState_withEmptyPrint_doesNothing()
+  {
+    // Get initial count
+    Integer beforeCount = derbyConnector.retryWithHandle(handle ->
+                                                             handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                                   .map((i, r, ctx) -> r.getInt(1))
+                                                                   .first()
+    );
+
+    // Persist empty map
+    derbyConnector.retryWithHandle(handle -> {
+      manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc());
+      return null;
+    });
+
+    // Verify count unchanged
+    Integer afterCount = derbyConnector.retryWithHandle(handle ->
+                                                            handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                                  .map((i, r, ctx) -> r.getInt(1))
+                                                                  .first()
+    );
+
+    assertEquals(beforeCount, afterCount);
+  }
+
+  @Test
+  public void test_upsertCompactionState_verifyExistingFingerprintMarkedUsed()
   {
     String fingerprint = "existing_fingerprint";
     CompactionState state = createTestCompactionState();
 
     // Persist initially
     derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, state);
-      manager.persistCompactionState("ds1", map, DateTimes.nowUtc());
+      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
       return null;
     });
 
@@ -306,9 +322,7 @@ public class PersistedCompactionStateManagerTest
 
     // Persist again with the same fingerprint (should UPDATE, not INSERT)
     derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, state);
-      manager.persistCompactionState("ds1", map, DateTimes.nowUtc());
+      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
       return null;
     });
 

@@ -23,15 +23,14 @@ import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Manages compaction state persistence and fingerprint generation.
  * <p>
- * Implementations may be backed by a database (like {@link PersistedCompactionStateManager}) or
- * use in-memory storage (like {@link HeapMemoryCompactionStateManager}).
+ * Implementations may be backed by a database (like {@link SqlCompactionStateStorage}) or
+ * use in-memory storage (like {@link HeapMemoryCompactionStateStorage}).
  */
-public interface CompactionStateManager
+public interface CompactionStateStorage
 {
   /**
    * Generates a deterministic fingerprint for the given compaction state and datasource.
@@ -44,28 +43,32 @@ public interface CompactionStateManager
   String generateCompactionStateFingerprint(CompactionState compactionState, String dataSource);
 
   /**
-   * Persists compaction states to storage.
+   * Upserts a compaction state to storage.
+   * <p>
+   * If a fingerprint already exists, marks it as used and updates the timestamp.
+   * If a fingerprint doesn't exist, inserts a new row with the full state payload.
    *
-   * @param dataSource The datasource name
-   * @param fingerprintToStateMap Map of fingerprints to their compaction states
-   * @param updateTime The timestamp for this update
+   * @param dataSource      The datasource name
+   * @param fingerprint     The fingerprint of the compaction state
+   * @param compactionState The compaction state to upsert
+   * @param updateTime      The timestamp for this update
    */
-  void persistCompactionState(
+
+  void upsertCompactionState(
       String dataSource,
-      Map<String, CompactionState> fingerprintToStateMap,
+      String fingerprint,
+      CompactionState compactionState,
       DateTime updateTime
   );
 
   /**
    * Marks compaction states as unused if they are not referenced by any used segments.
-   * This is used for cleanup operations. Implementations may choose to no-op this.
+   * <p>
+   * This is used for cleanup operations.
    *
    * @return Number of rows updated, or 0 if not applicable
    */
-  default int markUnreferencedCompactionStatesAsUnused()
-  {
-    return 0;
-  }
+  int markUnreferencedCompactionStatesAsUnused();
 
   /**
    * Finds all compaction state fingerprints which have been marked as unused but are
@@ -74,32 +77,25 @@ public interface CompactionStateManager
    *
    * @return List of fingerprints, or empty list
    */
-  default List<String> findReferencedCompactionStateMarkedAsUnused()
-  {
-    return List.of();
-  }
+  List<String> findReferencedCompactionStateMarkedAsUnused();
 
   /**
-   * Marks compaction states as used. This is used for reconciliation operations.
-   * Implementations may choose to no-op this.
+   * Marks compaction states as used.
+   * <p>
+   * This is used for reconciliation operations to avoid deleting states that are still in use.
    *
    * @param stateFingerprints List of fingerprints to mark as used
    * @return Number of rows updated, or 0 if not applicable
    */
-  default int markCompactionStatesAsUsed(List<String> stateFingerprints)
-  {
-    return 0;
-  }
+  int markCompactionStatesAsUsed(List<String> stateFingerprints);
 
   /**
    * Deletes unused compaction states older than the given timestamp.
-   * This is used for cleanup operations. Implementations may choose to no-op this.
+   * <p>
+   * This is used for cleanup operations.
    *
    * @param timestamp The cutoff timestamp in milliseconds
    * @return Number of rows deleted, or 0 if not applicable
    */
-  default int deleteUnusedCompactionStatesOlderThan(long timestamp)
-  {
-    return 0;
-  }
+  int deleteUnusedCompactionStatesOlderThan(long timestamp);
 }

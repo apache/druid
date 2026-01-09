@@ -74,7 +74,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     CompactionState compactionState = CompactionStatus.createCompactionStateFromConfig(config);
 
-    String compactionStateFingerprint = params.getCompactionStateManager().generateCompactionStateFingerprint(
+    String compactionStateFingerprint = params.getCompactionStateStorageImpl().generateCompactionStateFingerprint(
         compactionState,
         config.getDataSource()
     );
@@ -137,7 +137,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         // This policy is used only while creating jobs
         // The actual order of jobs is determined by the policy used in CompactionJobQueue
         new NewestSegmentFirstPolicy(null),
-        params.getCompactionStateManager(),
+        params.getCompactionStateStorageImpl(),
         params.getCompactionStateCache()
     );
 

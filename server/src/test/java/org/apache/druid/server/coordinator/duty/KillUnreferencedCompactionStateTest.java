@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.metadata.CompactionStateManager;
-import org.apache.druid.segment.metadata.PersistedCompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -42,9 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -60,7 +58,7 @@ public class KillUnreferencedCompactionStateTest
 
   private TestDerbyConnector derbyConnector;
   private MetadataStorageTablesConfig tablesConfig;
-  private CompactionStateManager compactionStateManager;
+  private CompactionStateStorage compactionStateStorage;
   private DruidCoordinatorRuntimeParams mockParams;
 
   @BeforeEach
@@ -72,7 +70,7 @@ public class KillUnreferencedCompactionStateTest
     derbyConnector.createCompactionStatesTable();
     derbyConnector.createSegmentTable();
 
-    compactionStateManager = new PersistedCompactionStateManager(tablesConfig, jsonMapper, createDeterministicMapper(), derbyConnector);
+    compactionStateStorage = new SqlCompactionStateStorage(tablesConfig, jsonMapper, createDeterministicMapper(), derbyConnector);
 
     mockParams = EasyMock.createMock(DruidCoordinatorRuntimeParams.class);
     CoordinatorRunStats runStats = new CoordinatorRunStats();
@@ -97,16 +95,14 @@ public class KillUnreferencedCompactionStateTest
     );
 
     KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateManager, dateTimes);
+        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
 
     // Insert a compaction state (initially marked as used)
     String fingerprint = "test_fingerprint";
     CompactionState state = createTestCompactionState();
 
     derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, state);
-      compactionStateManager.persistCompactionState("test-ds", map, DateTimes.nowUtc());
+      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
       return null;
     });
 
@@ -140,16 +136,14 @@ public class KillUnreferencedCompactionStateTest
     );
 
     KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateManager, dateTimes);
+        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
 
     // Insert compaction state
     String fingerprint = "repair_fingerprint";
     CompactionState state = createTestCompactionState();
 
     derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, state);
-      compactionStateManager.persistCompactionState("test-ds", map, DateTimes.nowUtc());
+      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
       return null;
     });
 
@@ -196,14 +190,12 @@ public class KillUnreferencedCompactionStateTest
     );
 
     KillUnreferencedCompactionState duty =
-        new KillUnreferencedCompactionState(cleanupConfig, compactionStateManager);
+        new KillUnreferencedCompactionState(cleanupConfig, compactionStateStorage);
 
     // Insert compaction state
     String fingerprint = "disabled_fingerprint";
     derbyConnector.retryWithHandle(handle -> {
-      Map<String, CompactionState> map = new HashMap<>();
-      map.put(fingerprint, createTestCompactionState());
-      compactionStateManager.persistCompactionState("test-ds", map, DateTimes.nowUtc());
+      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, createTestCompactionState(), DateTimes.nowUtc());
       return null;
     });
 
@@ -221,11 +213,11 @@ public class KillUnreferencedCompactionStateTest
 
     public TestKillUnreferencedCompactionState(
         MetadataCleanupConfig config,
-        CompactionStateManager compactionStateManager,
+        CompactionStateStorage compactionStateStorage,
         List<DateTime> dateTimes
     )
     {
-      super(config, compactionStateManager);
+      super(config, compactionStateStorage);
       this.dateTimes = dateTimes;
     }
 

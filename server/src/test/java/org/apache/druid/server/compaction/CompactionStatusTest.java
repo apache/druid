@@ -40,8 +40,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateManager;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateManager;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -57,7 +57,6 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public class CompactionStatusTest
 {
@@ -70,13 +69,13 @@ public class CompactionStatusTest
                    .size(100_000_000L)
                    .build();
 
-  private HeapMemoryCompactionStateManager compactionStateManager;
+  private HeapMemoryCompactionStateStorage compactionStateStorage;
   private CompactionStateCache compactionStateCache;
 
   @Before
   public void setUp()
   {
-    compactionStateManager = new HeapMemoryCompactionStateManager();
+    compactionStateStorage = new HeapMemoryCompactionStateStorage();
     compactionStateCache = new CompactionStateCache();
   }
 
@@ -85,7 +84,7 @@ public class CompactionStatusTest
    */
   private void syncCacheFromManager()
   {
-    compactionStateCache.resetCompactionStatesForPublishedSegments(compactionStateManager.getAllStoredStates());
+    compactionStateCache.resetCompactionStatesForPublishedSegments(compactionStateStorage.getAllStoredStates());
   }
 
   @Test
@@ -356,7 +355,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
     Assert.assertTrue(status.isComplete());
@@ -407,7 +406,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
     Assert.assertTrue(status.isComplete());
@@ -463,7 +462,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
     Assert.assertFalse(status.isComplete());
@@ -518,7 +517,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
     Assert.assertTrue(status.isComplete());
@@ -573,7 +572,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
     Assert.assertFalse(status.isComplete());
@@ -602,14 +601,14 @@ public class CompactionStatusTest
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
 
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", wrongState), DateTimes.nowUtc());
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateManager
+        compactionStateStorage
     );
   }
 
@@ -631,21 +630,21 @@ public class CompactionStatusTest
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
 
-    String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
     );
 
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", wrongState), DateTimes.nowUtc());
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateManager
+        compactionStateStorage
     );
   }
 
@@ -662,20 +661,20 @@ public class CompactionStatusTest
         .build();
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("wrongFingerprint", expectedState), DateTimes.nowUtc());
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
     Assert.assertTrue(status.isComplete());
   }
 
   @Test
-  public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNullCompactionStateManager()
+  public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNullCompactionStateStorage()
   {
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build()
@@ -690,7 +689,7 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "At least one segment has a mismatched fingerprint and needs compaction",
-        compactionStateManager
+        compactionStateStorage
     );
   }
 
@@ -710,7 +709,7 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "At least one segment has a mismatched fingerprint and needs compaction",
-        compactionStateManager
+        compactionStateStorage
     );
   }
 
@@ -725,7 +724,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
 
-    String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
@@ -735,7 +734,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
     Assert.assertTrue(status.isComplete());
@@ -752,7 +751,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
 
-    String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
@@ -763,7 +762,7 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateManager
+        compactionStateStorage
     );
   }
 
@@ -778,7 +777,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
 
-    String expectedFingerprint = compactionStateManager.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
@@ -788,7 +787,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
     Assert.assertTrue(status.isComplete());
@@ -819,7 +818,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
 
@@ -838,13 +837,13 @@ public class CompactionStatusTest
       CompactionCandidate candidate,
       DataSourceCompactionConfig compactionConfig,
       String expectedReason,
-      CompactionStateManager compactionStateManager
+      CompactionStateStorage compactionStateStorage
   )
   {
     final CompactionStatus status = CompactionStatus.compute(
         candidate,
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
     );
 
@@ -865,7 +864,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateManager,
+        compactionStateStorage,
         compactionStateCache
         );
 
