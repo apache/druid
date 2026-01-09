@@ -334,6 +334,14 @@ public class IndexerControllerContext implements ControllerContext
       builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
     }
 
+    if (queryContext.containsKey(MultiStageQueryContext.CTX_LIVE_REPORT_COUNTERS)) {
+      // No default for this one, because we want the default to be assigned on the worker.
+      builder.put(
+          MultiStageQueryContext.CTX_LIVE_REPORT_COUNTERS,
+          queryContext.getBoolean(MultiStageQueryContext.CTX_LIVE_REPORT_COUNTERS)
+      );
+    }
+
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
       builder.put(

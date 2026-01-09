@@ -36,7 +36,6 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -46,6 +45,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -451,7 +451,6 @@ public class TaskQueue
             }
             final TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
             notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
-            emitTaskCompletionLogsAndMetrics(task, taskStatus);
             return;
           }
           if (taskIsReady) {
@@ -751,8 +750,8 @@ public class TaskQueue
     }
 
     shutdownTaskOnRunner(task.getId(), reasonFormat, args);
-
     removeTaskLock(task);
+    emitTaskCompletionLogsAndMetrics(task, taskStatus);
     requestManagement();
 
     log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
@@ -813,9 +812,6 @@ public class TaskQueue
                   task.getId(),
                   entry -> notifyStatus(entry, status, "notified status change from task")
               );
-
-              // Emit event and log, if the task is done
-              emitTaskCompletionLogsAndMetrics(task, status);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to handle task status")
@@ -966,14 +962,14 @@ public class TaskQueue
   }
 
   /**
-   * Gets the current status of this task either from the {@link TaskRunner}
-   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   * Gets the current status of this task either from {@link #activeTasks} and {@link #taskRunner}, if active,
+   * or otherwise from the {@link TaskStorage}.
    */
   public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
-    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
-    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
-      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    final TaskEntry activeTaskEntry = activeTasks.get(taskId);
+    if (activeTaskEntry != null) {
+      return Optional.of(activeTaskEntry.taskInfo.getStatus().withLocation(taskRunner.getTaskLocation(taskId)));
     } else {
       return taskStorage.getStatus(taskId);
     }
@@ -1074,24 +1070,22 @@ public class TaskQueue
 
   private void emitTaskCompletionLogsAndMetrics(final Task task, final TaskStatus status)
   {
-    if (status.isComplete()) {
-      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
 
-      emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+    emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, status.getDuration()));
 
-      if (status.isSuccess()) {
-        Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
-      } else {
-        Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
-      }
-
-      log.info(
-          "Completed task[%s] with status[%s] in [%d]ms.",
-          task.getId(), status, status.getDuration()
-      );
+    if (status.isSuccess()) {
+      Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+    } else {
+      Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
     }
+
+    log.info(
+        "Completed task[%s] with status[%s] in [%d]ms.",
+        task.getId(), status, status.getDuration()
+    );
   }
 
   private void validateTaskPayload(Task task)

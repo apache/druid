@@ -67,6 +67,11 @@ import java.io.File;
 
 public class IndexerWorkerContext implements WorkerContext
 {
+  /**
+   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. On by default for tasks.
+   */
+  public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = true;
+
   private static final Logger log = new Logger(IndexerWorkerContext.class);
 
   private final MSQWorkerTask task;
@@ -81,6 +86,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final int maxConcurrentStages;
+  private final boolean liveReportCounters;
   private final boolean includeAllCounters;
   private final int threadCount;
 
@@ -117,6 +123,7 @@ public class IndexerWorkerContext implements WorkerContext
         queryContext,
         IndexerControllerContext.DEFAULT_MAX_CONCURRENT_STAGES
     );
+    this.liveReportCounters = MultiStageQueryContext.getLiveReportCounters(queryContext, DEFAULT_LIVE_REPORT_COUNTERS);
     this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     
     // Compute thread count once in constructor
@@ -246,6 +253,7 @@ public class IndexerWorkerContext implements WorkerContext
             new SpecificTaskRetryPolicy(task.getControllerTaskId(), StandardRetryPolicy.unlimited())
         ),
         jsonMapper(),
+        liveReportCounters,
         controllerLocator
     );
   }
