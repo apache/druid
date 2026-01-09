@@ -122,15 +122,15 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
           log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
 
           String insertSql = StringUtils.format(
-              "INSERT INTO %s (created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
-              + "VALUES (:created_date, :datasource, :fingerprint, :payload, :used, :used_status_last_updated)",
+              "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
+              + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :used_status_last_updated)",
               dbTables.getCompactionStatesTable()
           );
 
           try {
             handle.createStatement(insertSql)
                   .bind("created_date", now)
-                  .bind("datasource", dataSource)
+                  .bind("dataSource", dataSource)
                   .bind("fingerprint", fingerprint)
                   .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
                   .bind("used", true)

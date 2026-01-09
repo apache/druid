@@ -356,6 +356,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columns.add("payload %2$s NOT NULL");
     columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
     columns.add("compaction_state_fingerprint VARCHAR(255)");
+    columns.add("upgraded_from_segment_id VARCHAR(255)");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columns.add("schema_fingerprint VARCHAR(255)");
@@ -1115,7 +1116,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  datasource VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
                 + "  fingerprint VARCHAR(255) NOT NULL,\n"
                 + "  payload %3$s NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"

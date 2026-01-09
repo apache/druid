@@ -194,7 +194,7 @@ public class SqlCompactionStateStorageTest
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
-                + "(created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
+                + "(created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
                 + "VALUES (:cd, :ds, :fp, :pl, :used, :updated)"
             )
             .bind("cd", oldTime.toString())
@@ -211,7 +211,7 @@ public class SqlCompactionStateStorageTest
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
-                + "(created_date, datasource, fingerprint, payload, used, used_status_last_updated) "
+                + "(created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
                 + "VALUES (:cd, :ds, :fp, :pl, :used, :updated)"
             )
             .bind("cd", recentTime.toString())
