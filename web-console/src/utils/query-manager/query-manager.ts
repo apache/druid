@@ -27,7 +27,7 @@ import { ResultWithAuxiliaryWork } from './result-with-auxiliary-work';
 
 export interface ProcessQueryExtra<I = never> {
   setIntermediateQuery: (intermediateQuery: any) => void;
-  setIntermediateStateCallback: (intermediateStateCallback: () => Promise<I>) => void;
+  setIntermediateStateCallback: (intermediateStateCallback: (signal: AbortSignal) => Promise<I>) => void;
 }
 
 export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
@@ -156,9 +156,11 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
                   if (signal.aborted || this.currentQueryId !== myQueryId) return;
                 }
 
-                const intermediate = await intermediateStateCallback();
+                const intermediate = await intermediateStateCallback(signal);
 
-                if (signal.aborted || this.currentQueryId !== myQueryId) return;
+                if (signal.aborted || this.currentQueryId !== myQueryId || !this.state.loading) {
+                  return;
+                }
 
                 this.setState(
                   new QueryState<R, E, I>({

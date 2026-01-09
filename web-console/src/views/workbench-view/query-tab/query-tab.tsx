@@ -281,7 +281,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   .catch(() => {});
               });
 
-              setIntermediateStateCallback(async () => {
+              setIntermediateStateCallback(async signal => {
                 const { data } = await Api.instance.get(
                   `/druid/v2/sql/queries/${Api.encodePath(cancelQueryId)}/reports`,
                   { signal },
