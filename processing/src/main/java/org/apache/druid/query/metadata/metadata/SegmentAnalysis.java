@@ -232,7 +232,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 
     private Optional<Long> size = Optional.empty();
     private Optional<Integer> numRows = Optional.empty();
-    private Optional<Boolean> rollup = Optional.empty();
+    private Boolean rollup = null;
 
     public Builder(String segmentId)
     {
@@ -266,10 +266,10 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 
     public Builder rollup(Boolean rollup)
     {
-      if (this.rollup.isEmpty()) {
-        this.rollup = Optional.of(rollup);
+      if (this.rollup == null) {
+        this.rollup = rollup;
       } else {
-        throw new IllegalStateException("Rollup is already set: " + this.rollup.get());
+        throw new IllegalStateException("Rollup is already set: " + this.rollup);
       }
       return this;
     }
@@ -376,7 +376,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
           projections,
           timestampSpec,
           queryGranularity,
-          rollup.orElse(null)
+          rollup
       );
     }
   }
