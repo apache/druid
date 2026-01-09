@@ -1706,7 +1706,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves all unique compaction state fingerprints currently referenced by used segments.
+   * Retrieves all unique compaction state fingerprints currently marked as used.
    * This is used for delta syncs to determine which fingerprints are still active.
    *
    * @return Set of compaction state fingerprints
@@ -1714,9 +1714,8 @@ public class SqlSegmentsMetadataQuery
   public Set<String> retrieveAllUsedCompactionStateFingerprints()
   {
     final String sql = StringUtils.format(
-        "SELECT DISTINCT compaction_state_fingerprint FROM %s "
-        + "WHERE used = true AND compaction_state_fingerprint IS NOT NULL",
-        dbTables.getSegmentsTable()
+        "SELECT fingerprint FROM %s WHERE used = true",
+        dbTables.getCompactionStatesTable()
     );
 
     return Set.copyOf(
@@ -1728,22 +1727,15 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves all compaction states for used segments (full sync).
-   * Fetches from compaction_states table where the fingerprint is referenced by used segments.
+   * Retrieves all compaction states marked as used (full sync).
    *
    * @return List of CompactionStateRecord objects
    */
   public List<CompactionStateRecord> retrieveAllUsedCompactionStates()
   {
     final String sql = StringUtils.format(
-        "SELECT cs.fingerprint, cs.payload FROM %s cs "
-        + "WHERE cs.used = true "
-        + "AND cs.fingerprint IN ("
-        + "  SELECT DISTINCT compaction_state_fingerprint FROM %s "
-        + "  WHERE used = true AND compaction_state_fingerprint IS NOT NULL"
-        + ")",
-        dbTables.getCompactionStatesTable(),
-        dbTables.getSegmentsTable()
+        "SELECT fingerprint, payload FROM %s WHERE used = true",
+        dbTables.getCompactionStatesTable()
     );
 
     return retrieveValidCompactionStateRecordsWithQuery(handle.createQuery(sql));
