@@ -1189,6 +1189,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     // Remove entry for compaction states that have been deleted from the metadata store
     final Set<String> deletedFingerprints = Sets.difference(cachedFingerprints, persistedFingerprints);
     deletedFingerprints.forEach(fingerprintToStateMap::remove);
+    emitMetric(Metric.DELETED_COMPACTION_STATES, deletedFingerprints.size());
 
     // Retrieve and add entry for compaction states that have been added to the metadata store
     final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
@@ -1201,6 +1202,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     addedCompactionStateRecords.forEach(
         record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
     );
+    emitMetric(Metric.ADDED_COMPACTION_STATES, addedCompactionStateRecords.size());
 
     return fingerprintToStateMap;
   }

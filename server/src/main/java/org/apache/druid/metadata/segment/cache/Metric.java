@@ -169,6 +169,16 @@ public class Metric
   public static final String SKIPPED_COMPACTION_STATES = METRIC_NAME_PREFIX + "compactionState/skipped";
 
   /**
+   * Number of compaction states added to the cache in the latest sync.
+   */
+  public static final String ADDED_COMPACTION_STATES = METRIC_NAME_PREFIX + "compactionState/added";
+
+  /**
+   * Number of compaction states deleted from the cache in the latest sync.
+   */
+  public static final String DELETED_COMPACTION_STATES = METRIC_NAME_PREFIX + "compactionState/deleted";
+
+  /**
    * Number of unparseable pending segment records skipped while refreshing the cache.
    */
   public static final String SKIPPED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/skipped";
