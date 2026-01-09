@@ -54,6 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        jdk: [ "21" ]
         include:
           - name: "QTest 0/4"
             args: "-Dtest=QTest -Dquidem.split=0/4"
