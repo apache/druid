@@ -46,7 +46,7 @@ jobs:
     if: ${{ !cancelled() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
-      artifacts_to_download: "unit-test-reports-*"
+      artifacts_to_download: "unit-test-reports-jdk21*"
       key: "coverage-jacoco"
 
   run-separated-tests:
@@ -68,5 +68,4 @@ jobs:
     with:
       script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
       key: ${{ matrix.name }}
-      jdk: 21
-      artifact_prefix: "unit-test-reports"
+      artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
