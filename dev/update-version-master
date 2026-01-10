@@ -19,13 +19,13 @@
 # Updates the versions for the master branch
 # https://github.com/apache/druid/blob/master/distribution/asf-release-process-guide.md
 
-[ "$#" -lt 1 ] && echo "usage: $0 <new_version>" && exit 1
+[ "$#" -lt 1 ] && echo -e "usage: $0 <new_version> [<docs_version>]\n  note: omit docs_version during master update" && exit 1
 
 set -e
 set -x
 
 VERSION=$1
-DOCS_VERSION=latest
+DOCS_VERSION=${2:-latest}
 
 sed -i -r "s|public/web-console-[^<]+.js|public/web-console-${VERSION}.js|" web-console/unified-console.html
 sed -i -r "s|DRUID_DOCS_VERSION = '[^']+'|DRUID_DOCS_VERSION = '${DOCS_VERSION}'|" web-console/src/links.ts
