@@ -21,14 +21,23 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.timeline.CompactionState;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -89,4 +98,59 @@ public interface DataSourceCompactionConfig
 
   @Nullable
   AggregatorFactory[] getMetricsSpec();
+
+  /**
+   * Converts this compaction config to a {@link CompactionState}.
+   */
+  default CompactionState toCompactionState()
+  {
+    ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(this);
+
+    // 1. PartitionsSpec - reuse existing method
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
+
+    // 2. DimensionsSpec
+    DimensionsSpec dimensionsSpec = null;
+    if (getDimensionsSpec() != null && getDimensionsSpec().getDimensions() != null) {
+      dimensionsSpec = new DimensionsSpec(getDimensionsSpec().getDimensions());
+    }
+
+    // 3. Metrics
+    List<AggregatorFactory> metricsSpec = getMetricsSpec() == null
+                                          ? null
+                                          : Arrays.asList(getMetricsSpec());
+
+    // 4. Transform
+    CompactionTransformSpec transformSpec = getTransformSpec();
+
+    // 5. IndexSpec
+    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
+                          ? IndexSpec.getDefault()
+                          : tuningConfig.getIndexSpec();
+
+    // 6. GranularitySpec
+    GranularitySpec granularitySpec = null;
+    if (getGranularitySpec() != null) {
+      UserCompactionTaskGranularityConfig userGranularityConfig = getGranularitySpec();
+      granularitySpec = new UniformGranularitySpec(
+          userGranularityConfig.getSegmentGranularity(),
+          userGranularityConfig.getQueryGranularity(),
+          userGranularityConfig.isRollup(),
+          null  // intervals
+      );
+    }
+
+    // 7. Projections
+    List<AggregateProjectionSpec> projections = getProjections();
+
+    return new CompactionState(
+        partitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec,
+        projections
+    );
+  }
 }

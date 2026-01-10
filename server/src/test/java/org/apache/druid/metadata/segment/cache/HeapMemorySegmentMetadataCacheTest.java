@@ -38,6 +38,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -76,6 +77,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private HeapMemorySegmentMetadataCache cache;
   private SegmentSchemaCache schemaCache;
+  private CompactionStateCache compactionStateCache;
   private SegmentSchemaTestUtils schemaTestUtils;
 
   @Before
@@ -89,6 +91,7 @@ public class HeapMemorySegmentMetadataCacheTest
     derbyConnector.createSegmentTable();
     derbyConnector.createSegmentSchemasTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createCompactionStatesTable();
 
     schemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, TestHelper.JSON_MAPPER);
     EmittingLogger.registerEmitter(serviceEmitter);
@@ -119,11 +122,13 @@ public class HeapMemorySegmentMetadataCacheTest
     final SegmentsMetadataManagerConfig metadataManagerConfig
         = new SegmentsMetadataManagerConfig(null, cacheMode, null);
     schemaCache = useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache();
+    compactionStateCache = new CompactionStateCache();
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         schemaCache,
+        compactionStateCache,
         derbyConnector,
         executorFactory,
         serviceEmitter
@@ -510,6 +515,7 @@ public class HeapMemorySegmentMetadataCacheTest
         usedSegmentPlus.getCreatedDate(),
         updateTime.plus(1),
         true,
+        null,
         null,
         null,
         null

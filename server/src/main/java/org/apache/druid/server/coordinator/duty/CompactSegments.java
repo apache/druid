@@ -76,7 +76,12 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
-  public static final String COMPACTION_INTERVAL_KEY = "compactionInterval";
+
+  /**
+   * Must be the same as org.apache.druid.indexing.common.task.Tasks.COMPACTION_STATE_FINGERPRINT_KEY
+   */
+  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+
   private static final String COMPACTION_REASON_KEY = "compactionReason";
 
   private static final Logger LOG = new Logger(CompactSegments.class);
@@ -177,7 +182,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         policy,
         compactionConfigs,
         dataSources.getUsedSegmentsTimelinesPerDataSource(),
-        slotManager.getDatasourceIntervalsToSkipCompaction()
+        slotManager.getDatasourceIntervalsToSkipCompaction(),
+        null
     );
 
     final CompactionSnapshotBuilder compactionSnapshotBuilder = new CompactionSnapshotBuilder(stats);
@@ -254,7 +260,13 @@ public class CompactSegments implements CoordinatorCustomDuty
         snapshotBuilder.addToComplete(entry);
       }
 
-      final ClientCompactionTaskQuery taskPayload = createCompactionTask(entry, config, defaultEngine);
+      final ClientCompactionTaskQuery taskPayload = createCompactionTask(
+          entry,
+          config,
+          defaultEngine,
+          null,
+          true
+      );
 
       final String taskId = taskPayload.getId();
       FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
@@ -280,7 +292,9 @@ public class CompactSegments implements CoordinatorCustomDuty
   public static ClientCompactionTaskQuery createCompactionTask(
       CompactionCandidate candidate,
       DataSourceCompactionConfig config,
-      CompactionEngine defaultEngine
+      CompactionEngine defaultEngine,
+      String compactionStateFingerprint,
+      boolean persistLastCompactionStateInSegments
   )
   {
     final List<DataSegment> segmentsToCompact = candidate.getSegments();
@@ -357,6 +371,9 @@ public class CompactSegments implements CoordinatorCustomDuty
     if (candidate.getCurrentStatus() != null) {
       autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
     }
+
+    autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, persistLastCompactionStateInSegments);
+    autoCompactionContext.put(COMPACTION_STATE_FINGERPRINT_KEY, compactionStateFingerprint);
 
     return compactSegments(
         candidate,

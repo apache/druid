@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -98,14 +99,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void configureCompaction(CompactionEngine compactionEngine)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, true))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig(CompactionEngine compactionEngine)
+  public void test_ingestDayGranularity_andCompactToMonthGranularity_andCompactToYearGranularity_withInlineConfig(CompactionEngine compactionEngine)
   {
     configureCompaction(compactionEngine);
 
@@ -119,7 +120,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
 
     // Create a compaction config with MONTH granularity
-    InlineSchemaDataSourceCompactionConfig compactionConfig =
+    InlineSchemaDataSourceCompactionConfig monthGranularityConfig =
         InlineSchemaDataSourceCompactionConfig
             .builder()
             .forDataSource(dataSource)
@@ -152,11 +153,159 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             )
             .build();
 
-    runCompactionWithSpec(compactionConfig);
+    runCompactionWithSpec(monthGranularityConfig);
     waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
+
+    verifyCompactedSegmentsHaveFingerprints(monthGranularityConfig);
+
+    InlineSchemaDataSourceCompactionConfig yearGranConfig =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    overlord.latchableEmitter().flush(); // flush events so wait for works correctly on the next round of compaction
+    runCompactionWithSpec(yearGranConfig);
+    waitForAllCompactionTasksToFinish();
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.MONTH));
+    Assertions.assertEquals(1, getNumSegmentsWith(Granularities.YEAR));
+
+    verifyCompactedSegmentsHaveFingerprints(yearGranConfig);
+  }
+
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_compaction_withPersistLastCompactionStateFalse_storesOnlyFingerprint(CompactionEngine compactionEngine)
+      throws InterruptedException
+  {
+    // Configure cluster with persistLastCompactionState=false
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(
+            new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)
+        )
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+    // Ingest data at DAY granularity
+    runIngestionAtGranularity(
+        "DAY",
+        "2025-06-01T00:00:00.000Z,shirt,105\n"
+        + "2025-06-02T00:00:00.000Z,trousers,210"
+    );
+    Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
+
+    // Create compaction config to compact to MONTH granularity
+    InlineSchemaDataSourceCompactionConfig monthConfig =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .build();
+
+    runCompactionWithSpec(monthConfig);
+    waitForAllCompactionTasksToFinish();
+
+    verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
+  }
+
+  private void verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint()
+  {
+    overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .forEach(segment -> {
+          Assertions.assertNull(
+              segment.getLastCompactionState(),
+              "Segment " + segment.getId() + " should have null lastCompactionState"
+          );
+          Assertions.assertNotNull(
+              segment.getCompactionStateFingerprint(),
+              "Segment " + segment.getId() + " should have non-null compactionStateFingerprint"
+          );
+        });
+  }
+
+  private void verifyCompactedSegmentsHaveFingerprints(DataSourceCompactionConfig compactionConfig)
+  {
+    CompactionStateStorage compactionStateStorage = overlord
+        .bindings()
+        .getInstance(CompactionStateStorage.class);
+
+    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(
+        compactionConfig.toCompactionState(),
+        dataSource
+    );
+
+    overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .forEach(segment -> {
+          Assertions.assertEquals(
+              expectedFingerprint,
+              segment.getCompactionStateFingerprint(),
+              "Segment " + segment.getId() + " fingerprint should match expected fingerprint"
+          );
+        });
   }
 
   private void runCompactionWithSpec(DataSourceCompactionConfig config)

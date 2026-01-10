@@ -73,6 +73,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -1699,6 +1700,8 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
+      final String compactionStateFingerprint = querySpec.getContext().getString(Tasks.COMPACTION_STATE_FINGERPRINT_KEY);
+
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
         if (!destination.isReplaceTimeChunks()) {
@@ -1723,6 +1726,10 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         }
+      }
+      if (compactionStateFingerprint != null) {
+        compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(
+            AbstractBatchIndexTask.addCompactionStateFingerprintToSegments(compactionStateFingerprint));
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);

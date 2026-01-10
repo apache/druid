@@ -30,8 +30,10 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -55,6 +57,8 @@ import java.util.stream.Collectors;
  */
 public class CompactionStatus
 {
+  private static final Logger log = new Logger(CompactionStatus.class);
+
   private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
 
   public enum State
@@ -63,12 +67,18 @@ public class CompactionStatus
   }
 
   /**
+   * List of checks performed to determine if compaction is already complete based on compaction state fingerprints.
+   */
+  private static final List<Function<Evaluator, CompactionStatus>> FINGERPRINT_CHECKS = List.of(
+      Evaluator::allFingerprintedCandidatesHaveExpectedFingerprint
+  );
+
+  /**
    * List of checks performed to determine if compaction is already complete.
    * <p>
    * The order of the checks must be honored while evaluating them.
    */
   private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
-      Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
       Evaluator::partitionsSpecIsUpToDate,
       Evaluator::indexSpecIsUpToDate,
       Evaluator::segmentGranularityIsUpToDate,
@@ -249,14 +259,25 @@ public class CompactionStatus
    */
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
-      DataSourceCompactionConfig config
+      DataSourceCompactionConfig config,
+      @Nullable CompactionFingerprintMapper fingerprintMapper
   )
   {
-    return new Evaluator(candidateSegments, config).evaluate();
+    final CompactionState expectedState = config.toCompactionState();
+    String expectedFingerprint;
+    if (fingerprintMapper == null) {
+      expectedFingerprint = null;
+    } else {
+      expectedFingerprint = fingerprintMapper.generateFingerprint(
+          config.getDataSource(),
+          expectedState
+      );
+    }
+    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate();
   }
 
   @Nullable
-  static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  public static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {
@@ -330,18 +351,28 @@ public class CompactionStatus
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
+    private final List<DataSegment> fingerprintedSegments = new ArrayList<>();
+    private final List<DataSegment> compactedSegments = new ArrayList<>();
     private final List<DataSegment> uncompactedSegments = new ArrayList<>();
     private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
 
+    @Nullable
+    private final String targetFingerprint;
+    private final CompactionFingerprintMapper fingerprintMapper;
+
     private Evaluator(
         CompactionCandidate candidateSegments,
-        DataSourceCompactionConfig compactionConfig
+        DataSourceCompactionConfig compactionConfig,
+        @Nullable String targetFingerprint,
+        @Nullable CompactionFingerprintMapper fingerprintMapper
     )
     {
       this.candidateSegments = candidateSegments;
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
+      this.targetFingerprint = targetFingerprint;
+      this.fingerprintMapper = fingerprintMapper;
     }
 
     private CompactionStatus evaluate()
@@ -351,40 +382,138 @@ public class CompactionStatus
         return inputBytesCheck;
       }
 
-      final List<String> reasonsForCompaction =
+      List<String> reasonsForCompaction = new ArrayList<>();
+      CompactionStatus compactedOnceCheck = segmentsHaveBeenCompactedAtLeastOnce();
+      if (!compactedOnceCheck.isComplete()) {
+        reasonsForCompaction.add(compactedOnceCheck.getReason());
+      }
+
+      if (fingerprintMapper != null && targetFingerprint != null) {
+        // First try fingerprint-based evaluation (fast path)
+        CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
+                                                               .map(f -> f.apply(this))
+                                                               .filter(status -> !status.isComplete())
+                                                               .findFirst().orElse(COMPLETE);
+
+        if (!fingerprintStatus.isComplete()) {
+          reasonsForCompaction.add(fingerprintStatus.getReason());
+        }
+      }
+
+      reasonsForCompaction.addAll(
           CHECKS.stream()
                 .map(f -> f.apply(this))
                 .filter(status -> !status.isComplete())
                 .map(CompactionStatus::getReason)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList())
+      );
 
       // Consider segments which have passed all checks to be compacted
-      final List<DataSegment> compactedSegments = unknownStateToSegments
-          .values()
-          .stream()
-          .flatMap(List::stream)
-          .collect(Collectors.toList());
+      // Includes segments with correct fingerprints and segments that passed all state checks
+      this.compactedSegments.addAll(
+          unknownStateToSegments
+              .values()
+              .stream()
+              .flatMap(List::stream)
+              .collect(Collectors.toList())
+      );
 
       if (reasonsForCompaction.isEmpty()) {
         return COMPLETE;
       } else {
         return CompactionStatus.pending(
-            createStats(compactedSegments),
+            createStats(this.compactedSegments),
             createStats(uncompactedSegments),
             reasonsForCompaction.get(0)
         );
       }
     }
 
+    /**
+     * Evaluates the fingerprints of all fingerprinted candidate segments against the expected fingerprint.
+     * <p>
+     * If all fingerprinted segments have the expected fingerprint, the check can quickly pass as COMPLETE. However,
+     * if any fingerprinted segment has a mismatched fingerprint, we need to investigate further by adding them to
+     * {@link #unknownStateToSegments} where their compaction states will be analyzed.
+     * </p>
+     */
+    private CompactionStatus allFingerprintedCandidatesHaveExpectedFingerprint()
+    {
+      Map<String, List<DataSegment>> mismatchedFingerprintToSegmentMap = new HashMap<>();
+      for (DataSegment segment : fingerprintedSegments) {
+        String fingerprint = segment.getCompactionStateFingerprint();
+        if (fingerprint == null) {
+          // Should not happen since we are iterating over fingerprintedSegments
+        } else if (fingerprint.equals(targetFingerprint)) {
+          compactedSegments.add(segment);
+        } else {
+          mismatchedFingerprintToSegmentMap
+              .computeIfAbsent(fingerprint, k -> new ArrayList<>())
+              .add(segment);
+        }
+      }
+
+      if (mismatchedFingerprintToSegmentMap.isEmpty()) {
+        // All fingerprinted segments have the expected fingerprint - compaction is complete
+        return COMPLETE;
+      }
+
+      if (fingerprintMapper == null) {
+        // Cannot evaluate further without a fingerprint mapper
+        uncompactedSegments.addAll(
+            mismatchedFingerprintToSegmentMap.values()
+                                            .stream()
+                                            .flatMap(List::stream)
+                                            .collect(Collectors.toList())
+        );
+        return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
+      }
+
+      boolean fingerprintedSegmentWithoutCachedStateFound = false;
+
+      for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
+        String fingerprint = e.getKey();
+        CompactionState stateToValidate = fingerprintMapper.getStateForFingerprint(fingerprint).orElse(null);
+        if (stateToValidate == null) {
+          log.warn("No compaction state found for fingerprint[%s]", fingerprint);
+          fingerprintedSegmentWithoutCachedStateFound = true;
+          uncompactedSegments.addAll(e.getValue());
+        } else {
+          // Note that this does not mean we need compaction yet - we need to validate the state further to determine this
+          unknownStateToSegments.compute(
+              stateToValidate,
+              (state, segments) -> {
+                if (segments == null) {
+                  segments = new ArrayList<>();
+                }
+                segments.addAll(e.getValue());
+                return segments;
+              });
+        }
+      }
+
+      if (fingerprintedSegmentWithoutCachedStateFound) {
+        return CompactionStatus.pending("One or more fingerprinted segments do not have a cached compaction state");
+      } else {
+        return COMPLETE;
+      }
+    }
+
+    /**
+     * Checks if all the segments have been compacted at least once and groups them into uncompacted, fingerprinted, or
+     * non-fingerprinted.
+     */
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
-      // Identify the compaction states of all the segments
       for (DataSegment segment : candidateSegments.getSegments()) {
+        final String fingerprint = segment.getCompactionStateFingerprint();
         final CompactionState segmentState = segment.getLastCompactionState();
-        if (segmentState == null) {
+        if (fingerprint != null) {
+          fingerprintedSegments.add(segment);
+        } else if (segmentState == null) {
           uncompactedSegments.add(segment);
         } else {
-          unknownStateToSegments.computeIfAbsent(segmentState, s -> new ArrayList<>()).add(segment);
+          unknownStateToSegments.computeIfAbsent(segmentState, k -> new ArrayList<>()).add(segment);
         }
       }
 
@@ -674,4 +803,5 @@ public class CompactionStatus
       return CompactionStatistics.create(totalBytes, segments.size(), segmentIntervals.size());
     }
   }
+
 }

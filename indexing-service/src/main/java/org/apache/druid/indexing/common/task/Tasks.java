@@ -68,4 +68,13 @@ public class Tasks
   static {
     Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
   }
+
+  /**
+   * Context k:v pair that holds the fingerprint of the compaction state to be stored with the segment
+   */
+  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+
+  static {
+    Verify.verify(COMPACTION_STATE_FINGERPRINT_KEY.equals(CompactSegments.COMPACTION_STATE_FINGERPRINT_KEY));
+  }
 }
