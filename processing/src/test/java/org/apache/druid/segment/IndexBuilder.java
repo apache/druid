@@ -111,7 +111,7 @@ public class IndexBuilder
   private File inputSourceTmpDir = null;
 
   private boolean writeNullColumns = false;
-  private boolean buildV10 = true;
+  private boolean buildV10 = false;
 
   private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
   {
