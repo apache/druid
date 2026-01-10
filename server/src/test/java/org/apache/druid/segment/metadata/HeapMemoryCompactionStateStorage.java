@@ -19,15 +19,10 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
@@ -82,26 +77,12 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  @SuppressWarnings("UnstableApiUsage")
   public String generateCompactionStateFingerprint(
       final CompactionState compactionState,
       final String dataSource
   )
   {
-    final Hasher hasher = Hashing.sha256().newHasher();
-
-    hasher.putBytes(StringUtils.toUtf8(dataSource));
-    hasher.putByte((byte) 0xff);
-
-    try {
-      hasher.putBytes(deterministicMapper.writeValueAsBytes(compactionState));
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to serialize CompactionState for fingerprinting", e);
-    }
-    hasher.putByte((byte) 0xff);
-
-    return BaseEncoding.base16().encode(hasher.hash().asBytes());
+    return CompactionStateFingerprints.generate(compactionState, dataSource, deterministicMapper);
   }
 
   @Override
