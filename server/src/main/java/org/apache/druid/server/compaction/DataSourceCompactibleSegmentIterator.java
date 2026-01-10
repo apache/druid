@@ -30,8 +30,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -70,8 +69,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
-  private final CompactionStateStorage compactionStateStorage;
-  private final CompactionStateCache compactionStateCache;
+  private final CompactionFingerprintMapper fingerprintMapper;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -89,15 +87,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
       CompactionCandidateSearchPolicy searchPolicy,
-      CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache
+      CompactionFingerprintMapper compactionFingerprintMapper
   )
   {
     this.config = config;
     this.dataSource = config.getDataSource();
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
-    this.compactionStateStorage = compactionStateStorage;
-    this.compactionStateCache = compactionStateCache;
+    this.fingerprintMapper = compactionFingerprintMapper;
 
     populateQueue(timeline, skipIntervals);
   }
@@ -334,8 +330,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
 
       final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
-      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config,
-                                                                         compactionStateStorage, compactionStateCache);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config, fingerprintMapper);
       final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
 
       if (compactionStatus.isComplete()) {

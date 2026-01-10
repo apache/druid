@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
-import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -35,24 +35,24 @@ public class CompactionJobParams
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
+  private final CompactionFingerprintMapper fingerprintMapper;
   private final CompactionStateStorage compactionStateStorage;
-  private final CompactionStateCache compactionStateCache;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
       CompactionSnapshotBuilder snapshotBuilder,
-      CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache
+      CompactionFingerprintMapper fingerprintMapper,
+      CompactionStateStorage compactionStateStorage
   )
   {
     this.scheduleStartTime = scheduleStartTime;
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
+    this.fingerprintMapper = fingerprintMapper;
     this.compactionStateStorage = compactionStateStorage;
-    this.compactionStateCache = compactionStateCache;
   }
 
   /**
@@ -96,14 +96,14 @@ public class CompactionJobParams
     return snapshotBuilder;
   }
 
+  public CompactionFingerprintMapper getFingerprintMapper()
+  {
+    return fingerprintMapper;
+  }
+
   public CompactionStateStorage getCompactionStateStorageImpl()
   {
     return compactionStateStorage;
-  }
-
-  public CompactionStateCache getCompactionStateCache()
-  {
-    return compactionStateCache;
   }
 
   @FunctionalInterface

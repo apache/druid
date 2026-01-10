@@ -39,8 +39,10 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -71,12 +73,17 @@ public class CompactionStatusTest
 
   private HeapMemoryCompactionStateStorage compactionStateStorage;
   private CompactionStateCache compactionStateCache;
+  private CompactionFingerprintMapper fingerprintMapper;
 
   @Before
   public void setUp()
   {
     compactionStateStorage = new HeapMemoryCompactionStateStorage();
     compactionStateCache = new CompactionStateCache();
+    fingerprintMapper = new DefaultCompactionFingerprintMapper(
+        compactionStateStorage,
+        compactionStateCache
+    );
   }
 
   /**
@@ -355,9 +362,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -406,9 +412,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -462,9 +467,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
     Assert.assertFalse(status.isComplete());
   }
 
@@ -517,9 +521,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
     Assert.assertTrue(status.isComplete());
   }
 
@@ -572,9 +575,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
     Assert.assertFalse(status.isComplete());
   }
 
@@ -669,8 +671,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
+        fingerprintMapper
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -717,8 +718,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
+        fingerprintMapper
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -771,8 +771,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
+        fingerprintMapper
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -802,8 +801,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
+        fingerprintMapper
     );
 
     Assert.assertFalse(status.isComplete());
@@ -828,8 +826,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         candidate,
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
+        new DefaultCompactionFingerprintMapper(compactionStateStorage, compactionStateCache)
     );
 
     Assert.assertFalse(status.isComplete());
@@ -849,9 +846,8 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), null),
         compactionConfig,
-        compactionStateStorage,
-        compactionStateCache
-        );
+        fingerprintMapper
+    );
 
     Assert.assertFalse(status.isComplete());
     Assert.assertEquals(expectedReason, status.getReason());

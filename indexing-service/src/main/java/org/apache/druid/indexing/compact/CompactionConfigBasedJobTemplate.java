@@ -136,8 +136,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         // This policy is used only while creating jobs
         // The actual order of jobs is determined by the policy used in CompactionJobQueue
         new NewestSegmentFirstPolicy(null),
-        params.getCompactionStateStorageImpl(),
-        params.getCompactionStateCache()
+        params.getFingerprintMapper()
     );
 
     // Collect stats for segments that are already compacted

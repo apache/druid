@@ -33,8 +33,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -261,21 +260,20 @@ public class CompactionStatus
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
-      @Nullable CompactionStateStorage compactionStateStorage,
-      @Nullable CompactionStateCache compactionStateCache
+      @Nullable CompactionFingerprintMapper fingerprintMapper
   )
   {
     final CompactionState expectedState = config.toCompactionState();
     String expectedFingerprint;
-    if (compactionStateStorage == null) {
+    if (fingerprintMapper == null) {
       expectedFingerprint = null;
     } else {
-      expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(
-          expectedState,
-          config.getDataSource()
+      expectedFingerprint = fingerprintMapper.generateFingerprint(
+          config.getDataSource(),
+          expectedState
       );
     }
-    return new Evaluator(candidateSegments, config, expectedFingerprint, compactionStateCache).evaluate();
+    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate();
   }
 
   @Nullable
@@ -360,13 +358,13 @@ public class CompactionStatus
 
     @Nullable
     private final String targetFingerprint;
-    private final CompactionStateCache compactionStateCache;
+    private final CompactionFingerprintMapper fingerprintMapper;
 
     private Evaluator(
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         @Nullable String targetFingerprint,
-        @Nullable CompactionStateCache compactionStateCache
+        @Nullable CompactionFingerprintMapper fingerprintMapper
     )
     {
       this.candidateSegments = candidateSegments;
@@ -374,7 +372,7 @@ public class CompactionStatus
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
       this.targetFingerprint = targetFingerprint;
-      this.compactionStateCache = compactionStateCache;
+      this.fingerprintMapper = fingerprintMapper;
     }
 
     private CompactionStatus evaluate()
@@ -390,7 +388,7 @@ public class CompactionStatus
         reasonsForCompaction.add(compactedOnceCheck.getReason());
       }
 
-      if (compactionStateCache != null && targetFingerprint != null) {
+      if (fingerprintMapper != null && targetFingerprint != null) {
         // First try fingerprint-based evaluation (fast path)
         CompactionStatus fingerprintStatus = FINGERPRINT_CHECKS.stream()
                                                                .map(f -> f.apply(this))
@@ -460,22 +458,22 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      if (compactionStateCache == null) {
-        // Cannot evaluate further without a compaction state cache
+      if (fingerprintMapper == null) {
+        // Cannot evaluate further without a fingerprint mapper
         uncompactedSegments.addAll(
             mismatchedFingerprintToSegmentMap.values()
                                             .stream()
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList())
         );
-        return CompactionStatus.pending("Segments have a mismatched fingerprint and no compaction state cache is available");
+        return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
       }
 
       boolean fingerprintedSegmentWithoutCachedStateFound = false;
 
       for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
         String fingerprint = e.getKey();
-        CompactionState stateToValidate = compactionStateCache.getCompactionStateByFingerprint(fingerprint).orElse(null);
+        CompactionState stateToValidate = fingerprintMapper.getStateForFingerprint(fingerprint).orElse(null);
         if (stateToValidate == null) {
           log.warn("No compaction state found for fingerprint[%s]", fingerprint);
           fingerprintedSegmentWithoutCachedStateFound = true;

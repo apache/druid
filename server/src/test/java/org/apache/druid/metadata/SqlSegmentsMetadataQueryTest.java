@@ -388,7 +388,7 @@ public class SqlSegmentsMetadataQueryTest
   }
 
   @Test
-  public void test_retrieveAllUsedCompactionStateFingerprints_onlyUsedSegments()
+  public void test_retrieveAllUsedCompactionStateFingerprints()
   {
     derbyConnectorRule.getConnector().createCompactionStatesTable();
 
@@ -407,7 +407,7 @@ public class SqlSegmentsMetadataQueryTest
 
     Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints);
 
-    Assert.assertEquals("Should return only fingerprints from used segments", Set.of("fp1", "fp2"), fingerprints);
+    Assert.assertEquals("Should return all fingerprints in the cache", Set.of("fp1", "fp2", "fp3"), fingerprints);
   }
 
   @Test
@@ -453,11 +453,12 @@ public class SqlSegmentsMetadataQueryTest
         null,
         null
     );
+    CompactionState state3 = createTestCompactionState();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", state1);
     compactionStates.put("fp2", state2);
-    compactionStates.put("fp3", createTestCompactionState()); // Unreferenced state
+    compactionStates.put("fp3", state3); // Unreferenced state
     insertCompactionStates(compactionStates);
 
     // Only reference fp1 and fp2
@@ -466,12 +467,12 @@ public class SqlSegmentsMetadataQueryTest
 
     List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
 
-    Assert.assertEquals("Should return only referenced compaction states", 2, records.size());
+    Assert.assertEquals("Should return all compaction states", 3, records.size());
 
     Set<String> retrievedFingerprints = records.stream()
                                                 .map(CompactionStateRecord::getFingerprint)
                                                 .collect(Collectors.toSet());
-    Assert.assertEquals("Should contain fp1 and fp2", Set.of("fp1", "fp2"), retrievedFingerprints);
+    Assert.assertEquals("Should contain all fps", Set.of("fp1", "fp2", "fp3"), retrievedFingerprints);
 
     // Verify payloads
     Map<String, CompactionState> retrievedStates = records.stream()
@@ -481,6 +482,7 @@ public class SqlSegmentsMetadataQueryTest
         ));
     Assert.assertEquals("fp1 state should match", state1, retrievedStates.get("fp1"));
     Assert.assertEquals("fp2 state should match", state2, retrievedStates.get("fp2"));
+    Assert.assertEquals("fp3 state should match", state3, retrievedStates.get("fp3"));
   }
 
   @Test
@@ -498,8 +500,7 @@ public class SqlSegmentsMetadataQueryTest
 
     List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
 
-    Assert.assertEquals("Should only return states from used segments", 1, records.size());
-    Assert.assertEquals("Should return fp1", "fp1", records.get(0).getFingerprint());
+    Assert.assertEquals("Should only return all compaction states", 2, records.size());
   }
 
   @Test
