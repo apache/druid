@@ -27,7 +27,7 @@ export interface CompactionDynamicConfig {
   compactionPolicy: { type: 'newestSegmentFirst'; priorityDatasource?: string | null };
   useSupervisors: boolean;
   engine: 'native' | 'msq';
-  legacyPersistLastCompactionStateInSegments: boolean;
+  storeCompactionStatePerSegment: boolean;
 }
 
 export const COMPACTION_DYNAMIC_CONFIG_DEFAULT_RATIO = 0.1;
@@ -96,7 +96,7 @@ export const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] 
     ),
   },
   {
-    name: 'legacyPersistLastCompactionStateInSegments',
+    name: 'storeCompactionStatePerSegment',
     label: 'Legacy: Persist last compaction state in segments',
     type: 'boolean',
     defaultValue: true,

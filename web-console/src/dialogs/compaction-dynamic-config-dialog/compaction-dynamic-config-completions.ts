@@ -45,7 +45,7 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         documentation: 'Engine used for running compaction tasks (native or msq)',
       },
       {
-        value: 'legacyPersistLastCompactionStateInSegments',
+        value: 'storeCompactionStatePerSegment',
         documentation:
           'Whether to persist the full compaction state in segment metadata (default: true)',
       },
@@ -121,9 +121,8 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     condition: obj => !obj.useSupervisors,
     completions: [{ value: 'native', documentation: 'Native indexing engine (default)' }],
   },
-  // legacyPersistLastCompactionStateInSegments values
   {
-    path: '$.legacyPersistLastCompactionStateInSegments',
+    path: '$.storeCompactionStatePerSegment',
     completions: [
       {
         value: 'true',

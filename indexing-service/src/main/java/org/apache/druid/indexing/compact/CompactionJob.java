@@ -97,8 +97,8 @@ public class CompactionJob extends BatchIndexingJob
            super.toString() +
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
-           ", compactionStateFingerprint='" + targetCompactionStateFingerprint + '\'' +
-           ", compactionState=" + targetCompactionState +
+           ", targetCompactionStateFingerprint='" + targetCompactionStateFingerprint + '\'' +
+           ", targetCompactionState=" + targetCompactionState +
            '}';
   }
 }

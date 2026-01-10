@@ -22,7 +22,7 @@ package org.apache.druid.metadata.segment.cache;
 import org.apache.druid.timeline.CompactionState;
 
 /**
- * Represents a single record in the druid_compaction_states table.
+ * Represents a single record in the druid_compactionStates table.
  */
 public class CompactionStateRecord
 {
