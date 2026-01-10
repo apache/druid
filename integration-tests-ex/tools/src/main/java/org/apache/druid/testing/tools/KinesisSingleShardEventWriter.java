@@ -19,10 +19,11 @@
 
 package org.apache.druid.testing.tools;
 
-import java.nio.ByteBuffer;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kinesis.model.PutRecordRequest;
 
 /**
- * Writes only to a single shard
+ * Writes only to a single shard using a fixed partition key "0"
  */
 public class KinesisSingleShardEventWriter extends KinesisEventWriter
 {
@@ -35,10 +36,10 @@ public class KinesisSingleShardEventWriter extends KinesisEventWriter
   @Override
   public void write(String streamName, byte[] event)
   {
-    getKinesisProducer().addUserRecord(
-        streamName,
-        "0",
-        ByteBuffer.wrap(event)
-    );
+    getKinesisClient().putRecord(PutRecordRequest.builder()
+        .streamName(streamName)
+        .partitionKey("0")
+        .data(SdkBytes.fromByteArray(event))
+        .build());
   }
 }

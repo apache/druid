@@ -19,14 +19,15 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.google.common.base.Strings;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
-public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsProvider
+public class ConfigDrivenAwsCredentialsConfigProvider implements AwsCredentialsProvider
 {
-  private AWSCredentialsConfig config;
+  private final AWSCredentialsConfig config;
 
   public ConfigDrivenAwsCredentialsConfigProvider(AWSCredentialsConfig config)
   {
@@ -34,31 +35,13 @@ public class ConfigDrivenAwsCredentialsConfigProvider implements AWSCredentialsP
   }
 
   @Override
-  public AWSCredentials getCredentials()
+  public AwsCredentials resolveCredentials()
   {
     final String key = config.getAccessKey().getPassword();
     final String secret = config.getSecretKey().getPassword();
     if (!Strings.isNullOrEmpty(key) && !Strings.isNullOrEmpty(secret)) {
-      return new AWSCredentials()
-      {
-        @Override
-        public String getAWSAccessKeyId()
-        {
-          return key;
-        }
-
-        @Override
-        public String getAWSSecretKey()
-        {
-          return secret;
-        }
-      };
+      return AwsBasicCredentials.create(key, secret);
     }
-    throw new AmazonClientException("Unable to load AWS credentials from druid AWSCredentialsConfig");
-  }
-
-  @Override
-  public void refresh()
-  {
+    throw SdkClientException.create("Unable to load AWS credentials from druid AWSCredentialsConfig");
   }
 }
