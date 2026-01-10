@@ -139,7 +139,7 @@ public class CompactionRunSimulator
         clusterConfig.getCompactionPolicy(),
         clusterConfig.isUseSupervisors(),
         clusterConfig.getEngine(),
-        clusterConfig.isLegacyPersistLastCompactionStateInSegments()
+        clusterConfig.isStoreCompactionStatePerSegment()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();

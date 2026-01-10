@@ -1957,7 +1957,7 @@ public class AutoCompactionTest extends CompactionTestBase
             oldConfig.getCompactionPolicy(),
             oldConfig.isUseSupervisors(),
             oldConfig.getEngine(),
-            oldConfig.isLegacyPersistLastCompactionStateInSegments()
+            oldConfig.isStoreCompactionStatePerSegment()
         )
     );
 

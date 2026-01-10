@@ -145,7 +145,7 @@ public class DruidCompactionConfig
   @JsonProperty
   public boolean isLegacyPersistLastCompactionStateInSegments()
   {
-    return clusterConfig.isLegacyPersistLastCompactionStateInSegments();
+    return clusterConfig.isStoreCompactionStatePerSegment();
   }
 
   /**

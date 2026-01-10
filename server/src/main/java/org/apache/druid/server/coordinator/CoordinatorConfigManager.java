@@ -167,7 +167,7 @@ public class CoordinatorConfigManager
           currentClusterConfig.getCompactionPolicy(),
           currentClusterConfig.isUseSupervisors(),
           currentClusterConfig.getEngine(),
-          currentClusterConfig.isLegacyPersistLastCompactionStateInSegments()
+          currentClusterConfig.isStoreCompactionStatePerSegment()
       );
 
       return current.withClusterConfig(updatedClusterConfig);

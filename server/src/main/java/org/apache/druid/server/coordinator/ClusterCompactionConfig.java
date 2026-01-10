@@ -45,14 +45,7 @@ public class ClusterCompactionConfig
   private final boolean useSupervisors;
   private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
-  /**
-   * Whether to persist last compaction state directly in segments for backwards compatibility.
-   * <p>
-   * In a future release this option will be removed and last compaction state will no longer be persisted in segments.
-   * Instead, it will only be stored in the metadata store with a fingerprint id that segments will reference. Some
-   * operators may want to disable this behavior early to begin saving space in segment metadatastore table entries.
-   */
-  private final boolean legacyPersistLastCompactionStateInSegments;
+  private final boolean storeCompactionStatePerSegment;
 
   @JsonCreator
   public ClusterCompactionConfig(
@@ -61,7 +54,7 @@ public class ClusterCompactionConfig
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
-      @JsonProperty("legacyPersistLastCompactionStateInSegments") Boolean legacyPersistLastCompactionStateInSegments
+      @JsonProperty("storeCompactionStatePerSegment") Boolean storeCompactionStatePerSegment
   )
   {
     this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
@@ -69,8 +62,8 @@ public class ClusterCompactionConfig
     this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
     this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
     this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
-    this.legacyPersistLastCompactionStateInSegments = Configs.valueOrDefault(
-        legacyPersistLastCompactionStateInSegments,
+    this.storeCompactionStatePerSegment = Configs.valueOrDefault(
+        storeCompactionStatePerSegment,
         true
     );
 
@@ -109,10 +102,17 @@ public class ClusterCompactionConfig
     return engine;
   }
 
+  /**
+   * Whether to persist last compaction state directly in segments for backwards compatibility.
+   * <p>
+   * In a future release this option will be removed and last compaction state will no longer be persisted in segments.
+   * Instead, it will only be stored in the metadata store with a fingerprint id that segments will reference. Some
+   * operators may want to disable this behavior early to begin saving space in segment metadatastore table entries.
+   */
   @JsonProperty
-  public boolean isLegacyPersistLastCompactionStateInSegments()
+  public boolean isStoreCompactionStatePerSegment()
   {
-    return legacyPersistLastCompactionStateInSegments;
+    return storeCompactionStatePerSegment;
   }
 
   @Override
@@ -130,7 +130,7 @@ public class ClusterCompactionConfig
            && Objects.equals(compactionPolicy, that.compactionPolicy)
            && Objects.equals(useSupervisors, that.useSupervisors)
            && Objects.equals(engine, that.engine)
-           && Objects.equals(legacyPersistLastCompactionStateInSegments, that.legacyPersistLastCompactionStateInSegments);
+           && Objects.equals(storeCompactionStatePerSegment, that.storeCompactionStatePerSegment);
   }
 
   @Override
@@ -142,7 +142,7 @@ public class ClusterCompactionConfig
         compactionPolicy,
         useSupervisors,
         engine,
-        legacyPersistLastCompactionStateInSegments
+        storeCompactionStatePerSegment
     );
   }
 
@@ -155,7 +155,7 @@ public class ClusterCompactionConfig
            ", useSupervisors=" + useSupervisors +
            ", engine=" + engine +
            ", compactionPolicy=" + compactionPolicy +
-           ", legacyPersistLastCompactionStateInSegments=" + legacyPersistLastCompactionStateInSegments +
+           ", legacyPersistLastCompactionStateInSegments=" + storeCompactionStatePerSegment +
            '}';
   }
 }

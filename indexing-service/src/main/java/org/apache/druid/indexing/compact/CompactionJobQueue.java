@@ -361,11 +361,11 @@ public class CompactionJobQueue
    */
   private void persistPendingCompactionState(CompactionJob job)
   {
-    if (job.getCompactionState() != null && job.getCompactionStateFingerprint() != null) {
+    if (job.getTargetCompactionState() != null && job.getTargetCompactionStateFingerprint() != null) {
       jobParams.getCompactionStateStorageImpl().upsertCompactionState(
           job.getDataSource(),
-          job.getCompactionStateFingerprint(),
-          job.getCompactionState(),
+          job.getTargetCompactionStateFingerprint(),
+          job.getTargetCompactionState(),
           DateTimes.nowUtc()
       );
     }

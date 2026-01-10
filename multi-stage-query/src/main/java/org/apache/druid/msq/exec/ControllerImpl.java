@@ -1700,11 +1700,7 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
-      final String compactionStateFingerprint = querySpec.getContext()
-          .getString(
-              Tasks.COMPACTION_STATE_FINGERPRINT_KEY,
-              null
-          );
+      final String compactionStateFingerprint = querySpec.getContext().getString(Tasks.COMPACTION_STATE_FINGERPRINT_KEY);
 
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();

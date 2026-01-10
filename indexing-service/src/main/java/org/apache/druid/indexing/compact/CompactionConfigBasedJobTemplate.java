@@ -87,7 +87,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           config,
           params.getClusterCompactionConfig().getEngine(),
           compactionStateFingerprint,
-          params.getClusterCompactionConfig().isLegacyPersistLastCompactionStateInSegments()
+          params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
       );
       jobs.add(
           new CompactionJob(

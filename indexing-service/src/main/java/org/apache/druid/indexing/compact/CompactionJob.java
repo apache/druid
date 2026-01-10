@@ -32,37 +32,37 @@ public class CompactionJob extends BatchIndexingJob
 {
   private final CompactionCandidate candidate;
   private final int maxRequiredTaskSlots;
-  private final String compactionStateFingerprint;
-  private final CompactionState compactionState;
+  private final String targetCompactionStateFingerprint;
+  private final CompactionState targetCompactionState;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
-      String compactionStateFingerprint,
-      CompactionState compactionState
+      String targetCompactionStateFingerprint,
+      CompactionState targetCompactionState
   )
   {
     super(task, null);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-    this.compactionStateFingerprint = compactionStateFingerprint;
-    this.compactionState = compactionState;
+    this.targetCompactionStateFingerprint = targetCompactionStateFingerprint;
+    this.targetCompactionState = targetCompactionState;
   }
 
   public CompactionJob(
       ClientSqlQuery msqQuery,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
-      String compactionStateFingerprint,
-      CompactionState compactionState
+      String targetCompactionStateFingerprint,
+      CompactionState targetCompactionState
   )
   {
     super(null, msqQuery);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-    this.compactionStateFingerprint = compactionStateFingerprint;
-    this.compactionState = compactionState;
+    this.targetCompactionStateFingerprint = targetCompactionStateFingerprint;
+    this.targetCompactionState = targetCompactionState;
   }
 
   public String getDataSource()
@@ -80,14 +80,14 @@ public class CompactionJob extends BatchIndexingJob
     return maxRequiredTaskSlots;
   }
 
-  public String getCompactionStateFingerprint()
+  public String getTargetCompactionStateFingerprint()
   {
-    return compactionStateFingerprint;
+    return targetCompactionStateFingerprint;
   }
 
-  public CompactionState getCompactionState()
+  public CompactionState getTargetCompactionState()
   {
-    return compactionState;
+    return targetCompactionState;
   }
 
   @Override
@@ -97,8 +97,8 @@ public class CompactionJob extends BatchIndexingJob
            super.toString() +
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
-           ", compactionStateFingerprint='" + compactionStateFingerprint + '\'' +
-           ", compactionState=" + compactionState +
+           ", compactionStateFingerprint='" + targetCompactionStateFingerprint + '\'' +
+           ", compactionState=" + targetCompactionState +
            '}';
   }
 }

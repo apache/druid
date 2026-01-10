@@ -412,8 +412,7 @@ public class CompactionStatus
 
       // Consider segments which have passed all checks to be compacted
       // Includes segments with correct fingerprints and segments that passed all state checks
-      final List<DataSegment> allCompactedSegments = new ArrayList<>(this.compactedSegments);
-      allCompactedSegments.addAll(
+      this.compactedSegments.addAll(
           unknownStateToSegments
               .values()
               .stream()
@@ -425,7 +424,7 @@ public class CompactionStatus
         return COMPLETE;
       } else {
         return CompactionStatus.pending(
-            createStats(allCompactedSegments),
+            createStats(this.compactedSegments),
             createStats(uncompactedSegments),
             reasonsForCompaction.get(0)
         );
