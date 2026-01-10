@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,15 +15,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 set -e
+set -x
 
-./.github/scripts/setup_generate_license.sh
-mvn -B apache-rat:check -Prat --fail-at-end \
--Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
--Drat.consoleOutput=true
-# Generate dependency reports and checks they are valid.
-mkdir -p target
-distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-distribution/bin/check-licenses.py licenses.yaml target/license-reports
+echo 'Running Maven install...'
+mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
+mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+
+mvn -B checkstyle:checkstyle --fail-at-end
+
+./.github/scripts/license_checks_script.sh
+
+./.github/scripts/analyze_dependencies_script.sh
+
+mvn -B animal-sniffer:check --fail-at-end
+
+mvn -B enforcer:enforce --fail-at-end
+
+mvn -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+
+# TODO: consider adding pmd:cpd-check
+mvn -B pmd:check --fail-at-end
+
+mvn -B spotbugs:check --fail-at-end -pl '!benchmarks'

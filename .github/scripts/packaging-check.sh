@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,15 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/bash
-
 set -e
+set -x
 
 ./.github/scripts/setup_generate_license.sh
-mvn -B apache-rat:check -Prat --fail-at-end \
--Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
--Drat.consoleOutput=true
-# Generate dependency reports and checks they are valid.
-mkdir -p target
-distribution/bin/generate-license-dependency-reports.py . target --clean-maven-artifact-transfer --parallel 2
-distribution/bin/check-licenses.py licenses.yaml target/license-reports
+mvn -B clean install -Prat --fail-at-end \
+  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C
+mvn -B install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+  -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C
