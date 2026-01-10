@@ -40,6 +40,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -60,6 +61,7 @@ import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -72,6 +74,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -143,9 +146,12 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -244,6 +250,7 @@ import java.util.stream.Collectors;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.RESTRICTED_DATASOURCE;
+import static org.apache.druid.sql.calcite.util.CalciteTests.SOME_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
@@ -452,7 +459,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // which depends on the object mapper that the injector will provide, once it
   // is built, but has not yet been build while we build the SQL engine.
   @BeforeEach
-  public void setUp2() throws Exception
+  public void setUp2()
   {
     groupByBuffers = TestGroupByBuffers.createDefault();
 
@@ -679,6 +686,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     if (segmentManager.getSegment(segmentId) == null) {
       final QueryableIndex index;
+      Optional<Segment> segment = Optional.empty();
       switch (segmentId.getDataSource()) {
         case DATASOURCE1:
         case RESTRICTED_DATASOURCE: // RESTRICTED_DATASOURCE share the same index as DATASOURCE1.
@@ -729,41 +737,86 @@ public class MSQTestBase extends BaseCalciteQueryTest
         case WIKIPEDIA:
           index = TestDataBuilder.makeWikipediaIndex(newTempFolder());
           break;
+        case SOME_DATASOURCE:
+          index = null;
+          HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
+          collector1.add(HyperLogLogHash.getDefault().hash("abc"));
+          HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
+          collector2.add(HyperLogLogHash.getDefault().hash("abc"));
+          collector2.add(HyperLogLogHash.getDefault().hash("cde"));
+          final List<ImmutableMap<String, Object>> rtRawRows = ImmutableList.of(
+              ImmutableMap.<String, Object>builder()
+                          .put("t", "2000-01-01")
+                          .put("m1", "1.0")
+                          .put("m2", "1.0")
+                          .put("dim1", "")
+                          .put("dim2", ImmutableList.of("a"))
+                          .put("dim3", ImmutableList.of("a", "b"))
+                          .put("cnt", 7)
+                          .put("unique_dim1", collector1.toByteArray())
+                          .build(),
+              ImmutableMap.<String, Object>builder()
+                          .put("t", "2000-01-02")
+                          .put("m1", "2.0")
+                          .put("m2", "2.0")
+                          .put("dim1", "10.1")
+                          .put("dim2", ImmutableList.of())
+                          .put("dim3", ImmutableList.of("b", "c"))
+                          .put("cnt", 8)
+                          .put("unique_dim1", collector2.toByteArray())
+                          .build()
+          );
+          final List<InputRow> rtRows =
+              rtRawRows.stream().map(TestDataBuilder::createRow).collect(Collectors.toList());
+
+          segment = Optional.of(new TestSegmentUtils.InMemoryTestSegment<>(
+                                    segmentId,
+                                    Sequences.simple(rtRows),
+                                    RowAdapters.standardRow(),
+                                    RowSignature.builder()
+                                                .add("cnt", ColumnType.LONG)
+                                                .add("unique_dim1", HyperUniquesAggregatorFactory.TYPE)
+                                                .build()
+                                )
+          );
+          break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
       }
-      Segment segment = new Segment()
-      {
-        @Override
-        public SegmentId getId()
+      if (segment.isEmpty()) {
+        segment = Optional.of(new Segment()
         {
-          return segmentId;
-        }
-
-        @Override
-        public Interval getDataInterval()
-        {
-          return segmentId.getInterval();
-        }
-
-        @Nullable
-        @Override
-        public <T> T as(@Nonnull Class<T> clazz)
-        {
-          if (CursorFactory.class.equals(clazz)) {
-            return (T) new QueryableIndexCursorFactory(index);
-          } else if (QueryableIndex.class.equals(clazz)) {
-            return (T) index;
+          @Override
+          public SegmentId getId()
+          {
+            return segmentId;
           }
-          return null;
-        }
 
-        @Override
-        public void close()
-        {
-        }
-      };
-      segmentManager.addSegment(segment);
+          @Override
+          public Interval getDataInterval()
+          {
+            return segmentId.getInterval();
+          }
+
+          @Nullable
+          @Override
+          public <T> T as(@Nonnull Class<T> clazz)
+          {
+            if (CursorFactory.class.equals(clazz)) {
+              return (T) new QueryableIndexCursorFactory(index);
+            } else if (QueryableIndex.class.equals(clazz)) {
+              return (T) index;
+            }
+            return null;
+          }
+
+          @Override
+          public void close()
+          {
+          }
+        });
+      }
+      segmentManager.addSegment(segment.get());
     }
     DataSegment dataSegment = DataSegment.builder()
                                          .dataSource(segmentId.getDataSource())
