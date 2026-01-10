@@ -248,7 +248,7 @@ public class TestSegmentUtils
                       .shardSpec(TombstoneShardSpec.INSTANCE)
                       .binaryVersion(IndexIO.CURRENT_VERSION_ID)
                       .size(1L)
-                      .numRows(1)
+                      .totalRows(1)
                       .build();
   }
 
@@ -261,7 +261,7 @@ public class TestSegmentUtils
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(IndexIO.CURRENT_VERSION_ID)
                       .size(1L)
-                      .numRows(1)
+                      .totalRows(1)
                       .build();
   }
 
@@ -274,7 +274,7 @@ public class TestSegmentUtils
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(IndexIO.CURRENT_VERSION_ID)
                       .size(size)
-                      .numRows((int) (size / 1000))
+                      .totalRows((int) (size / 1000))
                       .build();
   }
 }

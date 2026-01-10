@@ -340,9 +340,9 @@ public class SystemSchema extends AbstractSchema
             }
 
             final long numRows;
-            if (segment.getNumRows() != null) {
+            if (segment.getTotalRows() != null) {
               // the recent version of DataSegment stores numRows
-              numRows = segment.getNumRows().longValue();
+              numRows = segment.getTotalRows().longValue();
             } else if (val.getNumRows() != null) {
               // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
               // broker might have outdated or no information regarding numRows and rowSignature for a segment.
@@ -408,7 +408,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
                 val.getNumReplicas(),
-                segment.getNumRows() != null ? segment.getNumRows() : val.getNumRows(),
+                segment.getTotalRows() != null ? segment.getTotalRows() : val.getNumRows(),
                 // is_active is true for unpublished segments iff they are realtime
                 val.isRealtime() /* is_active */,
                 // is_published is false for unpublished segments

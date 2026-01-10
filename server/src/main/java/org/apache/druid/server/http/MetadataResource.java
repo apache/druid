@@ -228,9 +228,9 @@ public class MetadataResource
                                                      : coordinator.getReplicationFactor(segment.getId());
 
           final Long numRows;
-          if (segment.getNumRows() != null) {
+          if (segment.getTotalRows() != null) {
             // the recent version of DataSegment stores numRows
-            numRows = segment.getNumRows().longValue();
+            numRows = segment.getTotalRows().longValue();
           } else if (coordinatorSegmentMetadataCache != null) {
             // if centralized schema is enabled, SchemaPayloadPlus stores numRows
             AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(

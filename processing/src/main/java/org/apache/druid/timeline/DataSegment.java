@@ -113,7 +113,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   @Nullable
   private final CompactionState lastCompactionState;
   private final long size;
-  private final Integer numRows;
+  private final Integer totalRows;
 
   /**
    * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
@@ -199,7 +199,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
-      @JsonProperty("numRows") Integer numRows,
+      @JsonProperty("totalRows") Integer totalRows,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -215,7 +215,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         lastCompactionState,
         binaryVersion,
         size,
-        numRows,
+        totalRows,
         pruneSpecsHolder
     );
   }
@@ -232,7 +232,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size,
-      Integer numRows,
+      Integer totalRows,
       PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -251,7 +251,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.binaryVersion = binaryVersion;
     Preconditions.checkArgument(size >= 0);
     this.size = size;
-    this.numRows = numRows;
+    this.totalRows = totalRows;
   }
 
   /**
@@ -335,11 +335,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @Nullable
-  @JsonProperty("numRows")
+  @JsonProperty("totalRows")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Integer getNumRows()
+  public Integer getTotalRows()
   {
-    return numRows;
+    return totalRows;
   }
 
   // "identifier" for backward compatibility of JSON API
@@ -487,7 +487,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
-           ", numRows=" + numRows +
+           ", totalRows=" + totalRows +
            '}';
   }
 
@@ -566,7 +566,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private CompactionState lastCompactionState;
     private Integer binaryVersion;
     private long size;
-    private Integer numRows;
+    private Integer totalRows;
 
     /**
      * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
@@ -581,7 +581,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.projections = null;
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.size = -1;
-      this.numRows = null;
+      this.totalRows = null;
     }
 
     private Builder(SegmentId segmentId)
@@ -592,7 +592,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.shardSpec = new NumberedShardSpec(0, 1);
       this.binaryVersion = 0;
       this.size = 0;
-      this.numRows = null;
+      this.totalRows = null;
       this.lastCompactionState = null;
     }
 
@@ -609,7 +609,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
       this.size = segment.getSize();
-      this.numRows = segment.getNumRows();
+      this.totalRows = segment.getTotalRows();
     }
 
     private Builder(DataSegment.Builder segmentBuilder)
@@ -625,7 +625,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.lastCompactionState = segmentBuilder.lastCompactionState;
       this.binaryVersion = segmentBuilder.binaryVersion;
       this.size = segmentBuilder.size;
-      this.numRows = segmentBuilder.numRows;
+      this.totalRows = segmentBuilder.totalRows;
     }
 
     public Builder dataSource(String dataSource)
@@ -694,9 +694,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
-    public Builder numRows(Integer numRows)
+    public Builder totalRows(Integer totalRows)
     {
-      this.numRows = numRows;
+      this.totalRows = totalRows;
       return this;
     }
 
@@ -720,7 +720,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           lastCompactionState,
           binaryVersion,
           size,
-          numRows,
+          totalRows,
           PruneSpecsHolder.DEFAULT
       );
     }

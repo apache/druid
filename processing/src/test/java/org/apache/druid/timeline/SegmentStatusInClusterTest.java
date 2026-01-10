@@ -65,7 +65,7 @@ public class SegmentStatusInClusterTest
                                          .loadSpec(LOAD_SPEC)
                                          .binaryVersion(TEST_VERSION)
                                          .size(1)
-                                         .numRows(NUM_ROWS)
+                                         .totalRows(NUM_ROWS)
                                          .build();
     return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME);
   }
@@ -78,7 +78,7 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(15, objectMap.size());
+    Assert.assertEquals(16, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -91,7 +91,8 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
     Assert.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
-    Assert.assertEquals(NUM_ROWS, objectMap.get("numRows"));
+    Assert.assertEquals(20, objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
+    Assert.assertEquals(NUM_ROWS, objectMap.get("totalRows"));  // From DataSegment
     Assert.assertEquals(REALTIME, objectMap.get("realtime"));
 
     final SegmentStatusInCluster deserializedSegment = MAPPER.readValue(

@@ -101,7 +101,7 @@ public class DataSegmentPlusTest
                    ))
                    .binaryVersion(TEST_VERSION)
                    .size(123L)
-                   .numRows(12)
+                   .totalRows(12)
                    .build(),
         createdDate,
         usedStatusLastUpdatedDate,
@@ -137,7 +137,7 @@ public class DataSegmentPlusTest
     );
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
     Assert.assertEquals(123, segmentObjectMap.get("size"));
-    Assert.assertEquals(12, segmentObjectMap.get("numRows"));
+    Assert.assertEquals(12, segmentObjectMap.get("totalRows"));
     Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
 
     // verify extra metadata

@@ -73,7 +73,7 @@ public class LoadableDataSegmentTest
                                            .lastCompactionState(compactionState)
                                            .binaryVersion(TEST_VERSION)
                                            .size(123L)
-                                           .numRows(12)
+                                           .totalRows(12)
                                            .build();
     final LoadableDataSegment loadableDataSegment = MAPPER.readValue(
         MAPPER.writeValueAsString(segment),

@@ -93,7 +93,7 @@ public class SegmentTimelineTest
                       .shardSpec(new NumberedShardSpec(partitionNum, totalNumPartitions))
                       .binaryVersion(0x9)
                       .size(1L)
-                      .numRows(1)
+                      .totalRows(1)
                       .build();
   }
 }

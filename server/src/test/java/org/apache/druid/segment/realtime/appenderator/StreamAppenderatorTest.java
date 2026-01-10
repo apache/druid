@@ -175,14 +175,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                          .shardSpec(IDENTIFIERS.get(0).getShardSpec())
                          .dimensions(List.of("dim"))
                          .metrics(List.of("count", "met"))
-                         .numRows(2)
+                         .totalRows(2)
                          .build()
                          .toString(),
               DataSegment.builder(IDENTIFIERS.get(1).asSegmentId())
                          .shardSpec(IDENTIFIERS.get(1).getShardSpec())
                          .dimensions(List.of("dim"))
                          .metrics(List.of("count", "met"))
-                         .numRows(1)
+                         .totalRows(1)
                          .build()
                          .toString()
           ), segments);

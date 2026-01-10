@@ -86,7 +86,7 @@ public class DataSegmentWithLocationTest
                                            .lastCompactionState(compactionState)
                                            .binaryVersion(TEST_VERSION)
                                            .size(123L)
-                                           .numRows(12)
+                                           .totalRows(12)
                                            .build();
     final DruidServerMetadata serverMetadata = MAPPER.convertValue(
         Map.of("name", "server1"),
