@@ -59,14 +59,19 @@ public class GroupByStatsMonitorTest
         return new AggregateStats(
             1L,
             100L,
+            200L,
+            100L,
+            200L,
             2L,
             200L,
+            200L,
+            300L,
             300L
         );
       }
     };
 
-    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
+    mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -79,8 +84,7 @@ public class GroupByStatsMonitorTest
   @Test
   public void testMonitor()
   {
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     emitter.start();
     monitor.doMonitor(emitter);
@@ -88,14 +92,19 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    Assert.assertEquals(12, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
+    emitter.verifyValue("mergeBuffer/maxAcquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/maxBytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
+    emitter.verifyValue("groupBy/maxSpilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
+    emitter.verifyValue("groupBy/maxMergeDictionarySize", 300L);
   }
 
   @Test
@@ -105,10 +114,7 @@ public class GroupByStatsMonitorTest
     final String taskId = "taskId1";
     final String groupId = "test_groupid";
     final String taskType = "test_tasktype";
-    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(
-        groupByStatsProvider,
-        mergeBufferPool
-    );
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host", new TestTaskHolder(dataSource, taskId, taskType, groupId));
     emitter.start();
     monitor.doMonitor(emitter);
@@ -128,10 +134,16 @@ public class GroupByStatsMonitorTest
     verifyMetricValue(emitter, "mergeBuffer/used", dimFilters, 0L);
     verifyMetricValue(emitter, "mergeBuffer/queries", dimFilters, 1L);
     verifyMetricValue(emitter, "mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "mergeBuffer/bytesUsed", dimFilters, 200L);
+    verifyMetricValue(emitter, "mergeBuffer/maxAcquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "mergeBuffer/maxBytesUsed", dimFilters, 200L);
     verifyMetricValue(emitter, "groupBy/spilledQueries", dimFilters, 2L);
     verifyMetricValue(emitter, "groupBy/spilledBytes", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/maxSpilledBytes", dimFilters, 200L);
     verifyMetricValue(emitter, "groupBy/mergeDictionarySize", dimFilters, 300L);
+    verifyMetricValue(emitter, "groupBy/maxMergeDictionarySize", dimFilters, 300L);
   }
+
 
   @Test
   public void testMonitoringMergeBuffer_acquiredCount()
@@ -141,8 +153,7 @@ public class GroupByStatsMonitorTest
       mergeBufferPool.takeBatch(4);
     }).get(20, TimeUnit.SECONDS);
 
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
@@ -170,8 +181,7 @@ public class GroupByStatsMonitorTest
         }
       }
 
-      final GroupByStatsMonitor monitor =
-          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
+      final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);
