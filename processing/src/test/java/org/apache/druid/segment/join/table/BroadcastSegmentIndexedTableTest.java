@@ -143,7 +143,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
                                          .metrics(ImmutableList.of())
                                          .binaryVersion(null)
                                          .size(segment.getTotalSpace())
-                                         .numRows(1)
+                                         .totalRows(1)
                                          .build();
     backingSegment = (QueryableIndexSegment) factory.factorize(
         dataSegment,

@@ -93,7 +93,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) inQ.getQuery()).withFinalizedAnalysisTypes(toolChest.getConfig());
         final SegmentAnalyzer analyzer = new SegmentAnalyzer(updatedQuery.getAnalysisTypes());
 
-        Integer numRows = segmentRef.getDataSegment().getNumRows();
+        Integer numRows = segmentRef.getDataSegment().getTotalRows();
         if (numRows == null) {
           numRows = analyzer.numRows(segment);
         }

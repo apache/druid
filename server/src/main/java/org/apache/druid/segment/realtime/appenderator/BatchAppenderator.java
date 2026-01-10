@@ -842,7 +842,7 @@ public class BatchAppenderator implements Appenderator
             sink.getSegment()
                 .toBuilder()
                 .dimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec()))
-                .numRows(index.getNumRows())
+                .totalRows(index.getNumRows())
                 .build();
       }
       catch (Throwable t) {
@@ -882,7 +882,7 @@ public class BatchAppenderator implements Appenderator
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
-          segment.getNumRows(),
+          segment.getTotalRows(),
           indexes.size(),
           mergeTimeMillis,
           pushTimeMillis,

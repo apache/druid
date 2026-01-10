@@ -115,7 +115,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
                                                .metrics(ImmutableList.of())
                                                .binaryVersion(null)
                                                .size(persistedSegmentRoot.getTotalSpace())
-                                               .numRows(1)
+                                               .totalRows(1)
                                                .build();
     final Segment loaded = factory.factorize(
         dataSegment,
