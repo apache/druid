@@ -35,6 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -47,6 +49,7 @@ public class LoadQueueTaskMaster
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService peonExec;
   private final ExecutorService callbackExec;
+  private final ReadWriteLock callbackLock;
   private final HttpLoadQueuePeonConfig config;
   private final HttpClient httpClient;
   private final Supplier<CoordinatorDynamicConfig> coordinatorDynamicConfigSupplier;
@@ -68,6 +71,7 @@ public class LoadQueueTaskMaster
     this.jsonMapper = jsonMapper;
     this.peonExec = peonExec;
     this.callbackExec = callbackExec;
+    this.callbackLock = new ReentrantReadWriteLock();
     this.config = config;
     this.httpClient = httpClient;
     this.coordinatorDynamicConfigSupplier = coordinatorDynamicConfigSupplier;
@@ -82,7 +86,8 @@ public class LoadQueueTaskMaster
         config,
         () -> coordinatorDynamicConfigSupplier.get().getLoadingModeForServer(server.getName()),
         peonExec,
-        callbackExec
+        callbackExec,
+        callbackLock
     );
   }
 
@@ -153,5 +158,10 @@ public class LoadQueueTaskMaster
   public boolean isHttpLoading()
   {
     return true;
+  }
+
+  public ReadWriteLock getCallbackLock()
+  {
+    return callbackLock;
   }
 }
