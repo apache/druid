@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.processor.Bouncer;
@@ -41,7 +42,6 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -55,7 +55,9 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -73,6 +75,8 @@ public class MSQTestWorkerContext implements WorkerContext
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
   private final ServiceEmitter serviceEmitter;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
 
   public MSQTestWorkerContext(
       String workerId,
@@ -82,7 +86,8 @@ public class MSQTestWorkerContext implements WorkerContext
       Injector injector,
       WorkerMemoryParameters workerMemoryParameters,
       WorkerStorageParameters workerStorageParameters,
-      ServiceEmitter serviceEmitter
+      ServiceEmitter serviceEmitter,
+      @Nullable CoordinatorClient coordinatorClient
   )
   {
     this.workerId = workerId;
@@ -93,6 +98,7 @@ public class MSQTestWorkerContext implements WorkerContext
     this.workerMemoryParameters = workerMemoryParameters;
     this.workerStorageParameters = workerStorageParameters;
     this.serviceEmitter = serviceEmitter;
+    this.coordinatorClient = coordinatorClient;
   }
 
   @Override
@@ -237,9 +243,15 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
-    public DataSegmentProvider dataSegmentProvider()
+    public SegmentManager segmentManager()
     {
-      return injector.getInstance(DataSegmentProvider.class);
+      return injector.getInstance(SegmentManager.class);
+    }
+
+    @Override
+    public CoordinatorClient coordinatorClient()
+    {
+      return coordinatorClient;
     }
 
     @Override

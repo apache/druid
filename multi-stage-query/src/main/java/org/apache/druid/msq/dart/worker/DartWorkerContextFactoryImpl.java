@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -33,7 +34,6 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -41,6 +41,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 
 import java.io.File;
 
@@ -58,7 +59,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
@@ -76,7 +78,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       DruidProcessingConfig processingConfig,
       SegmentWrangler segmentWrangler,
       GroupingEngine groupingEngine,
-      @Dart DataSegmentProvider dataSegmentProvider,
+      SegmentManager segmentManager,
+      CoordinatorClient coordinatorClient,
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox,
@@ -92,8 +95,9 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.serviceClientFactory = serviceClientFactory;
     this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
+    this.coordinatorClient = coordinatorClient;
     this.groupingEngine = groupingEngine;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
@@ -120,7 +124,8 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         processingConfig,
         segmentWrangler,
         groupingEngine,
-        dataSegmentProvider,
+        segmentManager,
+        coordinatorClient,
         memoryIntrospector,
         processingBuffersProvider,
         outbox,

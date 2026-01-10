@@ -85,7 +85,10 @@ public class DruidServerConfigTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(testSegmentCacheDir2, 20000000000L, null);
     locations.add(locationConfig1);
     locations.add(locationConfig2);
-    DruidServerConfig druidServerConfig = new DruidServerConfig(new RuntimeInfo(), new SegmentLoaderConfig().withLocations(locations));
+    DruidServerConfig druidServerConfig = new DruidServerConfig(
+        new RuntimeInfo(),
+        new SegmentLoaderConfig().setLocations(locations)
+    );
     Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
   }
 
@@ -129,7 +132,7 @@ public class DruidServerConfigTest
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
                                                          .addValue(
                                                              SegmentLoaderConfig.class,
-                                                             new SegmentLoaderConfig().withLocations(locations)
+                                                             new SegmentLoaderConfig().setLocations(locations)
                                                          )
                                                          .addValue(RuntimeInfo.class, new RuntimeInfo()));
 

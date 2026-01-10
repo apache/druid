@@ -1648,7 +1648,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
+           ));
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE ALL "

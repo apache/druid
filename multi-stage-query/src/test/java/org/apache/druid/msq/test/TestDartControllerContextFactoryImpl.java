@@ -132,7 +132,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               injector,
               MSQTestBase.makeTestWorkerMemoryParameters(),
               WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE),
-              serviceEmitter
+              serviceEmitter,
+              null // No CoordinatorClient needed for Dart
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();

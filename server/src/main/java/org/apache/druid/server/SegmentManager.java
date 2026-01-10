@@ -196,7 +196,7 @@ public class SegmentManager
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     return cacheManager.acquireSegment(dataSegment);
   }

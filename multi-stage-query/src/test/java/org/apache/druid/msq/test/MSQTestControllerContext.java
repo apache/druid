@@ -72,6 +72,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -148,6 +150,29 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
                                                                                  .equals(invocation.getArguments()[0]))
                                              .collect(Collectors.toList())
     );
+
+    Mockito.when(
+        coordinatorClient.fetchSegment(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyBoolean()
+        )
+    ).thenAnswer(invocation -> {
+      final SegmentId segmentId = SegmentId.tryParse(invocation.getArgument(0), invocation.getArgument(1));
+      final DataSegment found =
+          loadedSegments.stream()
+                        .map(ImmutableSegmentLoadInfo::getSegment)
+                        .filter(segment -> segment.getId().equals(segmentId))
+                        .findFirst()
+                        .orElse(null);
+
+      if (found != null) {
+        return Futures.immediateFuture(found);
+      } else {
+        return Futures.immediateFailedFuture(new ISE("Segment[%s] not found", segmentId));
+      }
+    });
+
     this.workerMemoryParameters = workerMemoryParameters;
     this.taskLockType = taskLockType;
     this.queryContext = queryContext;
@@ -181,7 +206,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
               injector,
               workerMemoryParameters,
               workerStorageParameters,
-              serviceEmitter
+              serviceEmitter,
+              coordinatorClient
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();
