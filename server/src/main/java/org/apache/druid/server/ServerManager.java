@@ -252,13 +252,11 @@ public class ServerManager implements QuerySegmentWalker
     // queries to build the SQL schema
     if (queryPlus.getQuery() instanceof SegmentMetadataQuery) {
       for (DataSegmentAndDescriptor segment : segmentsBundle.getLoadableSegments()) {
-        segmentReferences.add(
-            new SegmentReference(
-                segment,
-                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
-                null
-            )
-        );
+        segmentReferences.add(new SegmentReference(
+            segment,
+            Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
+            null
+        ));
       }
     } else {
       // load the remaining segments
@@ -370,9 +368,7 @@ public class ServerManager implements QuerySegmentWalker
         final ListenableFuture<AcquireSegmentResult> future = futures.get(i);
         final AcquireSegmentResult result = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         if (result == null) {
-          segmentReferences.add(
-              new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
-          );
+          segmentReferences.add(new SegmentReference(segmentAndDescriptor, Optional.empty(), action));
         } else {
           totalSegmentsLoadTime += result.getLoadTimeNanos();
           totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
@@ -382,13 +378,7 @@ public class ServerManager implements QuerySegmentWalker
           final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
           try {
             final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segmentAndDescriptor.getDescriptor(),
-                    mappedSegment,
-                    action
-                )
-            );
+            segmentReferences.add(new SegmentReference(segmentAndDescriptor, mappedSegment, action));
           }
           catch (Throwable t) {
             // if applying the mapFn failed, attach the base segment to the closer and rethrow
@@ -566,7 +556,10 @@ public class ServerManager implements QuerySegmentWalker
     return factory;
   }
 
-  protected static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)
+  protected static <T> QueryToolChest<T, Query<T>> getQueryToolChest(
+      Query<T> query,
+      QueryRunnerFactory<T, Query<T>> factory
+  )
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
