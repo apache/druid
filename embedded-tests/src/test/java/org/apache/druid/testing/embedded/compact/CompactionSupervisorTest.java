@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -292,7 +291,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .getInstance(CompactionStateStorage.class);
 
     String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(
-        CompactionStatus.createCompactionStateFromConfig(compactionConfig),
+        compactionConfig.toCompactionState(),
         dataSource
     );
 

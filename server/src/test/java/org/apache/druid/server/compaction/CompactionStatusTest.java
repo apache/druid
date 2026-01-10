@@ -591,7 +591,7 @@ public class CompactionStatusTest
         .forDataSource(TestDataSource.WIKI)
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .build();
-    CompactionState wrongState = CompactionStatus.createCompactionStateFromConfig(oldCompactionConfig);
+    CompactionState wrongState = oldCompactionConfig.toCompactionState();
 
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
@@ -599,7 +599,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
 
     compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
@@ -621,7 +621,7 @@ public class CompactionStatusTest
         .forDataSource(TestDataSource.WIKI)
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .build();
-    CompactionState wrongState = CompactionStatus.createCompactionStateFromConfig(oldCompactionConfig);
+    CompactionState wrongState = oldCompactionConfig.toCompactionState();
 
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
@@ -629,7 +629,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
 
     String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
@@ -662,7 +662,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
     compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
@@ -705,7 +705,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
 
     String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
@@ -732,7 +732,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
 
     String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 
@@ -759,7 +759,7 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = CompactionStatus.createCompactionStateFromConfig(compactionConfig);
+    CompactionState expectedState = compactionConfig.toCompactionState();
 
     String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
 

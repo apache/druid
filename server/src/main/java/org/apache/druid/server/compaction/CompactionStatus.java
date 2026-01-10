@@ -22,11 +22,7 @@ package org.apache.druid.server.compaction;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.granularity.GranularitySpec;
-import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -269,7 +265,7 @@ public class CompactionStatus
       @Nullable CompactionStateCache compactionStateCache
   )
   {
-    final CompactionState expectedState = createCompactionStateFromConfig(config);
+    final CompactionState expectedState = config.toCompactionState();
     String expectedFingerprint;
     if (compactionStateStorage == null) {
       expectedFingerprint = null;
@@ -811,58 +807,4 @@ public class CompactionStatus
     }
   }
 
-  /**
-   * Given a {@link DataSourceCompactionConfig}, create a {@link CompactionState}
-   */
-  public static CompactionState createCompactionStateFromConfig(DataSourceCompactionConfig config)
-  {
-    ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(config);
-
-    // 1. PartitionsSpec - reuse existing method
-    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
-
-    // 2. DimensionsSpec
-    DimensionsSpec dimensionsSpec = null;
-    if (config.getDimensionsSpec() != null && config.getDimensionsSpec().getDimensions() != null) {
-      dimensionsSpec = new DimensionsSpec(config.getDimensionsSpec().getDimensions());
-    }
-
-    // 3. Metrics
-    List<AggregatorFactory> metricsSpec = config.getMetricsSpec() == null
-                                          ? null
-                                          : Arrays.asList(config.getMetricsSpec());
-
-    // 4. Transform
-    CompactionTransformSpec transformSpec = config.getTransformSpec();
-
-    // 5. IndexSpec
-    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
-                          ? IndexSpec.getDefault()
-                          : tuningConfig.getIndexSpec();
-
-    // 6. GranularitySpec
-    GranularitySpec granularitySpec = null;
-    if (config.getGranularitySpec() != null) {
-      UserCompactionTaskGranularityConfig userGranularityConfig = config.getGranularitySpec();
-      granularitySpec = new UniformGranularitySpec(
-          userGranularityConfig.getSegmentGranularity(),
-          userGranularityConfig.getQueryGranularity(),
-          userGranularityConfig.isRollup(),
-          null  // intervals
-      );
-    }
-
-    // 7. Projections
-    List<AggregateProjectionSpec> projections = config.getProjections();
-
-    return new CompactionState(
-        partitionsSpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        indexSpec,
-        granularitySpec,
-        projections
-    );
-  }
 }
