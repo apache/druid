@@ -143,7 +143,7 @@ public class IndexBuilder
   public IndexBuilder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, writeNullColumns);
+    this.indexMerger = makeIndexMerger();
     return this;
   }
 
