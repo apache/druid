@@ -449,82 +449,78 @@ public class CompactionStatus
       Map<String, List<DataSegment>> mismatchedFingerprintToSegmentMap = new HashMap<>();
       for (DataSegment segment : fingerprintedSegments) {
         String fingerprint = segment.getCompactionStateFingerprint();
-        if (fingerprint != null && !fingerprint.equals(targetFingerprint)) {
+        if (fingerprint == null) {
+          // Should not happen since we are iterating over fingerprintedSegments
+        } else if (fingerprint.equals(targetFingerprint)) {
+          compactedSegments.add(segment);
+        } else {
           mismatchedFingerprintToSegmentMap
               .computeIfAbsent(fingerprint, k -> new ArrayList<>())
               .add(segment);
-        } else if (fingerprint != null && fingerprint.equals(targetFingerprint)) {
-          // Segment has correct fingerprint - add to compacted segments
-          compactedSegments.add(segment);
         }
       }
 
       if (mismatchedFingerprintToSegmentMap.isEmpty()) {
+        // All fingerprinted segments have the expected fingerprint - compaction is complete
         return COMPLETE;
       }
 
-      boolean fingerprintedSegmentNeedingCompactionFound = false;
+      if (compactionStateCache == null) {
+        // Cannot evaluate further without a compaction state cache
+        uncompactedSegments.addAll(
+            mismatchedFingerprintToSegmentMap.values()
+                                            .stream()
+                                            .flatMap(List::stream)
+                                            .collect(Collectors.toList())
+        );
+        return CompactionStatus.pending("Segments have a mismatched fingerprint and no compaction state cache is available");
+      }
 
-      if (compactionStateCache != null) {
-        for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
-          String fingerprint = e.getKey();
-          CompactionState stateToValidate = compactionStateCache.getCompactionStateByFingerprint(fingerprint).orElse(null);
-          if (stateToValidate == null) {
-            log.warn("No compaction state found for fingerprint[%s]", fingerprint);
-            fingerprintedSegmentNeedingCompactionFound = true;
-            uncompactedSegments.addAll(e.getValue());
-          } else {
-            // Note that this does not mean we need compaction yet - we need to validate the state further to determine this
-            unknownStateToSegments.compute(
-                stateToValidate,
-                (state, segments) -> {
-                  if (segments == null) {
-                    segments = new ArrayList<>();
-                  }
-                  segments.addAll(e.getValue());
-                  return segments;
-                }
-            );
-          }
-        }
-      } else {
-        for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
+      boolean fingerprintedSegmentWithoutCachedStateFound = false;
+
+      for (Map.Entry<String, List<DataSegment>> e : mismatchedFingerprintToSegmentMap.entrySet()) {
+        String fingerprint = e.getKey();
+        CompactionState stateToValidate = compactionStateCache.getCompactionStateByFingerprint(fingerprint).orElse(null);
+        if (stateToValidate == null) {
+          log.warn("No compaction state found for fingerprint[%s]", fingerprint);
+          fingerprintedSegmentWithoutCachedStateFound = true;
           uncompactedSegments.addAll(e.getValue());
-          fingerprintedSegmentNeedingCompactionFound = true;
+        } else {
+          // Note that this does not mean we need compaction yet - we need to validate the state further to determine this
+          unknownStateToSegments.compute(
+              stateToValidate,
+              (state, segments) -> {
+                if (segments == null) {
+                  segments = new ArrayList<>();
+                }
+                segments.addAll(e.getValue());
+                return segments;
+              });
         }
       }
 
-      if (fingerprintedSegmentNeedingCompactionFound) {
-        return CompactionStatus.pending("At least one segment has a mismatched fingerprint and needs compaction");
+      if (fingerprintedSegmentWithoutCachedStateFound) {
+        return CompactionStatus.pending("One or more fingerprinted segments do not have a cached compaction state");
       } else {
         return COMPLETE;
       }
     }
 
     /**
-     * Divvys up segments by certain characteristics and determines if any segments have never been compacted.
-     * <p>
-     * Segments are categorized into three groups:
-     * <ul>
-     *   <li>fingerprinted - segments who have a compaction state fingerprint and need more investigation before adding to {@link #unknownStateToSegments}</li>
-     *   <li>non-fingerprinted with a lastCompactionState - segments who have no fingerprint but have stored a lastCompactionState that needs to be analyzed</li>
-     *   <li>uncompacted - segments who have neither a fingerprint nor a lastCompactionState and thus definitely need compaction</li>
-     * </ul>
-     * </p>
+     * Checks if all the segments have been compacted at least once and groups them into uncompacted, fingerprinted, or
+     * non-fingerprinted.
      */
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       for (DataSegment segment : candidateSegments.getSegments()) {
         final String fingerprint = segment.getCompactionStateFingerprint();
+        final CompactionState segmentState = segment.getLastCompactionState();
         if (fingerprint != null) {
           fingerprintedSegments.add(segment);
+        } else if (segmentState == null) {
+          uncompactedSegments.add(segment);
         } else {
-          final CompactionState segmentState = segment.getLastCompactionState();
-          if (segmentState == null) {
-            uncompactedSegments.add(segment);
-          } else {
-            unknownStateToSegments.computeIfAbsent(segmentState, k -> new ArrayList<>()).add(segment);
-          }
+          unknownStateToSegments.computeIfAbsent(segmentState, k -> new ArrayList<>()).add(segment);
         }
       }
 

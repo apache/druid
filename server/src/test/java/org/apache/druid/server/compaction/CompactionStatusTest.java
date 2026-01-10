@@ -608,7 +608,8 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage
+        compactionStateStorage,
+        compactionStateCache
     );
   }
 
@@ -644,7 +645,8 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage
+        compactionStateStorage,
+        compactionStateCache
     );
   }
 
@@ -674,26 +676,6 @@ public class CompactionStatusTest
   }
 
   @Test
-  public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNullCompactionStateStorage()
-  {
-    List<DataSegment> segments = List.of(
-        DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint("wrongFingerprint").build()
-    );
-    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
-        .builder()
-        .forDataSource(TestDataSource.WIKI)
-        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
-        .build();
-
-    verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
-        CompactionCandidate.from(segments, null),
-        compactionConfig,
-        "At least one segment has a mismatched fingerprint and needs compaction",
-        compactionStateStorage
-    );
-  }
-
-  @Test
   public void test_evaluate_needsCompactionWhenUnexpectedFingerprintAndNoFingerprintInMetadataStore()
   {
     List<DataSegment> segments = List.of(
@@ -708,8 +690,9 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "At least one segment has a mismatched fingerprint and needs compaction",
-        compactionStateStorage
+        "One or more fingerprinted segments do not have a cached compaction state",
+        compactionStateStorage,
+        compactionStateCache
     );
   }
 
@@ -762,7 +745,8 @@ public class CompactionStatusTest
         CompactionCandidate.from(segments, null),
         compactionConfig,
         "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage
+        compactionStateStorage,
+        compactionStateCache
     );
   }
 
@@ -837,7 +821,8 @@ public class CompactionStatusTest
       CompactionCandidate candidate,
       DataSourceCompactionConfig compactionConfig,
       String expectedReason,
-      CompactionStateStorage compactionStateStorage
+      CompactionStateStorage compactionStateStorage,
+      CompactionStateCache compactionStateCache
   )
   {
     final CompactionStatus status = CompactionStatus.compute(
