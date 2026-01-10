@@ -111,7 +111,7 @@ public class IndexBuilder
   private File inputSourceTmpDir = null;
 
   private boolean writeNullColumns = false;
-  private boolean buildV10 = true;
+  private boolean buildV10 = false;
 
   private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
   {
@@ -143,7 +143,7 @@ public class IndexBuilder
   public IndexBuilder segmentWriteOutMediumFactory(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, writeNullColumns);
+    this.indexMerger = makeIndexMerger();
     return this;
   }
 
