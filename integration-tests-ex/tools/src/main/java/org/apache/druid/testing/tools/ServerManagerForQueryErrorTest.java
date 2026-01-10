@@ -227,13 +227,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
           }
           Optional<Segment> ref = segmentManager.acquireCachedSegment(dataSegment);
           if (ref.isPresent()) {
-            segmentReferences.add(
-                new SegmentReference(
-                    segment.getDescriptor(),
-                    segmentMapFunction.apply(ref),
-                    null
-                )
-            );
+            segmentReferences.add(new SegmentReference(segment, segmentMapFunction.apply(ref), null));
           } else if (segmentManager.canLoadSegmentOnDemand(dataSegment)) {
             loadableSegments.add(segment);
           } else {
@@ -374,8 +368,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                           }
 
                           return buildQueryRunnerForSegment(
-                              ref.getSegmentDescriptor(),
-                              segment,
+                              ref,
                               factory,
                               toolChest,
                               cpuTimeAccumulator,

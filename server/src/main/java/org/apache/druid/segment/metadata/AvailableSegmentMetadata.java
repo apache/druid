@@ -60,6 +60,10 @@ public class AvailableSegmentMetadata
   private final long isRealtime;
   // set of servers that contain the segment
   private final Set<DruidServerMetadata> segmentServers;
+  /**
+   * @deprecated numRows is now stored in {@link DataSegment}.
+   */
+  @Deprecated
   private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
@@ -93,6 +97,10 @@ public class AvailableSegmentMetadata
     return segmentServers.size();
   }
 
+  /**
+   * @deprecated numRows is now stored in {@link DataSegment}.
+   */
+  @Deprecated
   public long getNumRows()
   {
     return numRows;
@@ -112,6 +120,10 @@ public class AvailableSegmentMetadata
     private Set<DruidServerMetadata> segmentServers;
     @Nullable
     private RowSignature rowSignature;
+    /**
+     * @deprecated numRows is now stored in {@link DataSegment}.
+     */
+    @Deprecated
     private long numRows;
 
     private Builder(
@@ -135,6 +147,10 @@ public class AvailableSegmentMetadata
       return this;
     }
 
+    /**
+     * @deprecated numRows is now stored in {@link DataSegment}.
+     */
+    @Deprecated
     public Builder withNumRows(long numRows)
     {
       this.numRows = numRows;

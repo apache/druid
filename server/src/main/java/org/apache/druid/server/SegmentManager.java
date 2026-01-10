@@ -162,7 +162,7 @@ public class SegmentManager
       if (ref.isPresent()) {
         segmentReferences.add(
             new SegmentReference(
-                segment.getDescriptor(),
+                segment,
                 segmentMapFunction.apply(ref),
                 null
             )

@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -31,6 +30,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -111,21 +111,43 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // push all
-      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+      final List<String> segments = appenderator.push(
           appenderator.getSegments(),
           null,
           false
-      ).get();
+      ).get().getSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList());
       Assert.assertEquals(
-          IDENTIFIERS.subList(0, 3),
-          Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
-              SegmentIdWithShardSpec::fromDataSegment
-          ).stream().sorted().collect(Collectors.toList())
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(1)
+                         .build()
+                         .toString(),
+              DataSegment.builder(IDENTIFIERS.get(1).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(1).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(2)
+                         .build()
+                         .toString(),
+              DataSegment.builder(IDENTIFIERS.get(2).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(2).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(1)
+                         .build()
+                         .toString()
+          ), segments
       );
       Assert.assertEquals(
-          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          tester.getPushedSegments()
+                .stream()
+                .sorted()
+                .map(DataSegment::toString)
+                .collect(Collectors.toList()),
+          segments
       );
 
       SegmentGenerationMetrics segmentGenerationMetrics = tester.getMetrics();
@@ -267,21 +289,24 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
 
       // push all
-      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+      final List<String> segments = appenderator.push(
           appenderator.getSegments(),
           null,
           false
-      ).get();
+      ).get().getSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList());
       Assert.assertEquals(
-          Collections.singletonList(segmentIdWithNonUTCTime),
-          Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
-              SegmentIdWithShardSpec::fromDataSegment
-          ).stream().sorted().collect(Collectors.toList())
+          List.of(DataSegment.builder(segmentIdWithNonUTCTime.asSegmentId())
+                             .shardSpec(segmentIdWithNonUTCTime.getShardSpec())
+                             .dimensions(List.of("dim"))
+                             .metrics(List.of("count", "met"))
+                             .totalRows(1)
+                             .build()
+                             .toString()),
+          segments
       );
       Assert.assertEquals(
-          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          tester.getPushedSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList()),
+          segments
       );
 
       appenderator.close();
@@ -707,17 +732,22 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       // Since maxRowsInMemory is one there ought to be three hydrants stored and recovered
       // just before push, internally the code has a sanity check to make sure that this works. If it does not it throws
       // an exception
-      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+      final List<String> segments = appenderator.push(
           appenderator.getSegments(),
           null,
           false
-      ).get();
+      ).get().getSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList());
       Assert.assertEquals(
-          IDENTIFIERS.subList(0, 1),
-          Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
-              SegmentIdWithShardSpec::fromDataSegment
-          ).stream().sorted().collect(Collectors.toList())
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(3)
+                         .build()
+                         .toString()
+          ),
+          segments
       );
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
 
@@ -952,24 +982,29 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar3", 1), null);
 
       // push only a single segment
-      final SegmentsAndCommitMetadata segmentsAndCommitMetadata = appenderator.push(
+      final List<String> segments = appenderator.push(
           Collections.singletonList(IDENTIFIERS.get(0)),
           null,
           false
-      ).get();
+      ).get().getSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList());
 
       // only one segment must have been pushed:
       Assert.assertEquals(
-          Collections.singletonList(IDENTIFIERS.get(0)),
-          Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
-              SegmentIdWithShardSpec::fromDataSegment
-          ).stream().sorted().collect(Collectors.toList())
+          List.of(
+              DataSegment.builder(IDENTIFIERS.get(0).asSegmentId())
+                         .shardSpec(IDENTIFIERS.get(0).getShardSpec())
+                         .dimensions(List.of("dim"))
+                         .metrics(List.of("count", "met"))
+                         .totalRows(2)
+                         .build()
+                         .toString()
+          ),
+          segments
       );
 
       Assert.assertEquals(
-          tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          tester.getPushedSegments().stream().sorted().map(DataSegment::toString).collect(Collectors.toList()),
+          segments
       );
       // the responsability for dropping is in the BatchAppenderatorDriver, drop manually:
       appenderator.drop(IDENTIFIERS.get(0));

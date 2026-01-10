@@ -79,7 +79,7 @@ public class SegmentAnalyzer
     this.analysisTypes = analysisTypes;
   }
 
-  public long numRows(Segment segment)
+  public int numRows(Segment segment)
   {
     return Preconditions.checkNotNull(segment.as(PhysicalSegmentInspector.class), "PhysicalSegmentInspector")
                         .getNumRows();

@@ -61,6 +61,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -89,6 +90,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
@@ -250,13 +252,11 @@ public class ServerManager implements QuerySegmentWalker
     // queries to build the SQL schema
     if (queryPlus.getQuery() instanceof SegmentMetadataQuery) {
       for (DataSegmentAndDescriptor segment : segmentsBundle.getLoadableSegments()) {
-        segmentReferences.add(
-            new SegmentReference(
-                segment.getDescriptor(),
-                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
-                null
-            )
-        );
+        segmentReferences.add(new SegmentReference(
+            segment,
+            Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
+            null
+        ));
       }
     } else {
       // load the remaining segments
@@ -368,9 +368,7 @@ public class ServerManager implements QuerySegmentWalker
         final ListenableFuture<AcquireSegmentResult> future = futures.get(i);
         final AcquireSegmentResult result = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         if (result == null) {
-          segmentReferences.add(
-              new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
-          );
+          segmentReferences.add(new SegmentReference(segmentAndDescriptor, Optional.empty(), action));
         } else {
           totalSegmentsLoadTime += result.getLoadTimeNanos();
           totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
@@ -380,13 +378,7 @@ public class ServerManager implements QuerySegmentWalker
           final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
           try {
             final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segmentAndDescriptor.getDescriptor(),
-                    mappedSegment,
-                    action
-                )
-            );
+            segmentReferences.add(new SegmentReference(segmentAndDescriptor, mappedSegment, action));
           }
           catch (Throwable t) {
             // if applying the mapFn failed, attach the base segment to the closer and rethrow
@@ -455,35 +447,27 @@ public class ServerManager implements QuerySegmentWalker
       final Optional<byte[]> cacheKeyPrefix
   )
   {
+    List<SegmentDescriptor> missingSegments = segmentReferences.stream()
+                                                               .filter(ref -> ref.getSegmentReference().isEmpty())
+                                                               .map(ref -> ref.getSegmentDescriptor())
+                                                               .collect(Collectors.toList());
+    if (!missingSegments.isEmpty()) {
+      throw DruidException.defensive("Unexpected missing segments[%s]", missingSegments);
+    }
     return FunctionalIterable
         .create(segmentReferences)
-        .transform(
-            ref ->
-                ref.getSegmentReference()
-                   .map(segment ->
-                            buildQueryRunnerForSegment(
-                                ref.getSegmentDescriptor(),
-                                segment,
-                                factory,
-                                toolChest,
-                                cpuTimeAccumulator,
-                                cacheKeyPrefix
-                            )
-                   ).orElseThrow(
-                       () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
-                   )
-        );
+        .transform(ref -> buildQueryRunnerForSegment(ref, factory, toolChest, cpuTimeAccumulator, cacheKeyPrefix));
   }
 
   protected <T> QueryRunner<T> buildQueryRunnerForSegment(
-      final SegmentDescriptor segmentDescriptor,
-      final Segment segment,
-      final QueryRunnerFactory<T, Query<T>> factory,
+      final SegmentReference segmentReference,
+      final QueryRunnerFactory<T, ? extends Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final AtomicLong cpuTimeAccumulator,
       Optional<byte[]> cacheKeyPrefix
   )
   {
+    Segment segment = segmentReference.getSegmentReference().get();
     if (segment.isTombstone()) {
       return new NoopQueryRunner<>();
     }
@@ -492,11 +476,13 @@ public class ServerManager implements QuerySegmentWalker
     final Interval segmentInterval = segment.getDataInterval();
     final String segmentIdString = segmentId.toString();
 
-    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
+    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentReference.getSegmentDescriptor());
     final MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
-        factory.createRunner(segment),
+        (factory instanceof SegmentMetadataQueryRunnerFactory)
+        ? (QueryRunner<T>) ((SegmentMetadataQueryRunnerFactory) factory).createRunner(segmentReference)
+        : factory.createRunner(segment),
         QueryMetrics::reportSegmentTime,
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
@@ -508,7 +494,7 @@ public class ServerManager implements QuerySegmentWalker
     final CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
         segmentIdString,
         cacheKeyPrefix,
-        segmentDescriptor,
+        segmentReference.getSegmentDescriptor(),
         cacheKeyInterval,
         objectMapper,
         cache,
@@ -539,7 +525,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final PerSegmentOptimizingQueryRunner<T> perSegmentOptimizingQueryRunner = new PerSegmentOptimizingQueryRunner<>(
         specificSegmentQueryRunner,
-        new PerSegmentQueryOptimizationContext(segmentDescriptor)
+        new PerSegmentQueryOptimizationContext(segmentReference.getSegmentDescriptor())
     );
 
     return new SetAndVerifyContextQueryRunner<>(
@@ -570,7 +556,10 @@ public class ServerManager implements QuerySegmentWalker
     return factory;
   }
 
-  protected static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)
+  protected static <T> QueryToolChest<T, Query<T>> getQueryToolChest(
+      Query<T> query,
+      QueryRunnerFactory<T, Query<T>> factory
+  )
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
