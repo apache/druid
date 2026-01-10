@@ -911,7 +911,7 @@
             <dependency>
                 <groupId>at.yawk.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.1</version>
+                <version>1.10.2</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
@@ -1846,10 +1846,9 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>12.1.0</version>
+                <version>12.2.0</version>
                 <configuration>
                     <nvdApiKey>${nvdApiKey}</nvdApiKey>
-                    <ossIndexServerId>ossindex-credentials</ossIndexServerId>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
