@@ -341,7 +341,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
     // Also check exception message as fallback
     String message = e.getMessage();
     if (message != null) {
-      String lowerMessage = message.toLowerCase();
+      String lowerMessage = StringUtils.toLowerCase(message);
       return lowerMessage.contains("unique constraint")
           || lowerMessage.contains("duplicate key")
           || lowerMessage.contains("duplicate entry");
