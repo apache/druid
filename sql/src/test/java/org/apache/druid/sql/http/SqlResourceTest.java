@@ -2215,14 +2215,32 @@ public class SqlResourceTest extends CalciteTestBase
     final Object explicitQueryId = query.getContext().get("queryId");
     final Object explicitSqlQueryId = query.getContext().get("sqlQueryId");
 
+    // Set up async context support in case the query execution path uses async processing.
+    // This is necessary because MetricsEmittingQueryRunner wraps queries in LazySequence,
+    // which defers execution until the sequence is consumed (after startAsync() is called).
+    MockHttpServletResponse asyncResponse = MockHttpServletResponse.forRequest(req);
     final Response response = resource.doPost(query, req);
 
-    final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
-    final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+    if (response != null) {
+      // Sync response path - error happened before async processing started
+      final Object actualQueryId = getHeader(response, QueryResource.QUERY_ID_RESPONSE_HEADER);
+      final Object actualSqlQueryId = getHeader(response, SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      validateQueryIds(explicitQueryId, explicitSqlQueryId, actualQueryId, actualSqlQueryId);
+      return response;
+    } else {
+      // Async response path - need to construct a Response from the async response
+      final Object actualQueryId = asyncResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
+      final Object actualSqlQueryId = asyncResponse.getHeader(SqlResource.SQL_QUERY_ID_RESPONSE_HEADER);
+      validateQueryIds(explicitQueryId, explicitSqlQueryId, actualQueryId, actualSqlQueryId);
 
-    validateQueryIds(explicitQueryId, explicitSqlQueryId, actualQueryId, actualSqlQueryId);
-
-    return response;
+      Response.ResponseBuilder responseBuilder = Response.status(asyncResponse.getStatus());
+      for (String headerName : asyncResponse.getHeaderNames()) {
+        responseBuilder.header(headerName, asyncResponse.getHeader(headerName));
+      }
+      final byte[] responseBytes = asyncResponse.baos.toByteArray();
+      responseBuilder.entity((StreamingOutput) output -> output.write(responseBytes));
+      return responseBuilder.build();
+    }
   }
 
   private ErrorResponse postSyncForException(String s, int expectedStatus) throws IOException

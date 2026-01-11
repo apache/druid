@@ -71,7 +71,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -575,9 +574,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         resourcesReservationPool,
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {
-        },
-        new GroupByStatsProvider()
+        (query, future) -> {}
     );
     this.timeseriesEngine = new TimeseriesQueryEngine(nonBlockingPool);
   }
@@ -2028,8 +2025,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       resourcesReservationPool.reserve(
           new QueryResourceId(String.valueOf(query.hashCode())),
           finalQuery,
-          true,
-          new GroupByStatsProvider.PerQueryStats()
+          true
       );
       runner = groupingEngine.mergeRunners(DirectQueryProcessingPool.INSTANCE, List.of(runner));
     }
@@ -2235,6 +2231,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static class ExpectedProjectionGroupBy extends ExpectedProjectionQueryMetrics<GroupByQuery>
       implements GroupByQueryMetrics
   {
+    private long mergeBufferAcquisitionTimeNs;
+    private long spilledBytes;
+    private long mergeDictionarySize;
+
     private ExpectedProjectionGroupBy(@Nullable String expectedProjection)
     {
       super(expectedProjection);
@@ -2243,25 +2243,57 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     @Override
     public void numDimensions(GroupByQuery query)
     {
-
     }
 
     @Override
     public void numMetrics(GroupByQuery query)
     {
-
     }
 
     @Override
     public void numComplexMetrics(GroupByQuery query)
     {
-
     }
 
     @Override
     public void granularity(GroupByQuery query)
     {
+    }
 
+    @Override
+    public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
+    {
+      this.mergeBufferAcquisitionTimeNs += mergeBufferAcquisitionTime;
+    }
+
+    @Override
+    public void bytesSpilledToStorage(long bytesSpilledToStorage)
+    {
+      this.spilledBytes += bytesSpilledToStorage;
+    }
+
+    @Override
+    public void mergeDictionarySize(long mergeDictionarySize)
+    {
+      this.mergeDictionarySize += mergeDictionarySize;
+    }
+
+    @Override
+    public long getSpilledBytes()
+    {
+      return spilledBytes;
+    }
+
+    @Override
+    public long getMergeDictionarySize()
+    {
+      return mergeDictionarySize;
+    }
+
+    @Override
+    public long getMergeBufferAcquisitionTime()
+    {
+      return mergeBufferAcquisitionTimeNs;
     }
   }
 
