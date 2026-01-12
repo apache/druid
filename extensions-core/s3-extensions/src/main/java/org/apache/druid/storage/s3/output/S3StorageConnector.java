@@ -150,9 +150,14 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
         String currentRange = currentRequest.range();
         if (currentRange != null && currentRange.startsWith("bytes=")) {
           String[] parts = currentRange.substring(6).split("-");
-          long oldStart = Long.parseLong(parts[0]);
-          long oldEnd = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : Long.MAX_VALUE;
-          object.range(StringUtils.format("bytes=%d-%d", oldStart + offset, oldEnd));
+          try {
+            long oldStart = Long.parseLong(parts[0]);
+            long oldEnd = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : Long.MAX_VALUE;
+            object.range(StringUtils.format("bytes=%d-%d", oldStart + offset, oldEnd));
+          }
+          catch (NumberFormatException e) {
+            throw new RE(e, "Invalid range format in S3 request: [%s]", currentRange);
+          }
         } else {
           object.range(StringUtils.format("bytes=%d-", offset));
         }

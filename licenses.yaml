@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.28.28
+version: 2.40.0
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -276,6 +276,7 @@ libraries:
   - software.amazon.awssdk: sts
   - software.amazon.awssdk: third-party-jackson-core
   - software.amazon.awssdk: utils
+  - software.amazon.awssdk: utils-lite
   - software.amazon.awssdk: aws-cbor-protocol
   - software.amazon.awssdk: aws-json-protocol
   - software.amazon.awssdk: third-party-jackson-dataformat-cbor

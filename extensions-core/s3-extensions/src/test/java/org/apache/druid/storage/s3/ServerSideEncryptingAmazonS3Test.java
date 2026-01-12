@@ -121,8 +121,7 @@ public class ServerSideEncryptingAmazonS3Test
   @Test
   public void testUpload_WithGrantFullControlHeaderFormatted() throws IOException
   {
-    File testFile = temporaryFolder.newFile("test-upload-acl.txt");
-
+    final File testFile = temporaryFolder.newFile("test-upload-acl.txt");
     PutObjectResponse mockResponse = PutObjectResponse.builder().build();
 
     // Set up transfer config to return false for useTransferManager

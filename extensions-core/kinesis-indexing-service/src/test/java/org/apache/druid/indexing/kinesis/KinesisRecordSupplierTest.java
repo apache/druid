@@ -44,9 +44,9 @@ import software.amazon.awssdk.services.kinesis.model.GetRecordsRequest;
 import software.amazon.awssdk.services.kinesis.model.GetRecordsResponse;
 import software.amazon.awssdk.services.kinesis.model.GetShardIteratorRequest;
 import software.amazon.awssdk.services.kinesis.model.GetShardIteratorResponse;
-import software.amazon.awssdk.services.kinesis.model.KinesisException;
 import software.amazon.awssdk.services.kinesis.model.ListShardsRequest;
 import software.amazon.awssdk.services.kinesis.model.ListShardsResponse;
+import software.amazon.awssdk.services.kinesis.model.Record;
 import software.amazon.awssdk.services.kinesis.model.Shard;
 import software.amazon.awssdk.services.kinesis.model.StreamDescription;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
@@ -81,7 +81,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
           ImmutableMap.of(SHARD_ID0, SHARD0_LAG_MILLIS, SHARD_ID1, SHARD1_LAG_MILLIS_EMPTY);
 
   // SDK v2 Records for API responses
-  private static final List<software.amazon.awssdk.services.kinesis.model.Record> SHARD0_RECORDS_V2 = ImmutableList.of(
+  private static final List<Record> SHARD0_RECORDS_V2 = ImmutableList.of(
       buildV2Record(jb("2008", "a", "y", "10", "20.0", "1.0"), "0"),
       buildV2Record(jb("2009", "b", "y", "10", "20.0", "1.0"), "1")
   );
@@ -338,7 +338,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
           }
         }).anyTimes();
 
-    // Setup get records responses - first call throws exception, second succeeds
+    // Setup get records responses
     GetRecordsResponse getRecordsResult0Success = GetRecordsResponse.builder()
         .records(SHARD0_RECORDS_V2)
         .nextShardIterator(null)
@@ -351,17 +351,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         .millisBehindLatest(SHARD1_LAG_MILLIS)
         .build();
 
-    KinesisException getException = (KinesisException) KinesisException.builder()
-        .message("InternalFailure")
-        .statusCode(500)
-        .build();
-
-    KinesisException getException2 = (KinesisException) KinesisException.builder()
-        .message("InternalFailure")
-        .statusCode(503)
-        .build();
-
-    // First calls throw exceptions, subsequent calls succeed
+    // Mock always returns success for getRecords
     EasyMock.expect(kinesis.getRecords(EasyMock.anyObject(GetRecordsRequest.class)))
         .andAnswer(() -> {
           GetRecordsRequest req = (GetRecordsRequest) EasyMock.getCurrentArguments()[0];

@@ -38,7 +38,6 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,21 +98,16 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    final GetObjectResponse getObjectResponse = GetObjectResponse.builder()
-        .lastModified(Instant.ofEpochMilli(0))
-        .build();
-    final ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        getObjectResponse,
-        AbortableInputStream.create(new FileInputStream(tmpFile))
-    );
-
     final File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
     EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(bucket), EasyMock.eq(key)))
             .andReturn(true)
             .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(responseInputStream)
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
+                AbortableInputStream.create(Files.newInputStream(tmpFile.toPath()))
+            ))
             .once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
@@ -196,14 +190,6 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    final GetObjectResponse getObjectResponse = GetObjectResponse.builder()
-        .lastModified(Instant.ofEpochMilli(0))
-        .build();
-    final ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        getObjectResponse,
-        AbortableInputStream.create(new FileInputStream(tmpFile))
-    );
-
     File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
     S3Exception exception = (S3Exception) S3Exception.builder()
@@ -221,7 +207,10 @@ public class S3DataSegmentPullerTest
             .andThrow(exception)
             .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(responseInputStream)
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
+                AbortableInputStream.create(Files.newInputStream(tmpFile.toPath()))
+            ))
             .once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
@@ -255,16 +244,11 @@ public class S3DataSegmentPullerTest
       outputStream.write(value);
     }
 
-    final GetObjectResponse getObjectResponse = GetObjectResponse.builder()
-        .lastModified(Instant.ofEpochMilli(0))
-        .build();
-    final ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        getObjectResponse,
-        AbortableInputStream.create(new FileInputStream(tmpFile))
-    );
-
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(key)))
-            .andReturn(responseInputStream)
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
+                AbortableInputStream.create(Files.newInputStream(tmpFile.toPath()))
+            ))
             .once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
     EasyMock.replay(s3Client);
@@ -335,29 +319,19 @@ public class S3DataSegmentPullerTest
         .build();
     EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject())).andReturn(listResponse).once();
 
-    final GetObjectResponse getObjectResponse1 = GetObjectResponse.builder()
-        .lastModified(Instant.ofEpochMilli(0))
-        .build();
-    final ResponseInputStream<GetObjectResponse> responseInputStream1 = new ResponseInputStream<>(
-        getObjectResponse1,
-        AbortableInputStream.create(new FileInputStream(tmpFile))
-    );
-
-    final GetObjectResponse getObjectResponse2 = GetObjectResponse.builder()
-        .lastModified(Instant.ofEpochMilli(0))
-        .build();
-    final ResponseInputStream<GetObjectResponse> responseInputStream2 = new ResponseInputStream<>(
-        getObjectResponse2,
-        AbortableInputStream.create(new FileInputStream(tmpFile2))
-    );
-
     final File tmpDir = temporaryFolder.newFolder("noZipTestDir");
 
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(keyPrefix + "meta.smoosh")))
-            .andReturn(responseInputStream1)
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
+                AbortableInputStream.create(Files.newInputStream(tmpFile.toPath()))
+            ))
             .once();
     EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(keyPrefix + "00000.smoosh")))
-            .andReturn(responseInputStream2)
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().lastModified(Instant.ofEpochMilli(0)).build(),
+                AbortableInputStream.create(Files.newInputStream(tmpFile2.toPath()))
+            ))
             .once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
