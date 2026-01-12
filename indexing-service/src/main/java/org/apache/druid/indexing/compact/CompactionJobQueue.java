@@ -36,8 +36,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -98,6 +99,9 @@ public class CompactionJobQueue
   private final Set<String> activeSupervisors;
   private final Map<String, CompactionJob> submittedTaskIdToJob;
 
+  private final CompactionStateStorage compactionStateStorage;
+  private final CompactionStateCache compactionStateCache;
+
   public CompactionJobQueue(
       DataSourcesSnapshot dataSourcesSnapshot,
       ClusterCompactionConfig clusterCompactionConfig,
@@ -107,8 +111,8 @@ public class CompactionJobQueue
       OverlordClient overlordClient,
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
-      CompactionFingerprintMapper fingerprintMapper,
-      CompactionStateStorage compactionStateStorage
+      CompactionStateStorage compactionStateStorage,
+      CompactionStateCache compactionStateCache
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -125,9 +129,11 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        fingerprintMapper,
-        compactionStateStorage
+        new DefaultCompactionFingerprintMapper(compactionStateStorage, compactionStateCache)
     );
+
+    this.compactionStateStorage = compactionStateStorage;
+    this.compactionStateCache = compactionStateCache;
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.overlordClient = overlordClient;
@@ -362,12 +368,13 @@ public class CompactionJobQueue
   private void persistPendingCompactionState(CompactionJob job)
   {
     if (job.getTargetCompactionState() != null && job.getTargetCompactionStateFingerprint() != null) {
-      jobParams.getCompactionStateStorageImpl().upsertCompactionState(
+      compactionStateStorage.upsertCompactionState(
           job.getDataSource(),
           job.getTargetCompactionStateFingerprint(),
           job.getTargetCompactionState(),
           DateTimes.nowUtc()
       );
+      compactionStateCache.addCompactionState(job.getTargetCompactionStateFingerprint(), job.getTargetCompactionState());
     }
   }
 

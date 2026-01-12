@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.google.inject.Inject;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.timeline.CompactionState;
 
 import javax.annotation.Nullable;
@@ -31,13 +29,11 @@ import java.util.Optional;
  * {@link CompactionStateStorage} for fingerprint generation and {@link CompactionStateCache}
  * for state lookups.
  */
-@LazySingleton
 public class DefaultCompactionFingerprintMapper implements CompactionFingerprintMapper
 {
   private final CompactionStateStorage compactionStateStorage;
   private final CompactionStateCache compactionStateCache;
 
-  @Inject
   public DefaultCompactionFingerprintMapper(
       CompactionStateStorage compactionStateStorage,
       @Nullable CompactionStateCache compactionStateCache

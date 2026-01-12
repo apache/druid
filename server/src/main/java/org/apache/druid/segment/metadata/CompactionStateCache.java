@@ -23,6 +23,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.CompactionState;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -96,6 +97,47 @@ public class CompactionStateCache
       cacheHitCount.incrementAndGet();
       return Optional.of(state);
     }
+  }
+
+  /**
+   * Adds or updates a single compaction state in the cache.
+   * <p>
+   * This is called when a new compaction state is persisted to the database via upsertCompactionState
+   * to ensure the cache is immediately consistent without waiting for the next sync.
+   * <p>
+   * This method checks if the state is already cached before performing the atomic update.
+   *
+   * @param fingerprint The fingerprint key
+   * @param state       The compaction state to cache
+   */
+  public void addCompactionState(String fingerprint, CompactionState state)
+  {
+    if (fingerprint == null || state == null) {
+      return;
+    }
+
+    // Check if the state is already cached - avoid expensive update if not needed
+    CompactionState existing = publishedCompactionStates.get()
+                                                        .fingerprintToStateMap
+                                                        .get(fingerprint);
+    if (state.equals(existing)) {
+      log.debug("Compaction state for fingerprint[%s] already cached, skipping update", fingerprint);
+      return;
+    }
+
+    // State is not cached or different - perform atomic update
+    publishedCompactionStates.updateAndGet(current -> {
+      // Double-check in case another thread updated between our check and now
+      if (state.equals(current.fingerprintToStateMap.get(fingerprint))) {
+        return current;
+      }
+
+      Map<String, CompactionState> newMap = new HashMap<>(current.fingerprintToStateMap);
+      newMap.put(fingerprint, state);
+      return new PublishedCompactionStates(newMap);
+    });
+
+    log.debug("Added compaction state to cache for fingerprint[%s]", fingerprint);
   }
 
   /**

@@ -90,63 +90,78 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
 
     try {
       connector.retryWithHandle(handle -> {
-        // Check if the fingerprint already exists
-        final boolean fingerprintExists = isExistingFingerprint(handle, fingerprint);
+        // Check if the fingerprint already exists and its used status
+        final FingerprintState state = getFingerprintState(handle, fingerprint);
         final String now = updateTime.toString();
 
-        if (fingerprintExists) {
-          // Fingerprint exists - update the used flag
-          log.info(
-              "Found already existing compaction state in DB for fingerprint[%s] in dataSource[%s].",
-              fingerprint,
-              dataSource
-          );
-          String updateSql = StringUtils.format(
-              "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
-              + "WHERE fingerprint = :fingerprint",
-              dbTables.getCompactionStatesTable()
-          );
-          handle.createStatement(updateSql)
-                .bind("used", true)
-                .bind("used_status_last_updated", now)
-                .bind("fingerprint", fingerprint)
-                .execute();
-
-          log.info("Updated existing compaction state for datasource[%s].", dataSource);
-        } else {
-
-          // Fingerprint doesn't exist - insert new state
-          log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
-
-          String insertSql = StringUtils.format(
-              "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
-              + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :used_status_last_updated)",
-              dbTables.getCompactionStatesTable()
-          );
-
-          try {
-            handle.createStatement(insertSql)
-                  .bind("created_date", now)
-                  .bind("dataSource", dataSource)
-                  .bind("fingerprint", fingerprint)
-                  .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
-                  .bind("used", true)
-                  .bind("used_status_last_updated", now)
-                  .execute();
-
-            log.info(
-                "Published compaction state for fingerprint[%s] to DB for datasource[%s].",
+        switch (state) {
+          case EXISTS_AND_USED:
+            // Fingerprint exists and is already marked as used - no operation needed
+            log.debug(
+                "Compaction state for fingerprint[%s] in dataSource[%s] already exists and is marked as used. Skipping update.",
                 fingerprint,
                 dataSource
             );
-          }
-          catch (JsonProcessingException e) {
-            throw InternalServerError.exception(
-                e,
-                "Failed to serialize compaction state for fingerprint[%s]",
-                fingerprint
+            break;
+
+          case EXISTS_AND_UNUSED:
+            // Fingerprint exists but is marked as unused - update the used flag
+            log.info(
+                "Found existing compaction state in DB for fingerprint[%s] in dataSource[%s]. Marking as used.",
+                fingerprint,
+                dataSource
             );
-          }
+            String updateSql = StringUtils.format(
+                "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
+                + "WHERE fingerprint = :fingerprint",
+                dbTables.getCompactionStatesTable()
+            );
+            handle.createStatement(updateSql)
+                  .bind("used", true)
+                  .bind("used_status_last_updated", now)
+                  .bind("fingerprint", fingerprint)
+                  .execute();
+
+            log.info("Updated existing compaction state for datasource[%s].", dataSource);
+            break;
+
+          case DOES_NOT_EXIST:
+            // Fingerprint doesn't exist - insert new state
+            log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
+
+            String insertSql = StringUtils.format(
+                "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
+                + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :used_status_last_updated)",
+                dbTables.getCompactionStatesTable()
+            );
+
+            try {
+              handle.createStatement(insertSql)
+                    .bind("created_date", now)
+                    .bind("dataSource", dataSource)
+                    .bind("fingerprint", fingerprint)
+                    .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
+                    .bind("used", true)
+                    .bind("used_status_last_updated", now)
+                    .execute();
+
+              log.info(
+                  "Published compaction state for fingerprint[%s] to DB for datasource[%s].",
+                  fingerprint,
+                  dataSource
+              );
+            }
+            catch (JsonProcessingException e) {
+              throw InternalServerError.exception(
+                  e,
+                  "Failed to serialize compaction state for fingerprint[%s]",
+                  fingerprint
+              );
+            }
+            break;
+
+          default:
+            throw new IllegalStateException("Unknown fingerprint state: " + state);
         }
         return null;
       });
@@ -248,32 +263,51 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
 
 
   /**
-   * Checks if a fingerprint already exists in the metadata DB.
-   *
-   * @param handle Database handle
-   * @param fingerprintToCheck The fingerprint to check
-   * @return true if the fingerprint exists, false otherwise
+   * Represents the state of an indexing state fingerprint in the database.
+   * <p>
+   * Intent is to help upsert logic decide whether to insert, update, or skip operations.
    */
-  private boolean isExistingFingerprint(
+  private enum FingerprintState
+  {
+    /** Fingerprint does not exist in the database */
+    DOES_NOT_EXIST,
+    /** Fingerprint exists and is marked as used */
+    EXISTS_AND_USED,
+    /** Fingerprint exists but is marked as unused */
+    EXISTS_AND_UNUSED
+  }
+
+  /**
+   * Checks the state of a fingerprint in the metadata DB.
+   *
+   * @param handle             Database handle
+   * @param fingerprintToCheck The fingerprint to check
+   * @return The state of the fingerprint (exists and used, exists and unused, or does not exist)
+   */
+  private FingerprintState getFingerprintState(
       final Handle handle,
       @Nonnull final String fingerprintToCheck
   )
   {
     if (fingerprintToCheck.isEmpty()) {
-      return false;
+      return FingerprintState.DOES_NOT_EXIST;
     }
 
     String sql = StringUtils.format(
-        "SELECT COUNT(*) FROM %s WHERE fingerprint = :fingerprint",
+        "SELECT used FROM %s WHERE fingerprint = :fingerprint",
         dbTables.getCompactionStatesTable()
     );
 
-    Integer count = handle.createQuery(sql)
-                          .bind("fingerprint", fingerprintToCheck)
-                          .mapTo(Integer.class)
-                          .first();
+    Boolean used = handle.createQuery(sql)
+                         .bind("fingerprint", fingerprintToCheck)
+                         .mapTo(Boolean.class)
+                         .first();
 
-    return count != null && count > 0;
+    if (used == null) {
+      return FingerprintState.DOES_NOT_EXIST;
+    }
+
+    return used ? FingerprintState.EXISTS_AND_USED : FingerprintState.EXISTS_AND_UNUSED;
   }
 
   /**

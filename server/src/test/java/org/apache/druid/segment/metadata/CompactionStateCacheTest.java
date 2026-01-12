@@ -224,6 +224,68 @@ public class CompactionStateCacheTest
     assertEquals(0, stats.get(Metric.COMPACTION_STATE_CACHE_FINGERPRINTS));
   }
 
+  @Test
+  public void test_addCompactionState_addsNewStateToCache()
+  {
+    CompactionState state = createTestCompactionState();
+    String fingerprint = "test_fingerprint_123";
+
+    // Initially, cache should not have the state
+    assertEquals(Optional.empty(), cache.getCompactionStateByFingerprint(fingerprint));
+
+    // Add the state to cache
+    cache.addCompactionState(fingerprint, state);
+
+    // Now cache should have the state
+    assertEquals(Optional.of(state), cache.getCompactionStateByFingerprint(fingerprint));
+  }
+
+  @Test
+  public void test_addCompactionState_withDifferentStateForSameFingerprint_updatesCache()
+  {
+    CompactionState state1 = createTestCompactionState();
+    CompactionState state2 = new CompactionState(
+        new DynamicPartitionsSpec(200, null),
+        DimensionsSpec.EMPTY,
+        null,
+        null,
+        IndexSpec.getDefault(),
+        null,
+        null
+    );
+    String fingerprint = "same_fp";
+
+    // Add first state
+    cache.addCompactionState(fingerprint, state1);
+    assertEquals(Optional.of(state1), cache.getCompactionStateByFingerprint(fingerprint));
+
+    // Add different state with same fingerprint
+    cache.addCompactionState(fingerprint, state2);
+
+    // Cache should now have the new state
+    assertEquals(Optional.of(state2), cache.getCompactionStateByFingerprint(fingerprint));
+  }
+
+  @Test
+  public void test_addCompactionState_withNullFingerprint_doesNothing()
+  {
+    CompactionState state = createTestCompactionState();
+
+    cache.addCompactionState(null, state);
+
+    // Cache should remain empty
+    assertEquals(0, cache.getPublishedCompactionStateMap().size());
+  }
+
+  @Test
+  public void test_addCompactionState_withNullState_doesNothing()
+  {
+    cache.addCompactionState("some_fp", null);
+
+    // Cache should remain empty
+    assertEquals(0, cache.getPublishedCompactionStateMap().size());
+  }
+
   private CompactionState createTestCompactionState()
   {
     return new CompactionState(

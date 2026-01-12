@@ -347,6 +347,63 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
+  public void test_upsertCompactionState_whenAlreadyUsed_skipsUpdate()
+  {
+    String fingerprint = "already_used_fingerprint";
+    CompactionState state = createTestCompactionState();
+    DateTime initialTime = DateTimes.of("2024-01-01T00:00:00.000Z");
+
+    // Insert fingerprint as used initially
+    derbyConnector.retryWithHandle(handle -> {
+      manager.upsertCompactionState("ds1", fingerprint, state, initialTime);
+      return null;
+    });
+
+    // Verify it's marked as used with the initial timestamp
+    DateTime usedStatusBeforeUpdate = derbyConnector.retryWithHandle(handle ->
+                                                                         handle.createQuery(
+                                                                                   "SELECT used_status_last_updated FROM " + tablesConfig.getCompactionStatesTable()
+                                                                                   + " WHERE fingerprint = :fp"
+                                                                               ).bind("fp", fingerprint)
+                                                                               .map((i, r, ctx) -> DateTimes.of(r.getString("used_status_last_updated")))
+                                                                               .first()
+    );
+    assertEquals(initialTime, usedStatusBeforeUpdate);
+
+    // Call upsert again with a different timestamp
+    // Since the fingerprint is already used, this should skip the UPDATE
+    DateTime laterTime = DateTimes.of("2024-01-02T00:00:00.000Z");
+    derbyConnector.retryWithHandle(handle -> {
+      manager.upsertCompactionState("ds1", fingerprint, state, laterTime);
+      return null;
+    });
+
+    // Verify the used_status_last_updated timestamp DID NOT change
+    DateTime usedStatusAfterUpdate = derbyConnector.retryWithHandle(handle ->
+                                                                        handle.createQuery(
+                                                                                  "SELECT used_status_last_updated FROM " + tablesConfig.getCompactionStatesTable()
+                                                                                  + " WHERE fingerprint = :fp"
+                                                                              ).bind("fp", fingerprint)
+                                                                              .map((i, r, ctx) -> DateTimes.of(r.getString("used_status_last_updated")))
+                                                                              .first()
+    );
+
+    assertEquals(
+        initialTime,
+        usedStatusAfterUpdate,
+        "used_status_last_updated should not change when upserting an already-used fingerprint"
+    );
+
+    // Verify still only 1 row
+    Integer count = derbyConnector.retryWithHandle(handle ->
+                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                             .map((i, r, ctx) -> r.getInt(1))
+                                                             .first()
+    );
+    assertEquals(1, count);
+  }
+
+  @Test
   public void test_markCompactionStateAsUsed_withEmptyList_returnsZero()
   {
     assertEquals(0, manager.markCompactionStatesAsUsed(List.of()));

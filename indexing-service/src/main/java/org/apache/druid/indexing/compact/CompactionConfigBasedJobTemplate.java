@@ -73,9 +73,9 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     CompactionState compactionState = config.toCompactionState();
 
-    String compactionStateFingerprint = params.getCompactionStateStorageImpl().generateCompactionStateFingerprint(
-        compactionState,
-        config.getDataSource()
+    String compactionStateFingerprint = params.getFingerprintMapper().generateFingerprint(
+        config.getDataSource(),
+        compactionState
     );
 
     // Create a job for each CompactionCandidate
