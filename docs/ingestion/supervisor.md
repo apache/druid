@@ -191,9 +191,9 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 
 **2. Cost-based autoscaler strategy (experimental)**
 
-An autoscaler which coumputes the required supervisor task count via cost function based on extracted lag and poll idle time metrics.
-Task counts are selected from a bounded range derived from the current partitions-per-task (PPT) ratio,
-not strictly from factors/divisors of the partition count. This bounded PPT window enables gradual scaling while
+An autoscaler which computes the required supervisor task count via cost function based on ingestion lag and poll-to-idle ratio.
+Task counts are selected from a bounded range derived from the current partitions-per-task ratio,
+not strictly from factors/divisors of the partition count. This bounded partitions-per-task window enables gradual scaling while
 voiding large jumps and still allowing non-divisor task counts when needed.
 
 **It is experimental and the implementation details as well as cost function parameters are subject to change.**
@@ -202,12 +202,12 @@ Note: Kinesis is not supported yet, support is in progress.
 
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 
-| Property                  | Description                                                               | Required | Default |
-|---------------------------|---------------------------------------------------------------------------|----------|---------|
-| `scaleActionPeriodMillis` | The frequency in milliseconds to check if a scale action is triggered.    | No       | 60000   |
-| `lagWeight`               | The weight of extracted lag value in cost function.                       | No       | 0.25    |
-| `idleWeight`              | The weight of extracted poll idle value in cost function.                 | No       | 0.75    |
-| `defaultProcessingRate`   | A, planned processing rate per task, required for first cost estimations. | No       | 1000    |
+| Property|Description|Required|Default|
+|---------|---------------------------------------------------|---|-----|
+|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 60000 |
+|`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25|
+|`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
+|`defaultProcessingRate`|A planned processing rate per task, required for first cost estimations. | No | 1000 |
 
 The following example shows a supervisor spec with `lagBased` autoscaler:
 
