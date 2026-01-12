@@ -225,7 +225,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       return new WireTransferable.ConcreteDeserializer(
           objectMapper,
           Map.of(
-              ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+              ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
               new FrameWireTransferable.Deserializer()
           )
       );
@@ -530,7 +530,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
         final WireTransferable.ConcreteDeserializer deserializer = new WireTransferable.ConcreteDeserializer(
             objectMapper,
             Map.of(
-                ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+                ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
                 new FrameWireTransferable.Deserializer()
             )
         );

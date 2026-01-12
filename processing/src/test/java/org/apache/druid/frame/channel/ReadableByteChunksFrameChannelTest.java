@@ -32,6 +32,7 @@ import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.wire.FrameWireTransferable;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -278,7 +279,7 @@ public class ReadableByteChunksFrameChannelTest
         final WireTransferable.ConcreteDeserializer deserializer = new WireTransferable.ConcreteDeserializer(
             objectMapper,
             Map.of(
-                ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+                ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
                 new FrameWireTransferable.Deserializer()
             )
         );

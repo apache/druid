@@ -21,6 +21,7 @@ package org.apache.druid.frame.wire;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,7 +51,7 @@ public class FrameCompressionTest
   @Test
   public void test_compressAndDecompress_byteBuffer_smallData()
   {
-    final byte[] data = "Hello, World!".getBytes();
+    final byte[] data = StringUtils.toUtf8("Hello, World!");
     final ByteBuffer dataBuffer = ByteBuffer.wrap(data);
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
@@ -126,7 +127,7 @@ public class FrameCompressionTest
   @Test
   public void test_compressAndDecompress_memory()
   {
-    final byte[] data = "Test data for Memory compression".getBytes();
+    final byte[] data = StringUtils.toUtf8("Test data for Memory compression");
     final Memory dataMemory = Memory.wrap(data);
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
@@ -144,7 +145,7 @@ public class FrameCompressionTest
   public void test_compressAndDecompress_memory_partialRegion()
   {
     // Create a buffer with padding at the start.
-    final byte[] expected = "Test data".getBytes();
+    final byte[] expected = StringUtils.toUtf8("Test data");
     final byte[] paddedData = new byte[100 + expected.length + 100];
     System.arraycopy(expected, 0, paddedData, 100, expected.length);
 
@@ -164,7 +165,7 @@ public class FrameCompressionTest
   @Test
   public void test_compress_bufferTooSmall()
   {
-    final byte[] data = "Test data".getBytes();
+    final byte[] data = StringUtils.toUtf8("Test data");
     final ByteBuffer dataBuffer = ByteBuffer.wrap(data);
     final ByteBuffer tooSmallBuffer = ByteBuffer.allocate(10);
 
@@ -202,7 +203,7 @@ public class FrameCompressionTest
   public void test_decompress_checksumMismatch()
   {
     // First, create valid compressed data.
-    final byte[] data = "Test data for checksum test".getBytes();
+    final byte[] data = StringUtils.toUtf8("Test data for checksum test");
     final ByteBuffer dataBuffer = ByteBuffer.wrap(data);
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
@@ -226,7 +227,7 @@ public class FrameCompressionTest
   public void test_decompress_atOffset()
   {
     // Create compressed data.
-    final byte[] data = "Test data at offset".getBytes();
+    final byte[] data = StringUtils.toUtf8("Test data at offset");
     final ByteBuffer dataBuffer = ByteBuffer.wrap(data);
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
@@ -282,7 +283,7 @@ public class FrameCompressionTest
   @Test
   public void test_compressAndDecompress_directByteBuffer()
   {
-    final byte[] data = "Direct buffer test".getBytes();
+    final byte[] data = StringUtils.toUtf8("Direct buffer test");
     final ByteBuffer directDataBuffer = ByteBuffer.allocateDirect(data.length);
     directDataBuffer.put(data);
     directDataBuffer.flip();

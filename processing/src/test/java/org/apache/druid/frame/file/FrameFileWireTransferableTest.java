@@ -26,6 +26,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.wire.FrameWireTransferable;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
@@ -68,7 +69,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
     final WireTransferable.ConcreteDeserializer deserializer = new WireTransferable.ConcreteDeserializer(
         smileMapper,
         Map.of(
-            ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+            ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
             new FrameWireTransferable.Deserializer()
         )
     );
