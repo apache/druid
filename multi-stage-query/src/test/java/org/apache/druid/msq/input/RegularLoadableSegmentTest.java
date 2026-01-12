@@ -79,6 +79,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -266,7 +267,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // Cache dir should exist, but be (mostly) empty, since we've closed all segments.
     Assertions.assertTrue(cacheDir.exists());
-    Assertions.assertEquals(List.of("info_dir", "__drop"), Arrays.asList(cacheDir.list()));
+    Assertions.assertEquals(Set.of("info_dir", "__drop"), Set.of(cacheDir.list()));
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "__drop").list()));
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(cacheDir, "info_dir").list()));
   }
