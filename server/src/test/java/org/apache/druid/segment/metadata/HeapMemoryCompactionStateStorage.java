@@ -19,14 +19,9 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,8 +36,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
 {
-  private final ConcurrentMap<String, CompactionState> fingerprintToStateMap = new ConcurrentHashMap<>();
-  private final ObjectMapper deterministicMapper;
+  private final ConcurrentMap<String, CompactionState> fingerprintToStateMap;
 
   /**
    * Creates an in-memory compaction state manager with a default deterministic mapper.
@@ -50,39 +44,7 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
    */
   public HeapMemoryCompactionStateStorage()
   {
-    this(createDeterministicMapper());
-  }
-
-  /**
-   * Creates an in-memory compaction state manager with the provided deterministic mapper
-   * for fingerprint generation.
-   *
-   * @param deterministicMapper ObjectMapper configured for deterministic serialization
-   */
-  public HeapMemoryCompactionStateStorage(ObjectMapper deterministicMapper)
-  {
-    this.deterministicMapper = deterministicMapper;
-  }
-
-  /**
-   * Creates an ObjectMapper configured for deterministic serialization.
-   * Used for generating consistent fingerprints.
-   */
-  private static ObjectMapper createDeterministicMapper()
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-    return mapper;
-  }
-
-  @Override
-  public String generateCompactionStateFingerprint(
-      final CompactionState compactionState,
-      final String dataSource
-  )
-  {
-    return CompactionStateFingerprints.generate(compactionState, dataSource, deterministicMapper);
+    this.fingerprintToStateMap = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -119,15 +81,6 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   public int deleteUnusedCompactionStatesOlderThan(long timestamp)
   {
     return 0;
-  }
-
-  /**
-   * Gets a compaction state by fingerprint. For test verification only.
-   */
-  @Nullable
-  public CompactionState getCompactionStateByFingerprint(String fingerprint)
-  {
-    return fingerprintToStateMap.get(fingerprint);
   }
 
   /**

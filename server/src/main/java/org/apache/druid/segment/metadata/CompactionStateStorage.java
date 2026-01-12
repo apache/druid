@@ -33,18 +33,6 @@ import java.util.List;
 public interface CompactionStateStorage
 {
   /**
-   * Generates a deterministic fingerprint for the given compaction state and datasource.
-   * <p>
-   * The fingerprint is a SHA-256 hash of the datasource name and serialized compaction state that is globally unique in
-   * the segment space.
-   *
-   * @param compactionState The compaction configuration to fingerprint
-   * @param dataSource The datasource name
-   * @return A hex-encoded SHA-256 fingerprint string that is globally unique
-   */
-  String generateCompactionStateFingerprint(CompactionState compactionState, String dataSource);
-
-  /**
    * Upserts a compaction state to storage.
    * <p>
    * If a fingerprint already exists, marks it as used and updates the timestamp.

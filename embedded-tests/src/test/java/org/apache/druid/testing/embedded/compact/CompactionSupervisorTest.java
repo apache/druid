@@ -31,7 +31,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.CompactionTestUtils;
+import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -286,13 +289,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void verifyCompactedSegmentsHaveFingerprints(DataSourceCompactionConfig compactionConfig)
   {
-    CompactionStateStorage compactionStateStorage = overlord
-        .bindings()
-        .getInstance(CompactionStateStorage.class);
-
-    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(
-        compactionConfig.toCompactionState(),
-        dataSource
+    CompactionStateCache cache = overlord.bindings().getInstance(CompactionStateCache.class);
+    CompactionFingerprintMapper fingerprintMapper = new DefaultCompactionFingerprintMapper(
+        cache,
+        CompactionTestUtils.createDeterministicMapper()
+    );
+    String expectedFingerprint = fingerprintMapper.generateFingerprint(
+        dataSource,
+        compactionConfig.toCompactionState()
     );
 
     overlord

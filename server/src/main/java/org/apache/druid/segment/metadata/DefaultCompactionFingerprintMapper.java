@@ -19,9 +19,15 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
+import org.apache.druid.guice.annotations.Deterministic;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.CompactionState;
 
-import javax.annotation.Nullable;
 import java.util.Optional;
 
 /**
@@ -31,30 +37,51 @@ import java.util.Optional;
  */
 public class DefaultCompactionFingerprintMapper implements CompactionFingerprintMapper
 {
-  private final CompactionStateStorage compactionStateStorage;
   private final CompactionStateCache compactionStateCache;
+  private final ObjectMapper deterministicMapper;
 
   public DefaultCompactionFingerprintMapper(
-      CompactionStateStorage compactionStateStorage,
-      @Nullable CompactionStateCache compactionStateCache
+      CompactionStateCache compactionStateCache,
+      @Deterministic ObjectMapper deterministicMapper
   )
   {
-    this.compactionStateStorage = compactionStateStorage;
     this.compactionStateCache = compactionStateCache;
+    this.deterministicMapper = deterministicMapper;
   }
 
+  /**
+   * Generates a deterministic fingerprint for the given compaction state and datasource.
+   * <p>
+   * The fingerprint is a SHA-256 hash of the datasource name and serialized compaction state that is globally unique in
+   * the segment space.
+   *
+   * @param compactionState     The compaction configuration to fingerprint
+   * @param dataSource          The datasource name
+   * @return A hex-encoded SHA-256 fingerprint string
+   */
+  @SuppressWarnings("UnstableApiUsage")
   @Override
   public String generateFingerprint(String dataSource, CompactionState compactionState)
   {
-    return compactionStateStorage.generateCompactionStateFingerprint(compactionState, dataSource);
+    final Hasher hasher = Hashing.sha256().newHasher();
+
+    hasher.putBytes(StringUtils.toUtf8(dataSource));
+    hasher.putByte((byte) 0xff);
+
+    try {
+      hasher.putBytes(deterministicMapper.writeValueAsBytes(compactionState));
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException("Failed to serialize CompactionState for fingerprinting", e);
+    }
+    hasher.putByte((byte) 0xff);
+
+    return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
 
   @Override
   public Optional<CompactionState> getStateForFingerprint(String fingerprint)
   {
-    if (compactionStateCache == null) {
-      return Optional.empty();
-    }
     return compactionStateCache.getCompactionStateByFingerprint(fingerprint);
   }
 }

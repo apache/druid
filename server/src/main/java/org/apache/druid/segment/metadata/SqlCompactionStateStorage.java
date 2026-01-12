@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -59,20 +58,17 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
-  private final ObjectMapper deterministicMapper;
   private final SQLMetadataConnector connector;
 
   @Inject
   public SqlCompactionStateStorage(
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
-      @Deterministic @Nonnull ObjectMapper deterministicMapper,
       @Nonnull SQLMetadataConnector connector
   )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
-    this.deterministicMapper = deterministicMapper;
     this.connector = connector;
   }
 
@@ -251,16 +247,6 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
                         .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
                         .execute());
   }
-
-  @Override
-  public String generateCompactionStateFingerprint(
-      final CompactionState compactionState,
-      final String dataSource
-  )
-  {
-    return CompactionStateFingerprints.generate(compactionState, dataSource, deterministicMapper);
-  }
-
 
   /**
    * Represents the state of an indexing state fingerprint in the database.

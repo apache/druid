@@ -19,9 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -54,13 +52,15 @@ public class SqlCompactionStateStorageTest
   @RegisterExtension
   public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
       new TestDerbyConnector.DerbyConnectorRule5();
+  private static final ObjectMapper DETERMINISTIC_MAPPER = CompactionTestUtils.createDeterministicMapper();
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private final ObjectMapper deterministicMapper = createDeterministicMapper();
 
   private static TestDerbyConnector derbyConnector;
   private static MetadataStorageTablesConfig tablesConfig;
   private SqlCompactionStateStorage manager;
+
+  private static DefaultCompactionFingerprintMapper fingerprintMapper;
 
   @BeforeAll
   public static void setUpClass()
@@ -69,6 +69,10 @@ public class SqlCompactionStateStorageTest
     tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
     derbyConnector.createCompactionStatesTable();
     derbyConnector.createSegmentTable();
+    fingerprintMapper = new DefaultCompactionFingerprintMapper(
+        new NoopCompactionStateCache(),
+        DETERMINISTIC_MAPPER
+    );
   }
 
   @BeforeEach
@@ -80,7 +84,7 @@ public class SqlCompactionStateStorageTest
       return null;
     });
 
-    manager = new SqlCompactionStateStorage(tablesConfig, jsonMapper, deterministicMapper, derbyConnector);
+    manager = new SqlCompactionStateStorage(tablesConfig, jsonMapper, derbyConnector);
   }
 
   @Test
@@ -417,8 +421,8 @@ public class SqlCompactionStateStorageTest
     CompactionState compactionState1 = createBasicCompactionState();
     CompactionState compactionState2 = createBasicCompactionState();
 
-    String fingerprint1 = manager.generateCompactionStateFingerprint(compactionState1, "test-ds");
-    String fingerprint2 = manager.generateCompactionStateFingerprint(compactionState2, "test-ds");
+    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", compactionState1);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", compactionState2);
 
     assertEquals(
         fingerprint1,
@@ -432,8 +436,8 @@ public class SqlCompactionStateStorageTest
   {
     CompactionState compactionState = createBasicCompactionState();
 
-    String fingerprint1 = manager.generateCompactionStateFingerprint(compactionState, "ds1");
-    String fingerprint2 = manager.generateCompactionStateFingerprint(compactionState, "ds2");
+    String fingerprint1 = fingerprintMapper.generateFingerprint("ds1", compactionState);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("ds2", compactionState);
 
     assertNotEquals(
         fingerprint1,
@@ -475,8 +479,8 @@ public class SqlCompactionStateStorageTest
         null
     );
 
-    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
-    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
 
     assertNotEquals(
         fingerprint1,
@@ -516,8 +520,8 @@ public class SqlCompactionStateStorageTest
         null
     );
 
-    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
-    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
 
     assertNotEquals(
         fingerprint1,
@@ -549,22 +553,14 @@ public class SqlCompactionStateStorageTest
         null
     );
 
-    String fingerprint1 = manager.generateCompactionStateFingerprint(state1, "test-ds");
-    String fingerprint2 = manager.generateCompactionStateFingerprint(state2, "test-ds");
+    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
 
     assertNotEquals(
         fingerprint1,
         fingerprint2,
         "Different PartitionsSpec should produce different fingerprints"
     );
-  }
-
-  private static ObjectMapper createDeterministicMapper()
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    mapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-    return mapper;
   }
 
   private CompactionState createBasicCompactionState()

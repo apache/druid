@@ -30,6 +30,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
@@ -81,8 +83,8 @@ public class CompactionStatusTest
     compactionStateStorage = new HeapMemoryCompactionStateStorage();
     compactionStateCache = new CompactionStateCache();
     fingerprintMapper = new DefaultCompactionFingerprintMapper(
-        compactionStateStorage,
-        compactionStateCache
+        compactionStateCache,
+        CompactionTestUtils.createDeterministicMapper()
     );
   }
 
@@ -633,13 +635,14 @@ public class CompactionStatusTest
 
     CompactionState expectedState = compactionConfig.toCompactionState();
 
-    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
     );
 
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
     compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
@@ -708,7 +711,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = compactionConfig.toCompactionState();
 
-    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
@@ -733,13 +736,16 @@ public class CompactionStatusTest
         .build();
 
     CompactionState expectedState = compactionConfig.toCompactionState();
+    String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
-    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
+    syncCacheFromManager();
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint(null).lastCompactionState(createCompactionStateWithGranularity(Granularities.HOUR)).build()
     );
+
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
@@ -761,7 +767,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = compactionConfig.toCompactionState();
 
-    String expectedFingerprint = compactionStateStorage.generateCompactionStateFingerprint(expectedState, TestDataSource.WIKI);
+    String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(expectedFingerprint).build(),
@@ -826,7 +832,7 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         candidate,
         compactionConfig,
-        new DefaultCompactionFingerprintMapper(compactionStateStorage, compactionStateCache)
+        new DefaultCompactionFingerprintMapper(compactionStateCache, new DefaultObjectMapper()) // TODO fix
     );
 
     Assert.assertFalse(status.isComplete());

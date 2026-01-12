@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -143,6 +144,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private final CompactionStateStorage compactionStateStorage;
   private final CompactionStateCache compactionStateCache;
+  private final ObjectMapper deterministicMapper;
 
   @Inject
   public OverlordCompactionScheduler(
@@ -161,7 +163,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       ServiceEmitter emitter,
       ObjectMapper objectMapper,
       CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache
+      CompactionStateCache compactionStateCache,
+      @Deterministic ObjectMapper deterministicMapper
   )
   {
     final long segmentPollPeriodMillis =
@@ -189,6 +192,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.druidInputSourceFactory = druidInputSourceFactory;
     this.compactionStateStorage = compactionStateStorage;
     this.compactionStateCache = compactionStateCache;
+    this.deterministicMapper = deterministicMapper;
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
@@ -377,7 +381,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         brokerClient,
         objectMapper,
         compactionStateStorage,
-        compactionStateCache
+        compactionStateCache,
+        deterministicMapper
     );
     latestJobQueue.set(queue);
 

@@ -112,7 +112,8 @@ public class CompactionJobQueue
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
       CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache
+      CompactionStateCache compactionStateCache,
+      ObjectMapper deterministicCompactionStateMapper
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -129,7 +130,7 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        new DefaultCompactionFingerprintMapper(compactionStateStorage, compactionStateCache)
+        new DefaultCompactionFingerprintMapper(compactionStateCache, deterministicCompactionStateMapper)
     );
 
     this.compactionStateStorage = compactionStateStorage;

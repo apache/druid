@@ -235,7 +235,8 @@ public class OverlordCompactionSchedulerTest
         serviceEmitter,
         OBJECT_MAPPER,
         new HeapMemoryCompactionStateStorage(),
-        new CompactionStateCache()
+        new CompactionStateCache(),
+        OBJECT_MAPPER // TODO fix
     );
   }
 

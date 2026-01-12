@@ -670,7 +670,6 @@ public class SqlSegmentsMetadataQueryTest
     SqlCompactionStateStorage manager = new SqlCompactionStateStorage(
         tablesConfig,
         mapper,
-        mapper,
         derbyConnectorRule.getConnector()
     );
 
