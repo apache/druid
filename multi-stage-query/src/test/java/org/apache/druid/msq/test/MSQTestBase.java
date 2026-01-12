@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
@@ -809,7 +810,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                "compaction"
                                                            )
                                                        ).registerSubtypes(ExternalDataSource.class));
-    DruidSecondaryModule.setupJackson(injector, mapper);
+    DruidSecondaryModule.setupJackson(injector, mapper, Collections.emptyMap(), true);
 
     mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
 
@@ -1650,14 +1651,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   controllerId,
                   localFileStorageConnector,
                   closer,
-                  true
+                  true,
+                  null
               );
               rows.addAll(new FrameChannelSequence(inputChannelFactory.openChannel(
                   finalStage.getId(),
                   pageInformation.getWorker() == null ? 0 : pageInformation.getWorker(),
                   pageInformation.getPartition() == null ? 0 : pageInformation.getPartition()
-              )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-                  frame,
+              )).flatMap(rac -> SqlStatementResourceHelper.getResultSequence(
+                  rac.as(Frame.class),
                   finalStage.getFrameReader(),
                   msqControllerTask.getQuerySpec().getColumnMappings(),
                   new ResultsContext(msqControllerTask.getSqlTypeNames(), msqControllerTask.getSqlResultsContext()),

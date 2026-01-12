@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -136,6 +138,7 @@ public class SqlStatementResource
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final ServerConfig serverConfig;
+  private final WireTransferableContext wireTransferableContext;
 
   @Inject
   public SqlStatementResource(
@@ -145,7 +148,8 @@ public class SqlStatementResource
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper,
       final DefaultQueryConfig defaultQueryConfig,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final WireTransferableContext wireTransferableContext
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -155,6 +159,7 @@ public class SqlStatementResource
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
     this.serverConfig = serverConfig;
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   /**
@@ -813,7 +818,8 @@ public class SqlStatementResource
           msqControllerTask.getId(),
           storageConnector,
           closer,
-          true
+          true,
+          wireTransferableContext
       );
       results = Optional.of(Yielders.each(
           Sequences.concat(pages.stream()
@@ -838,9 +844,9 @@ public class SqlStatementResource
                                   }
                                 })
                                 .collect(Collectors.toList()))
-                   .flatMap(frame ->
+                   .flatMap(rac ->
                                 SqlStatementResourceHelper.getResultSequence(
-                                    frame,
+                                    rac.as(Frame.class),
                                     finalStage.getFrameReader(),
                                     msqControllerTask.getQuerySpec().getColumnMappings(),
                                     new ResultsContext(

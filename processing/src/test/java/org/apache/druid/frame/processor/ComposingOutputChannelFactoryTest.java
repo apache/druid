@@ -21,8 +21,8 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.channel.ByteTracker;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -43,8 +43,8 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
             ImmutableList.of(
                 // TODO : currently hardcoded 256k since it allows one frame to be written to each factory
                 // nicer to do that automatically
-                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000)),
-                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000))
+                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY),
+                new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY)
             ),
             100
         ),
@@ -57,7 +57,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
   {
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(1)),
+            new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(1), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory() // adding this to check if it gets called
         ),
         100
@@ -69,7 +69,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     writableFrameChannel.writabilityFuture().get();
     Assert.assertThrows(
         UnsupportedOperationException.class,
-        () -> writableFrameChannel.write(new FrameWithPartition(frame, 1))
+        () -> writableFrameChannel.write(frame, 1)
     );
   }
 
@@ -80,7 +80,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     // can handle the test data frames
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(1_000_000)),
+            new FileOutputChannelFactory(folder.newFolder(), 100, new ByteTracker(1_000_000), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory()
         ),
         100
@@ -90,7 +90,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     Assert.assertEquals(1, channel.getPartitionNumber());
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
-    writableFrameChannel.write(new FrameWithPartition(frame, 1));
+    writableFrameChannel.write(frame, 1);
     writableFrameChannel.close();
 
     verifySingleFrameReadableChannel(channel.getReadableChannel(), sourceCursorFactory);

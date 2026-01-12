@@ -431,7 +431,12 @@ public class RunWorkOrder
       case LOCAL_STORAGE:
         final File fileChannelDirectory =
             frameContext.tempDir(StringUtils.format("output_stage_%06d", workOrder.getStageNumber()));
-        outputChannelFactory = new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+        outputChannelFactory = new FileOutputChannelFactory(
+            fileChannelDirectory,
+            frameSize,
+            null,
+            frameContext.wireTransferableContext()
+        );
         break;
 
       case DURABLE_STORAGE_INTERMEDIATE:
@@ -464,8 +469,12 @@ public class RunWorkOrder
     final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tempDir, StringUtils.format("intermediate-stage-%06d", workOrder.getStageNumber()));
-    final FileOutputChannelFactory fileOutputChannelFactory =
-        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateByteTracker);
+    final FileOutputChannelFactory fileOutputChannelFactory = new FileOutputChannelFactory(
+        fileChannelDirectory,
+        frameSize,
+        intermediateByteTracker,
+        frameContext.wireTransferableContext()
+    );
 
     if (workOrder.getOutputChannelMode().isDurable()
         && frameContext.storageParameters().isIntermediateStorageLimitConfigured()) {
@@ -497,7 +506,8 @@ public class RunWorkOrder
         frameSize,
         MSQTasks.makeStorageConnector(workerContext.injector()),
         tmpDir,
-        isQueryResults
+        isQueryResults,
+        frameContext.wireTransferableContext()
     );
   }
 }

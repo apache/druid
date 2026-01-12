@@ -22,7 +22,6 @@ package org.apache.druid.msq.querykit.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
@@ -264,7 +263,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
   {
     if (frameWriter != null && frameWriter.getNumRows() > 0) {
       final Frame frame = Frame.wrap(frameWriter.toByteArray());
-      outputChannel.write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      outputChannel.write(frame);
       frameWriter.close();
       frameWriter = null;
       outputRows += frame.numRows();

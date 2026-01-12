@@ -20,8 +20,8 @@
 package org.apache.druid.frame.channel;
 
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.io.Closeable;
 import java.util.Iterator;
@@ -29,12 +29,12 @@ import java.util.NoSuchElementException;
 
 /**
  * Adapter that converts a {@link ReadableFrameChannel} into a {@link org.apache.druid.java.util.common.guava.Sequence}
- * of {@link Frame}.
+ * of {@link RowsAndColumns}.
  *
  * This class does blocking reads on the channel, rather than nonblocking reads. Therefore, it is preferable to use
  * {@link ReadableFrameChannel} directly whenever nonblocking reads are desired.
  */
-public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequence.FrameChannelIterator>
+public class FrameChannelSequence extends BaseSequence<RowsAndColumns, FrameChannelSequence.FrameChannelIterator>
 {
   public FrameChannelSequence(final ReadableFrameChannel channel)
   {
@@ -56,7 +56,7 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
     );
   }
 
-  public static class FrameChannelIterator implements Iterator<Frame>, Closeable
+  public static class FrameChannelIterator implements Iterator<RowsAndColumns>, Closeable
   {
     private final ReadableFrameChannel channel;
 
@@ -74,14 +74,14 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
     }
 
     @Override
-    public Frame next()
+    public RowsAndColumns next()
     {
       // Side effect of hasNext(): we also call await() to ensure the next frame is available.
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
 
-      return channel.read();
+      return channel.readRAC();
     }
 
     @Override

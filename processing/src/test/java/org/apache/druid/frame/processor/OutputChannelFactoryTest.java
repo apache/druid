@@ -23,7 +23,6 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -72,7 +71,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     // write data to the channel
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
-    writableFrameChannel.write(new FrameWithPartition(frame, 1));
+    writableFrameChannel.write(frame, 1);
     writableFrameChannel.close();
 
     // read back data from the channel
@@ -114,7 +113,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
     for (int partition : partitions) {
-      writableFrameChannel.write(new FrameWithPartition(frame, partition));
+      writableFrameChannel.write(frame, partition);
     }
     writableFrameChannel.close();
 

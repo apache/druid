@@ -20,9 +20,9 @@
 package org.apache.druid.frame.processor.test;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 /**
  * Wraps an underlying channel and forces an async style of reading. After each call to {@link #read()}, the
@@ -59,14 +59,14 @@ public class AlwaysAsyncReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
     if (defer) {
       throw new ISE("Cannot call read() while deferred");
     }
 
     defer = true;
-    return delegate.read();
+    return delegate.readRAC();
   }
 
   @Override

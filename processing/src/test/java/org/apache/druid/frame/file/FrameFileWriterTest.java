@@ -24,6 +24,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
@@ -55,14 +56,19 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frames();
 
     final File file = temporaryFolder.newFile();
-    final FrameFileWriter fileWriter = FrameFileWriter.open(Files.newByteChannel(
-        file.toPath(),
-        StandardOpenOption.WRITE
-    ), null, ByteTracker.unboundedTracker());
+    final FrameFileWriter fileWriter = FrameFileWriter.open(
+        Files.newByteChannel(
+            file.toPath(),
+            StandardOpenOption.WRITE
+        ),
+        null,
+        ByteTracker.unboundedTracker(),
+        FrameTestUtil.WT_CONTEXT_LEGACY
+    );
 
     frames.forEach(frame -> {
       try {
-        fileWriter.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+        fileWriter.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);

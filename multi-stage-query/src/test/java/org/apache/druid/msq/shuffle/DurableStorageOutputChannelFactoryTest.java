@@ -43,7 +43,8 @@ public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactory
             "0",
             100,
             new LocalFileStorageConnector(folder.newFolder()),
-            folder.newFolder()
+            folder.newFolder(),
+            null
         ),
         100
     );

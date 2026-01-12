@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 
 public class ColumnBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
-  public ColumnBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
+  public ColumnBasedFrameRowsAndColumns(Frame frame, @Nullable RowSignature signature)
   {
     super(frame.ensureColumnar(), signature);
   }
@@ -39,6 +39,10 @@ public class ColumnBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
   @Override
   public Column findColumn(String name)
   {
+    if (signature == null) {
+      throw DruidException.defensive("No signature present, cannot call findColumn()");
+    }
+
     // Use contains so that we can negative cache.
     if (!colCache.containsKey(name)) {
       final int columnIndex = signature.indexOf(name);

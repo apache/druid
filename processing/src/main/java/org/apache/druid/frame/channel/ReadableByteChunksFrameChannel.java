@@ -29,12 +29,17 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.wire.FrameCompression;
 import org.apache.druid.frame.file.FrameFileWriter;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
 import java.nio.ByteOrder;
@@ -60,9 +65,10 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   private static final long MAX_FRAME_SIZE_BYTES = 100_000_000;
 
   private static final int UNKNOWN_LENGTH = -1;
+  private static final byte NO_MARKER = 0;
   private static final int FRAME_MARKER_BYTES = Byte.BYTES;
   private static final int FRAME_MARKER_AND_COMPRESSED_ENVELOPE_BYTES =
-      Byte.BYTES + Frame.COMPRESSED_FRAME_ENVELOPE_SIZE;
+      Byte.BYTES + FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE;
 
   private enum StreamPart
   {
@@ -99,28 +105,53 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   @GuardedBy("lock")
   private long nextCompressedFrameLength = UNKNOWN_LENGTH;
 
+  /**
+   * The marker type of the next frame to be read. Set when {@link #nextCompressedFrameLength} is determined.
+   * Will be one of {@link FrameFileWriter#MARKER_FRAME}, {@link FrameFileWriter#MARKER_RAC}, or {@link #NO_MARKER}
+   * if no frame is currently ready.
+   */
+  @GuardedBy("lock")
+  private byte nextMarkerType = NO_MARKER;
+
   @GuardedBy("lock")
   private StreamPart streamPart;
 
   private final boolean framesOnly;
 
-  private ReadableByteChunksFrameChannel(String id, long bytesLimit, boolean framesOnly)
+  @Nullable
+  private final WireTransferableContext wtContext;
+
+  private ReadableByteChunksFrameChannel(
+      String id,
+      long bytesLimit,
+      boolean framesOnly,
+      @Nullable WireTransferableContext wtContext
+  )
   {
     this.id = Preconditions.checkNotNull(id, "id");
     this.bytesLimit = bytesLimit;
     this.streamPart = framesOnly ? StreamPart.FRAMES : StreamPart.MAGIC;
     this.framesOnly = framesOnly;
+    this.wtContext = wtContext;
   }
 
   /**
    * Create a channel that aims to limit its memory footprint to one frame. The channel exerts backpressure
    * from {@link #addChunk} immediately once a full frame has been buffered.
+   *
+   * @param id                      identifier for this channel
+   * @param framesOnly              if true, expects stream to include only FRAMES part (no header or footer)
+   * @param wireTransferableContext context for wire transfer serde
    */
-  public static ReadableByteChunksFrameChannel create(final String id, boolean framesOnly)
+  public static ReadableByteChunksFrameChannel create(
+      final String id,
+      boolean framesOnly,
+      @Nullable WireTransferableContext wireTransferableContext
+  )
   {
     // Set byte limit to 1, so backpressure will be exerted as soon as we have a full frame buffered.
     // (The bytesLimit is soft: it will be exceeded if needed to store a complete frame.)
-    return new ReadableByteChunksFrameChannel(id, 1, framesOnly);
+    return new ReadableByteChunksFrameChannel(id, 1, framesOnly, wireTransferableContext);
   }
 
   /**
@@ -188,6 +219,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
         chunks.clear();
         chunks.add(Either.error(t));
         nextCompressedFrameLength = UNKNOWN_LENGTH;
+        nextMarkerType = NO_MARKER;
         doneWriting();
       }
     }
@@ -229,7 +261,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
     synchronized (lock) {
       if (canReadError()) {
@@ -238,11 +270,12 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
         Throwables.propagateIfPossible(t);
         throw new RuntimeException(t);
       } else if (canReadFrame()) {
-        return nextFrame();
+        return nextRAC();
       } else if (noMoreWrites) {
         // The last few chunks are an incomplete or missing frame.
         chunks.clear();
         nextCompressedFrameLength = UNKNOWN_LENGTH;
+        nextMarkerType = NO_MARKER;
 
         throw new ISE(
             "Incomplete or missing frame at end of stream (id = %s, position = %d)",
@@ -278,6 +311,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
     synchronized (lock) {
       chunks.clear();
       nextCompressedFrameLength = UNKNOWN_LENGTH;
+      nextMarkerType = NO_MARKER;
 
       // Setting "noMoreWrites" causes the upstream entity to realize this channel has closed the next time
       // it calls "addChunk".
@@ -312,21 +346,23 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
     }
   }
 
-  private Frame nextFrame()
+  private RowsAndColumns nextRAC()
   {
-    final Memory frameMemory;
+    final Memory compressedMemory;
+    final byte markerType;
 
     synchronized (lock) {
       if (!canReadFrame()) {
         throw new ISE("Frame of size [%,d] not yet ready to read", nextCompressedFrameLength);
       }
 
-      if (nextCompressedFrameLength > Integer.MAX_VALUE - FRAME_MARKER_BYTES - Frame.COMPRESSED_FRAME_ENVELOPE_SIZE) {
+      if (nextCompressedFrameLength > Integer.MAX_VALUE - FRAME_MARKER_BYTES - FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE) {
         throw new ISE("Cannot read frame of size [%,d] bytes", nextCompressedFrameLength);
       }
 
+      markerType = nextMarkerType;
       final int numBytes = Ints.checkedCast(FRAME_MARKER_AND_COMPRESSED_ENVELOPE_BYTES + nextCompressedFrameLength);
-      frameMemory = copyFromQueuedChunks(numBytes).region(
+      compressedMemory = copyFromQueuedChunks(numBytes).region(
           FRAME_MARKER_BYTES,
           FRAME_MARKER_AND_COMPRESSED_ENVELOPE_BYTES + nextCompressedFrameLength - FRAME_MARKER_BYTES
       );
@@ -334,9 +370,26 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
       updateStreamState();
     }
 
-    final Frame frame = Frame.decompress(frameMemory, 0, frameMemory.getCapacity());
-    log.debug("Read frame with [%,d] rows and [%,d] bytes.", frame.numRows(), frame.numBytes());
-    return frame;
+    final byte[] decompressedBytes =
+        FrameCompression.decompress(compressedMemory, 0, compressedMemory.getCapacity());
+
+    switch (markerType) {
+      case FrameFileWriter.MARKER_FRAME:
+        final Frame frame = Frame.wrap(decompressedBytes);
+        log.debug("Read frame with rows[%,d] and bytes[%,d].", frame.numRows(), frame.numBytes());
+        return frame.asRAC();
+
+      case FrameFileWriter.MARKER_RAC:
+        if (wtContext == null) {
+          throw DruidException.defensive("Cannot read RAC, no WireTransferableContext");
+        }
+        final RowsAndColumns rac = wtContext.deserialize(ByteBufferUtils.wrapLE(decompressedBytes));
+        log.debug("Read RAC with rows[%,d] and bytes[%,d].", rac.numRows(), decompressedBytes.length);
+        return rac;
+
+      default:
+        throw new ISE("Unexpected marker type[%d]", markerType);
+    }
   }
 
   @GuardedBy("lock")
@@ -358,12 +411,15 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
     if (streamPart == StreamPart.FRAMES) {
       if (bytesBuffered >= Byte.BYTES) {
         final Memory memory = copyFromQueuedChunks(1);
+        final byte markerByte = memory.getByte(0);
 
-        if (memory.getByte(0) == FrameFileWriter.MARKER_FRAME) {
+        if (markerByte == FrameFileWriter.MARKER_FRAME || markerByte == FrameFileWriter.MARKER_RAC) {
           // Read nextFrameLength if needed; otherwise do nothing.
-          final int bytesRequiredToReadLength = FRAME_MARKER_BYTES + Frame.COMPRESSED_FRAME_HEADER_SIZE;
+          // Both MARKER_FRAME and MARKER_RAC use the same compression envelope format.
+          final int bytesRequiredToReadLength = FRAME_MARKER_BYTES + FrameCompression.COMPRESSED_DATA_HEADER_SIZE;
 
           if (nextCompressedFrameLength == UNKNOWN_LENGTH && bytesBuffered >= bytesRequiredToReadLength) {
+            nextMarkerType = markerByte;
             nextCompressedFrameLength = copyFromQueuedChunks(bytesRequiredToReadLength)
                 .getLong(FRAME_MARKER_BYTES + Byte.BYTES /* Compression strategy byte */);
 
@@ -371,9 +427,10 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
               throw new ISE("Invalid frame size (size = %,d B)", nextCompressedFrameLength);
             }
           }
-        } else if (memory.getByte(0) == FrameFileWriter.MARKER_NO_MORE_FRAMES) {
+        } else if (markerByte == FrameFileWriter.MARKER_NO_MORE_FRAMES) {
           streamPart = StreamPart.FOOTER;
           nextCompressedFrameLength = UNKNOWN_LENGTH;
+          nextMarkerType = NO_MARKER;
         } else {
           throw new ISE("Invalid midstream marker (id = %s, position = %d)", id, bytesAdded - bytesBuffered);
         }
@@ -461,7 +518,8 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
 
     bytesBuffered -= numBytes;
 
-    // Clear nextFrameLength; it won't be accurate anymore after deleting bytes.
+    // Clear nextFrameLength and nextMarkerType; they won't be accurate anymore after deleting bytes.
     nextCompressedFrameLength = UNKNOWN_LENGTH;
+    nextMarkerType = NO_MARKER;
   }
 }

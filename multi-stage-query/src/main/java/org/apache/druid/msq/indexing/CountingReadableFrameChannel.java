@@ -20,9 +20,9 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 public class CountingReadableFrameChannel implements ReadableFrameChannel
 {
@@ -54,11 +54,11 @@ public class CountingReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
-    final Frame frame = baseChannel.read();
-    channelCounters.addFrame(partitionNumber, frame);
-    return frame;
+    final RowsAndColumns rac = baseChannel.readRAC();
+    channelCounters.addRAC(rac, partitionNumber);
+    return rac;
   }
 
   @Override

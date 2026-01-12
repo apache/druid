@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -294,7 +293,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       return 0;
     } else {
       final Frame frame = Frame.wrap(frameWriter.toByteArray());
-      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      Iterables.getOnlyElement(outputChannels()).write(frame);
       frameWriter.close();
       frameWriter = null;
       return frame.numRows();

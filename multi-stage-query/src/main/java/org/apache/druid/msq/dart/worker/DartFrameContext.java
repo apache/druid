@@ -24,6 +24,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
@@ -133,6 +134,12 @@ public class DartFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return workerContext.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return workerContext.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

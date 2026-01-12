@@ -33,7 +33,9 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelUtils;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -92,10 +94,13 @@ public class ChannelStageOutputReader implements StageOutputReader
   @GuardedBy("this")
   private boolean didCloseWriter;
 
-  public ChannelStageOutputReader(final ReadableFrameChannel channel)
+  public ChannelStageOutputReader(
+      final ReadableFrameChannel channel,
+      @Nullable final WireTransferableContext wtContext
+  )
   {
     this.channel = channel;
-    this.writer = FrameFileWriter.open(new ChunkAcceptor(), null, ByteTracker.unboundedTracker());
+    this.writer = FrameFileWriter.open(new ChunkAcceptor(), null, ByteTracker.unboundedTracker(), wtContext);
   }
 
   /**
@@ -153,7 +158,7 @@ public class ChannelStageOutputReader implements StageOutputReader
           continue;
         } else if (channel.canRead()) {
           try {
-            writer.writeFrame(channel.read(), FrameFileWriter.NO_PARTITION);
+            writer.writeRAC(channel.readRAC(), FrameFileWriter.NO_PARTITION);
           }
           catch (Exception e) {
             try {

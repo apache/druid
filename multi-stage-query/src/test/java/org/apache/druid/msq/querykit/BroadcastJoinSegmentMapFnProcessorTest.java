@@ -45,6 +45,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.CursorFactory;
@@ -120,8 +121,8 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
     channels.add(new ExplodingReadableFrameChannel());
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null)));
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2, null)));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, null), null));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile2, null), null));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(null);
@@ -215,7 +216,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     sideStageChannelNumberMap.put(0, 0);
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker())));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker()), null));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);
@@ -256,7 +257,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     sideStageChannelNumberMap.put(0, 0);
 
     final List<ReadableFrameChannel> channels = new ArrayList<>();
-    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker())));
+    channels.add(new ReadableFileFrameChannel(FrameFile.open(testDataFile1, ByteTracker.unboundedTracker()), null));
 
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);
@@ -316,7 +317,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     }
 
     @Override
-    public Frame read()
+    public RowsAndColumns readRAC()
     {
       throw new IllegalStateException();
     }

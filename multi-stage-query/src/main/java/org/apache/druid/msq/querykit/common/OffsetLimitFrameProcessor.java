@@ -21,7 +21,6 @@ package org.apache.druid.msq.querykit.common;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -99,7 +98,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Object>
     final Frame truncatedFrame = chopAndProcess(frame, frameReader);
 
     if (truncatedFrame != null) {
-      outputChannel.write(new FrameWithPartition(truncatedFrame, FrameWithPartition.NO_PARTITION));
+      outputChannel.write(truncatedFrame);
     }
 
     if (rowsProcessedSoFar == offset + limit) {

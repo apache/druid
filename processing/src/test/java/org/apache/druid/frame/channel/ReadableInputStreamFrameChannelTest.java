@@ -72,7 +72,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         inputStream,
         "readSimpleFrameFile",
         executorService,
-        false
+        false,
+        null
     );
 
     FrameTestUtil.assertRowsEqual(
@@ -96,7 +97,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         Files.newInputStream(file.toPath()),
         "readEmptyFrameFile",
         executorService,
-        false
+        false,
+        null
     );
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
@@ -119,7 +121,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         Files.newInputStream(file.toPath()),
         "testZeroBytesFrameFile",
         executorService,
-        false
+        false,
+        null
     );
 
     final IllegalStateException e = Assert.assertThrows(
@@ -165,7 +168,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         new ByteArrayInputStream(truncatedFile),
         "readTruncatedFrameFile",
         executorService,
-        false
+        false,
+        null
     );
 
     expectedException.expect(ISE.class);
@@ -191,7 +195,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         Files.newInputStream(file.toPath()),
         "readIncorrectFrameFile",
         executorService,
-        false
+        false,
+        null
     );
 
     expectedException.expect(ISE.class);
@@ -215,7 +220,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         inputStream,
         "closeInputStreamWhileReading",
         executorService,
-        false
+        false,
+        null
     );
     inputStream.close();
 
@@ -240,7 +246,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         inputStream,
         "closeInputStreamWhileReadingCheckError",
         executorService,
-        false
+        false,
+        null
     );
 
     inputStream.close();

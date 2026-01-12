@@ -91,7 +91,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     public void setUp() throws Exception
     {
       channel = BlockingQueueFrameChannel.minimal();
-      channelReader = new ChannelStageOutputReader(channel.readable());
+      channelReader = new ChannelStageOutputReader(channel.readable(), null);
       tmpFile = temporaryFolder.newFile();
       tmpOut = Files.newOutputStream(tmpFile.toPath());
     }
@@ -127,7 +127,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(0).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
@@ -144,7 +144,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(0).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
@@ -159,7 +159,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(0).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
@@ -219,9 +219,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(3, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(0).numBytes());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(1).numBytes());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.frame(2).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(1, null).as(Frame.class).numBytes());
+      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(2, null).as(Frame.class).numBytes());
     }
 
     /**
@@ -280,7 +280,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private static final int EXPECTED_NUM_ROWS = 1209;
 
     private final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(MAX_FRAMES);
-    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable());
+    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), null);
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -387,7 +387,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
 
       final FrameFile frameFile = FrameFile.open(tmpFile, null);
       final int numRows =
-          FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile), frameReader).toList().size();
+          FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile, null), frameReader).toList().size();
 
       Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }
@@ -425,7 +425,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
 
       final FrameFile frameFile = FrameFile.open(tmpFile, null);
       final int numRows =
-          FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile), frameReader).toList().size();
+          FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile, null), frameReader).toList().size();
 
       Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }

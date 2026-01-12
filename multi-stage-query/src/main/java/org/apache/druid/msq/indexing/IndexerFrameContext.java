@@ -24,6 +24,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.ProcessingBuffers;
@@ -136,6 +137,12 @@ public class IndexerFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return context.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return context.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

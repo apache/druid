@@ -154,7 +154,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
-    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false);
+    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
     Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
@@ -180,7 +180,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
-    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false);
+    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     channel.close(); // ReadableFrameChannel's close() method.
 
     final ExecutionException e = Assert.assertThrows(
@@ -219,7 +219,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
-    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false);
+    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
     Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
@@ -244,7 +244,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
-    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false);
+    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
 
     final ExecutionException e = Assert.assertThrows(
         ExecutionException.class,
@@ -281,7 +281,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
-    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false);
+    final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
     Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
@@ -318,10 +318,10 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final FrameFileWriter writer =
-        FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker());
+        FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker(), FrameTestUtil.WT_CONTEXT_LEGACY);
     frames.forEach(frame -> {
       try {
-        writer.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+        writer.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);

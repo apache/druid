@@ -22,10 +22,13 @@ package org.apache.druid.frame.channel;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.java.util.common.concurrent.Execs;
 
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
+
+import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
@@ -90,17 +93,24 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
 
   /**
    * Create an instance of this class and immediately start reading from the provided InputStream.
+   *
+   * @param inputStream             the input stream to read from
+   * @param id                      identifier for this channel
+   * @param executorService         executor service for reading from the stream
+   * @param framesOnly              if true, expects stream to start at FRAMES part (no MAGIC header)
+   * @param wireTransferableContext context for wire transfer deserialization; may be null if all data uses legacy frames
    */
   public static ReadableInputStreamFrameChannel open(
       InputStream inputStream,
       String id,
       ExecutorService executorService,
-      boolean framesOnly
+      boolean framesOnly,
+      @Nullable WireTransferableContext wireTransferableContext
   )
   {
     return new ReadableInputStreamFrameChannel(
         inputStream,
-        ReadableByteChunksFrameChannel.create(id, framesOnly),
+        ReadableByteChunksFrameChannel.create(id, framesOnly, wireTransferableContext),
         executorService
     );
   }
@@ -124,11 +134,11 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
     synchronized (lock) {
       startReading();
-      return delegate.read();
+      return delegate.readRAC();
     }
   }
 

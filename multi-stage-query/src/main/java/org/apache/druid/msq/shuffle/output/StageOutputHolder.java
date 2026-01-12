@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.rpc.WorkerResource;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.servlet.http.HttpServletRequest;
@@ -45,10 +46,10 @@ public class StageOutputHolder implements Closeable
   private final SettableFuture<ReadableFrameChannel> channelFuture;
   private final ListenableFuture<StageOutputReader> readerFuture;
 
-  public StageOutputHolder()
+  public StageOutputHolder(final WireTransferableContext wireTransferableContext)
   {
     this.channelFuture = SettableFuture.create();
-    this.readerFuture = FutureUtils.transform(channelFuture, StageOutputHolder::createReader);
+    this.readerFuture = FutureUtils.transform(channelFuture, channel -> createReader(channel, wireTransferableContext));
   }
 
   /**
@@ -112,7 +113,10 @@ public class StageOutputHolder implements Closeable
     }
   }
 
-  private static StageOutputReader createReader(final ReadableFrameChannel channel)
+  private static StageOutputReader createReader(
+      final ReadableFrameChannel channel,
+      final WireTransferableContext wireTransferableContext
+  )
   {
     if (channel == null) {
       // Happens if close() was called before the channel resolved.
@@ -133,11 +137,11 @@ public class StageOutputHolder implements Closeable
         // Close original channel, so we don't leak a frame file reference.
         channel.close();
 
-        return new FileStageOutputReader(frameFile);
+        return new FileStageOutputReader(frameFile, wireTransferableContext.concreteDeserializer());
       }
     }
 
     // Generic implementation for any other type of channel.
-    return new ChannelStageOutputReader(channel);
+    return new ChannelStageOutputReader(channel, wireTransferableContext);
   }
 }

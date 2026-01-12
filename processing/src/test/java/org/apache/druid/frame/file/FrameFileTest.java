@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.file;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.math.IntMath;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.frame.Frame;
@@ -27,9 +28,12 @@ import org.apache.druid.frame.TestArrayCursorFactory;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.frame.wire.FrameWireTransferable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
@@ -50,11 +54,13 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -149,6 +155,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   private final boolean partitioned;
   private final AdapterType adapterType;
   private final int maxMmapSize;
+  private final boolean useLegacyFrameSerialization;
 
   private CursorFactory cursorFactory;
   private int rowCount;
@@ -159,7 +166,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
       final int maxRowsPerFrame,
       final boolean partitioned,
       final AdapterType adapterType,
-      final int maxMmapSize
+      final int maxMmapSize,
+      final boolean useLegacyFrameSerialization
   )
   {
     this.frameType = frameType;
@@ -167,6 +175,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     this.partitioned = partitioned;
     this.adapterType = adapterType;
     this.maxMmapSize = maxMmapSize;
+    this.useLegacyFrameSerialization = useLegacyFrameSerialization;
   }
 
   @Parameterized.Parameters(
@@ -174,7 +183,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
              + "maxRowsPerFrame = {1}, "
              + "partitioned = {2}, "
              + "adapter = {3}, "
-             + "maxMmapSize = {4}"
+             + "maxMmapSize = {4}, "
+             + "useLegacyFrameSerialization = {5}"
   )
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -193,7 +203,9 @@ public class FrameFileTest extends InitializedNullHandlingTest
             }
 
             for (int maxMmapSize : maxMmapSizes) {
-              constructors.add(new Object[]{frameType, maxRowsPerFrame, partitioned, adapterType, maxMmapSize});
+              for (boolean useLegacyFrameSerialization : new boolean[]{true, false}) {
+                constructors.add(new Object[]{frameType, maxRowsPerFrame, partitioned, adapterType, maxMmapSize, useLegacyFrameSerialization});
+              }
             }
           }
         }
@@ -201,6 +213,23 @@ public class FrameFileTest extends InitializedNullHandlingTest
     }
 
     return constructors;
+  }
+
+  @Nullable
+  private WireTransferable.ConcreteDeserializer makeConcreteDeserializer()
+  {
+    if (useLegacyFrameSerialization) {
+      return null;
+    } else {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      return new WireTransferable.ConcreteDeserializer(
+          objectMapper,
+          Map.of(
+              ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+              new FrameWireTransferable.Deserializer()
+          )
+      );
+    }
   }
 
   @Before
@@ -211,7 +240,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     file = temporaryFolder.newFile();
 
     try (final OutputStream out = Files.newOutputStream(file.toPath())) {
-      final FrameFileKey frameFileKey = new FrameFileKey(adapterType, frameType, maxRowsPerFrame, partitioned);
+      final FrameFileKey frameFileKey = new FrameFileKey(adapterType, frameType, maxRowsPerFrame, partitioned, useLegacyFrameSerialization);
       final byte[] frameFileBytes = FRAME_FILES.computeIfAbsent(frameFileKey, FrameFileTest::computeFrameFile);
       out.write(frameFileBytes);
     }
@@ -240,25 +269,25 @@ public class FrameFileTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_frame_first() throws IOException
+  public void test_rac_first() throws IOException
   {
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
-      final Frame firstFrame = frameFile.frame(0);
+      final Frame firstFrame = frameFile.rac(0, makeConcreteDeserializer()).as(Frame.class);
       Assert.assertEquals(Math.min(rowCount, maxRowsPerFrame), firstFrame.numRows());
     }
   }
 
   @Test
-  public void test_frame_last() throws IOException
+  public void test_rac_last() throws IOException
   {
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       // Skip test for empty files.
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
-      final Frame lastFrame = frameFile.frame(frameFile.numFrames() - 1);
+      final Frame lastFrame = frameFile.rac(frameFile.numFrames() - 1, makeConcreteDeserializer()).as(Frame.class);
       Assert.assertEquals(
           rowCount % maxRowsPerFrame != 0
           ? rowCount % maxRowsPerFrame
@@ -269,34 +298,34 @@ public class FrameFileTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_frame_outOfBoundsNegative() throws IOException
+  public void test_rac_outOfBoundsNegative() throws IOException
   {
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Frame [-1] out of bounds");
-      frameFile.frame(-1);
+      expectedException.expectMessage("Batch[-1] out of bounds");
+      frameFile.rac(-1, null);
     }
   }
 
   @Test
-  public void test_frame_outOfBoundsTooLarge() throws IOException
+  public void test_rac_outOfBoundsTooLarge() throws IOException
   {
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage(StringUtils.format("Frame [%,d] out of bounds", frameFile.numFrames()));
-      frameFile.frame(frameFile.numFrames());
+      expectedException.expectMessage(StringUtils.format("Batch[%,d] out of bounds", frameFile.numFrames()));
+      frameFile.rac(frameFile.numFrames(), null);
     }
   }
 
   @Test
-  public void test_frame_readAllDataViaCursorFactory() throws IOException
+  public void test_rac_readAllDataViaCursorFactory() throws IOException
   {
     final FrameReader frameReader = FrameReader.create(cursorFactory.getRowSignature());
 
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       final Sequence<List<Object>> frameFileRows = Sequences.concat(
           () -> IntStream.range(0, frameFile.numFrames())
-                         .mapToObj(frameFile::frame)
+                         .mapToObj(i -> frameFile.rac(i, makeConcreteDeserializer()).as(Frame.class))
                          .map(frameReader::makeCursorFactory)
                          .map(FrameTestUtil::readRowsFromCursorFactoryWithRowNumber)
                          .iterator()
@@ -417,6 +446,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   private static byte[] computeFrameFile(final FrameFileKey frameFileKey)
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final WireTransferableContext wireTransferableContext = frameFileKey.makeWireTransferableContext();
 
     try {
       if (frameFileKey.partitioned) {
@@ -443,7 +473,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
                                       }
                                     }
                                 ),
-            baos
+            baos,
+            wireTransferableContext
         );
       } else {
         FrameTestUtil.writeFrameFile(
@@ -451,7 +482,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
                                 .frameType(frameFileKey.frameType)
                                 .maxRowsPerFrame(frameFileKey.maxRowsPerFrame)
                                 .frames(),
-            baos
+            baos,
+            wireTransferableContext
         );
       }
     }
@@ -471,13 +503,39 @@ public class FrameFileTest extends InitializedNullHandlingTest
     final FrameType frameType;
     final int maxRowsPerFrame;
     final boolean partitioned;
+    final boolean useLegacyFrameSerialization;
 
-    public FrameFileKey(AdapterType adapterType, FrameType frameType, int maxRowsPerFrame, boolean partitioned)
+    public FrameFileKey(
+        AdapterType adapterType,
+        FrameType frameType,
+        int maxRowsPerFrame,
+        boolean partitioned,
+        boolean useLegacyFrameSerialization
+    )
     {
       this.adapterType = adapterType;
       this.frameType = frameType;
       this.maxRowsPerFrame = maxRowsPerFrame;
       this.partitioned = partitioned;
+      this.useLegacyFrameSerialization = useLegacyFrameSerialization;
+    }
+
+    @Nullable
+    WireTransferableContext makeWireTransferableContext()
+    {
+      if (useLegacyFrameSerialization) {
+        return null;
+      } else {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final WireTransferable.ConcreteDeserializer deserializer = new WireTransferable.ConcreteDeserializer(
+            objectMapper,
+            Map.of(
+                ByteBuffer.wrap(FrameWireTransferable.TYPE.getBytes()),
+                new FrameWireTransferable.Deserializer()
+            )
+        );
+        return new WireTransferableContext(objectMapper, deserializer, false);
+      }
     }
 
     @Override
@@ -492,6 +550,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       FrameFileKey that = (FrameFileKey) o;
       return maxRowsPerFrame == that.maxRowsPerFrame
              && partitioned == that.partitioned
+             && useLegacyFrameSerialization == that.useLegacyFrameSerialization
              && adapterType == that.adapterType
              && frameType == that.frameType;
     }
@@ -499,7 +558,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     @Override
     public int hashCode()
     {
-      return Objects.hash(adapterType, frameType, maxRowsPerFrame, partitioned);
+      return Objects.hash(adapterType, frameType, maxRowsPerFrame, partitioned, useLegacyFrameSerialization);
     }
 
     @Override
@@ -510,6 +569,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
              ", frameType=" + frameType +
              ", maxRowsPerFrame=" + maxRowsPerFrame +
              ", partitioned=" + partitioned +
+             ", useLegacyFrameSerialization=" + useLegacyFrameSerialization +
              '}';
     }
   }

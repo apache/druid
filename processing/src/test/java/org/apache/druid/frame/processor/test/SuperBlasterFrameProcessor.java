@@ -21,9 +21,9 @@ package org.apache.druid.frame.processor.test;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
@@ -93,11 +93,11 @@ public class SuperBlasterFrameProcessor implements FrameProcessor<Long>
       final ReadableFrameChannel inChannel = inChannels.get(channelNumber);
 
       if (!inChannel.isFinished()) {
-        final Frame frame = inChannel.read();
-        rowsRead += frame.numRows();
+        final RowsAndColumns rac = inChannel.readRAC();
+        rowsRead += rac.numRows();
 
         for (WritableFrameChannel outChannel : outChannels) {
-          outChannel.write(frame);
+          outChannel.write(rac);
         }
 
         // Only permitted to write one frame to each output channel.

@@ -21,9 +21,10 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
@@ -38,12 +39,19 @@ import java.util.NoSuchElementException;
 public class ReadableFileFrameChannel implements ReadableFrameChannel
 {
   private final FrameFile frameFile;
+  private final WireTransferable.ConcreteDeserializer deserializer;
   private final int endFrame;
   private int currentFrame;
 
-  public ReadableFileFrameChannel(final FrameFile frameFile, final int startFrame, final int endFrame)
+  public ReadableFileFrameChannel(
+      final FrameFile frameFile,
+      final int startFrame,
+      final int endFrame,
+      final WireTransferable.ConcreteDeserializer deserializer
+  )
   {
     this.frameFile = frameFile;
+    this.deserializer = deserializer;
     this.currentFrame = startFrame;
     this.endFrame = endFrame;
 
@@ -60,9 +68,12 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
     }
   }
 
-  public ReadableFileFrameChannel(final FrameFile frameFile)
+  public ReadableFileFrameChannel(
+      final FrameFile frameFile,
+      final WireTransferable.ConcreteDeserializer deserializer
+  )
   {
-    this(frameFile, 0, frameFile.numFrames());
+    this(frameFile, 0, frameFile.numFrames(), deserializer);
   }
 
   @Override
@@ -78,13 +89,13 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
     if (isFinished()) {
       throw new NoSuchElementException();
     }
 
-    return frameFile.frame(currentFrame++);
+    return frameFile.rac(currentFrame++, deserializer);
   }
 
   @Override

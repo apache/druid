@@ -21,13 +21,18 @@ package org.apache.druid.frame.file;
 
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.wire.FrameCompression;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -44,6 +49,7 @@ public class FrameFileWriter implements Closeable
   public static final byte[] MAGIC = {(byte) 0xff, 0x01};
   public static final byte MARKER_FRAME = (byte) 0x01;
   public static final byte MARKER_NO_MORE_FRAMES = (byte) 0x02;
+  public static final byte MARKER_RAC = (byte) 0x03;
   public static final int TRAILER_LENGTH = Integer.BYTES * 4;
   public static final int CHECKSUM_SEED = 0;
   public static final int NO_PARTITION = -1;
@@ -52,6 +58,7 @@ public class FrameFileWriter implements Closeable
   private final AppendableMemory tableOfContents;
   private final AppendableMemory partitions;
   private final ByteTracker byteTracker;
+  private final WireTransferableContext wtContext;
   private long bytesWritten = 0;
   private long trackedBytes = 0;
   private int numFrames = 0;
@@ -64,7 +71,8 @@ public class FrameFileWriter implements Closeable
       @Nullable final ByteBuffer compressionBuffer,
       final AppendableMemory tableOfContents,
       final AppendableMemory partitions,
-      ByteTracker byteTracker
+      final ByteTracker byteTracker,
+      final WireTransferableContext wtContext
   )
   {
     this.channel = channel;
@@ -72,20 +80,24 @@ public class FrameFileWriter implements Closeable
     this.tableOfContents = tableOfContents;
     this.partitions = partitions;
     this.byteTracker = byteTracker;
+    this.wtContext = wtContext;
   }
 
   /**
    * Opens a writer for a particular channel.
-   *  @param channel           destination channel
-   * @param compressionBuffer result of {@link Frame#compressionBufferSize} for the largest possible frame size that
-   *                          will be written to this file, or null to allocate buffers dynamically.
-   *                          Providing an explicit buffer here, if possible, improves performance.
-   * @param byteTracker       tracker to limit the number of bytes that can be written to the frame file
+   *
+   * @param channel                  destination channel
+   * @param compressionBuffer        result of {@link Frame#compressionBufferSize} for the largest possible frame size
+   *                                 that will be written to this file, or null to allocate buffers dynamically.
+   *                                 Providing an explicit buffer here, if possible, improves performance.
+   * @param byteTracker              tracker to limit the number of bytes that can be written to the frame file
+   * @param wireTransferableContext  context for wire transfer serialization
    */
   public static FrameFileWriter open(
       final WritableByteChannel channel,
       @Nullable final ByteBuffer compressionBuffer,
-      ByteTracker byteTracker
+      final ByteTracker byteTracker,
+      final WireTransferableContext wireTransferableContext
   )
   {
     // Unlimited allocator is for convenience. Only a few bytes per frame will be allocated.
@@ -95,18 +107,70 @@ public class FrameFileWriter implements Closeable
         compressionBuffer,
         AppendableMemory.create(allocator),
         AppendableMemory.create(allocator),
-        byteTracker
+        byteTracker,
+        wireTransferableContext
     );
   }
 
   /**
-   * Write a frame.
+   * Write a batch of data to the file. If legacy frame serialization is enabled and the RowsAndColumns can be
+   * converted to a Frame, it will be written as raw frame bytes with {@link #MARKER_FRAME}. Otherwise, it will be
+   * written using {@link WireTransferable} with {@link #MARKER_RAC}.
    *
-   * @param frame     the frame
+   * @param rac       the RowsAndColumns to write
    * @param partition partition number for a partitioned frame file, or {@link #NO_PARTITION} for an unpartitioned file.
    *                  Must be monotonically increasing.
    */
-  public void writeFrame(final Frame frame, final int partition) throws IOException
+  public void writeRAC(final RowsAndColumns rac, final int partition) throws IOException
+  {
+    if (wtContext.useLegacyFrameSerialization()) {
+      // Check if we should write as a Frame using the legacy format.
+      final Frame frame = rac.as(Frame.class);
+      if (frame != null) {
+        writeFrameLegacy(frame, partition);
+        return;
+      }
+    }
+
+    // Write using WireTransferable.
+    final WireTransferable wireTransferable = rac.as(WireTransferable.class);
+    if (wireTransferable == null) {
+      throw DruidException.defensive("RAC[%s] is not WireTransferable", rac.getClass().getName());
+    }
+
+    final WireTransferable.ByteArrayOffsetAndLen serializedBytes = wtContext.serializedBytes(wireTransferable);
+
+    // Compress and write the serialized bytes.
+    final ByteBuffer compressedBuffer = FrameCompression.compress(
+        serializedBytes.asByteBuffer(),
+        getCompressionBuffer(serializedBytes.getLength())
+    );
+
+    writeCompressedEntry(MARKER_RAC, compressedBuffer, partition);
+  }
+
+  /**
+   * Internal method to write a frame using the legacy format with {@link #MARKER_FRAME}.
+   */
+  private void writeFrameLegacy(final Frame frame, final int partition) throws IOException
+  {
+    final ByteBuffer compressedBuffer = FrameCompression.compress(
+        frame.readableMemory(),
+        frame.numBytes(),
+        getCompressionBuffer(frame.numBytes())
+    );
+
+    writeCompressedEntry(MARKER_FRAME, compressedBuffer, partition);
+  }
+
+  /**
+   * Common helper method to write a compressed entry (either MARKER_FRAME or MARKER_RAC) to the file.
+   */
+  private void writeCompressedEntry(
+      final byte marker,
+      final ByteBuffer compressedBuffer,
+      final int partition
+  ) throws IOException
   {
     if (numFrames == Integer.MAX_VALUE) {
       throw new ISE("Too many frames");
@@ -127,19 +191,35 @@ public class FrameFileWriter implements Closeable
 
     writeMagicIfNeeded();
 
+    // Write marker.
     byteTracker.reserve(1);
     trackedBytes++;
-    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{MARKER_FRAME}));
+    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{marker}));
     bytesWritten++;
-    long frameWrittenBytes = frame.writeTo(channel, true, getCompressionBuffer(frame.numBytes()), byteTracker);
-    bytesWritten += frameWrittenBytes;
-    trackedBytes += frameWrittenBytes;
+
+    // Write compressed data.
+    final int compressedBytes = compressedBuffer.remaining();
+    byteTracker.reserve(compressedBytes);
+    trackedBytes += compressedBytes;
+    Channels.writeFully(channel, compressedBuffer);
+    bytesWritten += compressedBytes;
 
     // Write *end* of frame to tableOfContents.
     final MemoryRange<WritableMemory> tocCursor = tableOfContents.cursor();
     tocCursor.memory().putLong(tocCursor.start(), bytesWritten);
     tableOfContents.advanceCursor(Long.BYTES);
 
+    // Update partitions if needed.
+    updatePartitionsIfNeeded(partition);
+
+    numFrames++;
+  }
+
+  /**
+   * Updates partition tracking after writing a frame.
+   */
+  private void updatePartitionsIfNeeded(final int partition)
+  {
     if (usePartitions) {
       // Write new partition if needed.
       int highestPartitionWritten = Ints.checkedCast(partitions.size() / Integer.BYTES) - 1;
@@ -162,8 +242,6 @@ public class FrameFileWriter implements Closeable
         partitions.advanceCursor(Integer.BYTES);
       }
     }
-
-    numFrames++;
   }
 
   /**

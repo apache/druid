@@ -115,6 +115,7 @@ import org.mockito.junit.MockitoRule;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -216,7 +217,7 @@ public class MSQTaskQueryMakerTest
         new MSQIndexingModule()
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
-    DruidSecondaryModule.setupJackson(injector, objectMapper);
+    DruidSecondaryModule.setupJackson(injector, objectMapper, Collections.emptyMap(), true);
 
     // Populate loadedSegmentMetadata from walker segments so CoordinatorClient.fetchSegment() can find them
     List<ImmutableSegmentLoadInfo> loadedSegmentMetadata = new ArrayList<>();

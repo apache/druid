@@ -138,7 +138,8 @@ public class FrameProcessorExecutorTest
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(outFile.toPath())),
                   null,
-                  ByteTracker.unboundedTracker()
+                  ByteTracker.unboundedTracker(),
+                  FrameTestUtil.WT_CONTEXT_LEGACY
               )
           )
       );
@@ -152,7 +153,7 @@ public class FrameProcessorExecutorTest
       Assert.assertEquals(
           index.numRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
-              new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
+              new ReadableFileFrameChannel(FrameFile.open(outFile, null), null),
               FrameReader.create(cursorFactory.getRowSignature())
           ).toList().size()
       );
@@ -529,7 +530,8 @@ public class FrameProcessorExecutorTest
               FrameFileWriter.open(
                   Channels.newChannel(Files.newOutputStream(files.get(i).toPath())),
                   null,
-                  ByteTracker.unboundedTracker()
+                  ByteTracker.unboundedTracker(),
+                  FrameTestUtil.WT_CONTEXT_LEGACY
               )
           );
         }
@@ -543,7 +545,7 @@ public class FrameProcessorExecutorTest
           public void accept(Frame frame)
           {
             try {
-              writers.get(j % writers.size()).writeFrame(frame, FrameFileWriter.NO_PARTITION);
+              writers.get(j % writers.size()).writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -572,7 +574,7 @@ public class FrameProcessorExecutorTest
   private static ReadableFrameChannel openFileChannel(final File file)
   {
     try {
-      return new ReadableFileFrameChannel(FrameFile.open(file, null));
+      return new ReadableFileFrameChannel(FrameFile.open(file, null), null);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

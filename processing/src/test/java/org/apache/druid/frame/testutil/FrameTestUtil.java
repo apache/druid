@@ -29,6 +29,8 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -71,6 +73,13 @@ public class FrameTestUtil
 {
   public static final String ROW_NUMBER_COLUMN = "__row_number";
 
+  /**
+   * A context that uses legacy frame serde, and does not support {@link WireTransferable}.
+   * Use this for tests that only need to exercise the legacy frame serde path.
+   */
+  public static final WireTransferableContext WT_CONTEXT_LEGACY =
+      new WireTransferableContext(null, null, true);
+
   private FrameTestUtil()
   {
     // No instantiation.
@@ -78,18 +87,33 @@ public class FrameTestUtil
 
   public static File writeFrameFile(final Sequence<Frame> frames, final File file) throws IOException
   {
-    writeFrameFile(frames, Files.newOutputStream(file.toPath()));
+    return writeFrameFile(frames, file, null);
+  }
+
+  public static File writeFrameFile(
+      final Sequence<Frame> frames,
+      final File file,
+      @Nullable final WireTransferableContext wireTransferableContext
+  ) throws IOException
+  {
+    writeFrameFile(frames, Files.newOutputStream(file.toPath()), wireTransferableContext);
     return file;
   }
 
-  public static void writeFrameFile(final Sequence<Frame> frames, final OutputStream out) throws IOException
+  public static void writeFrameFile(
+      final Sequence<Frame> frames,
+      final OutputStream out,
+      @Nullable final WireTransferableContext wireTransferableContext
+  ) throws IOException
   {
+    final WireTransferableContext context =
+        wireTransferableContext != null ? wireTransferableContext : WT_CONTEXT_LEGACY;
     try (final FrameFileWriter writer =
-             FrameFileWriter.open(Channels.newChannel(out), null, ByteTracker.unboundedTracker())) {
+             FrameFileWriter.open(Channels.newChannel(out), null, ByteTracker.unboundedTracker(), context)) {
       frames.forEach(
           frame -> {
             try {
-              writer.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+              writer.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -101,18 +125,22 @@ public class FrameTestUtil
 
   public static void writeFrameFileWithPartitions(
       final Sequence<IntObjectPair<Frame>> framesWithPartitions,
-      final OutputStream out
+      final OutputStream out,
+      @Nullable final WireTransferableContext wireTransferableContext
   ) throws IOException
   {
+    final WireTransferableContext context =
+        wireTransferableContext != null ? wireTransferableContext : WT_CONTEXT_LEGACY;
     try (final FrameFileWriter writer = FrameFileWriter.open(
         Channels.newChannel(out),
         null,
-        ByteTracker.unboundedTracker()
+        ByteTracker.unboundedTracker(),
+        context
     )) {
       framesWithPartitions.forEach(
           frameWithPartition -> {
             try {
-              writer.writeFrame(frameWithPartition.right(), frameWithPartition.leftInt());
+              writer.writeRAC(frameWithPartition.right().asRAC(), frameWithPartition.leftInt());
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -214,8 +242,8 @@ public class FrameTestUtil
   {
     return new FrameChannelSequence(channel)
         .flatMap(
-            frame -> {
-              final CursorHolder cursorHolder = frameReader.makeCursorFactory(frame)
+            rac -> {
+              final CursorHolder cursorHolder = frameReader.makeCursorFactory(rac.as(Frame.class))
                                                            .makeCursorHolder(CursorBuildSpec.FULL_SCAN);
               final Cursor cursor = cursorHolder.asCursor();
               if (cursor == null) {

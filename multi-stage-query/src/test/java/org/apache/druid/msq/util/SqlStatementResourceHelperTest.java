@@ -448,7 +448,7 @@ public class SqlStatementResourceHelperTest
       if (prev > current) {
         throw new IllegalArgumentException("Channel numbers should be in increasing order");
       }
-      channelCounters.addFrame(current, createFrame(current * 10 + 1, 100L));
+      channelCounters.addRAC(createFrame(current * 10 + 1, 100L).asRAC(), current);
       prev = current;
     }
     return channelCounters;

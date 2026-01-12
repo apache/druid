@@ -21,9 +21,9 @@ package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.util.NoSuchElementException;
 
@@ -64,10 +64,10 @@ public class FutureReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns readRAC()
   {
     if (populateChannel()) {
-      return channel.read();
+      return channel.readRAC();
     } else {
       throw new NoSuchElementException();
     }

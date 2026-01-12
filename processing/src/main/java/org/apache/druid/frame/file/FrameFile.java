@@ -20,8 +20,12 @@
 package org.apache.druid.frame.file;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.wire.FrameCompression;
 import org.apache.druid.frame.channel.ByteTracker;
+import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -30,6 +34,8 @@ import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ReferenceCountingCloseableObject;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -48,7 +54,7 @@ import java.util.EnumSet;
  *
  * Frame files are written by {@link FrameFileWriter}.
  *
- * Frame files can optionally be partitioned, by providing partition numbers to the {@link FrameFileWriter#writeFrame}
+ * Frame files can optionally be partitioned, by providing partition numbers to the {@link FrameFileWriter#writeRAC}
  * method when creating the file. Partitions are contiguous within the frame file.
  *
  * Frame files can contain up to {@link Integer#MAX_VALUE} frames. Generally, frames are on the order of 1 MB in size,
@@ -70,6 +76,9 @@ import java.util.EnumSet;
  *
  * Instances of this class are not thread-safe. For sharing across threads, use {@link #newReference()} to create
  * an additional reference.
+ *
+ * @see FrameFileWriter writer for this file format
+ * @see ReadableByteChunksFrameChannel streaming reader for this file format
  */
 public class FrameFile implements Closeable
 {
@@ -309,36 +318,62 @@ public class FrameFile implements Closeable
   }
 
   /**
-   * Reads a frame from the file.
+   * Reads a RowsAndColumns from the file.
+   *
+   * @param batchNumber  the batch number to read. Starts at 0, ends at {@link #numFrames()} (exclusive)
+   * @param deserializer deserializer for WireTransferable format
+   *
+   * @return the RowsAndColumns
    */
-  public Frame frame(final int frameNumber)
+  public RowsAndColumns rac(
+      final int batchNumber,
+      @Nullable final WireTransferable.ConcreteDeserializer deserializer
+  )
   {
     checkOpen();
 
-    if (frameNumber < 0 || frameNumber >= numFrames()) {
-      throw new IAE("Frame [%,d] out of bounds", frameNumber);
+    if (batchNumber < 0 || batchNumber >= numFrames()) {
+      throw new IAE("Batch[%,d] out of bounds", batchNumber);
     }
 
-    final long frameEnd = frameFileFooter.getFrameEndPosition(frameNumber);
-    final long frameStart;
+    final long markerPosition = getMarkerPosition(batchNumber);
+    final long dataStart = markerPosition + Byte.BYTES;
+    final long dataEnd = frameFileFooter.getFrameEndPosition(batchNumber);
 
-    if (frameNumber == 0) {
-      frameStart = FrameFileWriter.MAGIC.length + Byte.BYTES /* MARKER_FRAME */;
-    } else {
-      frameStart = frameFileFooter.getFrameEndPosition(frameNumber - 1) + Byte.BYTES /* MARKER_FRAME */;
+    // Map buffer to include marker byte.
+    if (buffer == null || markerPosition < bufferOffset || dataEnd > bufferOffset + buffer.getCapacity()) {
+      remapBuffer(markerPosition);
     }
 
-    if (buffer == null || frameStart < bufferOffset || frameEnd > bufferOffset + buffer.getCapacity()) {
-      remapBuffer(frameStart);
+    if (markerPosition < bufferOffset || dataEnd > bufferOffset + buffer.getCapacity()) {
+      // Still out of bounds after remapping successfully: must mean entry was too large to fit in maxMmapSize.
+      throw new ISE("Entry [%,d] too large (max size = %,d bytes)", batchNumber, maxMmapSize);
     }
 
-    if (frameStart < bufferOffset || frameEnd > bufferOffset + buffer.getCapacity()) {
-      // Still out of bounds after remapping successfully: must mean frame was too large to fit in maxMmapSize.
-      throw new ISE("Frame [%,d] too large (max size = %,d bytes)", frameNumber, maxMmapSize);
-    }
+    // Read marker byte.
+    final byte marker = buffer.getByte(markerPosition - bufferOffset);
 
-    // Decompression is safe even on corrupt data: it validates position, length, checksum.
-    return Frame.decompress(buffer, frameStart - bufferOffset, frameEnd - frameStart);
+    // Read the data.
+    final byte[] decompressedData = FrameCompression.decompress(
+        buffer,
+        dataStart - bufferOffset,
+        dataEnd - dataStart
+    );
+
+    switch (marker) {
+      case FrameFileWriter.MARKER_FRAME:
+        final Frame frame = Frame.wrap(decompressedData);
+        return frame.asRAC();
+
+      case FrameFileWriter.MARKER_RAC:
+        if (deserializer == null) {
+          throw DruidException.defensive("Cannot read RAC, no WireTransferable deserializer");
+        }
+        return deserializer.deserialize(ByteBufferUtils.wrapLE(decompressedData));
+
+      default:
+        throw new ISE("Invalid marker byte[%d] for batch[%,d]", marker, batchNumber);
+    }
   }
 
   /**
@@ -432,6 +467,18 @@ public class FrameFile implements Closeable
     finally {
       buffer = null;
       bufferCloser = null;
+    }
+  }
+
+  /**
+   * Returns the position in the file of the marker byte for the given frame number.
+   */
+  private long getMarkerPosition(final int frameNumber)
+  {
+    if (frameNumber == 0) {
+      return FrameFileWriter.MAGIC.length;
+    } else {
+      return frameFileFooter.getFrameEndPosition(frameNumber - 1);
     }
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
@@ -270,6 +271,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public ObjectMapper jsonMapper()
     {
       return mapper;
+    }
+
+    @Override
+    public WireTransferableContext wireTransferableContext()
+    {
+      return injector.getInstance(WireTransferableContext.class);
     }
 
     @Override
