@@ -475,8 +475,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetSegmentsBundleVirtual()
-      throws SegmentLoadingException, IOException, ExecutionException, InterruptedException
+  public void testGetSegmentsBundleVirtual() throws IOException, ExecutionException, InterruptedException
   {
     File loc = temporaryFolder.newFolder();
     File seg = TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.getDefault(), loc);

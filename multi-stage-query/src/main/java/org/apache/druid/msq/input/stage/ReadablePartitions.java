@@ -50,6 +50,8 @@ public interface ReadablePartitions extends Iterable<ReadablePartition>
    */
   List<ReadablePartitions> split(int maxNumSplits);
 
+  boolean isEmpty();
+
   /**
    * Empty set of partitions.
    */

@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
@@ -44,13 +43,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.indexing.InputChannelFactory;
-import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.MapInputSliceReader;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
@@ -60,7 +56,6 @@ import org.apache.druid.msq.input.inline.InlineInputSlice;
 import org.apache.druid.msq.input.inline.InlineInputSliceReader;
 import org.apache.druid.msq.input.lookup.LookupInputSlice;
 import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
-import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSliceReader;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
@@ -144,7 +139,11 @@ public class RunWorkOrder
   )
   {
     this.workOrder = workOrder;
-    this.inputChannelFactory = inputChannelFactory;
+    this.inputChannelFactory = new CountingInputChannelFactory(
+        inputChannelFactory,
+        workOrder,
+        counterTracker
+    );
     this.counterTracker = counterTracker;
     this.exec = exec;
     this.cancellationId = cancellationId;
@@ -385,6 +384,7 @@ public class RunWorkOrder
         exec,
         makeInputSliceReader(),
         this::makeIntermediateOutputChannelFactory,
+        inputChannelFactory,
         makeStageOutputChannelFactory(),
         stagePartitionBoundariesFuture,
         frameContext,
@@ -397,25 +397,11 @@ public class RunWorkOrder
 
   private InputSliceReader makeInputSliceReader()
   {
-    final String queryId = workOrder.getQueryDefinition().getQueryId();
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-
-    final InputChannels inputChannels =
-        new InputChannelsImpl(
-            workOrder.getQueryDefinition(),
-            InputSlices.allReadablePartitions(workOrder.getInputs()),
-            inputChannelFactory,
-            frameContext.frameWriterSpec(),
-            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
-            exec,
-            cancellationId,
-            counterTracker
-        );
-
     return new MapInputSliceReader(
         ImmutableMap.<Class<? extends InputSlice>, InputSliceReader>builder()
                     .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
-                    .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
+                    .put(StageInputSlice.class, StageInputSliceReader.INSTANCE)
                     .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")))
                     .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                     .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))

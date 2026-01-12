@@ -46,18 +46,18 @@ public class SegmentsInputSlice implements InputSlice
 {
   private final String dataSource;
   private final List<RichSegmentDescriptor> descriptors;
-  private final List<DataServerRequestDescriptor> servedSegments;
+  private final List<DataServerRequestDescriptor> queryableServers;
 
   @JsonCreator
   public SegmentsInputSlice(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<RichSegmentDescriptor> descriptors,
-      @JsonProperty("servedSegments") @Nullable List<DataServerRequestDescriptor> servedSegments
+      @JsonProperty("servedSegments") @Nullable List<DataServerRequestDescriptor> queryableServers
   )
   {
     this.dataSource = dataSource;
     this.descriptors = descriptors;
-    this.servedSegments = servedSegments;
+    this.queryableServers = queryableServers;
   }
 
   @JsonProperty
@@ -75,9 +75,9 @@ public class SegmentsInputSlice implements InputSlice
   @Nullable
   @JsonProperty("servedSegments")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<DataServerRequestDescriptor> getServedSegments()
+  public List<DataServerRequestDescriptor> getQueryableServers()
   {
-    return servedSegments;
+    return queryableServers;
   }
 
   @Override
@@ -96,16 +96,15 @@ public class SegmentsInputSlice implements InputSlice
       return false;
     }
     SegmentsInputSlice that = (SegmentsInputSlice) o;
-    return Objects.equals(dataSource, that.dataSource) && Objects.equals(
-        descriptors,
-        that.descriptors
-    ) && Objects.equals(servedSegments, that.servedSegments);
+    return Objects.equals(dataSource, that.dataSource)
+           && Objects.equals(descriptors, that.descriptors)
+           && Objects.equals(queryableServers, that.queryableServers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, descriptors, servedSegments);
+    return Objects.hash(dataSource, descriptors, queryableServers);
   }
 
   @Override
@@ -114,7 +113,7 @@ public class SegmentsInputSlice implements InputSlice
     return "SegmentsInputSlice{" +
            "dataSource='" + dataSource + '\'' +
            ", descriptors=" + descriptors +
-           ", servedSegments=" + servedSegments +
+           ", servedSegments=" + queryableServers +
            '}';
   }
 }
