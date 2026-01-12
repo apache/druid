@@ -25,12 +25,19 @@ import { IntermediateQueryState } from './intermediate-query-state';
 import { QueryState } from './query-state';
 import { ResultWithAuxiliaryWork } from './result-with-auxiliary-work';
 
+export interface ProcessQueryExtra<I = never> {
+  setIntermediateQuery: (intermediateQuery: any) => void;
+  setIntermediateStateCallback: (
+    intermediateStateCallback: (signal: AbortSignal) => Promise<I>,
+  ) => void;
+}
+
 export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
   initState?: QueryState<R, E, I>;
   processQuery: (
     query: Q,
     signal: AbortSignal,
-    setIntermediateQuery: (intermediateQuery: any) => void,
+    extra: ProcessQueryExtra<I>,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   backgroundStatusCheck?: (
     state: I,
@@ -56,7 +63,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private readonly processQuery: (
     query: Q,
     signal: AbortSignal,
-    setIntermediateQuery: (intermediateQuery: any) => void,
+    extra: ProcessQueryExtra<I>,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
 
   private readonly backgroundStatusCheck?: (
@@ -130,8 +137,56 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     const query = this.lastQuery;
     let data: R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>;
     try {
-      data = await this.processQuery(query, signal, (intermediateQuery: any) => {
-        this.lastIntermediateQuery = intermediateQuery;
+      data = await this.processQuery(query, signal, {
+        setIntermediateQuery: (intermediateQuery: any) => {
+          this.lastIntermediateQuery = intermediateQuery;
+        },
+        setIntermediateStateCallback: intermediateStateCallback => {
+          let backgroundChecks = 0;
+          let intermediateError: Error | undefined;
+
+          void (async () => {
+            while (!signal.aborted && this.currentQueryId === myQueryId) {
+              try {
+                const delay =
+                  backgroundChecks > 0
+                    ? this.backgroundStatusCheckDelay
+                    : this.backgroundStatusCheckInitDelay;
+
+                if (delay) {
+                  await wait(delay);
+                  if (signal.aborted || this.currentQueryId !== myQueryId) return;
+                }
+
+                const intermediate = await intermediateStateCallback(signal);
+
+                if (signal.aborted || this.currentQueryId !== myQueryId || !this.state.loading) {
+                  return;
+                }
+
+                this.setState(
+                  new QueryState<R, E, I>({
+                    loading: true,
+                    intermediate,
+                    intermediateError,
+                    lastData: this.state.getSomeData(),
+                  }),
+                );
+
+                intermediateError = undefined; // Clear the intermediate error if there was one
+              } catch (e) {
+                if (signal.aborted || this.currentQueryId !== myQueryId) return;
+                if (this.swallowBackgroundError?.(e)) {
+                  intermediateError = e;
+                } else {
+                  return; // Stop the loop on unrecoverable error
+                }
+              }
+
+              backgroundChecks++;
+            }
+          })();
+        },
       });
     } catch (e) {
       if (this.currentQueryId !== myQueryId) return;

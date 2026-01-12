@@ -27,6 +27,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.messages.DoneReadingInput;
 import org.apache.druid.msq.dart.controller.messages.PartialKeyStatistics;
+import org.apache.druid.msq.dart.controller.messages.PostCounters;
 import org.apache.druid.msq.dart.controller.messages.ResultsComplete;
 import org.apache.druid.msq.dart.controller.messages.WorkerError;
 import org.apache.druid.msq.dart.controller.messages.WorkerWarning;
@@ -47,6 +48,7 @@ public class DartControllerClient implements ControllerClient
   private final Outbox<ControllerMessage> outbox;
   private final String queryId;
   private final String controllerHost;
+  private final boolean liveReportCounters;
 
   /**
    * Currently-outstanding futures. These are tracked so they can be canceled in {@link #close()}.
@@ -56,12 +58,14 @@ public class DartControllerClient implements ControllerClient
   public DartControllerClient(
       final Outbox<ControllerMessage> outbox,
       final String queryId,
-      final String controllerHost
+      final String controllerHost,
+      final boolean liveReportCounters
   )
   {
     this.outbox = outbox;
     this.queryId = queryId;
     this.controllerHost = controllerHost;
+    this.liveReportCounters = liveReportCounters;
   }
 
   @Override
@@ -102,9 +106,11 @@ public class DartControllerClient implements ControllerClient
   }
 
   @Override
-  public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree)
+  public void postCounters(final String workerId, final CounterSnapshotsTree snapshotsTree)
   {
-    // Do nothing. Live counters are not sent to the controller in this mode.
+    if (liveReportCounters) {
+      sendMessage(new PostCounters(queryId, workerId, snapshotsTree));
+    }
   }
 
   @Override

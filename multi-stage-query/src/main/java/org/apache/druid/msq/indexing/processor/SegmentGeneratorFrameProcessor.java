@@ -39,7 +39,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;

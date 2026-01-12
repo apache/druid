@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.storage.StorageConnector;

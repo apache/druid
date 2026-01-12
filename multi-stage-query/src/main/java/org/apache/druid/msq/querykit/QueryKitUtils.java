@@ -31,9 +31,17 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
@@ -46,6 +54,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -191,7 +200,10 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final QueryContext queryContext)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(
+      final ObjectMapper jsonMapper,
+      final QueryContext queryContext
+  )
   {
     final Granularity segmentGranularity =
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
@@ -222,5 +234,41 @@ public class QueryKitUtils
         ColumnType.LONG,
         new ExprMacroTable(Collections.singletonList(new TimestampFloorExprMacro()))
     );
+  }
+
+  /**
+   * Create a sequence of {@link ReadableInput} corresponding to {@link ReadablePartitions}, read with a standard merger.
+   */
+  public static ReadableInput readPartition(
+      final ExecutionContext context,
+      final ReadablePartition readablePartition
+  )
+  {
+    final StandardPartitionReader partitionReader = new StandardPartitionReader(context);
+    final String queryId = context.workOrder().getStageDefinition().getId().getQueryId();
+    try {
+      return ReadableInput.channel(
+          partitionReader.openChannel(readablePartition),
+          partitionReader.frameReader(readablePartition.getStageNumber()),
+          new StagePartition(
+              new StageId(queryId, readablePartition.getStageNumber()),
+              readablePartition.getPartitionNumber()
+          )
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Create a sequence of {@link ReadableInput} corresponding to {@link ReadablePartitions}, read with a standard merger.
+   */
+  public static Sequence<ReadableInput> readPartitions(
+      final ExecutionContext context,
+      final ReadablePartitions readablePartitions
+  )
+  {
+    return Sequences.simple(readablePartitions).map(partition -> readPartition(context, partition));
   }
 }
