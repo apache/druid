@@ -1196,9 +1196,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final List<CompactionStateRecord> addedCompactionStateRecords = query(
         sql -> sql.retrieveCompactionStatesForFingerprints(addedFingerprints)
     );
-    if (addedCompactionStateRecords.size() < addedFingerprints.size()) {
-      emitMetric(Metric.SKIPPED_COMPACTION_STATES, addedFingerprints.size() - addedCompactionStateRecords.size());
-    }
+
     addedCompactionStateRecords.forEach(
         record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
     );

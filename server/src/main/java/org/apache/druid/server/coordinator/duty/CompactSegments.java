@@ -294,7 +294,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       DataSourceCompactionConfig config,
       CompactionEngine defaultEngine,
       String compactionStateFingerprint,
-      boolean persistLastCompactionStateInSegments
+      boolean storeCompactionStatePerSegment
   )
   {
     final List<DataSegment> segmentsToCompact = candidate.getSegments();
@@ -372,7 +372,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
     }
 
-    autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, persistLastCompactionStateInSegments);
+    autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
     autoCompactionContext.put(COMPACTION_STATE_FINGERPRINT_KEY, compactionStateFingerprint);
 
     return compactSegments(

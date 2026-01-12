@@ -87,7 +87,7 @@ public class DruidCompactionConfig
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
-      @JsonProperty("legacyPersistLastCompactionStateInSegments") @Nullable Boolean legacyPersistLastCompactionStateInSegments
+      @JsonProperty("storeCompactionStatePerSegment") @Nullable Boolean storeCompactionStatePerSegment
   )
   {
     this(
@@ -98,7 +98,7 @@ public class DruidCompactionConfig
             compactionPolicy,
             useSupervisors,
             engine,
-            legacyPersistLastCompactionStateInSegments
+            storeCompactionStatePerSegment
         )
     );
   }
