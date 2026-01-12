@@ -32,8 +32,8 @@ import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
 import java.io.File;

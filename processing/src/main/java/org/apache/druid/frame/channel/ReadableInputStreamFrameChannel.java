@@ -23,9 +23,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.java.util.common.concurrent.Execs;
-
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;

@@ -21,7 +21,6 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
