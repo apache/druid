@@ -152,8 +152,8 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_killAll_noException_deletesAllSegments() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
-    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_1);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
+    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(KEY_2, TIME_1);
 
     S3TestUtils.expectListObjects(
         s3Client,
@@ -198,7 +198,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_killAll_recoverableExceptionWhenListingObjects_deletesAllSegments() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
 
     S3TestUtils.expectListObjects(
         s3Client,
@@ -239,7 +239,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   {
     boolean ioExceptionThrown = false;
     try {
-      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
 
       S3TestUtils.expectListObjects(
           s3Client,

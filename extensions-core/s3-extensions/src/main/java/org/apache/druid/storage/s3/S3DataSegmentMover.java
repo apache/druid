@@ -21,7 +21,6 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -175,8 +174,12 @@ public class S3DataSegmentMover implements DataSegmentMover
       );
     }
     catch (Exception e) {
-      Throwables.propagateIfInstanceOf(e, S3Exception.class);
-      Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
+      if (e instanceof S3Exception) {
+        throw (S3Exception) e;
+      }
+      if (e instanceof SegmentLoadingException) {
+        throw (SegmentLoadingException) e;
+      }
       throw new RuntimeException(e);
     }
   }

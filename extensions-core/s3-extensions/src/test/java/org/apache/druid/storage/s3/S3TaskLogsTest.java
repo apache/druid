@@ -223,8 +223,8 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
-    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_1);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
+    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(KEY_2, TIME_1);
 
     EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
@@ -264,7 +264,7 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void test_killAll_recoverableExceptionWhenDeletingObjects_deletesAllTaskLogs() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
 
     EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
 
@@ -300,7 +300,7 @@ public class S3TaskLogsTest extends EasyMockSupport
   {
     boolean ioExceptionThrown = false;
     try {
-      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
       EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
       S3TestUtils.expectListObjects(
           s3Client,
@@ -337,8 +337,8 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void test_killOlderThan_noException_deletesOnlyTaskLogsOlderThan() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
-    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2, TIME_FUTURE);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
+    S3Object objectSummary2 = S3TestUtils.newS3ObjectSummary(KEY_2, TIME_FUTURE);
 
     S3TestUtils.expectListObjects(
         s3Client,
@@ -366,7 +366,7 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void test_killOlderThan_recoverableExceptionWhenListingObjects_deletesAllTaskLogs() throws IOException
   {
-    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+    S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
 
     S3TestUtils.expectListObjects(
         s3Client,
@@ -400,7 +400,7 @@ public class S3TaskLogsTest extends EasyMockSupport
   {
     boolean ioExceptionThrown = false;
     try {
-      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1, TIME_0);
+      S3Object objectSummary1 = S3TestUtils.newS3ObjectSummary(KEY_1, TIME_0);
       S3TestUtils.expectListObjects(
           s3Client,
           PREFIX_URI,

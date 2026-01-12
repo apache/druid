@@ -1365,37 +1365,30 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
   private static void expectGetObject(URI uri)
   {
-    final String s3Bucket = uri.getAuthority();
-    final String key = S3Utils.extractS3Key(uri);
-
-    GetObjectResponse response = GetObjectResponse.builder().build();
-    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        response,
-        AbortableInputStream.create(new ByteArrayInputStream(CONTENT))
-    );
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).once();
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class)))
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().build(),
+                AbortableInputStream.create(new ByteArrayInputStream(CONTENT))
+            ))
+            .once();
   }
 
 
   // Setup mocks for invoking the resetable condition for the S3Entity
   private static void expectSdkClientException(URI uri) throws IOException
   {
-    final String s3Bucket = uri.getAuthority();
-    final String key = S3Utils.extractS3Key(uri);
-
     InputStream mockInputStream = EasyMock.createMock(InputStream.class);
     EasyMock.expect(mockInputStream.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
             .andThrow(SdkClientException.builder().message("Data read has a different length than the expected").build()).anyTimes();
     mockInputStream.close();
     expectLastCall().andVoid().anyTimes();
 
-    GetObjectResponse response = GetObjectResponse.builder().build();
-    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        response,
-        AbortableInputStream.create(mockInputStream)
-    );
-
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).anyTimes();
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class)))
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().build(),
+                AbortableInputStream.create(mockInputStream)
+            ))
+            .anyTimes();
 
     EasyMock.replay(mockInputStream);
   }
@@ -1403,18 +1396,16 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
   private static void expectGetObjectCompressed(URI uri) throws IOException
   {
-    final String s3Bucket = uri.getAuthority();
-    final String key = S3Utils.extractS3Key(uri);
-
     ByteArrayOutputStream gzipped = new ByteArrayOutputStream();
     CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
+    final byte[] gzippedBytes = gzipped.toByteArray();
 
-    GetObjectResponse response = GetObjectResponse.builder().build();
-    ResponseInputStream<GetObjectResponse> responseInputStream = new ResponseInputStream<>(
-        response,
-        AbortableInputStream.create(new ByteArrayInputStream(gzipped.toByteArray()))
-    );
-    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class))).andReturn(responseInputStream).once();
+    EasyMock.expect(S3_CLIENT.getObject(EasyMock.anyObject(GetObjectRequest.class)))
+            .andAnswer(() -> new ResponseInputStream<>(
+                GetObjectResponse.builder().build(),
+                AbortableInputStream.create(new ByteArrayInputStream(gzippedBytes))
+            ))
+            .once();
   }
 
   private static ListObjectsV2Request matchListObjectsRequest(final URI prefixUri)

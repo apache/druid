@@ -32,15 +32,15 @@ public class AWSCredentialsUtils
 {
   public static AwsCredentialsProvider defaultAWSCredentialsProviderChain(final AWSCredentialsConfig config)
   {
-    return AwsCredentialsProviderChain.builder()
-        .addCredentialsProvider(new ConfigDrivenAwsCredentialsConfigProvider(config))
-        .addCredentialsProvider(new LazyFileSessionCredentialsProvider(config))
-        .addCredentialsProvider(EnvironmentVariableCredentialsProvider.create())
-        .addCredentialsProvider(SystemPropertyCredentialsProvider.create())
-        .addCredentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
-        .addCredentialsProvider(ProfileCredentialsProvider.create())
-        .addCredentialsProvider(ContainerCredentialsProvider.builder().build())
-        .addCredentialsProvider(InstanceProfileCredentialsProvider.create())
-        .build();
+    return AwsCredentialsProviderChain.of(
+        new ConfigDrivenAwsCredentialsConfigProvider(config),
+        new LazyFileSessionCredentialsProvider(config),
+        EnvironmentVariableCredentialsProvider.create(),
+        SystemPropertyCredentialsProvider.create(),
+        WebIdentityTokenFileCredentialsProvider.create(),
+        ProfileCredentialsProvider.create(),
+        ContainerCredentialsProvider.builder().build(),
+        InstanceProfileCredentialsProvider.create()
+    );
   }
 }
