@@ -82,7 +82,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 |`stopTaskCountRatio`|A variable version of `ioConfig.stopTaskCount` with a valid range of (0.0, 1.0]. Allows the maximum number of stoppable tasks in steady state to be proportional to the number of tasks currently running.|No||
 
-##### Autoscaler strategy
+##### Autoscaler strategy: lag-based
 
 :::info
 Unlike the Kafka indexing service, Kinesis reports lag metrics as the time difference in milliseconds between the current sequence number and the latest sequence number, rather than message count.
@@ -228,6 +228,51 @@ For configuration properties specific to Kafka and Kinesis, see [Kafka tuning co
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Setting `reportParseExceptions` overrides this limit.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Setting `reportParseExceptions` overrides this limit.|No|0|
 |`maxColumnsToMerge`|Integer|Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.|No|-1|
+
+
+##### Autoscaler strategy: cost-based (experimental)
+
+An autoscaler which coumputes the required supervisor task count via cost function based on extracted lag and poll idle time metrics.
+Task counts are selected from a bounded range derived from the current partitions-per-task (PPT) ratio, 
+not strictly from factors/divisors of the partition count. This bounded PPT window enables gradual scaling while 
+voiding large jumps and still allowing non-divisor task counts when needed.
+
+**It is experimental and the implementation details as well as cost function parameters are subject to change.**
+
+Note: Kinesis is not supported yet, support is in progress.
+
+The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
+
+| Property                  | Description                                                               | Required | Default |
+|---------------------------|---------------------------------------------------------------------------|----------|---------|
+| `scaleActionPeriodMillis` | The frequency in milliseconds to check if a scale action is triggered.    | No       | 60000   |
+| `lagWeight`               | The weight of extracted lag value in cost function.                       | No       | 0.25    |
+| `idleWeight`              | The weight of extracted poll idle value in cost function.                 | No       | 0.75    |
+| `defaultProcessingRate`   | A, planned processing rate per task, required for first cost estimations. | No       | 1000    |
+
+The following example shows a supervisor spec with `lagBased` autoscaler:
+
+<details>
+  <summary>Click to view the example</summary>
+
+```json
+{
+  "ioConfig": {
+    "stream": "metrics",
+    "autoScalerConfig": {
+      "enableTaskAutoScaler": true,
+      "autoScalerStrategy": "costBased",
+      "taskCountMin": 1,
+      "taskCountMax": 10,
+      "minTriggerScaleActionFrequencyMillis": 600000,
+      "lagWeight": 0.1,
+      "idleWeight": 0.9,
+      "defaultProcessingRate": 100
+    }
+  }
+}
+```
+</details>
 
 ## Start a supervisor
 
