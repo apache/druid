@@ -230,6 +230,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
+   *  Checks if the root cause of the given exception is a unique constraint violation.
+   *
+   * @return false by default. Specific implementations should override this method
+   * to correctly classify their unique constraint violation exceptions.
+   */
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    return false;
+  }
+
+  /**
    * Creates the given table and indexes if the table doesn't already exist.
    */
   public void createTable(final String tableName, final Iterable<String> sql)

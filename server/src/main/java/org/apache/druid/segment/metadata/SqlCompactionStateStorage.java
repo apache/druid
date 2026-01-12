@@ -36,7 +36,6 @@ import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nonnull;
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -162,18 +161,18 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         return null;
       });
     }
-    catch (Exception e) {
-      if (isUniqueConstraintViolation(e)) {
+    catch (Throwable e) {
+      if (connector.isUniqueConstraintViolation(e)) {
+        // Swallow exception - another thread already persisted the same data
         log.info(
             "Fingerprints already exist for datasource[%s] (likely concurrent insert). "
             + "Treating as success since operation is idempotent.",
             dataSource
         );
-        // Swallow exception - another thread already persisted the same data
-        return;
+      } else {
+        // For other exceptions, let them propagate
+        throw e;
       }
-      // For other exceptions, let them propagate
-      throw e;
     }
   }
 
@@ -332,41 +331,5 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
     for (int i = 0; i < values.size(); i++) {
       query.bind(parameterPrefix + i, values.get(i));
     }
-  }
-
-  /**
-   * Checks if an exception is a unique constraint violation.
-   * This is expected when multiple threads try to insert the same fingerprint concurrently.
-   * Since operations are idempotent, these violations can be safely ignored.
-   */
-  private boolean isUniqueConstraintViolation(Exception e)
-  {
-    // Look for SQLException in the cause chain
-    Throwable cause = e;
-    while (cause != null) {
-      if (cause instanceof SQLException) {
-        SQLException sqlException = (SQLException) cause;
-        String sqlState = sqlException.getSQLState();
-
-        // SQL standard unique constraint violation codes
-        // 23505 = unique_violation (PostgreSQL, Derby)
-        // 23000 = integrity_constraint_violation (MySQL and others)
-        if ("23505".equals(sqlState) || "23000".equals(sqlState)) {
-          return true;
-        }
-      }
-      cause = cause.getCause();
-    }
-
-    // Also check exception message as fallback
-    String message = e.getMessage();
-    if (message != null) {
-      String lowerMessage = StringUtils.toLowerCase(message);
-      return lowerMessage.contains("unique constraint")
-          || lowerMessage.contains("duplicate key")
-          || lowerMessage.contains("duplicate entry");
-    }
-
-    return false;
   }
 }
