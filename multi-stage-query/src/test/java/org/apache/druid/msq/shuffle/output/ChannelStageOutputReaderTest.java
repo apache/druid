@@ -91,7 +91,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     public void setUp() throws Exception
     {
       channel = BlockingQueueFrameChannel.minimal();
-      channelReader = new ChannelStageOutputReader(channel.readable(), null);
+      channelReader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
       tmpFile = temporaryFolder.newFile();
       tmpOut = Files.newOutputStream(tmpFile.toPath());
     }
@@ -280,7 +280,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private static final int EXPECTED_NUM_ROWS = 1209;
 
     private final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(MAX_FRAMES);
-    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), null);
+    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();

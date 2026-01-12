@@ -20,6 +20,7 @@
 package org.apache.druid.msq.shuffle;
 
 import org.apache.druid.frame.processor.OutputChannelFactoryTest;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.msq.shuffle.output.DurableStorageTaskOutputChannelFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.junit.ClassRule;
@@ -44,7 +45,7 @@ public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactory
             100,
             new LocalFileStorageConnector(folder.newFolder()),
             folder.newFolder(),
-            null
+            FrameTestUtil.WT_CONTEXT_LEGACY
         ),
         100
     );

@@ -36,6 +36,7 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -460,6 +461,14 @@ public class SqlStatementResourceHelperTest
     Frame frame = EasyMock.mock(Frame.class);
     EasyMock.expect(frame.numRows()).andReturn(numRows).anyTimes();
     EasyMock.expect(frame.numBytes()).andReturn(numBytes).anyTimes();
+
+    // Mock asRAC() to return a mock FrameRowsAndColumns
+    FrameRowsAndColumns rac = EasyMock.mock(FrameRowsAndColumns.class);
+    EasyMock.expect(rac.numRows()).andReturn(numRows).anyTimes();
+    EasyMock.expect(rac.as(Frame.class)).andReturn(frame).anyTimes();
+    EasyMock.replay(rac);
+
+    EasyMock.expect(frame.asRAC()).andReturn(rac).anyTimes();
     EasyMock.replay(frame);
     return frame;
   }

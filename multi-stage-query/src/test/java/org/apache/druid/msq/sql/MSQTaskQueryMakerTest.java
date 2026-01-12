@@ -31,6 +31,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -80,6 +81,7 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
@@ -214,7 +216,8 @@ public class MSQTaskQueryMakerTest
         new ConfigModule(),
         new SegmentWranglerModule(),
         new LookylooModule(),
-        new MSQIndexingModule()
+        new MSQIndexingModule(),
+        binder -> binder.bind(WireTransferableContext.class).toInstance(FrameTestUtil.WT_CONTEXT_LEGACY)
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper, Collections.emptyMap(), true);
