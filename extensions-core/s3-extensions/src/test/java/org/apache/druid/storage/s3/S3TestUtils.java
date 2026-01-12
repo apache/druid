@@ -169,7 +169,6 @@ public class S3TestUtils extends EasyMockSupport
   }
 
   public static S3Object newS3Object(
-      String bucket,
       String key,
       long lastModifiedTimestamp)
   {
@@ -186,10 +185,9 @@ public class S3TestUtils extends EasyMockSupport
    * In v2 SDK, S3ObjectSummary has been replaced with S3Object.
    */
   public static S3Object newS3ObjectSummary(
-      String bucket,
       String key,
       long lastModifiedTimestamp)
   {
-    return newS3Object(bucket, key, lastModifiedTimestamp);
+    return newS3Object(key, lastModifiedTimestamp);
   }
 }
