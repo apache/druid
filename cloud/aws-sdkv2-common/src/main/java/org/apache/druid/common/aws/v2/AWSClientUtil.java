@@ -17,14 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.common.aws;
+package org.apache.druid.common.aws.v2;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.collect.ImmutableSet;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.S3Error;
 
 import java.io.IOException;
 import java.util.Set;
@@ -32,11 +31,12 @@ import java.util.Set;
 public class AWSClientUtil
 {
   /**
-   * This list of error code come from {@link RetryUtils}, and
-   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">...</a>. At the moment, aws sdk
-   * does not expose a good way of retrying
-   * {@link com.amazonaws.services.s3.AmazonS3#deleteObjects(DeleteObjectsRequest)} requests. This request is used in
-   * org.apache.druid.storage.s3.S3DataSegmentKiller to delete a batch of segments from deep storage.
+   * This list of error codes comes from {@link RetryUtils}, and
+   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error Responses</a>.
+   * These codes are used to determine if an error from batch operations like
+   * {@link software.amazon.awssdk.services.s3.S3Client#deleteObjects} is recoverable.
+   * In AWS SDK v2, batch delete errors are returned in the response as {@link S3Error} objects
+   * rather than thrown as exceptions.
    */
   private static final Set<String> RECOVERABLE_ERROR_CODES = ImmutableSet.of(
       "503 SlowDown",
@@ -67,11 +67,9 @@ public class AWSClientUtil
   );
 
   /**
-   * Checks whether an exception can be retried or not. Implementation is copied
-   * from {@link com.amazonaws.retry.PredefinedRetryPolicies.SDKDefaultRetryCondition} except deprecated methods
-   * have been replaced with their recent versions.
+   * Checks whether an exception can be retried or not.
    */
-  public static boolean isClientExceptionRecoverable(AmazonClientException exception)
+  public static boolean isClientExceptionRecoverable(SdkException exception)
   {
     // Always retry on client exceptions caused by IOException
     if (exception.getCause() instanceof IOException) {
@@ -79,33 +77,36 @@ public class AWSClientUtil
     }
 
     // A special check carried forwarded from the previous implementation.
-    if (exception instanceof AmazonServiceException
-        && "RequestTimeout".equals(((AmazonServiceException) exception).getErrorCode())) {
+    if (exception instanceof AwsServiceException
+        && "RequestTimeout".equals(((AwsServiceException) exception).awsErrorDetails().errorCode())) {
       return true;
     }
 
     // This will retry for 5xx errors.
-    if (RetryUtils.isRetryableServiceException(exception)) {
-      return true;
-    }
+    return isExceptionRecoverable(exception)
+           || RetryUtils.isRetryableException(exception)
+           || RetryUtils.isThrottlingException(exception)
+           || RetryUtils.isClockSkewException(exception);
+  }
 
-    if (RetryUtils.isThrottlingException(exception)) {
-      return true;
+  public static boolean isExceptionRecoverable(SdkException exception)
+  {
+    if (exception instanceof AwsServiceException) {
+      int statusCode = ((AwsServiceException) exception).statusCode();
+      return statusCode >= 500 && statusCode < 600;
     }
-
-    if (RetryUtils.isClockSkewError(exception)) {
-      return true;
-    }
-
-    if (exception instanceof MultiObjectDeleteException) {
-      MultiObjectDeleteException multiObjectDeleteException = (MultiObjectDeleteException) exception;
-      for (MultiObjectDeleteException.DeleteError error : multiObjectDeleteException.getErrors()) {
-        if (RECOVERABLE_ERROR_CODES.contains(error.getCode())) {
-          return true;
-        }
-      }
-    }
-
     return false;
+  }
+
+  /**
+   * Checks whether an S3 error code from batch operations (like deleteObjects) is recoverable.
+   * In AWS SDK v2, batch operation errors are returned in the response rather than thrown as exceptions.
+   *
+   * @param errorCode the error code from {@link S3Error#code()}
+   * @return true if the error is recoverable and the operation should be retried
+   */
+  public static boolean isS3ErrorCodeRecoverable(String errorCode)
+  {
+    return RECOVERABLE_ERROR_CODES.contains(errorCode);
   }
 }

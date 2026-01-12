@@ -1,0 +1,240 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.storage.s3;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
+import com.google.inject.Inject;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
+import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.tasklogs.TaskLogs;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Date;
+
+/**
+ * Provides task logs archived on S3.
+ */
+public class S3TaskLogs implements TaskLogs
+{
+  private static final Logger log = new Logger(S3TaskLogs.class);
+
+  private final ServerSideEncryptingAmazonS3 service;
+  private final S3TaskLogsConfig config;
+  private final S3InputDataConfig inputDataConfig;
+  private final CurrentTimeMillisSupplier timeSupplier;
+
+  @Inject
+  public S3TaskLogs(
+      ServerSideEncryptingAmazonS3 service,
+      S3TaskLogsConfig config,
+      S3InputDataConfig inputDataConfig,
+      CurrentTimeMillisSupplier timeSupplier
+  )
+  {
+    this.service = service;
+    this.config = config;
+    this.inputDataConfig = inputDataConfig;
+    this.timeSupplier = timeSupplier;
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "log");
+    return streamTaskFileWithRetry(offset, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    return streamTaskFileWithRetry(0, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    return streamTaskFileWithRetry(0, taskKey);
+  }
+
+  @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "task.json");
+    log.info("Pushing task payload [%s] to location [%s]", taskPayloadFile, taskKey);
+    pushTaskFile(taskPayloadFile, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "task.json");
+    return streamTaskFileWithRetry(0, taskKey);
+  }
+
+  /**
+   * Using the retry conditions defined in {@link S3Utils#S3RETRY}.
+   */
+  private Optional<InputStream> streamTaskFileWithRetry(final long offset, String taskKey) throws IOException
+  {
+    try {
+      return S3Utils.retryS3Operation(() -> streamTaskFile(offset, taskKey));
+    }
+    catch (Exception e) {
+      throw new IOE(e, "Failed to stream logs for task[%s] starting at offset[%d]", taskKey, offset);
+    }
+  }
+
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
+  {
+    try {
+      final HeadObjectResponse objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
+
+      final long start;
+      final long end = objectMetadata.contentLength() - 1;
+
+      long contentLength = objectMetadata.contentLength();
+      if (offset >= contentLength || offset <= -contentLength) {
+        start = 0;
+      } else if (offset >= 0) {
+        start = offset;
+      } else {
+        start = contentLength + offset;
+      }
+
+      final GetObjectRequest request = GetObjectRequest.builder().bucket(config.getS3Bucket()).key(taskKey)
+          .ifMatch(ensureQuotated(objectMetadata.eTag()))
+          .range("bytes=" + start + "-" + end)
+          .build();
+
+      return Optional.of(service.getObject(request));
+    }
+    catch (S3Exception e) {
+      if (404 == e.awsErrorDetails().sdkHttpResponse().statusCode()
+          || "NoSuchKey".equals(e.awsErrorDetails().errorCode())
+          || "NoSuchBucket".equals(e.awsErrorDetails().errorCode())) {
+        return Optional.absent();
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  static String ensureQuotated(String eTag)
+  {
+    if (eTag != null) {
+      if (!eTag.startsWith("\"") && !eTag.endsWith("\"")) {
+        return "\"" + eTag + "\"";
+      }
+    }
+    return eTag;
+  }
+
+  @Override
+  public void pushTaskLog(final String taskid, final File logFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "log");
+    log.info("Pushing task log %s to: %s", logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
+  }
+
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    log.info("Pushing task reports %s to: %s", reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
+  }
+
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    log.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
+  private void pushTaskFile(final File logFile, String taskKey) throws IOException
+  {
+    try {
+      S3Utils.retryS3Operation(
+          () -> {
+            S3Utils.uploadFileIfPossible(service, config.getDisableAcl(), config.getS3Bucket(), taskKey, logFile);
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e, IOException.class);
+      throw new RuntimeException(e);
+    }
+  }
+
+  String getTaskLogKey(String taskid, String filename)
+  {
+    return StringUtils.format("%s/%s/%s", config.getS3Prefix(), taskid, filename);
+  }
+
+  @Override
+  public void killAll() throws IOException
+  {
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'].",
+        config.getS3Bucket(),
+        config.getS3Prefix()
+    );
+
+    long now = timeSupplier.getAsLong();
+    killOlderThan(now);
+  }
+
+  @Override
+  public void killOlderThan(long timestamp) throws IOException
+  {
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getS3Bucket(),
+        config.getS3Prefix(),
+        new Date(timestamp)
+    );
+    try {
+      S3Utils.deleteObjectsInPath(
+          service,
+          inputDataConfig.getMaxListingLength(),
+          config.getS3Bucket(),
+          config.getS3Prefix(),
+          (object) -> object.lastModified().toEpochMilli() < timestamp
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting task log files from s3. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
+  }
+}
