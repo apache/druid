@@ -22,11 +22,11 @@ package org.apache.druid.msq.querykit.results;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import java.io.IOException;
 import java.util.Collections;
