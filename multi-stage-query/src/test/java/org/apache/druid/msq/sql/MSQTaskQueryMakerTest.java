@@ -179,7 +179,8 @@ public class MSQTaskQueryMakerTest
   {
     walker = TestDataBuilder.addDataSetsToWalker(
         FileUtils.getTempDir().toFile(),
-        SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER))
+        SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER)),
+        jsonMapper
     );
     when(dataSegmentProviderMock.fetchSegment(
         any(),
