@@ -25,6 +25,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -36,10 +37,13 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
+  private static final long WORKER_WAIT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(10);
+
   protected final Map<String, WorkerRunRef> inMemoryWorkers;
   private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -57,7 +61,29 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected Worker getWorkerFor(String workerTaskId)
   {
-    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker).worker();
+    final WorkerRunRef workerRunRef = inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker);
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+
+    // Wait for the worker to exist
+    while (!workerRunRef.hasWorker()) {
+      if (stopwatch.millisElapsed() > WORKER_WAIT_TIMEOUT_MS) {
+        throw new ISE(
+            "Timed out after [%,d]ms waiting for worker[%s] to be registered",
+            stopwatch.millisElapsed(),
+            workerTaskId
+        );
+      }
+
+      try {
+        Thread.sleep(10);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new ISE("Interrupted while waiting for worker[%s]", workerTaskId);
+      }
+    }
+
+    return workerRunRef.worker();
   }
 
   protected WorkerRunRef newWorker(String workerId)

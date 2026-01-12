@@ -93,6 +93,14 @@ public class WorkerRunRef
   }
 
   /**
+   * Returns true if the worker reference has been set (i.e., {@link #run} has been called).
+   */
+  public boolean hasWorker()
+  {
+    return workerRef.get() != null;
+  }
+
+  /**
    * Cancel the worker. Interrupts the worker if currently running.
    */
   public void cancel()
