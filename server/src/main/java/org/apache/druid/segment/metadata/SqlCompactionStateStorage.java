@@ -129,7 +129,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
             String updateSql = StringUtils.format(
                 "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
                 + "WHERE fingerprint = :fingerprint",
-                dbTables.getCompactionStatesTable()
+                dbTables.getIndexingStatesTable()
             );
             handle.createStatement(updateSql)
                   .bind("used", true)
@@ -147,7 +147,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
             String insertSql = StringUtils.format(
                 "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
                 + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :pending, :used_status_last_updated)",
-                dbTables.getCompactionStatesTable()
+                dbTables.getIndexingStatesTable()
             );
 
             try {
@@ -205,8 +205,8 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
             handle.createStatement(
                       StringUtils.format(
                           "UPDATE %s SET used = false, used_status_last_updated = :now WHERE used = true AND pending = false "
-                          + "AND fingerprint NOT IN (SELECT DISTINCT compaction_state_fingerprint FROM %s WHERE used = true AND compaction_state_fingerprint IS NOT NULL)",
-                          dbTables.getCompactionStatesTable(),
+                          + "AND fingerprint NOT IN (SELECT DISTINCT indexing_state_fingerprint FROM %s WHERE used = true AND indexing_state_fingerprint IS NOT NULL)",
+                          dbTables.getIndexingStatesTable(),
                           dbTables.getSegmentsTable()
                       )
                   )
@@ -221,9 +221,9 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle ->
             handle.createQuery(
                       StringUtils.format(
-                          "SELECT DISTINCT compaction_state_fingerprint FROM %s WHERE used = true AND compaction_state_fingerprint IN (SELECT fingerprint FROM %s WHERE used = false)",
+                          "SELECT DISTINCT indexing_state_fingerprint FROM %s WHERE used = true AND indexing_state_fingerprint IN (SELECT fingerprint FROM %s WHERE used = false)",
                           dbTables.getSegmentsTable(),
-                          dbTables.getCompactionStatesTable()
+                          dbTables.getIndexingStatesTable()
                       ))
                   .mapTo(String.class)
                   .list()
@@ -243,7 +243,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
               StringUtils.format(
                   "UPDATE %s SET used = true, pending = false, used_status_last_updated = :now"
                   + " WHERE fingerprint IN (%s)",
-                  dbTables.getCompactionStatesTable(),
+                  dbTables.getIndexingStatesTable(),
                   buildParameterizedInClause("fp", stateFingerprints.size())
               )
           ).bind("now", DateTimes.nowUtc().toString());
@@ -262,7 +262,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle -> handle.createStatement(
                             StringUtils.format(
                                 "UPDATE %s SET pending = false WHERE fingerprint = :fingerprint AND pending = true",
-                                dbTables.getCompactionStatesTable()
+                                dbTables.getIndexingStatesTable()
                             ))
                         .bind("fingerprint", stateFingerprint)
                         .execute()
@@ -276,7 +276,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle -> handle.createStatement(
                             StringUtils.format(
                                 "DELETE FROM %s WHERE used = false AND pending = false AND used_status_last_updated < :maxUpdateTime",
-                                dbTables.getCompactionStatesTable()
+                                dbTables.getIndexingStatesTable()
                             ))
                         .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
                         .execute());
@@ -289,7 +289,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle -> handle.createStatement(
                             StringUtils.format(
                                 "DELETE FROM %s WHERE pending = true AND used_status_last_updated < :maxUpdateTime",
-                                dbTables.getCompactionStatesTable()
+                                dbTables.getIndexingStatesTable()
                             ))
                         .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
                         .execute());
@@ -303,7 +303,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle -> {
           String sql = StringUtils.format(
               "SELECT pending FROM %s WHERE fingerprint = :fingerprint",
-              dbTables.getCompactionStatesTable()
+              dbTables.getIndexingStatesTable()
           );
 
           return handle.createQuery(sql)
@@ -347,7 +347,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
 
     String sql = StringUtils.format(
         "SELECT used FROM %s WHERE fingerprint = :fingerprint",
-        dbTables.getCompactionStatesTable()
+        dbTables.getIndexingStatesTable()
     );
 
     Boolean used = handle.createQuery(sql)

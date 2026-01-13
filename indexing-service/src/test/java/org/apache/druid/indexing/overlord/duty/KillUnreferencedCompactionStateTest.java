@@ -58,7 +58,7 @@ public class KillUnreferencedCompactionStateTest
     derbyConnector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
-    derbyConnector.createCompactionStatesTable();
+    derbyConnector.createIndexingStatesTable();
     derbyConnector.createSegmentTable();
 
     compactionStateStorage = new SqlCompactionStateStorage(tablesConfig, jsonMapper, derbyConnector);
@@ -139,9 +139,9 @@ public class KillUnreferencedCompactionStateTest
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
                 + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
-                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "used_status_last_updated, indexing_state_fingerprint) "
                 + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
-                + ":used_status_last_updated, :compaction_state_fingerprint)"
+                + ":used_status_last_updated, :indexing_state_fingerprint)"
             )
             .bind("id", "testSegment_2024-01-01_2024-01-02_v1_0")
             .bind("dataSource", "test-ds")
@@ -153,7 +153,7 @@ public class KillUnreferencedCompactionStateTest
             .bind("used", true)
             .bind("payload", new byte[]{})
             .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-            .bind("compaction_state_fingerprint", fingerprint)
+            .bind("indexing_state_fingerprint", fingerprint)
             .execute();
       return null;
     });
@@ -288,9 +288,9 @@ public class KillUnreferencedCompactionStateTest
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
                 + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
-                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "used_status_last_updated, indexing_state_fingerprint) "
                 + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
-                + ":used_status_last_updated, :compaction_state_fingerprint)"
+                + ":used_status_last_updated, :indexing_state_fingerprint)"
             )
             .bind("id", "testSegment_2024-01-01_2024-01-02_v1_0")
             .bind("dataSource", "test-ds")
@@ -302,7 +302,7 @@ public class KillUnreferencedCompactionStateTest
             .bind("used", true)
             .bind("payload", new byte[]{})
             .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-            .bind("compaction_state_fingerprint", fingerprint)
+            .bind("indexing_state_fingerprint", fingerprint)
             .execute();
       return null;
     });
@@ -318,7 +318,7 @@ public class KillUnreferencedCompactionStateTest
   {
     List<Boolean> usedStatus = derbyConnector.retryWithHandle(
         handle -> handle.createQuery(
-                            "SELECT used FROM " + tablesConfig.getCompactionStatesTable()
+                            "SELECT used FROM " + tablesConfig.getIndexingStatesTable()
                             + " WHERE fingerprint = :fp"
                         )
                         .bind("fp", fingerprint)

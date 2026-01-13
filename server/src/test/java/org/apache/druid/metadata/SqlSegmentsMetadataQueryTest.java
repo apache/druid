@@ -380,7 +380,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStateFingerprints_emptyDatabase()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints);
 
@@ -390,7 +390,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStateFingerprints()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     // Insert compaction states
     Map<String, CompactionState> compactionStates = new HashMap<>();
@@ -413,7 +413,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStateFingerprints_ignoresNullFingerprints()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -430,7 +430,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStates_emptyDatabase()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     List<CompactionStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates);
 
@@ -440,7 +440,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStates_fullSync()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     // Create distinct compaction states
     CompactionState state1 = createTestCompactionState();
@@ -488,7 +488,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStates_onlyFromUsedSegments()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -506,7 +506,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveAllUsedCompactionStates_ignoresUnusedCompactionStates()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -525,7 +525,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_emptyInput()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     List<CompactionStateRecord> records = read(
         sql -> sql.retrieveCompactionStatesForFingerprints(Set.of())
@@ -537,7 +537,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_deltaSync()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     // Insert multiple compaction states
     Map<String, CompactionState> compactionStates = new HashMap<>();
@@ -562,7 +562,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_largeBatch()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     // Insert 150 compaction states (exceeds batching threshold of 100)
     Map<String, CompactionState> compactionStates = new HashMap<>();
@@ -590,7 +590,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_nonexistentFingerprints()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -607,7 +607,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_mixedExistingAndNonexistent()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -630,7 +630,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveCompactionStatesForFingerprints_onlyReturnsUsedStates()
   {
-    derbyConnectorRule.getConnector().createCompactionStatesTable();
+    derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     Map<String, CompactionState> compactionStates = new HashMap<>();
     compactionStates.put("fp1", createTestCompactionState());
@@ -694,9 +694,9 @@ public class SqlSegmentsMetadataQueryTest
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
                 + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
-                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "used_status_last_updated, indexing_state_fingerprint) "
                 + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
-                + ":used_status_last_updated, :compaction_state_fingerprint)"
+                + ":used_status_last_updated, :indexing_state_fingerprint)"
             )
             .bind("id", segmentId)
             .bind("dataSource", TestDataSource.WIKI)
@@ -708,7 +708,7 @@ public class SqlSegmentsMetadataQueryTest
             .bind("used", used)
             .bind("payload", TestHelper.JSON_MAPPER.writeValueAsBytes(WIKI_SEGMENTS_2X5D.get(0)))
             .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-            .bind("compaction_state_fingerprint", compactionStateFingerprint)
+            .bind("indexing_state_fingerprint", compactionStateFingerprint)
             .execute();
       return null;
     });
@@ -721,7 +721,7 @@ public class SqlSegmentsMetadataQueryTest
 
     connector.retryWithHandle(handle -> {
       handle.createStatement(
-                "UPDATE " + tablesConfig.getCompactionStatesTable() + " "
+                "UPDATE " + tablesConfig.getIndexingStatesTable() + " "
                 + "SET used = false "
                 + "WHERE fingerprint = :fingerprint"
             )

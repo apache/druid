@@ -179,7 +179,7 @@ public class TaskActionTestKit extends ExternalResource
     testDerbyConnector.createConfigTable();
     testDerbyConnector.createTaskTables();
     testDerbyConnector.createAuditTable();
-    testDerbyConnector.createCompactionStatesTable();
+    testDerbyConnector.createIndexingStatesTable();
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();

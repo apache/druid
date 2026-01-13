@@ -245,10 +245,10 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
         segments,
         "INSERT INTO %1$s "
         + "(id, dataSource, created_date, start, %2$send%2$s, partitioned, "
-        + "version, used, payload, used_status_last_updated, upgraded_from_segment_id, compaction_state_fingerprint) "
+        + "version, used, payload, used_status_last_updated, upgraded_from_segment_id, indexing_state_fingerprint) "
         + "VALUES "
         + "(:id, :dataSource, :created_date, :start, :end, :partitioned, "
-        + ":version, :used, :payload, :used_status_last_updated, :upgraded_from_segment_id, :compaction_state_fingerprint)"
+        + ":version, :used, :payload, :used_status_last_updated, :upgraded_from_segment_id, :indexing_state_fingerprint)"
     );
   }
 
@@ -261,11 +261,11 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
         "INSERT INTO %1$s "
         + "(id, dataSource, created_date, start, %2$send%2$s, partitioned, "
         + "version, used, payload, used_status_last_updated, upgraded_from_segment_id, "
-        + "schema_fingerprint, num_rows, compaction_state_fingerprint) "
+        + "schema_fingerprint, num_rows, indexing_state_fingerprint) "
         + "VALUES "
         + "(:id, :dataSource, :created_date, :start, :end, :partitioned, "
         + ":version, :used, :payload, :used_status_last_updated, :upgraded_from_segment_id, "
-        + ":schema_fingerprint, :num_rows, :compaction_state_fingerprint)"
+        + ":schema_fingerprint, :num_rows, :indexing_state_fingerprint)"
     );
   }
 
@@ -533,7 +533,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
                  .bind("payload", getJsonBytes(segment))
                  .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
                  .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId())
-                 .bind("compaction_state_fingerprint", segmentPlus.getCompactionStateFingerprint());
+                 .bind("indexing_state_fingerprint", segmentPlus.getCompactionStateFingerprint());
 
         if (persistAdditionalMetadata) {
           preparedBatchPart

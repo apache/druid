@@ -76,8 +76,8 @@ public class MetadataStorageTablesConfig
   @JsonProperty("useShortIndexNames")
   private final boolean useShortIndexNames;
 
-  @JsonProperty("compactionStates")
-  private final String compactionStatesTable;
+  @JsonProperty("indexingStates")
+  private final String indexingStatesTable;
 
   @JsonCreator
   public MetadataStorageTablesConfig(
@@ -94,7 +94,7 @@ public class MetadataStorageTablesConfig
       @JsonProperty("upgradeSegments") String upgradeSegmentsTable,
       @JsonProperty("segmentSchemas") String segmentSchemasTable,
       @JsonProperty("useShortIndexNames") Boolean useShortIndexNames,
-      @JsonProperty("compactionStates") String compactionStatesTable
+      @JsonProperty("indexingStates") String indexingStatesTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
@@ -111,7 +111,7 @@ public class MetadataStorageTablesConfig
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
     this.segmentSchemasTable = makeTableName(segmentSchemasTable, "segmentSchemas");
     this.useShortIndexNames = Configs.valueOrDefault(useShortIndexNames, false);
-    this.compactionStatesTable = makeTableName(compactionStatesTable, "compactionStates");
+    this.indexingStatesTable = makeTableName(indexingStatesTable, "indexingStates");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -186,9 +186,9 @@ public class MetadataStorageTablesConfig
     return segmentSchemasTable;
   }
 
-  public String getCompactionStatesTable()
+  public String getIndexingStatesTable()
   {
-    return compactionStatesTable;
+    return indexingStatesTable;
   }
 
   /**

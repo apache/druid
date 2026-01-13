@@ -148,7 +148,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     derbyConnector.createSegmentTable();
     derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
-    derbyConnector.createCompactionStatesTable();
+    derbyConnector.createIndexingStatesTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 

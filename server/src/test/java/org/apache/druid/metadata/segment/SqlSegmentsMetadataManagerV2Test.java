@@ -75,7 +75,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   {
     setUp(derbyConnectorRule);
     connector.createPendingSegmentsTable();
-    connector.createCompactionStatesTable();
+    connector.createIndexingStatesTable();
 
     emitter = new StubServiceEmitter();
 

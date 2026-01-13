@@ -76,7 +76,7 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getTasksTable());
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
-    tables.add(tablesConfig.getCompactionStatesTable());
+    tables.add(tablesConfig.getIndexingStatesTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
@@ -84,7 +84,7 @@ public class SQLMetadataConnectorTest
     connector.createTaskTables();
     connector.createAuditTable();
     connector.createSupervisorsTable();
-    connector.createCompactionStatesTable();
+    connector.createIndexingStatesTable();
 
     connector.getDBI().withHandle(
         handle -> {

@@ -800,13 +800,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final String sql;
     if (useSchemaCache) {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated, compaction_state_fingerprint, schema_fingerprint, num_rows"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint, schema_fingerprint, num_rows"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
     } else {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated, compaction_state_fingerprint"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );

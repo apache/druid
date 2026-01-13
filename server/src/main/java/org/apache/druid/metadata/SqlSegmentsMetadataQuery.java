@@ -587,7 +587,7 @@ public class SqlSegmentsMetadataQuery
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
               "SELECT payload, used, schema_fingerprint, num_rows,"
-              + " upgraded_from_segment_id, used_status_last_updated, compaction_state_fingerprint"
+              + " upgraded_from_segment_id, used_status_last_updated, indexing_state_fingerprint"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -618,7 +618,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date, compaction_state_fingerprint"
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date, indexing_state_fingerprint"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -1715,7 +1715,7 @@ public class SqlSegmentsMetadataQuery
   {
     final String sql = StringUtils.format(
         "SELECT fingerprint FROM %s WHERE used = true",
-        dbTables.getCompactionStatesTable()
+        dbTables.getIndexingStatesTable()
     );
 
     return Set.copyOf(
@@ -1735,7 +1735,7 @@ public class SqlSegmentsMetadataQuery
   {
     final String sql = StringUtils.format(
         "SELECT fingerprint, payload FROM %s WHERE used = true",
-        dbTables.getCompactionStatesTable()
+        dbTables.getIndexingStatesTable()
     );
 
     return retrieveValidCompactionStateRecordsWithQuery(handle.createQuery(sql));
@@ -1776,7 +1776,7 @@ public class SqlSegmentsMetadataQuery
         "SELECT fingerprint, payload FROM %s"
         + " WHERE used = true"
         + " %s",
-        dbTables.getCompactionStatesTable(),
+        dbTables.getIndexingStatesTable(),
         getParameterizedInConditionForColumn("fingerprint", fingerprints)
     );
 

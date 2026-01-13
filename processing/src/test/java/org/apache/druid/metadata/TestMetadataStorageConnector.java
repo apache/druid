@@ -103,7 +103,7 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   }
 
   @Override
-  public void createCompactionStatesTable()
+  public void createIndexingStatesTable()
   {
     throw new UnsupportedOperationException();
   }

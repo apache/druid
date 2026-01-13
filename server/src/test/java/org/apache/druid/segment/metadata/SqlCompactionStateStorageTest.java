@@ -68,7 +68,7 @@ public class SqlCompactionStateStorageTest
   {
     derbyConnector = DERBY_CONNECTOR_RULE.getConnector();
     tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
-    derbyConnector.createCompactionStatesTable();
+    derbyConnector.createIndexingStatesTable();
     derbyConnector.createSegmentTable();
     fingerprintMapper = new DefaultCompactionFingerprintMapper(
         new NoopCompactionStateCache(),
@@ -81,7 +81,7 @@ public class SqlCompactionStateStorageTest
   {
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement("DELETE FROM " + tablesConfig.getSegmentsTable()).execute();
-      handle.createStatement("DELETE FROM " + tablesConfig.getCompactionStatesTable()).execute();
+      handle.createStatement("DELETE FROM " + tablesConfig.getIndexingStatesTable()).execute();
       return null;
     });
 
@@ -107,7 +107,7 @@ public class SqlCompactionStateStorageTest
     // Verify the state was inserted into database by checking count
     Integer count = derbyConnector.retryWithHandle(handle ->
         handle.createQuery(
-            "SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable()
+            "SELECT COUNT(*) FROM " + tablesConfig.getIndexingStatesTable()
             + " WHERE fingerprint = :fp"
         ).bind("fp", fingerprint)
          .map((i, r, ctx) -> r.getInt(1))
@@ -157,9 +157,9 @@ public class SqlCompactionStateStorageTest
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
                 + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
-                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "used_status_last_updated, indexing_state_fingerprint) "
                 + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
-                + ":used_status_last_updated, :compaction_state_fingerprint)"
+                + ":used_status_last_updated, :indexing_state_fingerprint)"
             )
             .bind("id", "testSegment_2024-01-01_2024-01-02_v1_0")
             .bind("dataSource", "testDatasource")
@@ -171,7 +171,7 @@ public class SqlCompactionStateStorageTest
             .bind("used", true)
             .bind("payload", new byte[]{})  // Empty payload is fine for this test
             .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-            .bind("compaction_state_fingerprint", fingerprint)
+            .bind("indexing_state_fingerprint", fingerprint)
             .execute();
       return null;
     });
@@ -198,7 +198,7 @@ public class SqlCompactionStateStorageTest
     // Insert old unused state (60 days old)
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
-                "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
+                "INSERT INTO " + tablesConfig.getIndexingStatesTable() + " "
                 + "(created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
                 + "VALUES (:cd, :ds, :fp, :pl, :used, :pending, :updated)"
             )
@@ -216,7 +216,7 @@ public class SqlCompactionStateStorageTest
     // Insert recent unused state (15 days old)
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
-                "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
+                "INSERT INTO " + tablesConfig.getIndexingStatesTable() + " "
                 + "(created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
                 + "VALUES (:cd, :ds, :fp, :pl, :used, :pending, :updated)"
             )
@@ -237,7 +237,7 @@ public class SqlCompactionStateStorageTest
 
     // Verify only 1 state remains in the table
     Integer count = derbyConnector.retryWithHandle(handle ->
-                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getIndexingStatesTable())
                                                              .map((i, r, ctx) -> r.getInt(1))
                                                              .first()
     );
@@ -294,7 +294,7 @@ public class SqlCompactionStateStorageTest
     // Verify it's marked as used
     Boolean usedBefore = derbyConnector.retryWithHandle(handle ->
                                                             handle.createQuery(
-                                                                      "SELECT used FROM " + tablesConfig.getCompactionStatesTable()
+                                                                      "SELECT used FROM " + tablesConfig.getIndexingStatesTable()
                                                                       + " WHERE fingerprint = :fp"
                                                                   ).bind("fp", fingerprint)
                                                                   .map((i, r, ctx) -> r.getBoolean("used"))
@@ -305,7 +305,7 @@ public class SqlCompactionStateStorageTest
     // Manually mark it as unused
     derbyConnector.retryWithHandle(handle ->
                                        handle.createStatement(
-                                           "UPDATE " + tablesConfig.getCompactionStatesTable()
+                                           "UPDATE " + tablesConfig.getIndexingStatesTable()
                                            + " SET used = false WHERE fingerprint = :fp"
                                        ).bind("fp", fingerprint).execute()
     );
@@ -319,7 +319,7 @@ public class SqlCompactionStateStorageTest
     // Verify it's marked as used again
     Boolean usedAfter = derbyConnector.retryWithHandle(handle ->
                                                            handle.createQuery(
-                                                                     "SELECT used FROM " + tablesConfig.getCompactionStatesTable()
+                                                                     "SELECT used FROM " + tablesConfig.getIndexingStatesTable()
                                                                      + " WHERE fingerprint = :fp"
                                                                  ).bind("fp", fingerprint)
                                                                  .map((i, r, ctx) -> r.getBoolean("used"))
@@ -329,7 +329,7 @@ public class SqlCompactionStateStorageTest
 
     // Verify only 1 row exists (no duplicate insert)
     Integer count = derbyConnector.retryWithHandle(handle ->
-                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getIndexingStatesTable())
                                                              .map((i, r, ctx) -> r.getInt(1))
                                                              .first()
     );
@@ -352,7 +352,7 @@ public class SqlCompactionStateStorageTest
     // Verify it's marked as used with the initial timestamp
     DateTime usedStatusBeforeUpdate = derbyConnector.retryWithHandle(handle ->
                                                                          handle.createQuery(
-                                                                                   "SELECT used_status_last_updated FROM " + tablesConfig.getCompactionStatesTable()
+                                                                                   "SELECT used_status_last_updated FROM " + tablesConfig.getIndexingStatesTable()
                                                                                    + " WHERE fingerprint = :fp"
                                                                                ).bind("fp", fingerprint)
                                                                                .map((i, r, ctx) -> DateTimes.of(r.getString("used_status_last_updated")))
@@ -371,7 +371,7 @@ public class SqlCompactionStateStorageTest
     // Verify the used_status_last_updated timestamp DID NOT change
     DateTime usedStatusAfterUpdate = derbyConnector.retryWithHandle(handle ->
                                                                         handle.createQuery(
-                                                                                  "SELECT used_status_last_updated FROM " + tablesConfig.getCompactionStatesTable()
+                                                                                  "SELECT used_status_last_updated FROM " + tablesConfig.getIndexingStatesTable()
                                                                                   + " WHERE fingerprint = :fp"
                                                                               ).bind("fp", fingerprint)
                                                                               .map((i, r, ctx) -> DateTimes.of(r.getString("used_status_last_updated")))
@@ -386,7 +386,7 @@ public class SqlCompactionStateStorageTest
 
     // Verify still only 1 row
     Integer count = derbyConnector.retryWithHandle(handle ->
-                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
+                                                       handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getIndexingStatesTable())
                                                              .map((i, r, ctx) -> r.getInt(1))
                                                              .first()
     );
@@ -411,7 +411,7 @@ public class SqlCompactionStateStorageTest
     });
 
     Boolean pendingBefore = derbyConnector.retryWithHandle(handle ->
-        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
               .bind("fp", fingerprint)
               .map((i, r, ctx) -> r.getBoolean("pending"))
               .first()
@@ -422,7 +422,7 @@ public class SqlCompactionStateStorageTest
     assertEquals(1, rowsUpdated);
 
     Boolean pendingAfter = derbyConnector.retryWithHandle(handle ->
-        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
               .bind("fp", fingerprint)
               .map((i, r, ctx) -> r.getBoolean("pending"))
               .first()
@@ -447,7 +447,7 @@ public class SqlCompactionStateStorageTest
     assertEquals(0, secondUpdate);
 
     Boolean pending = derbyConnector.retryWithHandle(handle ->
-        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
               .bind("fp", fingerprint)
               .map((i, r, ctx) -> r.getBoolean("pending"))
               .first()

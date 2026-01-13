@@ -102,5 +102,5 @@ public interface MetadataStorageConnector
    * Multiple segments can refer to the same compaction state via its unique fingerprint
    * </p>
    */
-  void createCompactionStatesTable();
+  void createIndexingStatesTable();
 }
