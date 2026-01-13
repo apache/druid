@@ -67,7 +67,7 @@ public class QueryResultsFrameProcessor implements FrameProcessor<Object>
     if (inChannel.isFinished()) {
       return ReturnOrAwait.returnObject(Unit.instance());
     }
-    writeRAC(inChannel.readRAC());
+    writeRAC(inChannel.read());
     return ReturnOrAwait.awaitAll(1);
   }
 

@@ -81,7 +81,7 @@ public class FrameChannelSequence extends BaseSequence<RowsAndColumns, FrameChan
         throw new NoSuchElementException();
       }
 
-      return channel.readRAC();
+      return channel.read();
     }
 
     @Override

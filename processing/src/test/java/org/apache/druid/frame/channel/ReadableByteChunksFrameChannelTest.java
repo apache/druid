@@ -90,7 +90,7 @@ public class ReadableByteChunksFrameChannelTest
       expectedException.expect(IllegalStateException.class);
       expectedException.expectMessage("Incomplete or missing frame at end of stream (id = test, position = 0)");
 
-      channel.read();
+      channel.readFrame();
     }
 
     @Test
@@ -107,7 +107,7 @@ public class ReadableByteChunksFrameChannelTest
       expectedException.expect(IllegalArgumentException.class);
       expectedException.expectMessage("test error");
 
-      channel.read();
+      channel.readFrame();
     }
 
     @Test
@@ -124,7 +124,7 @@ public class ReadableByteChunksFrameChannelTest
       while (channel.canRead()) {
         Assert.assertFalse(channel.isFinished());
         Assert.assertFalse(channel.isErrorOrFinished());
-        channel.read();
+        channel.readFrame();
       }
 
       Assert.assertTrue(channel.isFinished());
@@ -175,12 +175,12 @@ public class ReadableByteChunksFrameChannelTest
       Assert.assertTrue(channel.canRead());
       Assert.assertFalse(channel.isFinished());
       Assert.assertFalse(channel.isErrorOrFinished());
-      channel.read(); // Throw away value.
+      channel.readFrame(); // Throw away value.
 
       Assert.assertTrue(channel.canRead());
       Assert.assertFalse(channel.isFinished());
       Assert.assertFalse(channel.isErrorOrFinished());
-      channel.read(); // Throw away value.
+      channel.readFrame(); // Throw away value.
 
       Assert.assertTrue(channel.canRead());
       Assert.assertFalse(channel.isFinished());
@@ -188,7 +188,7 @@ public class ReadableByteChunksFrameChannelTest
 
       expectedException.expect(IllegalStateException.class);
       expectedException.expectMessage(CoreMatchers.startsWith("Incomplete or missing frame at end of stream"));
-      channel.read();
+      channel.readFrame();
     }
 
     @Test
@@ -221,7 +221,7 @@ public class ReadableByteChunksFrameChannelTest
 
       expectedException.expect(IllegalStateException.class);
       expectedException.expectMessage("Test error!");
-      channel.read();
+      channel.readFrame();
     }
   }
 
@@ -391,14 +391,14 @@ public class ReadableByteChunksFrameChannelTest
           // Read one frame every 3 iterations. Read everything every 11 iterations. Otherwise, read nothing.
           if (iteration % 3 == 0) {
             while (channel.canRead()) {
-              outChannel.writable().write(channel.read());
+              outChannel.writable().write(channel.readFrame());
             }
 
             // After reading everything, backpressure should be off.
             Assert.assertTrue(backpressureFuture == null || backpressureFuture.isDone());
           } else if (iteration % 11 == 0) {
             if (channel.canRead()) {
-              outChannel.writable().write(channel.read());
+              outChannel.writable().write(channel.readFrame());
             }
           }
 
@@ -429,7 +429,7 @@ public class ReadableByteChunksFrameChannelTest
 
         // Get all the remaining frames.
         while (channel.canRead()) {
-          outChannel.writable().write(channel.read());
+          outChannel.writable().write(channel.readFrame());
         }
 
         outChannel.writable().close();
@@ -475,7 +475,7 @@ public class ReadableByteChunksFrameChannelTest
       // Read and verify using readRAC()
       final List<List<Object>> readRows = new ArrayList<>();
       while (channel.canRead()) {
-        final RowsAndColumns rac = channel.readRAC();
+        final RowsAndColumns rac = channel.read();
         final Frame frame = rac.as(Frame.class);
         Assert.assertNotNull("Frame should be retrievable from RAC", frame);
 
@@ -524,7 +524,7 @@ public class ReadableByteChunksFrameChannelTest
           // Read every 3 iterations
           if (iteration % 3 == 0) {
             while (channel.canRead()) {
-              final RowsAndColumns rac = channel.readRAC();
+              final RowsAndColumns rac = channel.read();
               final Frame frame = rac.as(Frame.class);
               final Sequence<List<Object>> frameRows = FrameTestUtil.readRowsFromCursorFactory(
                   frameReader.makeCursorFactory(frame)
@@ -543,7 +543,7 @@ public class ReadableByteChunksFrameChannelTest
 
       // Read remaining frames
       while (channel.canRead()) {
-        final RowsAndColumns rac = channel.readRAC();
+        final RowsAndColumns rac = channel.read();
         final Frame frame = rac.as(Frame.class);
         final Sequence<List<Object>> frameRows = FrameTestUtil.readRowsFromCursorFactory(
             frameReader.makeCursorFactory(frame)

@@ -94,7 +94,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Object>
       return ReturnOrAwait.returnObject(Unit.instance());
     }
 
-    final Frame frame = inputChannel.read();
+    final Frame frame = inputChannel.readFrame();
     final Frame truncatedFrame = chopAndProcess(frame, frameReader);
 
     if (truncatedFrame != null) {

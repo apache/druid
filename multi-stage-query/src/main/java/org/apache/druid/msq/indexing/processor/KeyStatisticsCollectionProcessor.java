@@ -107,7 +107,7 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
       return ReturnOrAwait.returnObject(clusterByStatisticsCollector);
     }
 
-    final Frame frame = inputChannel.read();
+    final Frame frame = inputChannel.readFrame();
     final Cursor cursor = FrameProcessors.makeCursor(frame, frameReader);
     final IntSupplier rowWeightSupplier =
         makeRowWeightSupplier(frameReader, frame.type(), cursor.getColumnSelectorFactory());

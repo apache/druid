@@ -79,7 +79,7 @@ public class FailingFrameProcessor implements FrameProcessor<Long>
         throw new RuntimeException("failure!");
       }
 
-      outChannel.write(inChannel.readRAC());
+      outChannel.write(inChannel.read());
       numFramesSoFar++;
 
       if (numFramesSoFar >= numFramesBeforeFailure) {

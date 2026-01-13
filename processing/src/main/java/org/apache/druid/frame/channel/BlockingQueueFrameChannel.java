@@ -220,7 +220,7 @@ public class BlockingQueueFrameChannel
     }
 
     @Override
-    public RowsAndColumns readRAC()
+    public RowsAndColumns read()
     {
       final Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>> next;
 

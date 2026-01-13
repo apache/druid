@@ -77,7 +77,7 @@ public class ChompingFrameProcessor implements FrameProcessor<Long>
         awaitSet.remove(channelNumber);
       } else {
         // Call readRAC() for side effects: we want to throw any exceptions that come in on the channel.
-        channel.readRAC();
+        channel.read();
         didReadFrame.countDown();
         numFrames++;
       }

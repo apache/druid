@@ -261,7 +261,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
 
             if (channel.canRead()) {
               // Read next frame from this channel.
-              final Frame frame = channel.read();
+              final Frame frame = channel.readFrame();
               final FramePlus framePlus = makeFramePlus(frame, frameReader);
               if (framePlus.isDone()) {
                 // Nothing to read in this frame. Not finished; we can't continue.
@@ -313,7 +313,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
         final ReadableFrameChannel channel = inputChannels.get(i);
 
         if (channel.canRead()) {
-          final Frame frame = channel.read();
+          final Frame frame = channel.readFrame();
           final FramePlus framePlus = makeFramePlus(frame, frameReader);
           if (framePlus.isDone()) {
             await.add(i);

@@ -54,9 +54,9 @@ public class CountingReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
-    final RowsAndColumns rac = baseChannel.readRAC();
+    final RowsAndColumns rac = baseChannel.read();
     channelCounters.addRAC(rac, partitionNumber);
     return rac;
   }

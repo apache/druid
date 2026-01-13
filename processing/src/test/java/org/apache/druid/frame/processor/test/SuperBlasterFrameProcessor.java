@@ -93,7 +93,7 @@ public class SuperBlasterFrameProcessor implements FrameProcessor<Long>
       final ReadableFrameChannel inChannel = inChannels.get(channelNumber);
 
       if (!inChannel.isFinished()) {
-        final RowsAndColumns rac = inChannel.readRAC();
+        final RowsAndColumns rac = inChannel.read();
         rowsRead += rac.numRows();
 
         for (WritableFrameChannel outChannel : outChannels) {

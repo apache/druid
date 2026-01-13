@@ -258,7 +258,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     while (!readableInputStreamFrameChannel.canRead()) {
       Thread.sleep(10);
     }
-    readableInputStreamFrameChannel.read();
+    readableInputStreamFrameChannel.readFrame();
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
   }

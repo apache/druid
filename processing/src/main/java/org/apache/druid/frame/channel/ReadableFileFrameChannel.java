@@ -89,7 +89,7 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     if (isFinished()) {
       throw new NoSuchElementException();

@@ -302,7 +302,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
         FutureUtils.getUnchecked(channel.readabilityFuture(), false);
 
         if (channel.canRead()) {
-          final Frame frame = channel.read();
+          final Frame frame = channel.readFrame();
           retVal.addAll(FrameTestUtil.readRowsFromCursorFactory(FRAME_READER.makeCursorFactory(frame)).toList());
         }
       }

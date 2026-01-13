@@ -72,14 +72,14 @@ public class ReadableConcatFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     if (!canRead()) {
       throw new NoSuchElementException();
     }
 
     assert currentChannel != null; // True because canRead() was true.
-    return currentChannel.readRAC();
+    return currentChannel.read();
   }
 
   @Override

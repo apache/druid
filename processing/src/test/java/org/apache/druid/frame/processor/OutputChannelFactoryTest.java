@@ -141,7 +141,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
         break;
       }
     }
-    Frame readbackFrame = readableFrameChannel.read();
+    Frame readbackFrame = readableFrameChannel.readFrame();
     readableFrameChannel.readabilityFuture().get();
     Assert.assertFalse(readableFrameChannel.canRead());
     Assert.assertTrue(readableFrameChannel.isFinished());

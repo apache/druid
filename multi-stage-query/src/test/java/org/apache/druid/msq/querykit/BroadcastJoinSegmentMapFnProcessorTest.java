@@ -316,7 +316,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     }
 
     @Override
-    public RowsAndColumns readRAC()
+    public RowsAndColumns read()
     {
       throw new IllegalStateException();
     }

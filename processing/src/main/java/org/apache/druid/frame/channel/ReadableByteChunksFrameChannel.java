@@ -261,7 +261,7 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     synchronized (lock) {
       if (canReadError()) {

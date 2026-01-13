@@ -207,7 +207,7 @@ public class FrameProcessorExecutorTest
 
       final RuntimeException readException = Assert.assertThrows(
           RuntimeException.class,
-          outReadableChannel::read
+          outReadableChannel::readFrame
       );
 
       MatcherAssert.assertThat(

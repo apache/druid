@@ -103,9 +103,9 @@ public class ComposingReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
-    return currentChannel.readRAC();
+    return currentChannel.read();
   }
 
   @Override

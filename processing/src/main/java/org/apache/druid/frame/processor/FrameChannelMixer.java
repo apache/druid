@@ -85,7 +85,7 @@ public class FrameChannelMixer implements FrameProcessor<Long>
       final ReadableFrameChannel channel = inputChannels.get(channelNumber);
 
       if (!channel.isFinished()) {
-        final RowsAndColumns rac = channel.readRAC();
+        final RowsAndColumns rac = channel.read();
         outputChannel.write(rac);
         rowsRead += rac.numRows();
       }

@@ -137,7 +137,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     }
 
     if (inputChannel.canRead()) {
-      final Frame frame = inputChannel.read();
+      final Frame frame = inputChannel.readFrame();
       LazilyDecoratedRowsAndColumns ldrc = convertRowFrameToRowsAndColumns(frame);
       frameRowsAndColsBuilder.add(ldrc);
 

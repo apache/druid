@@ -495,7 +495,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     } else if (!tracker.canBufferMoreFrames()) {
       return false;
     } else {
-      final Frame frame = channel.read();
+      final Frame frame = channel.readFrame();
 
       if (frame.numRows() == 0) {
         // Skip, read next.

@@ -144,7 +144,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
         writeEmptyAggregationsFrameIfNeeded();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final Frame frame = inputChannel.read();
+        final Frame frame = inputChannel.readFrame();
         frameCursor = FrameProcessors.makeCursor(frame, frameReader);
         final ColumnSelectorFactory frameColumnSelectorFactory = frameCursor.getColumnSelectorFactory();
 

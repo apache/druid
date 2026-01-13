@@ -64,10 +64,10 @@ public class FutureReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     if (populateChannel()) {
-      return channel.readRAC();
+      return channel.read();
     } else {
       throw new NoSuchElementException();
     }

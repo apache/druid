@@ -36,7 +36,7 @@ import java.util.NoSuchElementException;
  * Channels implementing this interface are used by a single reader; they do not support concurrent reads.
  *
  * Despite its name, instances of this class can typically return any {@link RowsAndColumns} through the
- * {@link #readRAC()} method.
+ * {@link #read()} method.
  */
 public interface ReadableFrameChannel extends Closeable
 {
@@ -53,12 +53,22 @@ public interface ReadableFrameChannel extends Closeable
 
   /**
    * Returns whether this channel has a batch of data or error condition currently available. If this method returns
-   * true, then you can call {@link #read()} or {@link #readRAC()} to retrieve the batch or error.
+   * true, then you can call {@link #readFrame()} or {@link #read()} to retrieve the batch or error.
    *
    * Note that it is possible for a channel to be unfinished and also have no available batches or errors. This happens
    * when it is not in a ready-for-reading state. See {@link #readabilityFuture()} for details.
    */
   boolean canRead();
+
+  /**
+   * Returns the next available batch of data from this channel as a {@link RowsAndColumns}.
+   *
+   * Before calling this method, you should check {@link #canRead()} to ensure there is a batch of data or
+   * error available.
+   *
+   * @throws NoSuchElementException if there is no batch currently available
+   */
+  RowsAndColumns read();
 
   /**
    * Returns the next available batch of data from this channel as a {@link Frame}.
@@ -69,9 +79,9 @@ public interface ReadableFrameChannel extends Closeable
    * @throws NoSuchElementException if there is no batch currently available
    * @throws DruidException         if the available batch was not available as a {@link Frame}
    */
-  default Frame read()
+  default Frame readFrame()
   {
-    final RowsAndColumns rac = readRAC();
+    final RowsAndColumns rac = read();
     final Frame frame = rac.as(Frame.class);
     if (frame != null) {
       return frame;
@@ -81,19 +91,9 @@ public interface ReadableFrameChannel extends Closeable
   }
 
   /**
-   * Returns the next available batch of data from this channel as a {@link RowsAndColumns}.
-   *
-   * Before calling this method, you should check {@link #canRead()} to ensure there is a batch of data or
-   * error available.
-   *
-   * @throws NoSuchElementException if there is no batch currently available
-   */
-  RowsAndColumns readRAC();
-
-  /**
    * Returns a future that will resolve when either {@link #isFinished()} or {@link #canRead()} would
    * return true. The future will never resolve to an exception. If something exceptional has happened, the exception
-   * can be retrieved from {@link #read()} or {@link #readRAC()}.
+   * can be retrieved from {@link #readFrame()} or {@link #read()}.
    */
   ListenableFuture<?> readabilityFuture();
 

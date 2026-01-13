@@ -49,7 +49,7 @@ public class ReadableNilFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     throw new NoSuchElementException();
   }

@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 /**
- * Wraps an underlying channel and forces an async style of reading. After each call to {@link #read()}, the
+ * Wraps an underlying channel and forces an async style of reading. After each call to {@link #readFrame()}, the
  * {@link #canRead()} and {@link #isFinished()} methods return false until {@link #readabilityFuture()} is called.
  */
 public class AlwaysAsyncReadableFrameChannel implements ReadableFrameChannel
@@ -59,14 +59,14 @@ public class AlwaysAsyncReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     if (defer) {
       throw new ISE("Cannot call read() while deferred");
     }
 
     defer = true;
-    return delegate.readRAC();
+    return delegate.read();
   }
 
   @Override

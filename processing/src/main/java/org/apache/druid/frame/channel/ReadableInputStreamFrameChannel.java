@@ -133,11 +133,11 @@ public class ReadableInputStreamFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public RowsAndColumns readRAC()
+  public RowsAndColumns read()
   {
     synchronized (lock) {
       startReading();
-      return delegate.readRAC();
+      return delegate.read();
     }
   }
 

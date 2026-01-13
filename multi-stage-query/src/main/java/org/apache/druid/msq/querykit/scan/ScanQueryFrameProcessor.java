@@ -373,7 +373,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   {
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
-        final Frame frame = inputChannel.read();
+        final Frame frame = inputChannel.readFrame();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
         final Segment mappedSegment = mapUnmanagedSegment(frameSegment);
