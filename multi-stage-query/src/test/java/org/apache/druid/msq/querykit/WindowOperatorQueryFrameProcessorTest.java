@@ -37,7 +37,6 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.indexing.CountingWritableFrameChannel;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;

@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
@@ -36,7 +37,6 @@ import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
-import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -58,11 +58,12 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskServiceLocator;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class IndexerWorkerContext implements WorkerContext
@@ -80,7 +81,9 @@ public class IndexerWorkerContext implements WorkerContext
   private final OverlordClient overlordClient;
   private final ServiceLocator controllerLocator;
   private final IndexIO indexIO;
-  private final TaskDataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
   private final IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
@@ -100,7 +103,8 @@ public class IndexerWorkerContext implements WorkerContext
       final OverlordClient overlordClient,
       final ServiceLocator controllerLocator,
       final IndexIO indexIO,
-      final TaskDataSegmentProvider dataSegmentProvider,
+      final SegmentManager segmentManager,
+      @Nullable final CoordinatorClient coordinatorClient,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
@@ -112,7 +116,8 @@ public class IndexerWorkerContext implements WorkerContext
     this.overlordClient = overlordClient;
     this.controllerLocator = controllerLocator;
     this.indexIO = indexIO;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
@@ -147,9 +152,10 @@ public class IndexerWorkerContext implements WorkerContext
   )
   {
     final IndexIO indexIO = injector.getInstance(IndexIO.class);
-    final SegmentCacheManager segmentCacheManager =
+    final SegmentManager segmentManager = new SegmentManager(
         injector.getInstance(SegmentCacheManagerFactory.class)
-                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"));
+                .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"), true)
+    );
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
@@ -166,7 +172,8 @@ public class IndexerWorkerContext implements WorkerContext
         overlordClient,
         new SpecificTaskServiceLocator(task.getControllerTaskId(), overlordClient),
         indexIO,
-        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager),
+        segmentManager,
+        toolbox.getCoordinatorClient(),
         serviceClientFactory,
         memoryIntrospector,
         processingBuffersProvider,
@@ -288,7 +295,8 @@ public class IndexerWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         indexIO,
-        dataSegmentProvider,
+        segmentManager,
+        coordinatorClient,
         processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         dataServerQueryHandlerFactory,
         memoryParameters,

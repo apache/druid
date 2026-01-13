@@ -17,10 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.exec.std;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.frame.allocation.MemoryAllocator;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -32,78 +33,71 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.CpuCounters;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.input.stage.InputChannels;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.input.stage.ReadablePartition;
-import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
 
 /**
- * Implementation of {@link InputChannels}.
+ * Helper class for reading {@link ReadablePartition} as a single {@link ReadableFrameChannel}, in the
+ * standard manner. Partitions located on a single worker are read as-is. Partitions located on multiple
+ * workers are either mixed or stream-merged depending on the {@link ShuffleSpec}.
  */
-public class InputChannelsImpl implements InputChannels
+public class StandardPartitionReader
 {
-  private final QueryDefinition queryDefinition;
-  private final InputChannelFactory channelFactory;
+  private final QueryDefinition queryDef;
+  private final InputChannelFactory inputChannelFactory;
   private final FrameWriterSpec frameWriterSpec;
-  private final Supplier<MemoryAllocator> allocatorMaker;
   private final FrameProcessorExecutor exec;
-  private final Map<StagePartition, ReadablePartition> readablePartitionMap;
-
-  @Nullable
   private final String cancellationId;
-
   @Nullable
-  private final CounterTracker counterTracker;
+  private final CounterTracker counters;
+  private final MemoryAllocatorFactory allocatorFactory;
 
-  public InputChannelsImpl(
-      final QueryDefinition queryDefinition,
-      final ReadablePartitions readablePartitions,
-      final InputChannelFactory channelFactory,
-      final FrameWriterSpec frameWriterSpec,
-      final Supplier<MemoryAllocator> allocatorMaker,
-      final FrameProcessorExecutor exec,
-      @Nullable final String cancellationId,
-      @Nullable final CounterTracker counterTracker
-  )
+  public StandardPartitionReader(ExecutionContext executionContext)
   {
-    this.queryDefinition = queryDefinition;
-    this.readablePartitionMap = new HashMap<>();
-    this.channelFactory = channelFactory;
-    this.frameWriterSpec = frameWriterSpec;
-    this.allocatorMaker = allocatorMaker;
-    this.exec = exec;
-    this.cancellationId = cancellationId;
-    this.counterTracker = counterTracker;
-
-    for (final ReadablePartition readablePartition : readablePartitions) {
-      readablePartitionMap.put(
-          new StagePartition(
-              new StageId(queryDefinition.getQueryId(), readablePartition.getStageNumber()),
-              readablePartition.getPartitionNumber()
-          ),
-          readablePartition
-      );
-    }
+    this.queryDef = executionContext.workOrder().getQueryDefinition();
+    this.inputChannelFactory = executionContext.inputChannelFactory();
+    this.frameWriterSpec = executionContext.frameContext().frameWriterSpec();
+    this.exec = executionContext.executor();
+    this.cancellationId = executionContext.cancellationId();
+    this.counters = executionContext.counters();
+    this.allocatorFactory =
+        new ArenaMemoryAllocatorFactory(executionContext.frameContext().memoryParameters().getFrameSize());
   }
 
-  @Override
-  public ReadableFrameChannel openChannel(final StagePartition stagePartition) throws IOException
+  public StandardPartitionReader(
+      final QueryDefinition queryDef,
+      final InputChannelFactory inputChannelFactory,
+      final FrameWriterSpec frameWriterSpec,
+      final FrameProcessorExecutor exec,
+      final String cancellationId,
+      @Nullable final CounterTracker counters,
+      final MemoryAllocatorFactory allocatorFactory
+  )
   {
-    final StageDefinition stageDef = queryDefinition.getStageDefinition(stagePartition.getStageId());
-    final ReadablePartition readablePartition = readablePartitionMap.get(stagePartition);
+    this.queryDef = queryDef;
+    this.inputChannelFactory = inputChannelFactory;
+    this.frameWriterSpec = frameWriterSpec;
+    this.exec = exec;
+    this.cancellationId = cancellationId;
+    this.counters = counters;
+    this.allocatorFactory = allocatorFactory;
+  }
+
+  public ReadableFrameChannel openChannel(final ReadablePartition readablePartition) throws IOException
+  {
+    final StageDefinition stageDef = queryDef.getStageDefinition(readablePartition.getStageNumber());
     final ClusterBy clusterBy = stageDef.getClusterBy();
     final boolean isSorted = clusterBy.sortable() && (clusterBy.getColumns().size() - clusterBy.getBucketByCount() > 0);
 
@@ -114,10 +108,9 @@ public class InputChannelsImpl implements InputChannels
     }
   }
 
-  @Override
   public FrameReader frameReader(final int stageNumber)
   {
-    return queryDefinition.getStageDefinition(stageNumber).getFrameReader();
+    return queryDef.getStageDefinition(stageNumber).getFrameReader();
   }
 
   private ReadableFrameChannel openSorted(
@@ -143,7 +136,7 @@ public class InputChannelsImpl implements InputChannels
           queueChannel.writable(),
           FrameWriters.makeFrameWriterFactory(
               frameWriterSpec.getRowBasedFrameType(),
-              new SingleMemoryAllocatorFactory(allocatorMaker.get()),
+              new SingleMemoryAllocatorFactory(allocatorFactory.newAllocator()),
               stageDefinition.getFrameReader().signature(),
               Collections.emptyList(),
               frameWriterSpec.getRemoveNullBytes()
@@ -157,7 +150,7 @@ public class InputChannelsImpl implements InputChannels
       // downstream processors are notified through fail(e) on in-memory channels. If we need to cancel it, we use
       // the cancellationId.
       exec.runFully(
-          counterTracker == null ? merger : counterTracker.trackCpu(merger, CpuCounters.LABEL_MERGE_INPUT),
+          counters == null ? merger : counters.trackCpu(merger, CpuCounters.LABEL_MERGE_INPUT),
           cancellationId
       );
 
@@ -185,7 +178,7 @@ public class InputChannelsImpl implements InputChannels
       // downstream processors are notified through fail(e) on in-memory channels. If we need to cancel it, we use
       // the cancellationId.
       exec.runFully(
-          counterTracker == null ? muxer : counterTracker.trackCpu(muxer, CpuCounters.LABEL_MERGE_INPUT),
+          counters == null ? muxer : counters.trackCpu(muxer, CpuCounters.LABEL_MERGE_INPUT),
           cancellationId
       );
 
@@ -203,7 +196,7 @@ public class InputChannelsImpl implements InputChannels
     try {
       for (final int workerNumber : readablePartition.getWorkerNumbers()) {
         channels.add(
-            channelFactory.openChannel(
+            inputChannelFactory.openChannel(
                 stageId,
                 workerNumber,
                 readablePartition.getPartitionNumber()

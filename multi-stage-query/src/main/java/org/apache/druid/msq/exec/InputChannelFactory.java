@@ -17,33 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.msq.exec;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import org.apache.druid.frame.channel.ReadableFrameChannel;
+import org.apache.druid.msq.kernel.StageId;
 
 import java.io.IOException;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-
-public class CompleteSegmentTest
+/**
+ * Creates {@link ReadableFrameChannel} to fetch data corresponding to a particular stage and partition on
+ * a particular worker.
+ */
+public interface InputChannelFactory
 {
-  @Test
-  public void testCloseSegment() throws IOException
-  {
-    Segment segment = mock(Segment.class);
-    CompleteSegment completeSegment = new CompleteSegment(null, segment);
-    completeSegment.close();
-    verify(segment).close();
-  }
-
-  @Test
-  public void testEquals()
-  {
-    EqualsVerifier.forClass(CompleteSegment.class)
-                  .withNonnullFields("segment", "dataSegment")
-                  .usingGetClass()
-                  .verify();
-  }
+  /**
+   * Given stageId, partitionNumber and workerNumber, this method opens the ReadableFrameChannel to fetch the
+   * corresponding frames
+   */
+  ReadableFrameChannel openChannel(StageId stageId, int workerNumber, int partitionNumber) throws IOException;
 }

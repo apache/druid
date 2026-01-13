@@ -30,7 +30,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.inject.util.Modules;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -52,7 +52,6 @@ import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageS
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
@@ -93,6 +92,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -102,7 +102,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.destination.IngestDestination;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.test.utils.TestSegmentManager;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -117,15 +118,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.expressionVirtualColumn;
 import static org.apache.druid.sql.calcite.table.RowSignatures.toRelDataType;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
 
 public class MSQTaskQueryMakerTest
@@ -139,8 +137,7 @@ public class MSQTaskQueryMakerTest
   @Bind
   private SpecificSegmentsQuerySegmentWalker walker;
   @Bind
-  @Mock
-  private DataSegmentProvider dataSegmentProviderMock;
+  private SegmentManager segmentManager;
   @Bind
   private ObjectMapper objectMapper;
   @Bind
@@ -181,16 +178,11 @@ public class MSQTaskQueryMakerTest
         FileUtils.getTempDir().toFile(),
         SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER))
     );
-    when(dataSegmentProviderMock.fetchSegment(
-        any(),
-        any(),
-        anyBoolean()
-    )).thenAnswer(invocation -> (Supplier<?>) () -> {
-      SegmentId segmentId = (SegmentId) invocation.getArguments()[0];
-      return new ReferenceCountingResourceHolder(walker.getSegment(segmentId), () -> {
-        // no-op closer, we don't want to close the segment
-      });
-    });
+    final TestSegmentManager testSegmentManager = new TestSegmentManager();
+    for (SpecificSegmentsQuerySegmentWalker.CompleteSegment completeSegment : walker.getCompleteSegments()) {
+      testSegmentManager.addSegment(completeSegment.dataSegment, completeSegment.segment);
+    }
+    segmentManager = testSegmentManager.getSegmentManager();
 
     objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();
@@ -225,12 +217,19 @@ public class MSQTaskQueryMakerTest
     );
     Injector injector = Guice.createInjector(defaultModule, BoundFieldModule.of(this));
     DruidSecondaryModule.setupJackson(injector, objectMapper);
+
+    // Populate loadedSegmentMetadata from walker segments so CoordinatorClient.fetchSegment() can find them
+    List<ImmutableSegmentLoadInfo> loadedSegmentMetadata = new ArrayList<>();
+    for (DataSegment dataSegment : walker.getSegments()) {
+      loadedSegmentMetadata.add(new ImmutableSegmentLoadInfo(dataSegment, java.util.Collections.emptySet()));
+    }
+
     fakeOverlordClient = new MSQTestOverlordServiceClient(
         objectMapper,
         injector,
         new MSQTestTaskActionClient(objectMapper, injector),
         MSQTestBase.makeTestWorkerMemoryParameters(),
-        new ArrayList<>()
+        loadedSegmentMetadata
     );
   }
 

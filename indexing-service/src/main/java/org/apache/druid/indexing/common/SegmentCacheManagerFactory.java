@@ -52,11 +52,12 @@ public class SegmentCacheManagerFactory
     this.jsonMapper = mapper;
   }
 
-  public SegmentCacheManager manufacturate(File storageDir)
+  public SegmentCacheManager manufacturate(File storageDir, boolean virtualStorage)
   {
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
-        Collections.singletonList(new StorageLocationConfig(storageDir, null, null))
-    );
+    final SegmentLoaderConfig loaderConfig =
+        new SegmentLoaderConfig()
+            .setLocations(Collections.singletonList(new StorageLocationConfig(storageDir, null, null)))
+            .setVirtualStorage(virtualStorage, virtualStorage);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,
