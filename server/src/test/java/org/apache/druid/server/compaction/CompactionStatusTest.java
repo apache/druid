@@ -42,7 +42,6 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionStateCache;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
@@ -611,9 +610,7 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage,
-        compactionStateCache
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
   }
 
@@ -649,9 +646,7 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage,
-        compactionStateCache
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
   }
 
@@ -694,9 +689,7 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "One or more fingerprinted segments do not have a cached compaction state",
-        compactionStateStorage,
-        compactionStateCache
+        "One or more fingerprinted segments do not have a cached compaction state"
     );
   }
 
@@ -750,9 +743,7 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "'segmentGranularity' mismatch: required[DAY], current[HOUR]",
-        compactionStateStorage,
-        compactionStateCache
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
     );
   }
 
@@ -824,15 +815,13 @@ public class CompactionStatusTest
   private void verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
       CompactionCandidate candidate,
       DataSourceCompactionConfig compactionConfig,
-      String expectedReason,
-      CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache
+      String expectedReason
   )
   {
     final CompactionStatus status = CompactionStatus.compute(
         candidate,
         compactionConfig,
-        new DefaultCompactionFingerprintMapper(compactionStateCache, new DefaultObjectMapper()) // TODO fix
+        fingerprintMapper
     );
 
     Assert.assertFalse(status.isComplete());
