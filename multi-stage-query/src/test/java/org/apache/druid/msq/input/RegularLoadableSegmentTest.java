@@ -343,7 +343,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // Cache dir should exist, but be (mostly) empty, since we've dropped all segments.
     Assertions.assertTrue(preLoadCacheDir.exists());
-    Assertions.assertEquals(List.of("info_dir", "__drop"), Arrays.asList(preLoadCacheDir.list()));
+    Assertions.assertEquals(Set.of("info_dir", "__drop"), Set.of(preLoadCacheDir.list()));
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(preLoadCacheDir, "__drop").list()));
     Assertions.assertEquals(Collections.emptyList(), Arrays.asList(new File(preLoadCacheDir, "info_dir").list()));
   }
