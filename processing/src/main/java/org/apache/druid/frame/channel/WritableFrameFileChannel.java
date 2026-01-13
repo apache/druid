@@ -43,7 +43,7 @@ public class WritableFrameFileChannel implements WritableFrameChannel
   @Override
   public void write(RowsAndColumns rac, int partitionNumber) throws IOException
   {
-    writer.writeRAC(rac, partitionNumber);
+    writer.write(rac, partitionNumber);
   }
 
   @Override

@@ -121,7 +121,7 @@ public class FrameFileWriter implements Closeable
    * @param partition partition number for a partitioned frame file, or {@link #NO_PARTITION} for an unpartitioned file.
    *                  Must be monotonically increasing.
    */
-  public void writeRAC(final RowsAndColumns rac, final int partition) throws IOException
+  public void write(final RowsAndColumns rac, final int partition) throws IOException
   {
     if (wtContext.useLegacyFrameSerialization()) {
       // Check if we should write as a Frame using the legacy format.

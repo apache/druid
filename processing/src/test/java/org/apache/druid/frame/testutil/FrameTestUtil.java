@@ -113,7 +113,7 @@ public class FrameTestUtil
       frames.forEach(
           frame -> {
             try {
-              writer.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
+              writer.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -140,7 +140,7 @@ public class FrameTestUtil
       framesWithPartitions.forEach(
           frameWithPartition -> {
             try {
-              writer.writeRAC(frameWithPartition.right().asRAC(), frameWithPartition.leftInt());
+              writer.write(frameWithPartition.right().asRAC(), frameWithPartition.leftInt());
             }
             catch (IOException e) {
               throw new RuntimeException(e);

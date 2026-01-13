@@ -54,7 +54,7 @@ import java.util.EnumSet;
  *
  * Frame files are written by {@link FrameFileWriter}.
  *
- * Frame files can optionally be partitioned, by providing partition numbers to the {@link FrameFileWriter#writeRAC}
+ * Frame files can optionally be partitioned, by providing partition numbers to the {@link FrameFileWriter#write}
  * method when creating the file. Partitions are contiguous within the frame file.
  *
  * Frame files can contain up to {@link Integer#MAX_VALUE} frames. Generally, frames are on the order of 1 MB in size,

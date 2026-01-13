@@ -545,7 +545,7 @@ public class FrameProcessorExecutorTest
           public void accept(Frame frame)
           {
             try {
-              writers.get(j % writers.size()).writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
+              writers.get(j % writers.size()).write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
             }
             catch (IOException e) {
               throw new RuntimeException(e);

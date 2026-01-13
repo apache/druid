@@ -68,7 +68,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     frames.forEach(frame -> {
       try {
-        fileWriter.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
+        fileWriter.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);

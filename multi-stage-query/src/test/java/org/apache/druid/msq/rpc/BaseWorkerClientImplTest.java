@@ -321,7 +321,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
         FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker(), FrameTestUtil.WT_CONTEXT_LEGACY);
     frames.forEach(frame -> {
       try {
-        writer.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
+        writer.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);

@@ -95,7 +95,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
         wireTransferableContext
     )) {
       for (Frame frame : frameList) {
-        writer.writeRAC(frame.asRAC(), FrameFileWriter.NO_PARTITION);
+        writer.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
     }
 

@@ -158,7 +158,7 @@ public class ChannelStageOutputReader implements StageOutputReader
           continue;
         } else if (channel.canRead()) {
           try {
-            writer.writeRAC(channel.readRAC(), FrameFileWriter.NO_PARTITION);
+            writer.write(channel.readRAC(), FrameFileWriter.NO_PARTITION);
           }
           catch (Exception e) {
             try {
