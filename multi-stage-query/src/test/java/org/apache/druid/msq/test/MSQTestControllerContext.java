@@ -211,8 +211,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();
-      ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
       inMemoryWorkers.put(task.getId(), workerRunRef);
+      ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
       Futures.addCallback(future, new FutureCallback<Object>()
