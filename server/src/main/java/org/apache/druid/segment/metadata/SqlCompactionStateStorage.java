@@ -22,6 +22,7 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
@@ -36,6 +37,7 @@ import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nonnull;
+import javax.validation.constraints.NotEmpty;
 import java.util.List;
 
 /**
@@ -73,14 +75,30 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
 
   @Override
   public void upsertCompactionState(
-      final String dataSource,
-      final String fingerprint,
-      final CompactionState compactionState,
-      final DateTime updateTime
+      @NotEmpty final String dataSource,
+      @NotEmpty final String fingerprint,
+      @Nonnull final CompactionState compactionState,
+      @Nonnull final DateTime updateTime
   )
   {
-    if (compactionState == null || fingerprint == null || fingerprint.isEmpty()) {
-      return;
+    // Strictly sanitize inputs to avoid writing junk data to the rdbms
+    StringBuilder errors = new StringBuilder();
+    if (dataSource == null || dataSource.isEmpty()) {
+      errors.append("dataSource cannot be empty; ");
+    }
+    if (fingerprint == null || fingerprint.isEmpty()) {
+      errors.append("fingerprint cannot be empty; ");
+    }
+    if (compactionState == null) {
+      errors.append("compactionState cannot be null; ");
+    }
+    if (updateTime == null) {
+      errors.append("updateTime cannot be null; ");
+    }
+    if (errors.length() > 0) {
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(errors.toString().trim());
     }
 
     try {

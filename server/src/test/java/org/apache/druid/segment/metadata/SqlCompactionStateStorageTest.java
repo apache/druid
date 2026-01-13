@@ -45,6 +45,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SqlCompactionStateStorageTest
@@ -242,55 +243,38 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_withNullState_doesNothing()
+  public void test_upsertCompactionState_withNullState_throwsException()
   {
-    // Get initial count
-    Integer beforeCount = derbyConnector.retryWithHandle(handle ->
-                                                             handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
-                                                                   .map((i, r, ctx) -> r.getInt(1))
-                                                                   .first()
+    Exception exception = assertThrows(
+        Exception.class,
+        () -> derbyConnector.retryWithHandle(handle -> {
+          manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc());
+          return null;
+        })
     );
 
-    // Persist empty map
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc());
-      return null;
-    });
-
-    // Verify count unchanged
-    Integer afterCount = derbyConnector.retryWithHandle(handle ->
-                                                            handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
-                                                                  .map((i, r, ctx) -> r.getInt(1))
-                                                                  .first()
+    assertTrue(
+        exception.getMessage().contains("compactionState cannot be null"),
+        "Exception message should contain 'compactionState cannot be null'"
     );
-
-    assertEquals(beforeCount, afterCount);
   }
 
   @Test
-  public void test_upsertCompactionState_withEmptyPrint_doesNothing()
+  public void test_upsertCompactionState_withEmptyFingerprint_throwsException()
   {
-    // Get initial count
-    Integer beforeCount = derbyConnector.retryWithHandle(handle ->
-                                                             handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
-                                                                   .map((i, r, ctx) -> r.getInt(1))
-                                                                   .first()
+    // The exception ends up wrapped in a sql exception doe to the retryWithHandle so we will just check the message
+    Exception exception = assertThrows(
+        Exception.class,
+        () -> derbyConnector.retryWithHandle(handle -> {
+          manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc());
+          return null;
+        })
     );
 
-    // Persist empty map
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc());
-      return null;
-    });
-
-    // Verify count unchanged
-    Integer afterCount = derbyConnector.retryWithHandle(handle ->
-                                                            handle.createQuery("SELECT COUNT(*) FROM " + tablesConfig.getCompactionStatesTable())
-                                                                  .map((i, r, ctx) -> r.getInt(1))
-                                                                  .first()
+    assertTrue(
+        exception.getMessage().contains("fingerprint cannot be empty"),
+        "Exception message should contain 'fingerprint cannot be empty'"
     );
-
-    assertEquals(beforeCount, afterCount);
   }
 
   @Test
