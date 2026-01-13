@@ -29,7 +29,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,17 +222,14 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   public static class Builder
   {
     private final String segmentId;
+    private final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+    private final Map<String, AggregatorFactory> aggregators = new LinkedHashMap<>();
+    private final Map<String, AggregateProjectionMetadata> projections = new LinkedHashMap<>();
 
-    private LinkedHashMap<String, ColumnAnalysis> columns = null;
-    private Map<String, AggregatorFactory> aggregators = null;
-    private Map<String, AggregateProjectionMetadata> projections = null;
-    private TimestampSpec timestampSpec = null;
-    private Granularity queryGranularity = null;
     private List<Interval> intervals = null;
-
-    private Optional<Long> size = Optional.empty();
+    private Optional<Integer> size = Optional.empty();
     private Optional<Integer> numRows = Optional.empty();
-    private Boolean rollup = null;
+    private Optional<Boolean> rollup = Optional.empty();
 
     public Builder(String segmentId)
     {
@@ -245,7 +241,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       this.segmentId = segmentId.toString();
     }
 
-    public Builder size(long size)
+    public Builder size(int size)
     {
       if (this.size.isEmpty()) {
         this.size = Optional.of(size);
@@ -255,7 +251,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder numRows(Integer numRows)
+    public Builder numRows(int numRows)
     {
       if (this.numRows.isEmpty()) {
         this.numRows = Optional.of(numRows);
@@ -265,12 +261,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder rollup(Boolean rollup)
+    public Builder rollup(boolean rollup)
     {
-      if (this.rollup == null) {
-        this.rollup = rollup;
+      if (this.rollup.isEmpty()) {
+        this.rollup = Optional.of(rollup);
       } else {
-        throw new IllegalStateException("Rollup is already set: " + this.rollup);
+        throw new IllegalStateException("Rollup is already set: " + this.rollup.get());
       }
       return this;
     }
@@ -284,90 +280,21 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder intervals(List<Interval> intervals)
-    {
-      if (this.intervals == null) {
-        this.intervals = intervals;
-      } else {
-        throw new IllegalStateException("Intervals is already set: " + this.intervals);
-      }
-      return this;
-    }
-
     public Builder column(String columnName, ColumnAnalysis columnAnalysis)
     {
-      if (this.columns == null) {
-        this.columns = new LinkedHashMap<>();
-      }
       this.columns.put(columnName, columnAnalysis);
-      return this;
-    }
-
-    public Builder columns(LinkedHashMap<String, ColumnAnalysis> columns)
-    {
-      if (this.columns == null) {
-        this.columns = columns;
-      } else {
-        throw new IllegalStateException("Columns is already set: " + this.columns);
-      }
       return this;
     }
 
     public Builder aggregator(String name, AggregatorFactory aggregatorFactory)
     {
-      if (this.aggregators == null) {
-        this.aggregators = new HashMap<>();
-      }
       this.aggregators.put(name, aggregatorFactory);
-      return this;
-    }
-
-    public Builder aggregators(Map<String, AggregatorFactory> aggregators)
-    {
-      if (this.aggregators == null) {
-        this.aggregators = aggregators;
-      } else {
-        throw new IllegalStateException("Aggregators is already set: " + this.aggregators);
-      }
       return this;
     }
 
     public Builder projection(String name, AggregateProjectionMetadata projection)
     {
-      if (this.projections == null) {
-        this.projections = new HashMap<>();
-      }
       this.projections.put(name, projection);
-      return this;
-    }
-
-    public Builder projections(Map<String, AggregateProjectionMetadata> projections)
-    {
-      if (this.projections == null) {
-        this.projections = projections;
-      } else {
-        throw new IllegalStateException("Projections is already set: " + this.projections);
-      }
-      return this;
-    }
-
-    public Builder timestampSpec(TimestampSpec timestampSpec)
-    {
-      if (this.timestampSpec == null) {
-        this.timestampSpec = timestampSpec;
-      } else {
-        throw new IllegalStateException("TimstampSpec is already set: " + this.timestampSpec);
-      }
-      return this;
-    }
-
-    public Builder granularity(Granularity queryGranularity)
-    {
-      if (this.queryGranularity == null) {
-        this.queryGranularity = queryGranularity;
-      } else {
-        throw new IllegalStateException("QueryGranularity is already set: " + this.queryGranularity);
-      }
       return this;
     }
 
@@ -376,14 +303,14 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return new SegmentAnalysis(
           segmentId,
           intervals,
-          columns == null ? new LinkedHashMap<>() : columns,
-          size.orElse(0L),
+          columns,
+          size.orElse(0),
           numRows.orElse(0),
-          aggregators,
-          projections,
-          timestampSpec,
-          queryGranularity,
-          rollup
+          aggregators.isEmpty() ? null : aggregators,
+          projections.isEmpty() ? null : projections,
+          null,
+          null,
+          rollup.orElse(null)
       );
     }
   }

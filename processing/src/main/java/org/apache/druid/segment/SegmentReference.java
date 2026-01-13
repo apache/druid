@@ -21,10 +21,8 @@ package org.apache.druid.segment;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.DataSegmentAndDescriptor;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -34,12 +32,12 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Wrapper for a {@link DataSegment} (Nullable), a {@link SegmentDescriptor} and an optional {@link Segment}.
- * {@link Segment} is created by a {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}.
- * <p>
+ * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}. For regular segments, the latter is typically
+ * created by a {@link ReferenceCountedSegmentProvider} that may have a {@link SegmentMapFunction} applied to it.
+ *
  * If the {@link SegmentMapFunction} you want to apply is not available at the time the {@link SegmentReference}
  * is created, use {@link #map(SegmentMapFunction)} to apply it.
- * <p>
+ *
  * Closing this object closes both the {@link #getSegmentReference()} and any closeables attached from the process of
  * creating this object, such as from {@link AcquireSegmentAction}. The object from {@link #getSegmentReference()}
  * should not be closed directly by callers.
@@ -51,8 +49,6 @@ public class SegmentReference implements Closeable
     return new SegmentReference(segmentDescriptor, Optional.empty(), null);
   }
 
-  @Nullable
-  private final DataSegment dataSegment;
   private final SegmentDescriptor segmentDescriptor;
   private final Optional<Segment> segmentReference;
   @Nullable
@@ -60,40 +56,14 @@ public class SegmentReference implements Closeable
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public SegmentReference(
-      DataSegmentAndDescriptor segment,
-      Optional<Segment> segmentReference,
-      @Nullable Closeable cleanupHold
-  )
-  {
-    this(segment.getDataSegment(), segment.getDescriptor(), segmentReference, cleanupHold);
-  }
-
-  public SegmentReference(
       SegmentDescriptor segmentDescriptor,
       Optional<Segment> segmentReference,
       @Nullable Closeable cleanupHold
   )
   {
-    this(null, segmentDescriptor, segmentReference, cleanupHold);
-  }
-
-  private SegmentReference(
-      @Nullable DataSegment segment,
-      SegmentDescriptor segmentDescriptor,
-      Optional<Segment> segmentReference,
-      @Nullable Closeable cleanupHold
-  )
-  {
-    this.dataSegment = segment;
     this.segmentDescriptor = segmentDescriptor;
     this.segmentReference = segmentReference;
     this.cleanupHold = cleanupHold;
-  }
-
-  @Nullable
-  public DataSegment getDataSegment()
-  {
-    return dataSegment;
   }
 
   public SegmentDescriptor getSegmentDescriptor()
