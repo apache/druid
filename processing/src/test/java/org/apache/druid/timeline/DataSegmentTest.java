@@ -96,7 +96,7 @@ public class DataSegmentTest
                                            .lastCompactionState(compactionState)
                                            .binaryVersion(TEST_VERSION)
                                            .size(123L)
-                                           .totalRows(12)
+                                           .numRows(12)
                                            .build();
     // act & assert
     final Map<String, Object> objectMap = MAPPER.readValue(
@@ -118,7 +118,7 @@ public class DataSegmentTest
     );
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(123, objectMap.get("size"));
-    Assert.assertEquals(12, objectMap.get("totalRows"));
+    Assert.assertEquals(12, objectMap.get("numRows"));
     Assert.assertEquals(6, ((Map) objectMap.get("lastCompactionState")).size());
     // another act & assert
     DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);

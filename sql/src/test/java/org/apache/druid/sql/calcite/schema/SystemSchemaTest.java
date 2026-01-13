@@ -326,7 +326,7 @@ public class SystemSchemaTest extends CalciteTestBase
                  .projections(ImmutableList.of("proj1", "proj2"))
                  .binaryVersion(1)
                  .size(100L)
-                 .totalRows(100)
+                 .numRows(100)
                  .build();
   private final DataSegment segment2 =
       DataSegment.builder(SegmentId.of("test2", Intervals.of("2011/2012"), "version2", null))
@@ -334,7 +334,7 @@ public class SystemSchemaTest extends CalciteTestBase
                  .metrics(ImmutableList.of("met1", "met2"))
                  .binaryVersion(1)
                  .size(100L)
-                 .totalRows(200)
+                 .numRows(200)
                  .build();
   private final DataSegment segment3 =
       DataSegment.builder(SegmentId.of("test3", Intervals.of("2012/2013"), "version3", null))

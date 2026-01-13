@@ -56,7 +56,7 @@ public class DataSegmentsWithSchemasTest
                                            .shardSpec(new LinearShardSpec(0))
                                            .binaryVersion(9)
                                            .size(100)
-                                           .totalRows(10)
+                                           .numRows(10)
                                            .build();
 
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(0);
@@ -97,7 +97,7 @@ public class DataSegmentsWithSchemasTest
                                            .shardSpec(new LinearShardSpec(0))
                                            .binaryVersion(9)
                                            .size(100)
-                                           .totalRows(10)
+                                           .numRows(10)
                                            .build();
 
     SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(0);

@@ -977,7 +977,7 @@ public class StreamAppenderator implements Appenderator
             sink.getSegment()
                 .toBuilder()
                 .dimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec()))
-                .totalRows(index.getNumRows())
+                .numRows(index.getNumRows())
                 .build();
       }
       catch (Throwable t) {
@@ -1001,7 +1001,7 @@ public class StreamAppenderator implements Appenderator
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
-          segment.getTotalRows(),
+          segment.getNumRows(),
           indexes.size(),
           mergeTimeMillis,
           pushTimeMillis,
