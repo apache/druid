@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -221,7 +222,18 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @LifecycleStart
   public synchronized void start()
   {
-    // Do nothing
+    // Validate that if compaction supervisors are enabled, the segment metadata incremental cache must be enabled
+    if (compactionConfigSupplier.get().isUseSupervisors()) {
+      if (segmentManager != null && !segmentManager.isPollingDatabasePeriodically()) {
+        throw DruidException
+            .forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
+            .build(
+                "Compaction supervisors require segment metadata cache to be enabled. "
+                + "Set 'druid.manager.segments.useIncrementalCache=always' or 'ifSynced'"
+            );
+      }
+    }
   }
 
   @LifecycleStop
