@@ -61,7 +61,7 @@ public class DataSegmentWithLocationTest
   }
 
   @Test
-  public void testSerde_LoadableDataSegment() throws Exception
+  public void testSerde_dataSegmentWithLocation() throws Exception
   {
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ShardSpec shardSpec = new NumberedShardSpec(3, 0);
