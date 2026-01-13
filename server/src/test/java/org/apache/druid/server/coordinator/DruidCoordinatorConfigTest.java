@@ -256,10 +256,6 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.segmentSchema.period", "PT2H");
     props.setProperty("druid.coordinator.kill.segmentSchema.durationToRetain", "PT8H");
 
-    props.setProperty("druid.coordinator.kill.compactionState.on", "false");
-    props.setProperty("druid.coordinator.kill.compactionState.period", "PT2H");
-    props.setProperty("druid.coordinator.kill.compactionState.durationToRetain", "PT8H");
-
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(props, "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
@@ -286,10 +282,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(2), Duration.standardHours(8)),
         killConfigs.segmentSchemas()
-    );
-    Assert.assertEquals(
-        new MetadataCleanupConfig(false, Duration.standardHours(2), Duration.standardHours(8)),
-        killConfigs.compactionStates()
     );
     Assert.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
   }
@@ -338,12 +330,6 @@ public class DruidCoordinatorConfigTest
         "'druid.coordinator.kill.segmentSchema.period'[PT1800S] must be greater than"
         + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
     );
-    verifyCoordinatorConfigFailsWith(
-        createKillConfig().compactionState(cleanupConfig).build(),
-        periodConfig,
-        "'druid.coordinator.kill.compactionState.period'[PT1800S] must be greater than"
-        + " 'druid.coordinator.period.metadataStoreManagementPeriod'[PT3600S]"
-    );
   }
 
   @Test
@@ -382,11 +368,6 @@ public class DruidCoordinatorConfigTest
         createKillConfig().segmentSchema(cleanupConfig).build(),
         defaultPeriodConfig,
         "'druid.coordinator.kill.segmentSchema.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
-    );
-    verifyCoordinatorConfigFailsWith(
-        createKillConfig().compactionState(cleanupConfig).build(),
-        defaultPeriodConfig,
-        "'druid.coordinator.kill.compactionState.durationToRetain'[PT-1S] must be 0 milliseconds or higher"
     );
   }
 
@@ -430,13 +411,6 @@ public class DruidCoordinatorConfigTest
         createKillConfig().segmentSchema(cleanupConfig).build(),
         defaultPeriodConfig,
         "'druid.coordinator.kill.segmentSchema.durationToRetain'[%s] cannot be"
-        + " greater than current time in milliseconds",
-        futureRetainDuration
-    );
-    verifyCoordinatorConfigFailsWith(
-        createKillConfig().compactionState(cleanupConfig).build(),
-        defaultPeriodConfig,
-        "'druid.coordinator.kill.compactionState.durationToRetain'[%s] cannot be"
         + " greater than current time in milliseconds",
         futureRetainDuration
     );
@@ -511,7 +485,6 @@ public class DruidCoordinatorConfigTest
     MetadataCleanupConfig pendingSegments;
     MetadataCleanupConfig segmentSchema;
     KillUnusedSegmentsConfig unusedSegments;
-    MetadataCleanupConfig compactionState;
 
     KillConfigBuilder audit(MetadataCleanupConfig config)
     {
@@ -549,12 +522,6 @@ public class DruidCoordinatorConfigTest
       return this;
     }
 
-    KillConfigBuilder compactionState(MetadataCleanupConfig config)
-    {
-      this.compactionState = config;
-      return this;
-    }
-
     KillConfigBuilder unusedSegments(KillUnusedSegmentsConfig config)
     {
       this.unusedSegments = config;
@@ -571,7 +538,6 @@ public class DruidCoordinatorConfigTest
           rules,
           compaction,
           segmentSchema,
-          compactionState,
           unusedSegments == null ? null : unusedSegments.isCleanupEnabled(),
           unusedSegments == null ? null : unusedSegments.getCleanupPeriod(),
           unusedSegments == null ? null : unusedSegments.getDurationToRetain(),

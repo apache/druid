@@ -120,6 +120,6 @@ public class DruidCompactionConfigTest
     Assert.assertEquals(CompactionEngine.NATIVE, config.getEngine());
     Assert.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 1e-9);
     Assert.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
-    Assert.assertTrue(config.isLegacyPersistLastCompactionStateInSegments());
+    Assert.assertTrue(config.isStoreCompactionStatePerSegment());
   }
 }

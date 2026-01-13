@@ -90,8 +90,11 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
+import org.apache.druid.indexing.overlord.config.OverlordKillConfigs;
+import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.duty.KillUnreferencedCompactionState;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleaner;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
@@ -411,6 +414,13 @@ public class CliOverlord extends ServerRunnable
 
               @Provides
               @LazySingleton
+              public OverlordMetadataCleanupConfig provideCompactionStateCleanupConfig(OverlordKillConfigs killConfigs)
+              {
+                return killConfigs.compactionStates();
+              }
+
+              @Provides
+              @LazySingleton
               @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
               public Supplier<Map<String, Object>> getHeartbeatSupplier(DruidOverlord overlord)
               {
@@ -451,9 +461,11 @@ public class CliOverlord extends ServerRunnable
           private void configureOverlordHelpers(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.logs.kill", TaskLogAutoCleanerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.overlord.kill", OverlordKillConfigs.class);
             final Multibinder<OverlordDuty> dutyBinder = Multibinder.newSetBinder(binder, OverlordDuty.class);
             dutyBinder.addBinding().to(TaskLogAutoCleaner.class);
             dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
+            dutyBinder.addBinding().to(KillUnreferencedCompactionState.class);
           }
 
           /**

@@ -17,40 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.indexing.overlord.duty;
 
+import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
-import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
+import javax.inject.Inject;
 import java.util.List;
 
-/**
- * Coordinator duty that cleans up old, unused compaction state entries from the database.
- * <p>
- * This duty performs a three-step cleanup process:
- * <ol>
- *   <li>Marks compaction states not referenced by any segments as unused</li>
- *   <li>Repairs any incorrectly marked unused states that are still referenced by used segments</li>
- *   <li>Deletes unused compaction states older than the configured retention period</li>
- * </ol>
- * <p>
- * This prevents unbounded growth of the compaction states table while ensuring that
- * states referenced by active segments are preserved.
- */
-public class KillUnreferencedCompactionState extends MetadataCleanupDuty
+public class KillUnreferencedCompactionState extends OverlordMetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedCompactionState.class);
   private final CompactionStateStorage compactionStateStorage;
 
+  @Inject
   public KillUnreferencedCompactionState(
-      MetadataCleanupConfig config,
+      OverlordMetadataCleanupConfig config,
       CompactionStateStorage compactionStateStorage
   )
   {
-    super("compactionState", config, Stats.Kill.COMPACTION_STATE);
+    super("compactionState", config);
     this.compactionStateStorage = compactionStateStorage;
   }
 

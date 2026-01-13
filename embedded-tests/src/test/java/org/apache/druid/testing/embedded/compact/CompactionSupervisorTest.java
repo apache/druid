@@ -211,9 +211,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
   public void test_compaction_withPersistLastCompactionStateFalse_storesOnlyFingerprint(CompactionEngine compactionEngine)
-      throws InterruptedException
   {
-    // Configure cluster with persistLastCompactionState=false
+    // Configure cluster with storeCompactionStatePerSegment=false
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(
             new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)

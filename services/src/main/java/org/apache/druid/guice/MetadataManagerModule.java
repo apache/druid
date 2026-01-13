@@ -43,7 +43,6 @@ import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
-import org.apache.druid.segment.metadata.NoopCompactionStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
@@ -107,9 +106,6 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
-    binder.bind(CompactionStateStorage.class)
-          .to(SqlCompactionStateStorage.class)
-          .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {
@@ -138,12 +134,12 @@ public class MetadataManagerModule implements Module
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
       binder.bind(CompactionStateCache.class).in(LazySingleton.class);
+      binder.bind(CompactionStateStorage.class)
+            .to(SqlCompactionStateStorage.class)
+            .in(ManageLifecycle.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)
-            .in(LazySingleton.class);
-      binder.bind(CompactionStateCache.class)
-            .to(NoopCompactionStateCache.class)
             .in(LazySingleton.class);
     }
   }

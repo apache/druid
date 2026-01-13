@@ -17,10 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.indexing.overlord.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -28,52 +29,39 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.CompactionState;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 public class KillUnreferencedCompactionStateTest
 {
-  @RegisterExtension
-  public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
-      new TestDerbyConnector.DerbyConnectorRule5();
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
+      new TestDerbyConnector.DerbyConnectorRule();
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private TestDerbyConnector derbyConnector;
   private MetadataStorageTablesConfig tablesConfig;
   private CompactionStateStorage compactionStateStorage;
-  private DruidCoordinatorRuntimeParams mockParams;
 
-  @BeforeEach
+  @Before
   public void setUp()
   {
-    derbyConnector = DERBY_CONNECTOR_RULE.getConnector();
-    tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
+    derbyConnector = derbyConnectorRule.getConnector();
+    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
     derbyConnector.createCompactionStatesTable();
     derbyConnector.createSegmentTable();
 
     compactionStateStorage = new SqlCompactionStateStorage(tablesConfig, jsonMapper, derbyConnector);
-
-    mockParams = EasyMock.createMock(DruidCoordinatorRuntimeParams.class);
-    CoordinatorRunStats runStats = new CoordinatorRunStats();
-    EasyMock.expect(mockParams.getCoordinatorStats()).andReturn(runStats).anyTimes();
-    EasyMock.replay(mockParams);
   }
 
   @Test
@@ -86,7 +74,7 @@ public class KillUnreferencedCompactionStateTest
     dateTimes.add(now.plusMinutes(61));         // Run 2: Still in retention period
     dateTimes.add(now.plusMinutes(6 * 60 + 1)); // Run 3: Past retention, delete
 
-    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),  // cleanup period
         Period.parse("PT6H").toStandardDuration()   // retention duration
@@ -104,19 +92,19 @@ public class KillUnreferencedCompactionStateTest
       return null;
     });
 
-    assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
+    Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
 
     // Run 1: Should mark as unused (no segments reference it)
-    duty.run(mockParams);
-    assertEquals(Boolean.FALSE, getCompactionStateUsedStatus(fingerprint));
+    duty.run();
+    Assert.assertEquals(Boolean.FALSE, getCompactionStateUsedStatus(fingerprint));
 
     // Run 2: Still unused, but within retention period - should not delete
-    duty.run(mockParams);
-    assertNotNull(getCompactionStateUsedStatus(fingerprint));
+    duty.run();
+    Assert.assertNotNull(getCompactionStateUsedStatus(fingerprint));
 
     // Run 3: Past retention period - should delete
-    duty.run(mockParams);
-    assertNull(getCompactionStateUsedStatus(fingerprint));
+    duty.run();
+    Assert.assertNull(getCompactionStateUsedStatus(fingerprint));
   }
 
   @Test
@@ -127,7 +115,7 @@ public class KillUnreferencedCompactionStateTest
     dateTimes.add(now);
     dateTimes.add(now.plusMinutes(61));
 
-    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration()
@@ -146,8 +134,8 @@ public class KillUnreferencedCompactionStateTest
     });
 
     // Run 1: Mark as unused
-    duty.run(mockParams);
-    assertEquals(Boolean.FALSE, getCompactionStateUsedStatus(fingerprint));
+    duty.run();
+    Assert.assertEquals(Boolean.FALSE, getCompactionStateUsedStatus(fingerprint));
 
     // Now insert a used segment that references this fingerprint
     derbyConnector.retryWithHandle(handle -> {
@@ -174,14 +162,14 @@ public class KillUnreferencedCompactionStateTest
     });
 
     // Run 2: Repair - should mark it back as used
-    duty.run(mockParams);
-    assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
+    duty.run();
+    Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
   }
 
   @Test
   public void testKillUnreferencedCompactionState_disabled()
   {
-    MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
         false, // disabled
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration()
@@ -198,10 +186,10 @@ public class KillUnreferencedCompactionStateTest
     });
 
     // Run duty - should do nothing
-    duty.run(mockParams);
+    duty.run();
 
     // Should still be used (not marked as unused)
-    assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
+    Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
   }
 
   private static class TestKillUnreferencedCompactionState extends KillUnreferencedCompactionState
@@ -210,7 +198,7 @@ public class KillUnreferencedCompactionStateTest
     private int index = -1;
 
     public TestKillUnreferencedCompactionState(
-        MetadataCleanupConfig config,
+        OverlordMetadataCleanupConfig config,
         CompactionStateStorage compactionStateStorage,
         List<DateTime> dateTimes
     )

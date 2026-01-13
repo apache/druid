@@ -54,7 +54,7 @@ public class ClusterCompactionConfig
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
-      @JsonProperty("storeCompactionStatePerSegment") Boolean storeCompactionStatePerSegment
+      @JsonProperty("storeCompactionStatePerSegment") @Nullable Boolean storeCompactionStatePerSegment
   )
   {
     this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
@@ -155,7 +155,7 @@ public class ClusterCompactionConfig
            ", useSupervisors=" + useSupervisors +
            ", engine=" + engine +
            ", compactionPolicy=" + compactionPolicy +
-           ", legacyPersistLastCompactionStateInSegments=" + storeCompactionStatePerSegment +
+           ", storeCompactionStatePerSegment=" + storeCompactionStatePerSegment +
            '}';
   }
 }
