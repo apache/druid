@@ -147,9 +147,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         for (StorageLocation location : locations) {
-          location.setEvictImmediatelyOnHoldRelease(true);
+          location.setAreWeakEntriesEphemeral(true);
         }
       }
       virtualStorageLoadOnDemandExec =
@@ -533,9 +533,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         throw DruidException.defensive(
-            "load() should not be called when virtualStorageFabricEvictImmediatelyOnHoldRelease is enabled"
+            "load() should not be called when virtualStorageIsEphemeral is true"
         );
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
@@ -579,9 +579,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         throw DruidException.defensive(
-            "bootstrap() should not be called when virtualStorageFabricEvictImmediatelyOnHoldRelease is enabled"
+            "bootstrap() should not be called when virtualStorageIsEphemeral is true"
         );
       }
       // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
@@ -1083,7 +1083,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           unmount();
         }
 
-        if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+        if (config.isVirtualStorageEphemeral()) {
           setDeleteInfoFileOnUnmount();
         }
       }

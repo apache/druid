@@ -31,13 +31,13 @@ public class SegmentLoaderConfigTest
 
     // Verify default values
     Assert.assertFalse(config.isVirtualStorage());
-    Assert.assertFalse(config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease());
+    Assert.assertFalse(config.isVirtualStorageEphemeral());
 
     // Set both to true
     config.setVirtualStorage(true, true);
 
     // Verify both fields are set
     Assert.assertTrue(config.isVirtualStorage());
-    Assert.assertTrue(config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease());
+    Assert.assertTrue(config.isVirtualStorageEphemeral());
   }
 }
