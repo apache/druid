@@ -21,6 +21,7 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
@@ -37,6 +38,7 @@ import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotEmpty;
 import java.util.List;
 
@@ -143,8 +145,8 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
             log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
 
             String insertSql = StringUtils.format(
-                "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
-                + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :used_status_last_updated)",
+                "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
+                + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :pending, :used_status_last_updated)",
                 dbTables.getCompactionStatesTable()
             );
 
@@ -155,6 +157,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
                     .bind("fingerprint", fingerprint)
                     .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
                     .bind("used", true)
+                    .bind("pending", true)
                     .bind("used_status_last_updated", now)
                     .execute();
 
@@ -201,7 +204,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle ->
             handle.createStatement(
                       StringUtils.format(
-                          "UPDATE %s SET used = false, used_status_last_updated = :now WHERE used = true "
+                          "UPDATE %s SET used = false, used_status_last_updated = :now WHERE used = true AND pending = false "
                           + "AND fingerprint NOT IN (SELECT DISTINCT compaction_state_fingerprint FROM %s WHERE used = true AND compaction_state_fingerprint IS NOT NULL)",
                           dbTables.getCompactionStatesTable(),
                           dbTables.getSegmentsTable()
@@ -238,7 +241,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
         handle -> {
           Update statement = handle.createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used = true, used_status_last_updated = :now"
+                  "UPDATE %s SET used = true, pending = false, used_status_last_updated = :now"
                   + " WHERE fingerprint IN (%s)",
                   dbTables.getCompactionStatesTable(),
                   buildParameterizedInClause("fp", stateFingerprints.size())
@@ -253,16 +256,62 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
+  public int markCompactionStatesAsActive(String stateFingerprint)
+  {
+    return connector.retryWithHandle(
+        handle -> handle.createStatement(
+                            StringUtils.format(
+                                "UPDATE %s SET pending = false WHERE fingerprint = :fingerprint AND pending = true",
+                                dbTables.getCompactionStatesTable()
+                            ))
+                        .bind("fingerprint", stateFingerprint)
+                        .execute()
+    );
+  }
+
+  @Override
   public int deleteUnusedCompactionStatesOlderThan(long timestamp)
   {
     return connector.retryWithHandle(
         handle -> handle.createStatement(
                             StringUtils.format(
-                                "DELETE FROM %s WHERE used = false AND used_status_last_updated < :maxUpdateTime",
+                                "DELETE FROM %s WHERE used = false AND pending = false AND used_status_last_updated < :maxUpdateTime",
                                 dbTables.getCompactionStatesTable()
                             ))
                         .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
                         .execute());
+  }
+
+  @Override
+  public int deletePendingCompactionStatesOlderThan(long timestamp)
+  {
+    return connector.retryWithHandle(
+        handle -> handle.createStatement(
+                            StringUtils.format(
+                                "DELETE FROM %s WHERE pending = true AND used_status_last_updated < :maxUpdateTime",
+                                dbTables.getCompactionStatesTable()
+                            ))
+                        .bind("maxUpdateTime", DateTimes.utc(timestamp).toString())
+                        .execute());
+  }
+
+  @Nullable
+  @VisibleForTesting
+  public Boolean isCompactionStatePending(final String fingerprint)
+  {
+    return connector.retryWithHandle(
+        handle -> {
+          String sql = StringUtils.format(
+              "SELECT pending FROM %s WHERE fingerprint = :fingerprint",
+              dbTables.getCompactionStatesTable()
+          );
+
+          return handle.createQuery(sql)
+                       .bind("fingerprint", fingerprint)
+                       .mapTo(Boolean.class)
+                       .first();
+        }
+    );
   }
 
   /**

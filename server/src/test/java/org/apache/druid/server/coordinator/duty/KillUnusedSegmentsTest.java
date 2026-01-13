@@ -44,6 +44,7 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
@@ -117,7 +118,8 @@ public class KillUnusedSegmentsTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryCompactionStateStorage()
     );
 
     this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();

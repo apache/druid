@@ -80,6 +80,21 @@ public interface CompactionStateStorage
   int markCompactionStatesAsUsed(List<String> stateFingerprints);
 
   /**
+   * Marks compaction states as active for a given fingerprint.
+   *
+   * @param stateFingerprint The fingerprint to mark as active
+   * @return Number of rows updated, or 0 if not applicable
+   */
+  int markCompactionStatesAsActive(String stateFingerprint);
+
+  /**
+   * Deletes pending compaction states older than the given timestamp.
+   * @param timestamp The cutoff timestamp in milliseconds
+   * @return Number of rows deleted, or 0 if not applicable
+   */
+  int deletePendingCompactionStatesOlderThan(long timestamp);
+
+  /**
    * Deletes unused compaction states older than the given timestamp.
    * <p>
    * This is used for cleanup operations.

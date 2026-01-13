@@ -27,6 +27,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -42,20 +43,24 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.metadata.NoopCompactionStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
+import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -113,6 +118,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private StubServiceEmitter emitter;
   private SqlSegmentMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
+  private SqlCompactionStateStorage compactionStateStorage;
 
   private final SegmentMetadataCache.UsageMode cacheMode;
 
@@ -142,12 +148,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     derbyConnector.createSegmentTable();
     derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createCompactionStatesTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 
     fingerprintGenerator = new FingerprintGenerator(mapper);
     segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
+    compactionStateStorage = new SqlCompactionStateStorage(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        mapper,
+        derbyConnector
+    );
 
     emitter = new StubServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
@@ -200,7 +212,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        compactionStateStorage
     )
     {
       @Override
@@ -796,7 +809,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryCompactionStateStorage()
     )
     {
       @Override
@@ -955,7 +969,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryCompactionStateStorage()
     )
     {
       @Override
@@ -4315,6 +4330,97 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertTrue(writeAction.get().isEmpty());
     emitter.verifyValue(Metric.READ_WRITE_TRANSACTIONS, 1L);
+  }
+
+  @Test
+  public void testCommitSegmentsAndMetadata_marksPendingCompactionStateAsActive()
+  {
+    String fingerprint = "vanillaFingerprint";
+    CompactionState state = createTestCompactionState();
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    coordinator.commitSegmentsAndMetadata(
+        ImmutableSet.of(segment),
+        SUPERVISOR_ID,
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isCompactionStatePending(fingerprint));
+  }
+
+  @Test
+  public void testCommitReplaceSegments_marksPendingCompactionStateAsActive()
+  {
+    String fingerprint = "replaceFingerprint";
+    CompactionState state = createTestCompactionState();
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    final String replaceTaskId = "replaceTask";
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
+        replaceTaskId,
+        Intervals.of("2023-01-01/2023-01-02"),
+        "2024-01-01"
+    );
+
+    coordinator.commitReplaceSegments(
+        ImmutableSet.of(segment),
+        ImmutableSet.of(replaceLock),
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isCompactionStatePending(fingerprint));
+  }
+
+  @Test
+  public void testCCommitAppendSegments_marksPendingCompactionStateAsActive()
+  {
+    String fingerprint = "appendFingerprint";
+    CompactionState state = createTestCompactionState();
+    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                   .startingAt("2023-01-01")
+                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .eachOfSizeInMb(500)
+                                                   .get(0);
+
+    final String taskAllocatorId = "appendTask";
+
+    coordinator.commitAppendSegments(
+        ImmutableSet.of(segment),
+        Map.of(),
+        taskAllocatorId,
+        null
+    );
+
+    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isCompactionStatePending(fingerprint));
+  }
+
+  private CompactionState createTestCompactionState()
+  {
+    return new CompactionState(
+        new DynamicPartitionsSpec(100, null),
+        null, null, null,
+        IndexSpec.getDefault(),
+        null, null
+    );
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

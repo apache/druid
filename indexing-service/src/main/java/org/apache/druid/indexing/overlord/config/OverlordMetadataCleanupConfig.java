@@ -28,7 +28,7 @@ import java.util.Objects;
 
 public class OverlordMetadataCleanupConfig
 {
-  public static final OverlordMetadataCleanupConfig DEFAULT = new OverlordMetadataCleanupConfig(null, null, null);
+  public static final OverlordMetadataCleanupConfig DEFAULT = new OverlordMetadataCleanupConfig(null, null, null, null);
 
   @JsonProperty("on")
   private final boolean cleanupEnabled;
@@ -39,16 +39,21 @@ public class OverlordMetadataCleanupConfig
   @JsonProperty("durationToRetain")
   private final Duration durationToRetain;
 
+  @JsonProperty("pendingDurationToRetain")
+  private final Duration pendingDurationToRetain;
+
   @JsonCreator
   public OverlordMetadataCleanupConfig(
       @JsonProperty("on") Boolean cleanupEnabled,
       @JsonProperty("period") Duration cleanupPeriod,
-      @JsonProperty("durationToRetain") Duration durationToRetain
+      @JsonProperty("durationToRetain") Duration durationToRetain,
+      @JsonProperty("pendingDurationToRetain") Duration pendingDurationToRetain
   )
   {
     this.cleanupEnabled = Configs.valueOrDefault(cleanupEnabled, true);
     this.cleanupPeriod = Configs.valueOrDefault(cleanupPeriod, Duration.standardDays(1));
     this.durationToRetain = Configs.valueOrDefault(durationToRetain, Duration.standardDays(90));
+    this.pendingDurationToRetain = Configs.valueOrDefault(pendingDurationToRetain, Duration.standardDays(7));
   }
 
   public Duration getCleanupPeriod()
@@ -59,6 +64,11 @@ public class OverlordMetadataCleanupConfig
   public Duration getDurationToRetain()
   {
     return durationToRetain;
+  }
+
+  public Duration getPendingDurationToRetain()
+  {
+    return pendingDurationToRetain;
   }
 
   public boolean isCleanupEnabled()
@@ -78,12 +88,13 @@ public class OverlordMetadataCleanupConfig
     OverlordMetadataCleanupConfig that = (OverlordMetadataCleanupConfig) o;
     return cleanupEnabled == that.cleanupEnabled
            && Objects.equals(cleanupPeriod, that.cleanupPeriod)
-           && Objects.equals(durationToRetain, that.durationToRetain);
+           && Objects.equals(durationToRetain, that.durationToRetain)
+           && Objects.equals(pendingDurationToRetain, that.pendingDurationToRetain);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(cleanupEnabled, cleanupPeriod, durationToRetain);
+    return Objects.hash(cleanupEnabled, cleanupPeriod, durationToRetain, pendingDurationToRetain);
   }
 }

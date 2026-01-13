@@ -106,6 +106,9 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
+    binder.bind(CompactionStateStorage.class)
+          .to(SqlCompactionStateStorage.class)
+          .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {
@@ -134,9 +137,6 @@ public class MetadataManagerModule implements Module
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
       binder.bind(CompactionStateCache.class).in(LazySingleton.class);
-      binder.bind(CompactionStateStorage.class)
-            .to(SqlCompactionStateStorage.class)
-            .in(ManageLifecycle.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)

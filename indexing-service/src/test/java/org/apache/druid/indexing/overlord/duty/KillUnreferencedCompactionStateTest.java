@@ -50,7 +50,7 @@ public class KillUnreferencedCompactionStateTest
 
   private TestDerbyConnector derbyConnector;
   private MetadataStorageTablesConfig tablesConfig;
-  private CompactionStateStorage compactionStateStorage;
+  private SqlCompactionStateStorage compactionStateStorage;
 
   @Before
   public void setUp()
@@ -65,32 +65,30 @@ public class KillUnreferencedCompactionStateTest
   }
 
   @Test
-  public void testKillUnreferencedCompactionState_lifecycle()
+  public void test_killUnreferencedCompactionState_validateLifecycleOfActiveCompactionState()
   {
-    // Setup time progression: now, +1hr, +7hrs (past cleanup period and retention)
+    // Setup time progression: now, +1hr, +7hrs
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
-    dateTimes.add(now);                         // Run 1: Mark as unused
-    dateTimes.add(now.plusMinutes(61));         // Run 2: Still in retention period
-    dateTimes.add(now.plusMinutes(6 * 60 + 1)); // Run 3: Past retention, delete
+    dateTimes.add(now);
+    dateTimes.add(now.plusMinutes(61));
+    dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
     OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
         true,
-        Period.parse("PT1H").toStandardDuration(),  // cleanup period
-        Period.parse("PT6H").toStandardDuration()   // retention duration
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("PT6H").toStandardDuration(), // Unused and over 6 hours old should be deleted
+        Period.parse("P8D").toStandardDuration()
     );
 
     KillUnreferencedCompactionState duty =
         new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
 
-    // Insert a compaction state (initially marked as used)
     String fingerprint = "test_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    derbyConnector.retryWithHandle(handle -> {
-      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
+    compactionStateStorage.markCompactionStatesAsActive(fingerprint);
 
     Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
 
@@ -108,7 +106,7 @@ public class KillUnreferencedCompactionStateTest
   }
 
   @Test
-  public void testKillUnreferencedCompactionState_repair()
+  public void test_killUnreferencedCompactionState_validateRepair()
   {
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
@@ -118,7 +116,8 @@ public class KillUnreferencedCompactionStateTest
     OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
-        Period.parse("PT6H").toStandardDuration()
+        Period.parse("PT6H").toStandardDuration(),
+        Period.parse("P8D").toStandardDuration()
     );
 
     KillUnreferencedCompactionState duty =
@@ -128,12 +127,10 @@ public class KillUnreferencedCompactionStateTest
     String fingerprint = "repair_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    derbyConnector.retryWithHandle(handle -> {
-      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
+    compactionStateStorage.markCompactionStatesAsActive(fingerprint);
 
-    // Run 1: Mark as unused
+    Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
     duty.run();
     Assert.assertEquals(Boolean.FALSE, getCompactionStateUsedStatus(fingerprint));
 
@@ -161,18 +158,19 @@ public class KillUnreferencedCompactionStateTest
       return null;
     });
 
-    // Run 2: Repair - should mark it back as used
+    // Confirm that the state is "repaired" now that it is referenced
     duty.run();
     Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
   }
 
   @Test
-  public void testKillUnreferencedCompactionState_disabled()
+  public void test_killUnreferencedCompactionState_disabled()
   {
     OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
-        false, // disabled
+        false, // cleanup disabled
         Period.parse("PT1H").toStandardDuration(),
-        Period.parse("PT6H").toStandardDuration()
+        Period.parse("PT6H").toStandardDuration(),
+        Period.parse("P8D").toStandardDuration()
     );
 
     KillUnreferencedCompactionState duty =
@@ -180,18 +178,162 @@ public class KillUnreferencedCompactionStateTest
 
     // Insert compaction state
     String fingerprint = "disabled_fingerprint";
-    derbyConnector.retryWithHandle(handle -> {
-      compactionStateStorage.upsertCompactionState("test-ds", fingerprint, createTestCompactionState(), DateTimes.nowUtc());
-      return null;
-    });
+    compactionStateStorage.upsertCompactionState("test-ds", fingerprint, createTestCompactionState(), DateTimes.nowUtc());
+    compactionStateStorage.markCompactionStatesAsActive(fingerprint);
 
     // Run duty - should do nothing
     duty.run();
 
-    // Should still be used (not marked as unused)
+    // Should still be used (not marked as unused since cleanup is disabled)
     Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
   }
 
+  @Test
+  public void test_killUnreferencedCompactionState_validateLifecycleOfPendingCompactionState()
+  {
+    List<DateTime> dateTimes = new ArrayList<>();
+    DateTime now = DateTimes.nowUtc();
+    dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(15));
+
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("P7D").toStandardDuration(),
+        Period.parse("P10D").toStandardDuration() // Pending states older than 10 days should be deleted
+    );
+
+    KillUnreferencedCompactionState duty =
+        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+
+    String fingerprint = "pending_fingerprint";
+    CompactionState state = createTestCompactionState();
+    compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
+
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    duty.run();
+    Assert.assertNotNull(compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    duty.run();
+    Assert.assertNull(compactionStateStorage.isCompactionStatePending(fingerprint));
+  }
+
+  /**
+   * Validate multiple states cleaned up as per their individual retention policies.
+   */
+  @Test
+  public void test_killUnreferencedCompactionState_validateMixedPendingAndActiveCompactionStateCleanup()
+  {
+    List<DateTime> dateTimes = new ArrayList<>();
+    DateTime now = DateTimes.nowUtc();
+    dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(31));
+
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("P7D").toStandardDuration(),
+        Period.parse("P30D").toStandardDuration()
+    );
+
+    KillUnreferencedCompactionState duty =
+        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+
+    String pendingFingerprint = "pending_fp";
+    String nonPendingFingerprint = "non_pending_fp";
+    CompactionState state = createTestCompactionState();
+
+    compactionStateStorage.upsertCompactionState("test-ds", pendingFingerprint, state, DateTimes.nowUtc());
+    compactionStateStorage.upsertCompactionState("test-ds", nonPendingFingerprint, state, DateTimes.nowUtc());
+    compactionStateStorage.markCompactionStatesAsActive(nonPendingFingerprint);
+
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(pendingFingerprint));
+    Assert.assertNotNull(getCompactionStateUsedStatus(nonPendingFingerprint));
+
+    duty.run();
+    Assert.assertNotNull(compactionStateStorage.isCompactionStatePending(pendingFingerprint));
+    Assert.assertNull(getCompactionStateUsedStatus(nonPendingFingerprint));
+
+    duty.run();
+    Assert.assertNull(getCompactionStateUsedStatus(nonPendingFingerprint));
+    Assert.assertNull(compactionStateStorage.isCompactionStatePending(pendingFingerprint));
+  }
+
+  @Test
+  public void test_killUnreferencedCompactionState_pendingStateMarkedActiveNotDeleted()
+  {
+    List<DateTime> dateTimes = new ArrayList<>();
+    DateTime now = DateTimes.nowUtc();
+    dateTimes.add(now.plusDays(31)); // The state would be removed if it was still pending
+
+    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+        true,
+        Period.parse("PT1H").toStandardDuration(),
+        Period.parse("P7D").toStandardDuration(),
+        Period.parse("P30D").toStandardDuration()
+    );
+
+    KillUnreferencedCompactionState duty =
+        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+
+    String fingerprint = "pending_marked_active_fp";
+    CompactionState state = createTestCompactionState();
+
+    compactionStateStorage.upsertCompactionState("test-ds", fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    // Now insert a used segment that references this fingerprint
+    derbyConnector.retryWithHandle(handle -> {
+      handle.createStatement(
+                "INSERT INTO " + tablesConfig.getSegmentsTable() + " "
+                + "(id, dataSource, created_date, start, \"end\", partitioned, version, used, payload, "
+                + "used_status_last_updated, compaction_state_fingerprint) "
+                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, "
+                + ":used_status_last_updated, :compaction_state_fingerprint)"
+            )
+            .bind("id", "testSegment_2024-01-01_2024-01-02_v1_0")
+            .bind("dataSource", "test-ds")
+            .bind("created_date", DateTimes.nowUtc().toString())
+            .bind("start", "2024-01-01T00:00:00.000Z")
+            .bind("end", "2024-01-02T00:00:00.000Z")
+            .bind("partitioned", 0)
+            .bind("version", "v1")
+            .bind("used", true)
+            .bind("payload", new byte[]{})
+            .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+            .bind("compaction_state_fingerprint", fingerprint)
+            .execute();
+      return null;
+    });
+
+    compactionStateStorage.markCompactionStatesAsActive(fingerprint);
+    Assert.assertNotEquals(Boolean.TRUE, compactionStateStorage.isCompactionStatePending(fingerprint));
+
+    duty.run();
+    Assert.assertNotNull(compactionStateStorage.isCompactionStatePending(fingerprint));
+  }
+
+  private Boolean getCompactionStateUsedStatus(String fingerprint)
+  {
+    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
+        handle -> handle.createQuery(
+                            "SELECT used FROM " + tablesConfig.getCompactionStatesTable()
+                            + " WHERE fingerprint = :fp"
+                        )
+                        .bind("fp", fingerprint)
+                        .mapTo(Boolean.class)
+                        .list()
+    );
+
+    return usedStatus.isEmpty() ? null : usedStatus.get(0);
+  }
+
+  /**
+   * Extension of KillUnreferencedCompactionState that allows controlling the reference time used for cleanup decisions.
+   * <p>
+   * Allowing time control enables realistic testing of time-based retention logic.
+   */
   private static class TestKillUnreferencedCompactionState extends KillUnreferencedCompactionState
   {
     private final List<DateTime> dateTimes;
@@ -223,20 +365,5 @@ public class KillUnreferencedCompactionStateTest
         IndexSpec.getDefault(),
         null, null
     );
-  }
-
-  private Boolean getCompactionStateUsedStatus(String fingerprint)
-  {
-    List<Boolean> usedStatus = derbyConnector.retryWithHandle(
-        handle -> handle.createQuery(
-                            "SELECT used FROM " + tablesConfig.getCompactionStatesTable()
-                            + " WHERE fingerprint = :fp"
-                        )
-                        .bind("fp", fingerprint)
-                        .mapTo(Boolean.class)
-                        .list()
-    );
-
-    return usedStatus.isEmpty() ? null : usedStatus.get(0);
   }
 }

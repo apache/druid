@@ -56,6 +56,7 @@ import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -111,6 +112,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
+  private final CompactionStateStorage compactionStateStorage;
 
   private final SegmentMetadataTransactionFactory transactionFactory;
 
@@ -121,7 +123,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
       SegmentSchemaManager segmentSchemaManager,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      CompactionStateStorage compactionStateStorage
   )
   {
     this.transactionFactory = transactionFactory;
@@ -133,6 +136,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.schemaPersistEnabled =
         centralizedDatasourceSchemaConfig.isEnabled()
         && !centralizedDatasourceSchemaConfig.isTaskSchemaPublishDisabled();
+    this.compactionStateStorage = compactionStateStorage;
   }
 
   @LifecycleStart
@@ -438,12 +442,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = segments.iterator().next().getDataSource();
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Try to update datasource metadata first
             if (startMetadata != null) {
-              final SegmentPublishResult result = updateDataSourceMetadataInTransaction(
+              final SegmentPublishResult metadataResult = updateDataSourceMetadataInTransaction(
                   transaction,
                   supervisorId,
                   dataSource,
@@ -452,8 +456,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               );
 
               // Do not proceed if the datasource metadata update failed
-              if (!result.isSuccess()) {
-                return result;
+              if (!metadataResult.isSuccess()) {
+                return metadataResult;
               }
             }
 
@@ -462,6 +466,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markCompactionFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       throw e;
@@ -478,7 +489,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = verifySegmentsToCommit(replaceSegments);
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
@@ -520,6 +531,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markCompactionFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       return SegmentPublishResult.fail(e.getMessage());
@@ -1213,7 +1231,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Try to update datasource metadata first
@@ -1254,6 +1272,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markCompactionFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       throw e;
@@ -2686,6 +2711,46 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
     return upgradedToSegmentIds;
+  }
+
+  /**
+   * Marks compaction state fingerprints as active (non-pending) for successfully published segments.
+   * <p>
+   * Extracts unique compaction state fingerprints from the given segments and marks them as active
+   * in the compaction state storage. This is called after successful segment publishing to indicate
+   * that the compaction state is no longer pending and can be retained with the regular grace period.
+   * <p>
+   * Most calls result in 0-row updates since fingerprints are stable and the first task already
+   * marked them as active.
+   *
+   * @param segments The segments that were successfully published
+   */
+  private void markCompactionFingerprintsAsActive(Set<DataSegment> segments)
+  {
+    if (segments == null || segments.isEmpty()) {
+      return;
+    }
+
+    // Collect unique non-null compaction state fingerprints
+    final Set<String> fingerprints = segments.stream()
+                                             .map(DataSegment::getCompactionStateFingerprint)
+                                             .filter(fp -> fp != null && !fp.isEmpty())
+                                             .collect(Collectors.toSet());
+
+    // Mark each fingerprint as active
+    for (String fingerprint : fingerprints) {
+      try {
+        int rowsUpdated = compactionStateStorage.markCompactionStatesAsActive(fingerprint);
+        if (rowsUpdated > 0) {
+          log.info("Marked compaction state fingerprint[%s] as active (non-pending).", fingerprint);
+        }
+      }
+      catch (Exception e) {
+        // Log but don't fail the overall operation - the fingerprint will stay pending
+        // and be cleaned up by the pending grace period
+        log.warn(e, "Failed to mark compaction state fingerprint[%s] as active. Will retry on next publish.", fingerprint);
+      }
+    }
   }
 
   /**

@@ -1130,6 +1130,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  fingerprint VARCHAR(255) NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  used BOOLEAN NOT NULL,\n"
+                + "  pending BOOLEAN NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (fingerprint)\n"
                 + ")",

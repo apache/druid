@@ -199,14 +199,15 @@ public class SqlCompactionStateStorageTest
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
-                + "(created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
-                + "VALUES (:cd, :ds, :fp, :pl, :used, :updated)"
+                + "(created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
+                + "VALUES (:cd, :ds, :fp, :pl, :used, :pending, :updated)"
             )
             .bind("cd", oldTime.toString())
             .bind("ds", "testDatasource")
             .bind("fp", oldFingerprint)
             .bind("pl", jsonMapper.writeValueAsBytes(oldState))
             .bind("used", false)
+            .bind("pending", false)
             .bind("updated", oldTime.toString())
             .execute();
       return null;
@@ -216,14 +217,15 @@ public class SqlCompactionStateStorageTest
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
                 "INSERT INTO " + tablesConfig.getCompactionStatesTable() + " "
-                + "(created_date, dataSource, fingerprint, payload, used, used_status_last_updated) "
-                + "VALUES (:cd, :ds, :fp, :pl, :used, :updated)"
+                + "(created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
+                + "VALUES (:cd, :ds, :fp, :pl, :used, :pending, :updated)"
             )
             .bind("cd", recentTime.toString())
             .bind("ds", "testDatasource")
             .bind("fp", recentFingerprint)
             .bind("pl", jsonMapper.writeValueAsBytes(recentState))
             .bind("used", false)
+            .bind("pending", false)
             .bind("updated", recentTime.toString())
             .execute();
       return null;
@@ -395,6 +397,69 @@ public class SqlCompactionStateStorageTest
   public void test_markCompactionStateAsUsed_withEmptyList_returnsZero()
   {
     assertEquals(0, manager.markCompactionStatesAsUsed(List.of()));
+  }
+
+  @Test
+  public void test_markCompactionStatesAsActive_marksPendingStateAsActive()
+  {
+    String fingerprint = "pending_fingerprint";
+    CompactionState state = createTestCompactionState();
+
+    derbyConnector.retryWithHandle(handle -> {
+      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+      return null;
+    });
+
+    Boolean pendingBefore = derbyConnector.retryWithHandle(handle ->
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+              .bind("fp", fingerprint)
+              .map((i, r, ctx) -> r.getBoolean("pending"))
+              .first()
+    );
+    assertTrue(pendingBefore);
+
+    int rowsUpdated = manager.markCompactionStatesAsActive(fingerprint);
+    assertEquals(1, rowsUpdated);
+
+    Boolean pendingAfter = derbyConnector.retryWithHandle(handle ->
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+              .bind("fp", fingerprint)
+              .map((i, r, ctx) -> r.getBoolean("pending"))
+              .first()
+    );
+    assertEquals(false, pendingAfter);
+  }
+
+  @Test
+  public void test_markCompactionStatesAsActive_idempotent_returnsZeroWhenAlreadyActive()
+  {
+    String fingerprint = "already_active_fingerprint";
+    CompactionState state = createTestCompactionState();
+
+    derbyConnector.retryWithHandle(handle -> {
+      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+      return null;
+    });
+    int firstUpdate = manager.markCompactionStatesAsActive(fingerprint);
+    assertEquals(1, firstUpdate);
+
+    int secondUpdate = manager.markCompactionStatesAsActive(fingerprint);
+    assertEquals(0, secondUpdate);
+
+    Boolean pending = derbyConnector.retryWithHandle(handle ->
+        handle.createQuery("SELECT pending FROM " + tablesConfig.getCompactionStatesTable() + " WHERE fingerprint = :fp")
+              .bind("fp", fingerprint)
+              .map((i, r, ctx) -> r.getBoolean("pending"))
+              .first()
+    );
+    assertEquals(false, pending);
+  }
+
+  @Test
+  public void test_markCompactionStatesAsActive_nonExistentFingerprint_returnsZero()
+  {
+    int rowsUpdated = manager.markCompactionStatesAsActive("does_not_exist");
+    assertEquals(0, rowsUpdated);
   }
 
   // ===== Fingerprint Generation Tests =====

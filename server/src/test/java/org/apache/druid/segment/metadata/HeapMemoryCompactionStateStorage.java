@@ -78,6 +78,18 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
+  public int markCompactionStatesAsActive(String stateFingerprint)
+  {
+    return 0;
+  }
+
+  @Override
+  public int deletePendingCompactionStatesOlderThan(long timestamp)
+  {
+    return 0;
+  }
+
+  @Override
   public int deleteUnusedCompactionStatesOlderThan(long timestamp)
   {
     return 0;

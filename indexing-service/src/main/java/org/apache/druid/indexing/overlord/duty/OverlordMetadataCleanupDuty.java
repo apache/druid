@@ -29,7 +29,7 @@ import org.joda.time.DateTime;
  * <p>
  * In every invocation of {@link #run}, the duty checks if the {@code cleanupPeriod}
  * has elapsed since the {@link #lastCleanupTime}. If it has, then the method
- * {@link #cleanupEntriesCreatedBefore(DateTime)} is invoked. Otherwise, the duty
+ * {@link #cleanupEntriesCreatedBeforeDurationToRetain(DateTime)} is invoked. Otherwise, the duty
  * completes immediately without making any changes.
  */
 public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
@@ -69,9 +69,14 @@ public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
 
       try {
         DateTime minCreatedTime = now.minus(cleanupConfig.getDurationToRetain());
-        int deletedEntries = cleanupEntriesCreatedBefore(minCreatedTime);
+        int deletedEntries = cleanupEntriesCreatedBeforeDurationToRetain(minCreatedTime);
         if (deletedEntries > 0) {
           log.info("Removed [%,d] [%s] created before [%s].", deletedEntries, entryType, minCreatedTime);
+        }
+        DateTime pendingMinCreatedTime = now.minus(cleanupConfig.getPendingDurationToRetain());
+        int deletedPendingEntries = cleanupEntriesCreatedBeforePendingDurationToRetain(pendingMinCreatedTime);
+        if (deletedPendingEntries > 0) {
+          log.info("Removed [%,d] pending entries [%s] created before [%s].", deletedPendingEntries, entryType, pendingMinCreatedTime);
         }
       }
       catch (Exception e) {
@@ -97,14 +102,22 @@ public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
   }
 
   /**
-   * Cleans up metadata entries created before the {@code minCreatedTime}.
+   * Cleans up metadata entries created before the {@code minCreatedTime} calculated with {@link OverlordMetadataCleanupConfig#durationToRetain}.
    * <p>
-   * This method is not invoked if the {@code cleanupPeriod} has not elapsed
-   * since the {@link #lastCleanupTime}.
+   * This method is not invoked if the {@code cleanupPeriod} has not elapsed since the {@link #lastCleanupTime}.
    *
    * @return Number of deleted metadata entries
    */
-  protected abstract int cleanupEntriesCreatedBefore(DateTime minCreatedTime);
+  protected abstract int cleanupEntriesCreatedBeforeDurationToRetain(DateTime minCreatedTime);
+
+  /**
+   * Cleans up pending metadata entries created before the {@code minCreatedTime} calculated with {@link OverlordMetadataCleanupConfig#pendingDurationToRetain}.
+   * <p>
+   * This method is not invoked if the {@code cleanupPeriod} has not elapsed since the {@link #lastCleanupTime}.
+   *
+   * @return Number of deleted pending metadata entries
+   */
+  protected abstract int cleanupEntriesCreatedBeforePendingDurationToRetain(DateTime minCreatedTime);
 
   protected DateTime getCurrentTime()
   {

@@ -88,6 +88,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -182,7 +183,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryCompactionStateStorage()
     );
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,

@@ -43,7 +43,7 @@ public class KillUnreferencedCompactionState extends OverlordMetadataCleanupDuty
   }
 
   @Override
-  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
+  protected int cleanupEntriesCreatedBeforeDurationToRetain(DateTime minCreatedTime)
   {
     // 1: Mark unreferenced states as unused
     int unused = compactionStateStorage.markUnreferencedCompactionStatesAsUnused();
@@ -58,5 +58,11 @@ public class KillUnreferencedCompactionState extends OverlordMetadataCleanupDuty
 
     // 3: Delete unused states older than threshold
     return compactionStateStorage.deleteUnusedCompactionStatesOlderThan(minCreatedTime.getMillis());
+  }
+
+  @Override
+  protected int cleanupEntriesCreatedBeforePendingDurationToRetain(DateTime minCreatedTime)
+  {
+    return compactionStateStorage.deletePendingCompactionStatesOlderThan(minCreatedTime.getMillis());
   }
 }
