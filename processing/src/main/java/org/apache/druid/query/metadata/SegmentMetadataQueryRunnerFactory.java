@@ -71,7 +71,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   public QueryRunner<SegmentAnalysis> createRunner(SegmentReference segmentRef)
   {
     if (segmentRef.getDataSegment() == null) {
-      throw DruidException.defensive("Missing Segment[%s]", segmentRef.getSegmentDescriptor());
+      throw DruidException.defensive("Missing DataSegment[%s]", segmentRef.getSegmentDescriptor());
     } else if (segmentRef.getSegmentReference().isEmpty()) {
       throw DruidException.defensive("Missing Segment[%s]", segmentRef.getDataSegment().getId());
     }
