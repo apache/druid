@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
@@ -38,6 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * An immutable snapshot of metadata information about used segments and overshadowed segments, coming from
@@ -47,7 +51,7 @@ public class DataSourcesSnapshot
 {
   public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments)
   {
-    return fromUsedSegments(segments, DateTimes.nowUtc());
+    return fromUsedSegments(segments, DateTimes.nowUtc(), ImmutableMap.of());
   }
 
   /**
@@ -76,7 +80,7 @@ public class DataSourcesSnapshot
    * Creates a snapshot of all "used" segments that existed in the database at
    * the {@code snapshotTime}.
    */
-  public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments, DateTime snapshotTime)
+  public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments, DateTime snapshotTime, Map<String, Set<SegmentId>> loadedSegmentsPerDataSource)
   {
     final Map<String, String> dataSourceProperties = ImmutableMap.of("created", DateTimes.nowUtc().toString());
     Map<String, DruidDataSource> dataSources = new HashMap<>();
@@ -85,9 +89,25 @@ public class DataSourcesSnapshot
             .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
             .addSegmentIfAbsent(segment)
     );
+
+    Map<String, ImmutableDruidDataSource> immutableDruidDataSources = CollectionUtils.mapValues(
+        dataSources,
+        DruidDataSource::toImmutableDruidDataSource
+    );
+    Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource = CollectionUtils.mapValues(
+        immutableDruidDataSources,
+        dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
+    );
+    ImmutableSet<DataSegment> overshadowedSegments = determineOvershadowedSegments(
+        immutableDruidDataSources,
+        usedSegmentsTimelinesPerDataSource
+    );
     return new DataSourcesSnapshot(
         snapshotTime,
-        CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource)
+        immutableDruidDataSources,
+        usedSegmentsTimelinesPerDataSource,
+        overshadowedSegments,
+        loadedSegmentsPerDataSource
     );
   }
 
@@ -95,19 +115,53 @@ public class DataSourcesSnapshot
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
+  private final Map<String, Set<SegmentId>> loadedSegmentsPerDataSource;
 
   private DataSourcesSnapshot(
       DateTime snapshotTime,
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments
   )
   {
+    this(
+        snapshotTime,
+        dataSourcesWithAllUsedSegments,
+        CollectionUtils.mapValues(
+            dataSourcesWithAllUsedSegments,
+            dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
+        ),
+        ImmutableMap.of()
+    );
+  }
+
+  private DataSourcesSnapshot(
+      DateTime snapshotTime,
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
+      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
+  )
+  {
+    this(
+        snapshotTime,
+        dataSourcesWithAllUsedSegments,
+        usedSegmentsTimelinesPerDataSource,
+        determineOvershadowedSegments(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource),
+        loadedSegmentsPerDataSource
+    );
+  }
+
+  private DataSourcesSnapshot(
+      DateTime snapshotTime,
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
+      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
+      ImmutableSet<DataSegment> overshadowedSegments,
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
+  )
+  {
     this.snapshotTime = snapshotTime;
     this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
-    this.usedSegmentsTimelinesPerDataSource = CollectionUtils.mapValues(
-        dataSourcesWithAllUsedSegments,
-        dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
-    );
-    this.overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments());
+    this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
+    this.overshadowedSegments = overshadowedSegments;
+    this.loadedSegmentsPerDataSource = loadedSegmentsPerDataSource;
   }
 
   /**
@@ -143,6 +197,11 @@ public class DataSourcesSnapshot
   public ImmutableSet<DataSegment> getOvershadowedSegments()
   {
     return overshadowedSegments;
+  }
+
+  public Map<String, Set<SegmentId>> getLoadedSegmentsPerDataSource()
+  {
+    return loadedSegmentsPerDataSource;
   }
 
   /**
@@ -191,7 +250,9 @@ public class DataSourcesSnapshot
    *
    * @return List of overshadowed segments
    */
-  private List<DataSegment> determineOvershadowedSegments()
+  private static ImmutableSet<DataSegment> determineOvershadowedSegments(
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
+      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource)
   {
     // It's fine to add all overshadowed segments to a single collection because only
     // a small fraction of the segments in the cluster are expected to be overshadowed,
@@ -206,6 +267,47 @@ public class DataSourcesSnapshot
         }
       }
     }
-    return overshadowedSegments;
+    return ImmutableSet.copyOf(overshadowedSegments);
+  }
+
+  /**
+   * Note that the returned set of segments doesn't contain numRows information
+   */
+  public static Set<SegmentStatusInCluster> getSegmentsWithOvershadowedAndLoadStatus(
+      Collection<ImmutableDruidDataSource> segments,
+      Set<DataSegment> overshadowedSegments,
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
+  )
+  {
+    final Stream<DataSegment> usedSegments = segments
+        .stream()
+        .flatMap(t -> t.getSegments().stream());
+
+    return usedSegments
+        .map(segment ->
+                 new SegmentStatusInCluster(
+                     segment,
+                     overshadowedSegments.contains(segment),
+                     null,
+                     null,
+                     false,
+                     getLoadStatusForSegment(
+                         loadedSegmentsPerDataSource,
+                         segment.getDataSource(),
+                         segment.getId()
+                     )
+                 )
+        )
+        .collect(Collectors.toSet());
+  }
+
+  private static boolean getLoadStatusForSegment(
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource,
+      String dataSource,
+      SegmentId segmentId
+  )
+  {
+    return loadedSegmentsPerDataSource.containsKey(dataSource)
+           && loadedSegmentsPerDataSource.get(dataSource).contains(segmentId);
   }
 }

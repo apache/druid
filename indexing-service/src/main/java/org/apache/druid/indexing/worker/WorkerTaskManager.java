@@ -432,7 +432,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
         return future;
       }
     } else {
-      return changeHistory.getRequestsSince(counter);
+      return changeHistory.getRequestsSinceAsync(counter);
     }
   }
 

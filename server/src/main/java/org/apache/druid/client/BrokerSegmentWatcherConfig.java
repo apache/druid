@@ -42,6 +42,9 @@ public class BrokerSegmentWatcherConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  @JsonProperty
+  private boolean detectUnavailableSegments = false;
+
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
@@ -65,5 +68,10 @@ public class BrokerSegmentWatcherConfig
   public boolean isAwaitInitializationOnStart()
   {
     return awaitInitializationOnStart;
+  }
+
+  public boolean detectUnavailableSegments()
+  {
+    return detectUnavailableSegments;
   }
 }
