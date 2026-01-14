@@ -40,7 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.metadata.segment.cache.CompactionStateRecord;
+import org.apache.druid.metadata.segment.cache.IndexingStateRecord;
 import org.apache.druid.metadata.segment.cache.SegmentSchemaRecord;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -1706,12 +1706,12 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves all unique compaction state fingerprints currently marked as used.
+   * Retrieves all unique indexing state fingerprints currently marked as used.
    * This is used for delta syncs to determine which fingerprints are still active.
    *
-   * @return Set of compaction state fingerprints
+   * @return Set of indexing state fingerprints
    */
-  public Set<String> retrieveAllUsedCompactionStateFingerprints()
+  public Set<String> retrieveAllUsedIndexingStateFingerprints()
   {
     final String sql = StringUtils.format(
         "SELECT fingerprint FROM %s WHERE used = true",
@@ -1727,28 +1727,28 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves all compaction states marked as used (full sync).
+   * Retrieves all indexing states marked as used (full sync).
    *
-   * @return List of CompactionStateRecord objects
+   * @return List of IndexingStateRecord objects
    */
-  public List<CompactionStateRecord> retrieveAllUsedCompactionStates()
+  public List<IndexingStateRecord> retrieveAllUsedIndexingStates()
   {
     final String sql = StringUtils.format(
         "SELECT fingerprint, payload FROM %s WHERE used = true",
         dbTables.getIndexingStatesTable()
     );
 
-    return retrieveValidCompactionStateRecordsWithQuery(handle.createQuery(sql));
+    return retrieveValidIndexingStateRecordsWithQuery(handle.createQuery(sql));
   }
 
   /**
-   * Retrieves compaction states for specific fingerprints (delta sync).
-   * Used to fetch only newly added compaction states.
+   * Retrieves indexing states for specific fingerprints (delta sync).
+   * Used to fetch only newly added indexing states.
    *
    * @param fingerprints Set of fingerprints to retrieve
-   * @return List of CompactionStateRecord objects
+   * @return List of IndexingStateRecord objects
    */
-  public List<CompactionStateRecord> retrieveCompactionStatesForFingerprints(
+  public List<IndexingStateRecord> retrieveIndexingStatesForFingerprints(
       Set<String> fingerprints
   )
   {
@@ -1757,10 +1757,10 @@ public class SqlSegmentsMetadataQuery
         MAX_INTERVALS_PER_BATCH
     );
 
-    final List<CompactionStateRecord> records = new ArrayList<>();
+    final List<IndexingStateRecord> records = new ArrayList<>();
     for (List<String> fingerprintBatch : fingerprintBatches) {
       records.addAll(
-          retrieveBatchOfCompactionStates(fingerprintBatch)
+          retrieveBatchOfIndexingStates(fingerprintBatch)
       );
     }
 
@@ -1768,9 +1768,9 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves a batch of compaction state records for the given fingerprints.
+   * Retrieves a batch of indexing state records for the given fingerprints.
    */
-  private List<CompactionStateRecord> retrieveBatchOfCompactionStates(List<String> fingerprints)
+  private List<IndexingStateRecord> retrieveBatchOfIndexingStates(List<String> fingerprints)
   {
     final String sql = StringUtils.format(
         "SELECT fingerprint, payload FROM %s"
@@ -1783,19 +1783,19 @@ public class SqlSegmentsMetadataQuery
     final Query<Map<String, Object>> query = handle.createQuery(sql);
     bindColumnValuesToQueryWithInCondition("fingerprint", fingerprints, query);
 
-    return retrieveValidCompactionStateRecordsWithQuery(query);
+    return retrieveValidIndexingStateRecordsWithQuery(query);
   }
 
   /**
-   * Executes the given query and maps results to valid CompactionStateRecord objects.
+   * Executes the given query and maps results to valid IndexingStateRecord objects.
    * Records that fail to parse are filtered out.
    */
-  private List<CompactionStateRecord> retrieveValidCompactionStateRecordsWithQuery(
+  private List<IndexingStateRecord> retrieveValidIndexingStateRecordsWithQuery(
       Query<Map<String, Object>> query
   )
   {
     return query.setFetchSize(connector.getStreamingFetchSize())
-                .map((index, r, ctx) -> mapToCompactionStateRecord(r))
+                .map((index, r, ctx) -> mapToIndexingStateRecord(r))
                 .list()
                 .stream()
                 .filter(Objects::nonNull)
@@ -1803,22 +1803,22 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Tries to parse the fields of the result set into a {@link CompactionStateRecord}.
+   * Tries to parse the fields of the result set into a {@link IndexingStateRecord}.
    *
    * @return null if an error occurred while parsing the result
    */
-  private CompactionStateRecord mapToCompactionStateRecord(ResultSet resultSet)
+  private IndexingStateRecord mapToIndexingStateRecord(ResultSet resultSet)
   {
     String fingerprint = null;
     try {
       fingerprint = resultSet.getString("fingerprint");
-      return new CompactionStateRecord(
+      return new IndexingStateRecord(
           fingerprint,
           jsonMapper.readValue(resultSet.getBytes("payload"), CompactionState.class)
       );
     }
     catch (Throwable t) {
-      log.error(t, "Could not read compaction state with fingerprint[%s]", fingerprint);
+      log.error(t, "Could not read indexing state with fingerprint[%s]", fingerprint);
       return null;
     }
   }

@@ -1833,7 +1833,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
             segmentMetadata == null ? null : segmentMetadata.getNumRows(),
             null,
-            segment.getCompactionStateFingerprint()
+            segment.getIndexingStateFingerprint()
         );
       }).collect(Collectors.toSet());
 
@@ -1956,7 +1956,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               oldSegmentMetadata.getSchemaFingerprint(),
               oldSegmentMetadata.getNumRows(),
               upgradedFromSegmentId,
-              oldSegmentMetadata.getCompactionStateFingerprint()
+              oldSegmentMetadata.getIndexingStateFingerprint()
           )
       );
     }
@@ -2049,7 +2049,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
           segmentMetadata == null ? null : segmentMetadata.getNumRows(),
           upgradedFromSegmentIdMap.get(segment.getId().toString()),
-          segment.getCompactionStateFingerprint()
+          segment.getIndexingStateFingerprint()
       );
     }).collect(Collectors.toSet());
 
@@ -2733,7 +2733,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Collect unique non-null compaction state fingerprints
     final Set<String> fingerprints = segments.stream()
-                                             .map(DataSegment::getCompactionStateFingerprint)
+                                             .map(DataSegment::getIndexingStateFingerprint)
                                              .filter(fp -> fp != null && !fp.isEmpty())
                                              .collect(Collectors.toSet());
 

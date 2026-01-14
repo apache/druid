@@ -32,21 +32,21 @@ public class CompactionJob extends BatchIndexingJob
 {
   private final CompactionCandidate candidate;
   private final int maxRequiredTaskSlots;
-  private final String targetCompactionStateFingerprint;
+  private final String targetIndexingStateFingerprint;
   private final CompactionState targetCompactionState;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
-      String targetCompactionStateFingerprint,
+      String targetIndexingStateFingerprint,
       CompactionState targetCompactionState
   )
   {
     super(task, null);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-    this.targetCompactionStateFingerprint = targetCompactionStateFingerprint;
+    this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
     this.targetCompactionState = targetCompactionState;
   }
 
@@ -54,14 +54,14 @@ public class CompactionJob extends BatchIndexingJob
       ClientSqlQuery msqQuery,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
-      String targetCompactionStateFingerprint,
+      String targetIndexingStateFingerprint,
       CompactionState targetCompactionState
   )
   {
     super(null, msqQuery);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
-    this.targetCompactionStateFingerprint = targetCompactionStateFingerprint;
+    this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
     this.targetCompactionState = targetCompactionState;
   }
 
@@ -80,9 +80,9 @@ public class CompactionJob extends BatchIndexingJob
     return maxRequiredTaskSlots;
   }
 
-  public String getTargetCompactionStateFingerprint()
+  public String getTargetIndexingStateFingerprint()
   {
-    return targetCompactionStateFingerprint;
+    return targetIndexingStateFingerprint;
   }
 
   public CompactionState getTargetCompactionState()
@@ -97,7 +97,7 @@ public class CompactionJob extends BatchIndexingJob
            super.toString() +
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
-           ", targetCompactionStateFingerprint='" + targetCompactionStateFingerprint + '\'' +
+           ", targetIndexingStateFingerprint='" + targetIndexingStateFingerprint + '\'' +
            ", targetCompactionState=" + targetCompactionState +
            '}';
   }

@@ -1154,14 +1154,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    */
   private Map<String, CompactionState> buildFingerprintToStateMapForFullSync()
   {
-    final List<CompactionStateRecord> records = query(
-        SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStates
+    final List<IndexingStateRecord> records = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates
     );
 
     return records.stream().collect(
         Collectors.toMap(
-            CompactionStateRecord::getFingerprint,
-            CompactionStateRecord::getState
+            IndexingStateRecord::getFingerprint,
+            IndexingStateRecord::getState
         )
     );
   }
@@ -1183,7 +1183,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     );
     final Set<String> cachedFingerprints = Set.copyOf(fingerprintToStateMap.keySet());
     final Set<String> persistedFingerprints = query(
-        SqlSegmentsMetadataQuery::retrieveAllUsedCompactionStateFingerprints
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints
     );
 
     // Remove entry for compaction states that have been deleted from the metadata store
@@ -1193,14 +1193,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     // Retrieve and add entry for compaction states that have been added to the metadata store
     final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
-    final List<CompactionStateRecord> addedCompactionStateRecords = query(
-        sql -> sql.retrieveCompactionStatesForFingerprints(addedFingerprints)
+    final List<IndexingStateRecord> addedIndexingStateRecords = query(
+        sql -> sql.retrieveIndexingStatesForFingerprints(addedFingerprints)
     );
 
-    addedCompactionStateRecords.forEach(
+    addedIndexingStateRecords.forEach(
         record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
     );
-    emitMetric(Metric.ADDED_COMPACTION_STATES, addedCompactionStateRecords.size());
+    emitMetric(Metric.ADDED_COMPACTION_STATES, addedIndexingStateRecords.size());
 
     return fingerprintToStateMap;
   }

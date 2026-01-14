@@ -1700,7 +1700,7 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
-      final String compactionStateFingerprint = querySpec.getContext().getString(Tasks.COMPACTION_STATE_FINGERPRINT_KEY);
+      final String indexingStateFingerprint = querySpec.getContext().getString(Tasks.INDEXING_STATE_FINGERPRINT_KEY);
 
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
@@ -1727,9 +1727,9 @@ public class ControllerImpl implements Controller
           );
         }
       }
-      if (compactionStateFingerprint != null) {
+      if (indexingStateFingerprint != null) {
         compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(
-            AbstractBatchIndexTask.addCompactionStateFingerprintToSegments(compactionStateFingerprint));
+            AbstractBatchIndexTask.addIndexingStateFingerprintToSegments(indexingStateFingerprint));
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);

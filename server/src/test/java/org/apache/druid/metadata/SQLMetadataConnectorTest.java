@@ -194,7 +194,7 @@ public class SQLMetadataConnectorTest
    * in the segments table.
    */
   @Test
-  public void testAlterSegmentTableAddCompactionStateFingerprint()
+  public void testAlterSegmentTableAddIndexingStateFingerprint()
   {
     connector.createSegmentTable();
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN INDEXING_STATE_FINGERPRINT");

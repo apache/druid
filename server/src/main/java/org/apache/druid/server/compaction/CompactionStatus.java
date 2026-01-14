@@ -441,7 +441,7 @@ public class CompactionStatus
     {
       Map<String, List<DataSegment>> mismatchedFingerprintToSegmentMap = new HashMap<>();
       for (DataSegment segment : fingerprintedSegments) {
-        String fingerprint = segment.getCompactionStateFingerprint();
+        String fingerprint = segment.getIndexingStateFingerprint();
         if (fingerprint == null) {
           // Should not happen since we are iterating over fingerprintedSegments
         } else if (fingerprint.equals(targetFingerprint)) {
@@ -506,7 +506,7 @@ public class CompactionStatus
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       for (DataSegment segment : candidateSegments.getSegments()) {
-        final String fingerprint = segment.getCompactionStateFingerprint();
+        final String fingerprint = segment.getIndexingStateFingerprint();
         final CompactionState segmentState = segment.getLastCompactionState();
         if (fingerprint != null) {
           fingerprintedSegments.add(segment);

@@ -280,8 +280,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
               "Segment " + segment.getId() + " should have null lastCompactionState"
           );
           Assertions.assertNotNull(
-              segment.getCompactionStateFingerprint(),
-              "Segment " + segment.getId() + " should have non-null compactionStateFingerprint"
+              segment.getIndexingStateFingerprint(),
+              "Segment " + segment.getId() + " should have non-null indexingStateFingerprint"
           );
         });
   }
@@ -305,7 +305,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .forEach(segment -> {
           Assertions.assertEquals(
               expectedFingerprint,
-              segment.getCompactionStateFingerprint(),
+              segment.getIndexingStateFingerprint(),
               "Segment " + segment.getId() + " fingerprint should match expected fingerprint"
           );
         });

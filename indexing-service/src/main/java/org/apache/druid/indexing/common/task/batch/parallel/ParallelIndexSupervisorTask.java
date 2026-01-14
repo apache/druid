@@ -1162,8 +1162,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         Tasks.STORE_COMPACTION_STATE_KEY,
         Tasks.DEFAULT_STORE_COMPACTION_STATE
     );
-    final String compactionStateFingerprint = getContextValue(
-        Tasks.COMPACTION_STATE_FINGERPRINT_KEY,
+    final String indexingStateFingerprint = getContextValue(
+        Tasks.INDEXING_STATE_FINGERPRINT_KEY,
         null
     );
 
@@ -1173,7 +1173,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
             toolbox,
             ingestionSchema
         ).andThen(
-            addCompactionStateFingerprintToSegments(compactionStateFingerprint)
+            addIndexingStateFingerprintToSegments(indexingStateFingerprint)
         );
 
     Set<DataSegment> tombStones = Collections.emptySet();

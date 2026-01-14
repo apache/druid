@@ -70,11 +70,11 @@ public class Tasks
   }
 
   /**
-   * Context k:v pair that holds the fingerprint of the compaction state to be stored with the segment
+   * Context k:v pair that holds the fingerprint of the indexing state to be stored with the segment
    */
-  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+  public static final String INDEXING_STATE_FINGERPRINT_KEY = "indexingStateFingerprint";
 
   static {
-    Verify.verify(COMPACTION_STATE_FINGERPRINT_KEY.equals(CompactSegments.COMPACTION_STATE_FINGERPRINT_KEY));
+    Verify.verify(INDEXING_STATE_FINGERPRINT_KEY.equals(CompactSegments.INDEXING_STATE_FINGERPRINT_KEY));
   }
 }

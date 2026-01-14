@@ -78,9 +78,9 @@ public class CompactSegments implements CoordinatorCustomDuty
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
   /**
-   * Must be the same as org.apache.druid.indexing.common.task.Tasks.COMPACTION_STATE_FINGERPRINT_KEY
+   * Must be the same as org.apache.druid.indexing.common.task.Tasks.INDEXING_STATE_FINGERPRINT_KEY
    */
-  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+  public static final String INDEXING_STATE_FINGERPRINT_KEY = "indexingStateFingerprint";
 
   private static final String COMPACTION_REASON_KEY = "compactionReason";
 
@@ -293,7 +293,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       CompactionCandidate candidate,
       DataSourceCompactionConfig config,
       CompactionEngine defaultEngine,
-      String compactionStateFingerprint,
+      String indexingStateFingerprint,
       boolean storeCompactionStatePerSegment
   )
   {
@@ -373,7 +373,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
 
     autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
-    autoCompactionContext.put(COMPACTION_STATE_FINGERPRINT_KEY, compactionStateFingerprint);
+    autoCompactionContext.put(INDEXING_STATE_FINGERPRINT_KEY, indexingStateFingerprint);
 
     return compactSegments(
         candidate,

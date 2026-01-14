@@ -59,7 +59,7 @@ public class DataSegmentPlus
   private final String upgradedFromSegmentId;
 
   @Nullable
-  private final String compactionStateFingerprint;
+  private final String indexingStateFingerprint;
 
   @JsonCreator
   public DataSegmentPlus(
@@ -70,7 +70,7 @@ public class DataSegmentPlus
       @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
       @JsonProperty("numRows") @Nullable final Long numRows,
       @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId,
-      @JsonProperty("compactionStateFingerprint") @Nullable String compactionStateFingerprint
+      @JsonProperty("indexingStateFingerprint") @Nullable String indexingStateFingerprint
   )
   {
     this.dataSegment = dataSegment;
@@ -80,7 +80,7 @@ public class DataSegmentPlus
     this.schemaFingerprint = schemaFingerprint;
     this.numRows = numRows;
     this.upgradedFromSegmentId = upgradedFromSegmentId;
-    this.compactionStateFingerprint = compactionStateFingerprint;
+    this.indexingStateFingerprint = indexingStateFingerprint;
   }
 
   @Nullable
@@ -133,9 +133,9 @@ public class DataSegmentPlus
 
   @Nullable
   @JsonProperty
-  public String getCompactionStateFingerprint()
+  public String getIndexingStateFingerprint()
   {
-    return compactionStateFingerprint;
+    return indexingStateFingerprint;
   }
 
   @Override
@@ -155,7 +155,7 @@ public class DataSegmentPlus
            && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
            && Objects.equals(numRows, that.getNumRows())
            && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId())
-           && Objects.equals(compactionStateFingerprint, that.getCompactionStateFingerprint());
+           && Objects.equals(indexingStateFingerprint, that.getIndexingStateFingerprint());
   }
 
   @Override
@@ -169,7 +169,7 @@ public class DataSegmentPlus
         schemaFingerprint,
         numRows,
         upgradedFromSegmentId,
-        compactionStateFingerprint
+        indexingStateFingerprint
     );
   }
 
@@ -184,7 +184,7 @@ public class DataSegmentPlus
            ", schemaFingerprint=" + getSchemaFingerprint() +
            ", numRows=" + getNumRows() +
            ", upgradedFromSegmentId=" + getUpgradedFromSegmentId() +
-           ", compactionStateFingerprint=" + getCompactionStateFingerprint() +
+           ", indexingStateFingerprint=" + getIndexingStateFingerprint() +
            '}';
   }
 }

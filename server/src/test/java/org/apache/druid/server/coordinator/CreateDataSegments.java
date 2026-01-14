@@ -63,7 +63,7 @@ public class CreateDataSegments
   private String upgradedFromSegmentId;
   private String schemaFingerprint;
   private Long numRows;
-  private String compactionStateFingerprint;
+  private String indexingStateFingerprint;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -128,9 +128,9 @@ public class CreateDataSegments
     return this;
   }
 
-  public CreateDataSegments withCompactionStateFingerprint(String compactionStateFingerprint)
+  public CreateDataSegments withIndexingStateFingerprint(String indexingStateFingerprint)
   {
-    this.compactionStateFingerprint = compactionStateFingerprint;
+    this.indexingStateFingerprint = indexingStateFingerprint;
     return this;
   }
 
@@ -195,7 +195,7 @@ public class CreateDataSegments
                 ++uniqueIdInInterval,
                 compactionState,
                 sizeInBytes,
-                compactionStateFingerprint
+                indexingStateFingerprint
             )
         );
       }
@@ -215,7 +215,7 @@ public class CreateDataSegments
         schemaFingerprint,
         numRows,
         upgradedFromSegmentId,
-        compactionStateFingerprint
+        indexingStateFingerprint
     );
   }
 
@@ -235,7 +235,7 @@ public class CreateDataSegments
         int uniqueId,
         CompactionState compactionState,
         long size,
-        String compactionStateFingerprint
+        String indexingStateFingerprint
     )
     {
       super(
@@ -250,7 +250,7 @@ public class CreateDataSegments
           compactionState,
           IndexIO.CURRENT_VERSION_ID,
           size,
-          compactionStateFingerprint,
+          indexingStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
       this.uniqueId = uniqueId;

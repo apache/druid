@@ -642,17 +642,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * Returns a function that adds the given compaction state fingerprint to all segments.
+   * Returns a function that adds the given indexing state fingerprint to all segments.
    * If the fingerprint is null, returns an identity function that leaves segments unchanged.
    */
-  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFingerprintToSegments(
-      String compactionStateFingerprint
+  public static Function<Set<DataSegment>, Set<DataSegment>> addIndexingStateFingerprintToSegments(
+      String indexingStateFingerprint
   )
   {
-    if (compactionStateFingerprint != null) {
+    if (indexingStateFingerprint != null) {
       return segments -> segments.stream()
                                  .map(
-                                     segment -> segment.withCompactionStateFingerprint(compactionStateFingerprint)
+                                     segment -> segment.withIndexingStateFingerprint(indexingStateFingerprint)
                                  )
                                  .collect(Collectors.toSet());
     } else {

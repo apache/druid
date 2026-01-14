@@ -22,14 +22,14 @@ package org.apache.druid.metadata.segment.cache;
 import org.apache.druid.timeline.CompactionState;
 
 /**
- * Represents a single record in the druid_compactionStates table.
+ * Represents a single record in the druid_indexingStates table.
  */
-public class CompactionStateRecord
+public class IndexingStateRecord
 {
   private final String fingerprint;
   private final CompactionState state;
 
-  public CompactionStateRecord(String fingerprint, CompactionState state)
+  public IndexingStateRecord(String fingerprint, CompactionState state)
   {
     this.fingerprint = fingerprint;
     this.state = state;

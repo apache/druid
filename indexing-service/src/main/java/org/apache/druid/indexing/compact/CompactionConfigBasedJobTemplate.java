@@ -73,7 +73,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     CompactionState compactionState = config.toCompactionState();
 
-    String compactionStateFingerprint = params.getFingerprintMapper().generateFingerprint(
+    String indexingStateFingerprint = params.getFingerprintMapper().generateFingerprint(
         config.getDataSource(),
         compactionState
     );
@@ -86,7 +86,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           candidate,
           config,
           params.getClusterCompactionConfig().getEngine(),
-          compactionStateFingerprint,
+          indexingStateFingerprint,
           params.getClusterCompactionConfig().isStoreCompactionStatePerSegment()
       );
       jobs.add(
@@ -94,7 +94,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
               taskPayload,
               candidate,
               CompactionSlotManager.computeSlotsRequiredForTask(taskPayload),
-              compactionStateFingerprint,
+              indexingStateFingerprint,
               compactionState
           )
       );

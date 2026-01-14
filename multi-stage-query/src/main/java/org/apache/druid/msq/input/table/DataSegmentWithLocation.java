@@ -61,7 +61,7 @@ public class DataSegmentWithLocation extends DataSegment
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JsonProperty("servers") Set<DruidServerMetadata> servers,
-      @JsonProperty("compactionStateFingerprint") String compactionStateFingerprint,
+      @JsonProperty("indexingStateFingerprint") String indexingStateFingerprint,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -77,7 +77,7 @@ public class DataSegmentWithLocation extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
-        compactionStateFingerprint,
+        indexingStateFingerprint,
         pruneSpecsHolder
     );
     this.servers = Preconditions.checkNotNull(servers, "servers");
@@ -100,7 +100,7 @@ public class DataSegmentWithLocation extends DataSegment
         null,
         dataSegment.getBinaryVersion(),
         dataSegment.getSize(),
-        dataSegment.getCompactionStateFingerprint(),
+        dataSegment.getIndexingStateFingerprint(),
         PruneSpecsHolder.DEFAULT
     );
     this.servers = servers;

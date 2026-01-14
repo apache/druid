@@ -781,7 +781,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         segment.getSchemaFingerprint(),
         segment.getNumRows(),
         segment.getUpgradedFromSegmentId(),
-        segment.getCompactionStateFingerprint()
+        segment.getIndexingStateFingerprint()
     );
   }
 

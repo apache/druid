@@ -437,7 +437,7 @@ public class SqlIndexingStateStorageTest
   // ===== Fingerprint Generation Tests =====
 
   @Test
-  public void test_generateCompactionStateFingerprint_deterministicFingerprinting()
+  public void test_generateIndexingStateFingerprint_deterministicFingerprinting()
   {
     CompactionState compactionState1 = createBasicCompactionState();
     CompactionState compactionState2 = createBasicCompactionState();
@@ -453,7 +453,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_generateCompactionStateFingerprint_differentDatasourcesWithSameState_differentFingerprints()
+  public void test_generateIndexingStateFingerprint_differentDatasourcesWithSameState_differentFingerprints()
   {
     CompactionState compactionState = createBasicCompactionState();
 
@@ -468,7 +468,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_generateCompactionStateFingerprint_metricsListOrderDifferenceResultsInNewFingerprint()
+  public void test_generateIndexingStateFingerprint_metricsListOrderDifferenceResultsInNewFingerprint()
   {
     List<AggregatorFactory> metrics1 = Arrays.asList(
         new CountAggregatorFactory("count"),
@@ -511,7 +511,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_generateCompactionStateFingerprint_dimensionsListOrderDifferenceResultsInNewFingerprint()
+  public void test_generateIndexingStateFingerprint_dimensionsListOrderDifferenceResultsInNewFingerprint()
   {
     DimensionsSpec dimensions1 = new DimensionsSpec(
         DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3"))
@@ -552,7 +552,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void testGenerateCompactionStateFingerprint_differentPartitionsSpec()
+  public void testGenerateIndexingStateFingerprint_differentPartitionsSpec()
   {
     CompactionState state1 = new CompactionState(
         new DynamicPartitionsSpec(5000000, null),

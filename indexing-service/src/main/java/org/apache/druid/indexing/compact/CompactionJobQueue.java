@@ -36,9 +36,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -368,14 +368,14 @@ public class CompactionJobQueue
    */
   private void persistPendingIndexingState(CompactionJob job)
   {
-    if (job.getTargetCompactionState() != null && job.getTargetCompactionStateFingerprint() != null) {
+    if (job.getTargetCompactionState() != null && job.getTargetIndexingStateFingerprint() != null) {
       indexingStateStorage.upsertIndexingState(
           job.getDataSource(),
-          job.getTargetCompactionStateFingerprint(),
+          job.getTargetIndexingStateFingerprint(),
           job.getTargetCompactionState(),
           DateTimes.nowUtc()
       );
-      indexingStateCache.addIndexingState(job.getTargetCompactionStateFingerprint(), job.getTargetCompactionState());
+      indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetCompactionState());
     }
   }
 

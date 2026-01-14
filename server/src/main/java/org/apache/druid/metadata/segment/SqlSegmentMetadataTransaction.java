@@ -533,7 +533,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
                  .bind("payload", getJsonBytes(segment))
                  .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
                  .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId())
-                 .bind("indexing_state_fingerprint", segmentPlus.getCompactionStateFingerprint());
+                 .bind("indexing_state_fingerprint", segmentPlus.getIndexingStateFingerprint());
 
         if (persistAdditionalMetadata) {
           preparedBatchPart

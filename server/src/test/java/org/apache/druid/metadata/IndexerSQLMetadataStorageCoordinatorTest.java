@@ -4342,7 +4342,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
-                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .withIndexingStateFingerprint(fingerprint)
                                                    .eachOfSizeInMb(500)
                                                    .get(0);
 
@@ -4367,7 +4367,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
-                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .withIndexingStateFingerprint(fingerprint)
                                                    .eachOfSizeInMb(500)
                                                    .get(0);
 
@@ -4397,7 +4397,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
-                                                   .withCompactionStateFingerprint(fingerprint)
+                                                   .withIndexingStateFingerprint(fingerprint)
                                                    .eachOfSizeInMb(500)
                                                    .get(0);
 

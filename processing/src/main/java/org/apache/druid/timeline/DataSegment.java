@@ -117,12 +117,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   /**
    * SHA-256 fingerprint representation of the CompactionState.
    * <p>
-   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before compaction
-   * fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
+   * A null fingerprint indicates that this segment either has not been compacted, or was compacted before indexing
+   * state fingerprinting existed. In the latter case, the segment would have a non-null {@link #lastCompactionState}.
    * </p>
    */
   @Nullable
-  private final String compactionStateFingerprint;
+  private final String indexingStateFingerprint;
 
   /**
    * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
@@ -208,7 +208,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
-      @JsonProperty("compactionStateFingerprint") @Nullable String compactionStateFingerprint,
+      @JsonProperty("indexingStateFingerprint") @Nullable String indexingStateFingerprint,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -224,7 +224,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         lastCompactionState,
         binaryVersion,
         size,
-        compactionStateFingerprint,
+        indexingStateFingerprint,
         pruneSpecsHolder
     );
   }
@@ -241,7 +241,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size,
-      String compactionStateFingerprint,
+      String indexingStateFingerprint,
       PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -260,9 +260,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.binaryVersion = binaryVersion;
     Preconditions.checkArgument(size >= 0);
     this.size = size;
-    this.compactionStateFingerprint = compactionStateFingerprint == null ?
-                                      null :
-                                      STRING_INTERNER.intern(compactionStateFingerprint);
+    this.indexingStateFingerprint = indexingStateFingerprint == null ?
+                                    null :
+                                    STRING_INTERNER.intern(indexingStateFingerprint);
   }
 
   /**
@@ -367,9 +367,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getCompactionStateFingerprint()
+  public String getIndexingStateFingerprint()
   {
-    return compactionStateFingerprint;
+    return indexingStateFingerprint;
   }
 
   @Override
@@ -466,9 +466,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).lastCompactionState(compactionState).build();
   }
 
-  public DataSegment withCompactionStateFingerprint(String compactionStateFingerprint)
+  public DataSegment withIndexingStateFingerprint(String indexingStateFingerprint)
   {
-    return builder(this).compactionStateFingerprint(compactionStateFingerprint).build();
+    return builder(this).indexingStateFingerprint(indexingStateFingerprint).build();
   }
 
   @Override
@@ -505,7 +505,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
-           ", compactionStateFingerprint=" + compactionStateFingerprint +
+           ", indexingStateFingerprint=" + indexingStateFingerprint +
            '}';
   }
 
@@ -579,7 +579,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     private CompactionState lastCompactionState;
     private Integer binaryVersion;
     private long size;
-    private String compactionStateFingerprint;
+    private String indexingStateFingerprint;
 
     /**
      * @deprecated use {@link #Builder(SegmentId)} or {@link #Builder(DataSegment)} instead.
@@ -605,7 +605,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.binaryVersion = 0;
       this.size = 0;
       this.lastCompactionState = null;
-      this.compactionStateFingerprint = null;
+      this.indexingStateFingerprint = null;
     }
 
     private Builder(DataSegment segment)
@@ -621,7 +621,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       this.lastCompactionState = segment.getLastCompactionState();
       this.binaryVersion = segment.getBinaryVersion();
       this.size = segment.getSize();
-      this.compactionStateFingerprint = segment.getCompactionStateFingerprint();
+      this.indexingStateFingerprint = segment.getIndexingStateFingerprint();
     }
 
     public Builder dataSource(String dataSource)
@@ -690,9 +690,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
-    public Builder compactionStateFingerprint(String compactionStateFingerprint)
+    public Builder indexingStateFingerprint(String indexingStateFingerprint)
     {
-      this.compactionStateFingerprint = compactionStateFingerprint;
+      this.indexingStateFingerprint = indexingStateFingerprint;
       return this;
     }
 
@@ -716,7 +716,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
           lastCompactionState,
           binaryVersion,
           size,
-          compactionStateFingerprint,
+          indexingStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
     }

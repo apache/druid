@@ -54,7 +54,7 @@ public class LoadableDataSegment extends DataSegment
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
-      @JsonProperty("compactionStateFingerprint") String compactionStateFingerprint
+      @JsonProperty("indexingStateFingerprint") String indexingStateFingerprint
   )
   {
     super(
@@ -69,7 +69,7 @@ public class LoadableDataSegment extends DataSegment
         lastCompactionState,
         binaryVersion,
         size,
-        compactionStateFingerprint,
+        indexingStateFingerprint,
         PruneSpecsHolder.DEFAULT
     );
   }
