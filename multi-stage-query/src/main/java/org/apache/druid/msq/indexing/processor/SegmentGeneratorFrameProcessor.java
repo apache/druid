@@ -161,7 +161,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         log.debug("Received first frame for segment [%s].", segmentIdWithShardSpec.asSegmentId());
       }
 
-      addFrame(inChannel.read());
+      addFrame(inChannel.readFrame());
       return ReturnOrAwait.awaitAll(1);
     }
   }

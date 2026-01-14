@@ -32,6 +32,7 @@ import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
@@ -136,6 +137,12 @@ public class IndexerFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return context.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return context.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

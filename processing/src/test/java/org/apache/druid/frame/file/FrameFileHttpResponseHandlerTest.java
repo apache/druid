@@ -104,7 +104,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
         temporaryFolder.newFile()
     );
 
-    channel = ReadableByteChunksFrameChannel.create("test", false);
+    channel = ReadableByteChunksFrameChannel.create("test", false, null);
     handler = new FrameFileHttpResponseHandler(channel);
   }
 

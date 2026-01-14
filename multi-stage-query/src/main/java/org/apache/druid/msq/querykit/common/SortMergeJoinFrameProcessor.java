@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.FrameComparisonWidget;
@@ -496,7 +495,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     } else if (!tracker.canBufferMoreFrames()) {
       return false;
     } else {
-      final Frame frame = channel.read();
+      final Frame frame = channel.readFrame();
 
       if (frame.numRows() == 0) {
         // Skip, read next.
@@ -531,7 +530,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
         final Frame frame = Frame.wrap(frameWriter.toByteArray());
         frameWriter.close();
         frameWriter = null;
-        outputChannel.write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+        outputChannel.write(frame);
       }
     }
   }

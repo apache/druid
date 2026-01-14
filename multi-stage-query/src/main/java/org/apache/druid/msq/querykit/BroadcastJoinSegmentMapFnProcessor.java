@@ -244,7 +244,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
     while (inputChannelIterator.hasNext()) {
       final int channelNumber = inputChannelIterator.nextInt();
       if (sideChannelNumbers.contains(channelNumber) && channels.get(channelNumber).canRead()) {
-        final Frame frame = channels.get(channelNumber).read();
+        final Frame frame = channels.get(channelNumber).readFrame();
 
         memoryUsed += frame.numBytes();
 

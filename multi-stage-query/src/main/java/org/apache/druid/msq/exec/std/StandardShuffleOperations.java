@@ -28,7 +28,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.FrameWithPartition;
+import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
@@ -159,7 +159,7 @@ public class StandardShuffleOperations
 
             final OutputChannel outputChannel = OutputChannel.readOnly(
                 channel.readable(),
-                FrameWithPartition.NO_PARTITION
+                WritableFrameChannel.NO_PARTITION
             );
 
             return new ResultAndChannels<>(
