@@ -26,6 +26,14 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 
+/**
+ * A fixed-width, open-addressing hash table that lives inside a caller-provided byte buffer.
+ * <p>
+ * The table uses a contiguous slice of the merge buffer as its backing store. Each bucket holds at most one entry,
+ * and occupies {@code bucketSizeWithHash} number of bytes. Collisions are resolved by continuously probing the
+ * next bucket to find an empty bucket to slot the new entry. The current table view is maintained as a
+ * {@link ByteBuffer} slice that moves and grows within the arena as the table expands.
+ */
 public class ByteBufferHashTable
 {
   public static int calculateTableArenaSizeWithPerBucketAdditionalSize(
@@ -230,7 +238,6 @@ public class ByteBufferHashTable
     maxBuckets = newBuckets;
     regrowthThreshold = newMaxSize;
     tableBuffer = newTableBuffer;
-    updateMaxTableBufferUsedBytes();
     tableStart = newTableStart;
 
     growthCount++;
@@ -251,6 +258,7 @@ public class ByteBufferHashTable
     tableBuffer.putInt(Groupers.getUsedFlag(keyHash));
     tableBuffer.put(keyBuffer);
     size++;
+    updateMaxTableBufferUsedBytes();
 
     if (bucketUpdateHandler != null) {
       bucketUpdateHandler.handleNewBucket(offset);
@@ -389,7 +397,7 @@ public class ByteBufferHashTable
 
   protected void updateMaxTableBufferUsedBytes()
   {
-    maxTableBufferUsedBytes = Math.max(maxTableBufferUsedBytes, tableBuffer.capacity());
+    maxTableBufferUsedBytes = Math.max(maxTableBufferUsedBytes, (long) size * bucketSizeWithHash);
   }
 
   public long getMaxTableBufferUsedBytes()
