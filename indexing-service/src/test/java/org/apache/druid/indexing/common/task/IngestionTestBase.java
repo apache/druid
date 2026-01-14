@@ -87,7 +87,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -184,7 +184,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create(),
-        new HeapMemoryCompactionStateStorage()
+        new HeapMemoryIndexingStateStorage()
     );
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,

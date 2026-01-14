@@ -39,7 +39,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -110,7 +110,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnector,
         segmentSchemaManager,
         centralizedDatasourceSchemaConfig,
-        new HeapMemoryCompactionStateStorage()
+        new HeapMemoryIndexingStateStorage()
     )
     {
       @Override

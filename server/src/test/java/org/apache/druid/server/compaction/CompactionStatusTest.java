@@ -42,7 +42,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -71,14 +71,14 @@ public class CompactionStatusTest
                    .size(100_000_000L)
                    .build();
 
-  private HeapMemoryCompactionStateStorage compactionStateStorage;
+  private HeapMemoryIndexingStateStorage compactionStateStorage;
   private IndexingStateCache indexingStateCache;
   private CompactionFingerprintMapper fingerprintMapper;
 
   @Before
   public void setUp()
   {
-    compactionStateStorage = new HeapMemoryCompactionStateStorage();
+    compactionStateStorage = new HeapMemoryIndexingStateStorage();
     indexingStateCache = new IndexingStateCache();
     fingerprintMapper = new DefaultCompactionFingerprintMapper(
         indexingStateCache,
@@ -603,7 +603,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = compactionConfig.toCompactionState();
 
-    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
+    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
@@ -638,8 +638,8 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).compactionStateFingerprint("wrongFingerprint").build()
     );
 
-    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
-    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
+    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
+    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
@@ -662,7 +662,7 @@ public class CompactionStatusTest
         .build();
 
     CompactionState expectedState = compactionConfig.toCompactionState();
-    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
+    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     final CompactionStatus status = CompactionStatus.compute(
@@ -730,7 +730,7 @@ public class CompactionStatusTest
     CompactionState expectedState = compactionConfig.toCompactionState();
     String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
-    compactionStateStorage.upsertCompactionState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
+    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     List<DataSegment> segments = List.of(

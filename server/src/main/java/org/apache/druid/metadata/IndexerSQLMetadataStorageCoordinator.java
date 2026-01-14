@@ -56,7 +56,7 @@ import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -112,7 +112,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
-  private final CompactionStateStorage compactionStateStorage;
+  private final IndexingStateStorage indexingStateStorage;
 
   private final SegmentMetadataTransactionFactory transactionFactory;
 
@@ -124,7 +124,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       SQLMetadataConnector connector,
       SegmentSchemaManager segmentSchemaManager,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionStateStorage compactionStateStorage
+      IndexingStateStorage indexingStateStorage
   )
   {
     this.transactionFactory = transactionFactory;
@@ -136,7 +136,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.schemaPersistEnabled =
         centralizedDatasourceSchemaConfig.isEnabled()
         && !centralizedDatasourceSchemaConfig.isTaskSchemaPublishDisabled();
-    this.compactionStateStorage = compactionStateStorage;
+    this.indexingStateStorage = indexingStateStorage;
   }
 
   @LifecycleStart
@@ -2740,7 +2740,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Mark each fingerprint as active
     for (String fingerprint : fingerprints) {
       try {
-        int rowsUpdated = compactionStateStorage.markCompactionStatesAsActive(fingerprint);
+        int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprint);
         if (rowsUpdated > 0) {
           log.info("Marked compaction state fingerprint[%s] as active (non-pending).", fingerprint);
         }

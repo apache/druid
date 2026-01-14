@@ -25,17 +25,17 @@ import org.joda.time.DateTime;
 import java.util.List;
 
 /**
- * Manages compaction state persistence and fingerprint generation.
+ * Manages indexing state persistence and fingerprint generation.
  * <p>
- * Implementations may be backed by a database (like {@link SqlCompactionStateStorage}) or
- * use in-memory storage (like {@link HeapMemoryCompactionStateStorage}).
+ * Implementations may be backed by a database (like {@link SqlIndexingStateStorage}) or
+ * use in-memory storage (like {@link HeapMemoryIndexingStateStorage}).
  */
-public interface CompactionStateStorage
+public interface IndexingStateStorage
 {
   /**
-   * Upserts a compaction state to storage.
+   * Upserts an indexing state to storage.
    * <p>
-   * If a fingerprint already exists, marks it as used and updates the timestamp.
+   * If a fingerprint already exists, update to reflect proper used state and timestamp.
    * If a fingerprint doesn't exist, inserts a new row with the full state payload.
    *
    * @param dataSource      The datasource name
@@ -44,7 +44,7 @@ public interface CompactionStateStorage
    * @param updateTime      The timestamp for this update
    */
 
-  void upsertCompactionState(
+  void upsertIndexingState(
       String dataSource,
       String fingerprint,
       CompactionState compactionState,
@@ -52,55 +52,55 @@ public interface CompactionStateStorage
   );
 
   /**
-   * Marks compaction states as unused if they are not referenced by any used segments.
+   * Marks indexing states as unused if they are not referenced by any used segments.
    * <p>
    * This is used for cleanup operations.
    *
    * @return Number of rows updated, or 0 if not applicable
    */
-  int markUnreferencedCompactionStatesAsUnused();
+  int markUnreferencedIndexingStatesAsUnused();
 
   /**
-   * Finds all compaction state fingerprints which have been marked as unused but are
+   * Finds all indexing state fingerprints which have been marked as unused but are
    * still referenced by some used segments. This is used for validation/reconciliation.
    * Implementations may return an empty list if not applicable.
    *
    * @return List of fingerprints, or empty list
    */
-  List<String> findReferencedCompactionStateMarkedAsUnused();
+  List<String> findReferencedIndexingStateMarkedAsUnused();
 
   /**
-   * Marks compaction states as used.
+   * Marks indexing states as used.
    * <p>
    * This is used for reconciliation operations to avoid deleting states that are still in use.
    *
    * @param stateFingerprints List of fingerprints to mark as used
    * @return Number of rows updated, or 0 if not applicable
    */
-  int markCompactionStatesAsUsed(List<String> stateFingerprints);
+  int markIndexingStatesAsUsed(List<String> stateFingerprints);
 
   /**
-   * Marks compaction states as active for a given fingerprint.
+   * Marks indexing states as active for a given fingerprint.
    *
    * @param stateFingerprint The fingerprint to mark as active
    * @return Number of rows updated, or 0 if not applicable
    */
-  int markCompactionStatesAsActive(String stateFingerprint);
+  int markIndexingStatesAsActive(String stateFingerprint);
 
   /**
-   * Deletes pending compaction states older than the given timestamp.
+   * Deletes pending indexing states older than the given timestamp.
    * @param timestamp The cutoff timestamp in milliseconds
    * @return Number of rows deleted, or 0 if not applicable
    */
-  int deletePendingCompactionStatesOlderThan(long timestamp);
+  int deletePendingIndexingStatesOlderThan(long timestamp);
 
   /**
-   * Deletes unused compaction states older than the given timestamp.
+   * Deletes unused indexing states older than the given timestamp.
    * <p>
    * This is used for cleanup operations.
    *
    * @param timestamp The cutoff timestamp in milliseconds
    * @return Number of rows deleted, or 0 if not applicable
    */
-  int deleteUnusedCompactionStatesOlderThan(long timestamp);
+  int deleteUnusedIndexingStatesOlderThan(long timestamp);
 }

@@ -53,7 +53,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
@@ -122,7 +122,7 @@ public class MaterializedViewSupervisorTest
         derbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create(),
-        new HeapMemoryCompactionStateStorage()
+        new HeapMemoryIndexingStateStorage()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);

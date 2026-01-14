@@ -46,7 +46,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
@@ -143,7 +143,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final boolean shouldPollSegments;
   private final long schedulePeriodMillis;
 
-  private final CompactionStateStorage compactionStateStorage;
+  private final IndexingStateStorage indexingStateStorage;
   private final IndexingStateCache indexingStateCache;
   private final ObjectMapper deterministicMapper;
 
@@ -163,7 +163,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       BrokerClient brokerClient,
       ServiceEmitter emitter,
       ObjectMapper objectMapper,
-      CompactionStateStorage compactionStateStorage,
+      IndexingStateStorage indexingStateStorage,
       IndexingStateCache indexingStateCache,
       @Deterministic ObjectMapper deterministicMapper
   )
@@ -191,7 +191,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.druidInputSourceFactory = druidInputSourceFactory;
-    this.compactionStateStorage = compactionStateStorage;
+    this.indexingStateStorage = indexingStateStorage;
     this.indexingStateCache = indexingStateCache;
     this.deterministicMapper = deterministicMapper;
     this.taskRunnerListener = new TaskRunnerListener()
@@ -392,7 +392,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         overlordClient,
         brokerClient,
         objectMapper,
-        compactionStateStorage,
+        indexingStateStorage,
         indexingStateCache,
         deterministicMapper
     );

@@ -32,7 +32,7 @@ import org.apache.druid.metadata.storage.derby.DerbyConnector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.SqlCompactionStateStorage;
+import org.apache.druid.segment.metadata.SqlIndexingStateStorage;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -667,7 +667,7 @@ public class SqlSegmentsMetadataQueryTest
   {
     ObjectMapper mapper = TestHelper.JSON_MAPPER;
     MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
-    SqlCompactionStateStorage manager = new SqlCompactionStateStorage(
+    SqlIndexingStateStorage manager = new SqlIndexingStateStorage(
         tablesConfig,
         mapper,
         derbyConnectorRule.getConnector()
@@ -675,7 +675,7 @@ public class SqlSegmentsMetadataQueryTest
 
     derbyConnectorRule.getConnector().retryWithHandle(handle -> {
       for (Map.Entry<String, CompactionState> entry : compactionStates.entrySet()) {
-        manager.upsertCompactionState(TestDataSource.WIKI, entry.getKey(), entry.getValue(), DateTimes.nowUtc());
+        manager.upsertIndexingState(TestDataSource.WIKI, entry.getKey(), entry.getValue(), DateTimes.nowUtc());
       }
       return null;
     });

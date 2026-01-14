@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SqlCompactionStateStorageTest
+public class SqlIndexingStateStorageTest
 {
   @RegisterExtension
   public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
@@ -59,7 +59,7 @@ public class SqlCompactionStateStorageTest
 
   private static TestDerbyConnector derbyConnector;
   private static MetadataStorageTablesConfig tablesConfig;
-  private SqlCompactionStateStorage manager;
+  private SqlIndexingStateStorage manager;
 
   private static DefaultCompactionFingerprintMapper fingerprintMapper;
 
@@ -85,16 +85,16 @@ public class SqlCompactionStateStorageTest
       return null;
     });
 
-    manager = new SqlCompactionStateStorage(tablesConfig, jsonMapper, derbyConnector);
+    manager = new SqlIndexingStateStorage(tablesConfig, jsonMapper, derbyConnector);
   }
 
   @Test
-  public void test_upsertCompactionState_successfullyInsertsIntoDatabase()
+  public void test_upsertIndexingState_successfullyInsertsIntoDatabase()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    manager.upsertCompactionState(
+    manager.upsertIndexingState(
         "testDatasource",
         fingerprint,
         state1,
@@ -114,39 +114,39 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_andThen_markUnreferencedCompactionStateAsUnused_andThen_markCompactionStatesAsUsed()
+  public void test_upsertCompactionState_andThen_markUnreferencedCompactionStateAsUnused_andThen_markIndexingStatesAsUsed()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    manager.upsertCompactionState(
+    manager.upsertIndexingState(
         "testDatasource",
         fingerprint,
         state1,
         DateTimes.nowUtc()
     );
-    manager.markCompactionStatesAsActive(fingerprint);
+    manager.markIndexingStatesAsActive(fingerprint);
 
-    assertEquals(1, manager.markUnreferencedCompactionStatesAsUnused());
-    assertEquals(1, manager.markCompactionStatesAsUsed(List.of(fingerprint)));
+    assertEquals(1, manager.markUnreferencedIndexingStatesAsUnused());
+    assertEquals(1, manager.markIndexingStatesAsUsed(List.of(fingerprint)));
   }
 
   @Test
-  public void test_findReferencedCompactionStateMarkedAsUnused()
+  public void test_findReferencedIndexingStateMarkedAsUnused()
   {
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    manager.upsertCompactionState(
+    manager.upsertIndexingState(
         "testDatasource",
         fingerprint,
         state1,
         DateTimes.nowUtc()
     );
-    manager.markCompactionStatesAsActive(fingerprint);
+    manager.markIndexingStatesAsActive(fingerprint);
 
-    manager.markUnreferencedCompactionStatesAsUnused();
-    assertEquals(0, manager.findReferencedCompactionStateMarkedAsUnused().size());
+    manager.markUnreferencedIndexingStatesAsUnused();
+    assertEquals(0, manager.findReferencedIndexingStateMarkedAsUnused().size());
 
     derbyConnector.retryWithHandle(handle -> {
       handle.createStatement(
@@ -171,7 +171,7 @@ public class SqlCompactionStateStorageTest
       return null;
     });
 
-    List<String> referenced = manager.findReferencedCompactionStateMarkedAsUnused();
+    List<String> referenced = manager.findReferencedIndexingStateMarkedAsUnused();
     assertEquals(1, referenced.size());
     assertEquals(fingerprint, referenced.get(0));
   }
@@ -227,7 +227,7 @@ public class SqlCompactionStateStorageTest
     });
 
     // Delete states older than 30 days
-    int deleted = manager.deleteUnusedCompactionStatesOlderThan(cutoffTime.getMillis());
+    int deleted = manager.deleteUnusedIndexingStatesOlderThan(cutoffTime.getMillis());
     assertEquals(1, deleted);
 
     // Verify only 1 state remains in the table
@@ -240,11 +240,11 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_withNullState_throwsException()
+  public void test_upsertIndexingState_withNullState_throwsException()
   {
     Exception exception = assertThrows(
         Exception.class,
-        () -> manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc())
+        () -> manager.upsertIndexingState("ds", "somePrint", null, DateTimes.nowUtc())
     );
 
     assertTrue(
@@ -254,12 +254,12 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_withEmptyFingerprint_throwsException()
+  public void test_upsertIndexingState_withEmptyFingerprint_throwsException()
   {
     // The exception ends up wrapped in a sql exception doe to the retryWithHandle so we will just check the message
     Exception exception = assertThrows(
         Exception.class,
-        () -> manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc())
+        () -> manager.upsertIndexingState("ds", "", createBasicCompactionState(), DateTimes.nowUtc())
     );
 
     assertTrue(
@@ -269,13 +269,13 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_verifyExistingFingerprintMarkedUsed()
+  public void test_upsertIndexingState_verifyExistingFingerprintMarkedUsed()
   {
     String fingerprint = "existing_fingerprint";
     CompactionState state = createTestCompactionState();
 
     // Persist initially
-    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+    manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     // Verify it's marked as used
     Boolean usedBefore = derbyConnector.retryWithHandle(handle ->
@@ -297,7 +297,7 @@ public class SqlCompactionStateStorageTest
     );
 
     // Persist again with the same fingerprint (should UPDATE, not INSERT)
-    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+    manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     // Verify it's marked as used again
     Boolean usedAfter = derbyConnector.retryWithHandle(handle ->
@@ -320,14 +320,14 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_whenAlreadyUsed_skipsUpdate()
+  public void test_upsertIndexingState_whenAlreadyUsed_skipsUpdate()
   {
     String fingerprint = "already_used_fingerprint";
     CompactionState state = createTestCompactionState();
     DateTime initialTime = DateTimes.of("2024-01-01T00:00:00.000Z");
 
     // Insert fingerprint as used initially
-    manager.upsertCompactionState("ds1", fingerprint, state, initialTime);
+    manager.upsertIndexingState("ds1", fingerprint, state, initialTime);
 
     // Verify it's marked as used with the initial timestamp
     DateTime usedStatusBeforeUpdate = derbyConnector.retryWithHandle(handle ->
@@ -343,7 +343,7 @@ public class SqlCompactionStateStorageTest
     // Call upsert again with a different timestamp
     // Since the fingerprint is already used, this should skip the UPDATE
     DateTime laterTime = DateTimes.of("2024-01-02T00:00:00.000Z");
-    manager.upsertCompactionState("ds1", fingerprint, state, laterTime);
+    manager.upsertIndexingState("ds1", fingerprint, state, laterTime);
 
     // Verify the used_status_last_updated timestamp DID NOT change
     DateTime usedStatusAfterUpdate = derbyConnector.retryWithHandle(handle ->
@@ -373,16 +373,16 @@ public class SqlCompactionStateStorageTest
   @Test
   public void test_markCompactionStateAsUsed_withEmptyList_returnsZero()
   {
-    assertEquals(0, manager.markCompactionStatesAsUsed(List.of()));
+    assertEquals(0, manager.markIndexingStatesAsUsed(List.of()));
   }
 
   @Test
-  public void test_markCompactionStatesAsActive_marksPendingStateAsActive()
+  public void test_markIndexingStatesAsActive_marksPendingStateAsActive()
   {
     String fingerprint = "pending_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+    manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     Boolean pendingBefore = derbyConnector.retryWithHandle(handle ->
         handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
@@ -392,7 +392,7 @@ public class SqlCompactionStateStorageTest
     );
     assertTrue(pendingBefore);
 
-    int rowsUpdated = manager.markCompactionStatesAsActive(fingerprint);
+    int rowsUpdated = manager.markIndexingStatesAsActive(fingerprint);
     assertEquals(1, rowsUpdated);
 
     Boolean pendingAfter = derbyConnector.retryWithHandle(handle ->
@@ -405,17 +405,17 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_markCompactionStatesAsActive_idempotent_returnsZeroWhenAlreadyActive()
+  public void test_markIndexingStatesAsActive_idempotent_returnsZeroWhenAlreadyActive()
   {
     String fingerprint = "already_active_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+    manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
-    int firstUpdate = manager.markCompactionStatesAsActive(fingerprint);
+    int firstUpdate = manager.markIndexingStatesAsActive(fingerprint);
     assertEquals(1, firstUpdate);
 
-    int secondUpdate = manager.markCompactionStatesAsActive(fingerprint);
+    int secondUpdate = manager.markIndexingStatesAsActive(fingerprint);
     assertEquals(0, secondUpdate);
 
     Boolean pending = derbyConnector.retryWithHandle(handle ->
@@ -428,9 +428,9 @@ public class SqlCompactionStateStorageTest
   }
 
   @Test
-  public void test_markCompactionStatesAsActive_nonExistentFingerprint_returnsZero()
+  public void test_markIndexingStatesAsActive_nonExistentFingerprint_returnsZero()
   {
-    int rowsUpdated = manager.markCompactionStatesAsActive("does_not_exist");
+    int rowsUpdated = manager.markIndexingStatesAsActive("does_not_exist");
     assertEquals(0, rowsUpdated);
   }
 

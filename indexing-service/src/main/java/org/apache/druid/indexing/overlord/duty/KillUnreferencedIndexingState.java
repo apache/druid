@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.duty;
 
 import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.joda.time.DateTime;
 
 import javax.inject.Inject;
@@ -30,39 +30,39 @@ import java.util.List;
 public class KillUnreferencedIndexingState extends OverlordMetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedIndexingState.class);
-  private final CompactionStateStorage compactionStateStorage;
+  private final IndexingStateStorage indexingStateStorage;
 
   @Inject
   public KillUnreferencedIndexingState(
       OverlordMetadataCleanupConfig config,
-      CompactionStateStorage compactionStateStorage
+      IndexingStateStorage indexingStateStorage
   )
   {
     super("indexingStates", config);
-    this.compactionStateStorage = compactionStateStorage;
+    this.indexingStateStorage = indexingStateStorage;
   }
 
   @Override
   protected int cleanupEntriesCreatedBeforeDurationToRetain(DateTime minCreatedTime)
   {
     // 1: Mark unreferenced states as unused
-    int unused = compactionStateStorage.markUnreferencedCompactionStatesAsUnused();
+    int unused = indexingStateStorage.markUnreferencedIndexingStatesAsUnused();
     log.info("Marked [%s] unreferenced indexing states as unused.", unused);
 
     // 2: Repair - find unused states still referenced by segments
-    List<String> stateFingerprints = compactionStateStorage.findReferencedCompactionStateMarkedAsUnused();
+    List<String> stateFingerprints = indexingStateStorage.findReferencedIndexingStateMarkedAsUnused();
     if (!stateFingerprints.isEmpty()) {
-      int numUpdated = compactionStateStorage.markCompactionStatesAsUsed(stateFingerprints);
+      int numUpdated = indexingStateStorage.markIndexingStatesAsUsed(stateFingerprints);
       log.info("Marked [%s] unused indexing states referenced by used segments as used.", numUpdated);
     }
 
     // 3: Delete unused states older than threshold
-    return compactionStateStorage.deleteUnusedCompactionStatesOlderThan(minCreatedTime.getMillis());
+    return indexingStateStorage.deleteUnusedIndexingStatesOlderThan(minCreatedTime.getMillis());
   }
 
   @Override
   protected int cleanupEntriesCreatedBeforePendingDurationToRetain(DateTime minCreatedTime)
   {
-    return compactionStateStorage.deletePendingCompactionStatesOlderThan(minCreatedTime.getMillis());
+    return indexingStateStorage.deletePendingIndexingStatesOlderThan(minCreatedTime.getMillis());
   }
 }

@@ -43,28 +43,28 @@ import javax.validation.constraints.NotEmpty;
 import java.util.List;
 
 /**
- * Database-backed implementation of {@link CompactionStateStorage}.
+ * Database-backed implementation of {@link IndexingStateStorage}.
  * <p>
- * Manages the persistence and retrieval of {@link CompactionState} objects in the metadata storage.
- * Compaction states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content.
+ * Manages the persistence and retrieval of {@link CompactionState} (AKA IndexinState) objects in the metadata storage.
+ * Indexing states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content.
  * </p>
  * <p>
- * This implementation is designed to be called from a single thread (CompactionJobQueue) and relies on
+ * This implementation is designed to be called from a single thread and relies on
  * database constraints and the retry mechanism to handle any conflicts. Operations are idempotent - concurrent
  * upserts for the same fingerprint will either succeed or fail with a constraint violation that is safely ignored.
  * </p>
  */
 @LazySingleton
-public class SqlCompactionStateStorage implements CompactionStateStorage
+public class SqlIndexingStateStorage implements IndexingStateStorage
 {
-  private static final EmittingLogger log = new EmittingLogger(SqlCompactionStateStorage.class);
+  private static final EmittingLogger log = new EmittingLogger(SqlIndexingStateStorage.class);
 
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
   private final SQLMetadataConnector connector;
 
   @Inject
-  public SqlCompactionStateStorage(
+  public SqlIndexingStateStorage(
       @Nonnull MetadataStorageTablesConfig dbTables,
       @Nonnull ObjectMapper jsonMapper,
       @Nonnull SQLMetadataConnector connector
@@ -76,7 +76,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public void upsertCompactionState(
+  public void upsertIndexingState(
       @NotEmpty final String dataSource,
       @NotEmpty final String fingerprint,
       @Nonnull final CompactionState compactionState,
@@ -113,7 +113,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
           case EXISTS_AND_USED:
             // Fingerprint exists and is already marked as used - no operation needed
             log.debug(
-                "Compaction state for fingerprint[%s] in dataSource[%s] already exists and is marked as used. Skipping update.",
+                "Indexing state for fingerprint[%s] in dataSource[%s] already exists and is marked as used. Skipping update.",
                 fingerprint,
                 dataSource
             );
@@ -122,7 +122,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
           case EXISTS_AND_UNUSED:
             // Fingerprint exists but is marked as unused - update the used flag
             log.info(
-                "Found existing compaction state in DB for fingerprint[%s] in dataSource[%s]. Marking as used.",
+                "Found existing indexing state in DB for fingerprint[%s] in dataSource[%s]. Marking as used.",
                 fingerprint,
                 dataSource
             );
@@ -137,12 +137,12 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
                   .bind("fingerprint", fingerprint)
                   .execute();
 
-            log.info("Updated existing compaction state for datasource[%s].", dataSource);
+            log.info("Updated existing indexing state for datasource[%s].", dataSource);
             break;
 
           case DOES_NOT_EXIST:
             // Fingerprint doesn't exist - insert new state
-            log.info("Inserting new compaction state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
+            log.info("Inserting new indexing state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
 
             String insertSql = StringUtils.format(
                 "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
@@ -162,7 +162,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
                     .execute();
 
               log.info(
-                  "Published compaction state for fingerprint[%s] to DB for datasource[%s].",
+                  "Published indexing state for fingerprint[%s] to DB for datasource[%s].",
                   fingerprint,
                   dataSource
               );
@@ -170,7 +170,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
             catch (JsonProcessingException e) {
               throw InternalServerError.exception(
                   e,
-                  "Failed to serialize compaction state for fingerprint[%s]",
+                  "Failed to serialize indexing state for fingerprint[%s]",
                   fingerprint
               );
             }
@@ -198,7 +198,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int markUnreferencedCompactionStatesAsUnused()
+  public int markUnreferencedIndexingStatesAsUnused()
   {
     return connector.retryWithHandle(
         handle ->
@@ -215,7 +215,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public List<String> findReferencedCompactionStateMarkedAsUnused()
+  public List<String> findReferencedIndexingStateMarkedAsUnused()
   {
     return connector.retryWithHandle(
         handle ->
@@ -231,7 +231,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int markCompactionStatesAsUsed(List<String> stateFingerprints)
+  public int markIndexingStatesAsUsed(List<String> stateFingerprints)
   {
     if (stateFingerprints.isEmpty()) {
       return 0;
@@ -256,7 +256,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int markCompactionStatesAsActive(String stateFingerprint)
+  public int markIndexingStatesAsActive(String stateFingerprint)
   {
     return connector.retryWithHandle(
         handle -> handle.createStatement(
@@ -270,7 +270,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int deleteUnusedCompactionStatesOlderThan(long timestamp)
+  public int deleteUnusedIndexingStatesOlderThan(long timestamp)
   {
     return connector.retryWithHandle(
         handle -> handle.createStatement(
@@ -283,7 +283,7 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int deletePendingCompactionStatesOlderThan(long timestamp)
+  public int deletePendingIndexingStatesOlderThan(long timestamp)
   {
     return connector.retryWithHandle(
         handle -> handle.createStatement(
@@ -295,9 +295,15 @@ public class SqlCompactionStateStorage implements CompactionStateStorage
                         .execute());
   }
 
+  /**
+   * Checks if the indexing state for the given fingerprint is pending.
+   * <p>
+   * Useful for testing purposes to verify the pending status of an indexing state.
+   * </p>
+   */
   @Nullable
   @VisibleForTesting
-  public Boolean isCompactionStatePending(final String fingerprint)
+  public Boolean isIndexingStatePending(final String fingerprint)
   {
     return connector.retryWithHandle(
         handle -> {

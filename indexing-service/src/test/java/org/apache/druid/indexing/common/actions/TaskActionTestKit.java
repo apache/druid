@@ -41,7 +41,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -137,7 +137,7 @@ public class TaskActionTestKit extends ExternalResource
         testDerbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create(),
-        new HeapMemoryCompactionStateStorage()
+        new HeapMemoryIndexingStateStorage()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     taskLockbox.syncFromStorage();

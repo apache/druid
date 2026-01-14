@@ -32,7 +32,7 @@ import java.util.Optional;
 
 /**
  * Default implementation of {@link CompactionFingerprintMapper} that delegates to
- * {@link CompactionStateStorage} for fingerprint generation and {@link IndexingStateCache}
+ * {@link IndexingStateStorage} for fingerprint generation and {@link IndexingStateCache}
  * for state lookups.
  */
 public class DefaultCompactionFingerprintMapper implements CompactionFingerprintMapper

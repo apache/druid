@@ -36,7 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionCandidate;
@@ -99,7 +99,7 @@ public class CompactionJobQueue
   private final Set<String> activeSupervisors;
   private final Map<String, CompactionJob> submittedTaskIdToJob;
 
-  private final CompactionStateStorage compactionStateStorage;
+  private final IndexingStateStorage indexingStateStorage;
   private final IndexingStateCache indexingStateCache;
 
   public CompactionJobQueue(
@@ -111,7 +111,7 @@ public class CompactionJobQueue
       OverlordClient overlordClient,
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
-      CompactionStateStorage compactionStateStorage,
+      IndexingStateStorage indexingStateStorage,
       IndexingStateCache indexingStateCache,
       ObjectMapper deterministicCompactionStateMapper
   )
@@ -133,7 +133,7 @@ public class CompactionJobQueue
         new DefaultCompactionFingerprintMapper(indexingStateCache, deterministicCompactionStateMapper)
     );
 
-    this.compactionStateStorage = compactionStateStorage;
+    this.indexingStateStorage = indexingStateStorage;
     this.indexingStateCache = indexingStateCache;
 
     this.taskActionClientFactory = taskActionClientFactory;
@@ -328,7 +328,7 @@ public class CompactionJobQueue
     // Assume MSQ jobs to be always ready
     if (job.isMsq()) {
       try {
-        persistPendingCompactionState(job);
+        persistPendingIndexingState(job);
         return FutureUtils.getUnchecked(brokerClient.submitSqlTask(job.getNonNullMsqQuery()), true)
                           .getTaskId();
       }
@@ -347,7 +347,7 @@ public class CompactionJobQueue
     try {
       taskLockbox.add(task);
       if (task.isReady(taskActionClientFactory.create(task))) {
-        persistPendingCompactionState(job);
+        persistPendingIndexingState(job);
         // Hold the locks acquired by task.isReady() as we will reacquire them anyway
         FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
         return task.getId();
@@ -364,12 +364,12 @@ public class CompactionJobQueue
   }
 
   /**
-   * Persist the compaction state associated with the given job with {@link CompactionStateStorage}.
+   * Persist the indexing state associated with the given job with {@link IndexingStateStorage}.
    */
-  private void persistPendingCompactionState(CompactionJob job)
+  private void persistPendingIndexingState(CompactionJob job)
   {
     if (job.getTargetCompactionState() != null && job.getTargetCompactionStateFingerprint() != null) {
-      compactionStateStorage.upsertCompactionState(
+      indexingStateStorage.upsertIndexingState(
           job.getDataSource(),
           job.getTargetCompactionStateFingerprint(),
           job.getTargetCompactionState(),

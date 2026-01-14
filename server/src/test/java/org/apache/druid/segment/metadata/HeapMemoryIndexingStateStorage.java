@@ -28,27 +28,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * In-memory implementation of {@link CompactionStateStorage} that stores
- * compaction state fingerprints in heap memory without requiring a database.
+ * In-memory implementation of {@link IndexingStateStorage} that stores
+ * indexing state fingerprints and states in heap memory without requiring a database.
  * <p>
  * Useful for simulations and unit tests where database persistence is not needed.
  * Database-specific operations (cleanup, unused marking) are no-ops in this implementation.
  */
-public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
+public class HeapMemoryIndexingStateStorage implements IndexingStateStorage
 {
   private final ConcurrentMap<String, CompactionState> fingerprintToStateMap;
 
   /**
-   * Creates an in-memory compaction state manager with a default deterministic mapper.
+   * Creates an in-memory indexing state manager with a default deterministic mapper.
    * This is a convenience constructor for tests and simulations.
    */
-  public HeapMemoryCompactionStateStorage()
+  public HeapMemoryIndexingStateStorage()
   {
     this.fingerprintToStateMap = new ConcurrentHashMap<>();
   }
 
   @Override
-  public void upsertCompactionState(
+  public void upsertIndexingState(
       final String dataSource,
       final String fingerprint,
       final CompactionState compactionState,
@@ -60,43 +60,43 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   }
 
   @Override
-  public int markUnreferencedCompactionStatesAsUnused()
+  public int markUnreferencedIndexingStatesAsUnused()
   {
     return 0;
   }
 
   @Override
-  public List<String> findReferencedCompactionStateMarkedAsUnused()
+  public List<String> findReferencedIndexingStateMarkedAsUnused()
   {
     return List.of();
   }
 
   @Override
-  public int markCompactionStatesAsUsed(List<String> stateFingerprints)
+  public int markIndexingStatesAsUsed(List<String> stateFingerprints)
   {
     return 0;
   }
 
   @Override
-  public int markCompactionStatesAsActive(String stateFingerprint)
+  public int markIndexingStatesAsActive(String stateFingerprint)
   {
     return 0;
   }
 
   @Override
-  public int deletePendingCompactionStatesOlderThan(long timestamp)
+  public int deletePendingIndexingStatesOlderThan(long timestamp)
   {
     return 0;
   }
 
   @Override
-  public int deleteUnusedCompactionStatesOlderThan(long timestamp)
+  public int deleteUnusedIndexingStatesOlderThan(long timestamp)
   {
     return 0;
   }
 
   /**
-   * Gets all stored compaction states. For test verification only.
+   * Gets all stored indexing states. For test verification only.
    */
   public Map<String, CompactionState> getAllStoredStates()
   {
@@ -104,7 +104,7 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   }
 
   /**
-   * Clears all stored compaction states. Useful for test cleanup or resetting
+   * Clears all stored indexing states. Useful for test cleanup or resetting
    * state between test runs.
    */
   public void clear()
@@ -113,7 +113,7 @@ public class HeapMemoryCompactionStateStorage implements CompactionStateStorage
   }
 
   /**
-   * Returns the number of stored compaction state fingerprints.
+   * Returns the number of stored indexing state fingerprints.
    */
   public int size()
   {

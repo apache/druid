@@ -120,7 +120,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -638,7 +638,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         derbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create(),
-        new HeapMemoryCompactionStateStorage()
+        new HeapMemoryIndexingStateStorage()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
