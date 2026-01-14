@@ -177,10 +177,12 @@ public class MSQTaskQueryMakerTest
   @Before
   public void setUp() throws Exception
   {
+    objectMapper = TestHelper.makeJsonMapper();
+    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     walker = TestDataBuilder.addDataSetsToWalker(
         FileUtils.getTempDir().toFile(),
         SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER)),
-        jsonMapper
+        objectMapper
     );
     when(dataSegmentProviderMock.fetchSegment(
         any(),
@@ -193,9 +195,7 @@ public class MSQTaskQueryMakerTest
       });
     });
 
-    objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();
-    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     queryProcessingPool = new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"));
     groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig(),
