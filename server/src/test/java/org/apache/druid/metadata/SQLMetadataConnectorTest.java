@@ -197,12 +197,11 @@ public class SQLMetadataConnectorTest
   public void testAlterSegmentTableAddCompactionStateFingerprint()
   {
     connector.createSegmentTable();
-    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN COMPACTION_STATE_FINGERPRINT");
-
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN INDEXING_STATE_FINGERPRINT");
     connector.alterSegmentTable();
     Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
-        "COMPACTION_STATE_FINGERPRINT"
+        "INDEXING_STATE_FINGERPRINT"
     ));
   }
 

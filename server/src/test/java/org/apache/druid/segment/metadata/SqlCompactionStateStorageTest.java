@@ -94,15 +94,12 @@ public class SqlCompactionStateStorageTest
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState(
-          "testDatasource",
-          fingerprint,
-          state1,
-          DateTimes.nowUtc()
-      );
-      return null;
-    });
+    manager.upsertCompactionState(
+        "testDatasource",
+        fingerprint,
+        state1,
+        DateTimes.nowUtc()
+    );
 
     // Verify the state was inserted into database by checking count
     Integer count = derbyConnector.retryWithHandle(handle ->
@@ -122,15 +119,14 @@ public class SqlCompactionStateStorageTest
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState(
-          "testDatasource",
-          fingerprint,
-          state1,
-          DateTimes.nowUtc()
-      );
-      return null;
-    });
+    manager.upsertCompactionState(
+        "testDatasource",
+        fingerprint,
+        state1,
+        DateTimes.nowUtc()
+    );
+    manager.markCompactionStatesAsActive(fingerprint);
+
     assertEquals(1, manager.markUnreferencedCompactionStatesAsUnused());
     assertEquals(1, manager.markCompactionStatesAsUsed(List.of(fingerprint)));
   }
@@ -141,15 +137,14 @@ public class SqlCompactionStateStorageTest
     CompactionState state1 = createTestCompactionState();
     String fingerprint = "fingerprint_abc123";
 
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState(
-          "testDatasource",
-          fingerprint,
-          state1,
-          DateTimes.nowUtc()
-      );
-      return null;
-    });
+    manager.upsertCompactionState(
+        "testDatasource",
+        fingerprint,
+        state1,
+        DateTimes.nowUtc()
+    );
+    manager.markCompactionStatesAsActive(fingerprint);
+
     manager.markUnreferencedCompactionStatesAsUnused();
     assertEquals(0, manager.findReferencedCompactionStateMarkedAsUnused().size());
 
@@ -249,10 +244,7 @@ public class SqlCompactionStateStorageTest
   {
     Exception exception = assertThrows(
         Exception.class,
-        () -> derbyConnector.retryWithHandle(handle -> {
-          manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc());
-          return null;
-        })
+        () -> manager.upsertCompactionState("ds", "somePrint", null, DateTimes.nowUtc())
     );
 
     assertTrue(
@@ -267,10 +259,7 @@ public class SqlCompactionStateStorageTest
     // The exception ends up wrapped in a sql exception doe to the retryWithHandle so we will just check the message
     Exception exception = assertThrows(
         Exception.class,
-        () -> derbyConnector.retryWithHandle(handle -> {
-          manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc());
-          return null;
-        })
+        () -> manager.upsertCompactionState("ds", "", createBasicCompactionState(), DateTimes.nowUtc())
     );
 
     assertTrue(
@@ -286,10 +275,7 @@ public class SqlCompactionStateStorageTest
     CompactionState state = createTestCompactionState();
 
     // Persist initially
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     // Verify it's marked as used
     Boolean usedBefore = derbyConnector.retryWithHandle(handle ->
@@ -311,10 +297,7 @@ public class SqlCompactionStateStorageTest
     );
 
     // Persist again with the same fingerprint (should UPDATE, not INSERT)
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     // Verify it's marked as used again
     Boolean usedAfter = derbyConnector.retryWithHandle(handle ->
@@ -344,10 +327,7 @@ public class SqlCompactionStateStorageTest
     DateTime initialTime = DateTimes.of("2024-01-01T00:00:00.000Z");
 
     // Insert fingerprint as used initially
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, initialTime);
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, initialTime);
 
     // Verify it's marked as used with the initial timestamp
     DateTime usedStatusBeforeUpdate = derbyConnector.retryWithHandle(handle ->
@@ -363,10 +343,7 @@ public class SqlCompactionStateStorageTest
     // Call upsert again with a different timestamp
     // Since the fingerprint is already used, this should skip the UPDATE
     DateTime laterTime = DateTimes.of("2024-01-02T00:00:00.000Z");
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, laterTime);
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, laterTime);
 
     // Verify the used_status_last_updated timestamp DID NOT change
     DateTime usedStatusAfterUpdate = derbyConnector.retryWithHandle(handle ->
@@ -405,10 +382,7 @@ public class SqlCompactionStateStorageTest
     String fingerprint = "pending_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
 
     Boolean pendingBefore = derbyConnector.retryWithHandle(handle ->
         handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
@@ -436,10 +410,8 @@ public class SqlCompactionStateStorageTest
     String fingerprint = "already_active_fingerprint";
     CompactionState state = createTestCompactionState();
 
-    derbyConnector.retryWithHandle(handle -> {
-      manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
-      return null;
-    });
+    manager.upsertCompactionState("ds1", fingerprint, state, DateTimes.nowUtc());
+
     int firstUpdate = manager.markCompactionStatesAsActive(fingerprint);
     assertEquals(1, firstUpdate);
 
