@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.OptBoolean;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
@@ -38,7 +39,7 @@ import java.util.List;
  *
  * For V10 segment format {@link org.apache.druid.segment.file.SegmentFileMetadata}
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", requireTypeIdForSubtypes = OptBoolean.FALSE)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = AggregateProjectionSpec.TYPE_NAME, value = AggregateProjectionSchema.class),
     @JsonSubTypes.Type(name = TableProjectionSchema.TYPE_NAME, value = TableProjectionSchema.class),
