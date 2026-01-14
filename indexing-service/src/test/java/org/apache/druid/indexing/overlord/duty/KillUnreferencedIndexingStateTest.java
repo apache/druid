@@ -40,7 +40,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-public class KillUnreferencedCompactionStateTest
+public class KillUnreferencedIndexingStateTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
@@ -81,8 +81,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P8D").toStandardDuration()
     );
 
-    KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+    KillUnreferencedIndexingState duty =
+        new TestKillUnreferencedIndexingState(cleanupConfig, compactionStateStorage, dateTimes);
 
     String fingerprint = "test_fingerprint";
     CompactionState state = createTestCompactionState();
@@ -120,8 +120,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P8D").toStandardDuration()
     );
 
-    KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+    KillUnreferencedIndexingState duty =
+        new TestKillUnreferencedIndexingState(cleanupConfig, compactionStateStorage, dateTimes);
 
     // Insert compaction state
     String fingerprint = "repair_fingerprint";
@@ -173,8 +173,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P8D").toStandardDuration()
     );
 
-    KillUnreferencedCompactionState duty =
-        new KillUnreferencedCompactionState(cleanupConfig, compactionStateStorage);
+    KillUnreferencedIndexingState duty =
+        new KillUnreferencedIndexingState(cleanupConfig, compactionStateStorage);
 
     // Insert compaction state
     String fingerprint = "disabled_fingerprint";
@@ -203,8 +203,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P10D").toStandardDuration() // Pending states older than 10 days should be deleted
     );
 
-    KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+    KillUnreferencedIndexingState duty =
+        new TestKillUnreferencedIndexingState(cleanupConfig, compactionStateStorage, dateTimes);
 
     String fingerprint = "pending_fingerprint";
     CompactionState state = createTestCompactionState();
@@ -237,8 +237,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P30D").toStandardDuration()
     );
 
-    KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+    KillUnreferencedIndexingState duty =
+        new TestKillUnreferencedIndexingState(cleanupConfig, compactionStateStorage, dateTimes);
 
     String pendingFingerprint = "pending_fp";
     String nonPendingFingerprint = "non_pending_fp";
@@ -274,8 +274,8 @@ public class KillUnreferencedCompactionStateTest
         Period.parse("P30D").toStandardDuration()
     );
 
-    KillUnreferencedCompactionState duty =
-        new TestKillUnreferencedCompactionState(cleanupConfig, compactionStateStorage, dateTimes);
+    KillUnreferencedIndexingState duty =
+        new TestKillUnreferencedIndexingState(cleanupConfig, compactionStateStorage, dateTimes);
 
     String fingerprint = "pending_marked_active_fp";
     CompactionState state = createTestCompactionState();
@@ -330,16 +330,16 @@ public class KillUnreferencedCompactionStateTest
   }
 
   /**
-   * Extension of KillUnreferencedCompactionState that allows controlling the reference time used for cleanup decisions.
+   * Extension of KillUnreferencedIndexingState that allows controlling the reference time used for cleanup decisions.
    * <p>
    * Allowing time control enables realistic testing of time-based retention logic.
    */
-  private static class TestKillUnreferencedCompactionState extends KillUnreferencedCompactionState
+  private static class TestKillUnreferencedIndexingState extends KillUnreferencedIndexingState
   {
     private final List<DateTime> dateTimes;
     private int index = -1;
 
-    public TestKillUnreferencedCompactionState(
+    public TestKillUnreferencedIndexingState(
         OverlordMetadataCleanupConfig config,
         CompactionStateStorage compactionStateStorage,
         List<DateTime> dateTimes

@@ -27,18 +27,18 @@ import org.joda.time.DateTime;
 import javax.inject.Inject;
 import java.util.List;
 
-public class KillUnreferencedCompactionState extends OverlordMetadataCleanupDuty
+public class KillUnreferencedIndexingState extends OverlordMetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillUnreferencedCompactionState.class);
+  private static final Logger log = new Logger(KillUnreferencedIndexingState.class);
   private final CompactionStateStorage compactionStateStorage;
 
   @Inject
-  public KillUnreferencedCompactionState(
+  public KillUnreferencedIndexingState(
       OverlordMetadataCleanupConfig config,
       CompactionStateStorage compactionStateStorage
   )
   {
-    super("compactionState", config);
+    super("indexingStates", config);
     this.compactionStateStorage = compactionStateStorage;
   }
 
@@ -47,13 +47,13 @@ public class KillUnreferencedCompactionState extends OverlordMetadataCleanupDuty
   {
     // 1: Mark unreferenced states as unused
     int unused = compactionStateStorage.markUnreferencedCompactionStatesAsUnused();
-    log.info("Marked [%s] unreferenced compaction states as unused.", unused);
+    log.info("Marked [%s] unreferenced indexing states as unused.", unused);
 
     // 2: Repair - find unused states still referenced by segments
     List<String> stateFingerprints = compactionStateStorage.findReferencedCompactionStateMarkedAsUnused();
     if (!stateFingerprints.isEmpty()) {
       int numUpdated = compactionStateStorage.markCompactionStatesAsUsed(stateFingerprints);
-      log.info("Marked [%s] unused compaction states referenced by used segments as used.", numUpdated);
+      log.info("Marked [%s] unused indexing states referenced by used segments as used.", numUpdated);
     }
 
     // 3: Delete unused states older than threshold

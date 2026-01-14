@@ -94,7 +94,7 @@ import org.apache.druid.indexing.overlord.config.OverlordKillConfigs;
 import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.duty.KillUnreferencedCompactionState;
+import org.apache.druid.indexing.overlord.duty.KillUnreferencedIndexingState;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleaner;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
@@ -416,7 +416,7 @@ public class CliOverlord extends ServerRunnable
               @LazySingleton
               public OverlordMetadataCleanupConfig provideCompactionStateCleanupConfig(OverlordKillConfigs killConfigs)
               {
-                return killConfigs.compactionStates();
+                return killConfigs.indexingStates();
               }
 
               @Provides
@@ -465,7 +465,7 @@ public class CliOverlord extends ServerRunnable
             final Multibinder<OverlordDuty> dutyBinder = Multibinder.newSetBinder(binder, OverlordDuty.class);
             dutyBinder.addBinding().to(TaskLogAutoCleaner.class);
             dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
-            dutyBinder.addBinding().to(KillUnreferencedCompactionState.class);
+            dutyBinder.addBinding().to(KillUnreferencedIndexingState.class);
           }
 
           /**

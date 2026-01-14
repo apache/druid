@@ -26,18 +26,18 @@ public class OverlordKillConfigs
 {
   public static OverlordKillConfigs DEFAULT = new OverlordKillConfigs(null);
 
-  @JsonProperty("compactionStates")
-  private final OverlordMetadataCleanupConfig compactionStates;
+  @JsonProperty("indexingStates")
+  private final OverlordMetadataCleanupConfig indexingStates;
 
   public OverlordKillConfigs(
-      @JsonProperty("compactionStates") OverlordMetadataCleanupConfig compactionStates
+      @JsonProperty("indexingStates") OverlordMetadataCleanupConfig indexingStates
   )
   {
-    this.compactionStates = Configs.valueOrDefault(compactionStates, OverlordMetadataCleanupConfig.DEFAULT);
+    this.indexingStates = Configs.valueOrDefault(indexingStates, OverlordMetadataCleanupConfig.DEFAULT);
   }
 
-  public OverlordMetadataCleanupConfig compactionStates()
+  public OverlordMetadataCleanupConfig indexingStates()
   {
-    return compactionStates;
+    return indexingStates;
   }
 }

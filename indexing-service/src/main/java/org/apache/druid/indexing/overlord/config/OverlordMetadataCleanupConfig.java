@@ -52,7 +52,7 @@ public class OverlordMetadataCleanupConfig
   {
     this.cleanupEnabled = Configs.valueOrDefault(cleanupEnabled, true);
     this.cleanupPeriod = Configs.valueOrDefault(cleanupPeriod, Duration.standardDays(1));
-    this.durationToRetain = Configs.valueOrDefault(durationToRetain, Duration.standardDays(90));
+    this.durationToRetain = Configs.valueOrDefault(durationToRetain, Duration.standardDays(7));
     this.pendingDurationToRetain = Configs.valueOrDefault(pendingDurationToRetain, Duration.standardDays(7));
   }
 
