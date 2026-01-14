@@ -20,12 +20,12 @@
 package org.apache.druid.segment.metadata;
 
 /**
- * Metrics related to {@link SegmentSchemaCache}, {@link SegmentSchemaManager}, and {@link CompactionStateCache}.
+ * Metrics related to {@link SegmentSchemaCache}, {@link SegmentSchemaManager}, and {@link IndexingStateCache}.
  */
 public class Metric
 {
   private static final String PREFIX = "segment/schemaCache/";
-  private static final String COMPACTION_STATE_PREFIX = "segment/compactionStateCache/";
+  private static final String INDEXING_STATE_PREFIX = "segment/indexingStateCache/";
 
   public static final String CACHE_MISSES = "miss/count";
 
@@ -60,7 +60,7 @@ public class Metric
   public static final String USED_COLD_SEGMENTS = "segment/used/deepStorageOnly/count";
 
   // Compaction state cache metrics
-  public static final String COMPACTION_STATE_CACHE_HITS = COMPACTION_STATE_PREFIX + "hit/count";
-  public static final String COMPACTION_STATE_CACHE_MISSES = COMPACTION_STATE_PREFIX + "miss/count";
-  public static final String COMPACTION_STATE_CACHE_FINGERPRINTS = COMPACTION_STATE_PREFIX + "fingerprint/count";
+  public static final String INDEXING_STATE_CACHE_HITS = INDEXING_STATE_PREFIX + "hit/count";
+  public static final String INDEXING_STATE_CACHE_MISSES = INDEXING_STATE_PREFIX + "miss/count";
+  public static final String INDEXING_STATE_CACHE_FINGERPRINTS = INDEXING_STATE_PREFIX + "fingerprint/count";
 }

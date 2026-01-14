@@ -32,20 +32,20 @@ import java.util.Optional;
 
 /**
  * Default implementation of {@link CompactionFingerprintMapper} that delegates to
- * {@link CompactionStateStorage} for fingerprint generation and {@link CompactionStateCache}
+ * {@link CompactionStateStorage} for fingerprint generation and {@link IndexingStateCache}
  * for state lookups.
  */
 public class DefaultCompactionFingerprintMapper implements CompactionFingerprintMapper
 {
-  private final CompactionStateCache compactionStateCache;
+  private final IndexingStateCache indexingStateCache;
   private final ObjectMapper deterministicMapper;
 
   public DefaultCompactionFingerprintMapper(
-      CompactionStateCache compactionStateCache,
+      IndexingStateCache indexingStateCache,
       @Deterministic ObjectMapper deterministicMapper
   )
   {
-    this.compactionStateCache = compactionStateCache;
+    this.indexingStateCache = indexingStateCache;
     this.deterministicMapper = deterministicMapper;
   }
 
@@ -82,6 +82,6 @@ public class DefaultCompactionFingerprintMapper implements CompactionFingerprint
   @Override
   public Optional<CompactionState> getStateForFingerprint(String fingerprint)
   {
-    return compactionStateCache.getCompactionStateByFingerprint(fingerprint);
+    return indexingStateCache.getIndexingStateByFingerprint(fingerprint);
   }
 }

@@ -26,10 +26,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * No-op implementation of {@link CompactionStateCache} used on non-Overlord nodes
- * where compaction state caching is not needed.
+ * No-op implementation of {@link IndexingStateCache}
  */
-public class NoopCompactionStateCache extends CompactionStateCache
+public class NoopIndexingStateCache extends IndexingStateCache
 {
   @Override
   public boolean isEnabled()
@@ -38,19 +37,19 @@ public class NoopCompactionStateCache extends CompactionStateCache
   }
 
   @Override
-  public void resetCompactionStatesForPublishedSegments(Map<String, CompactionState> fingerprintToStateMap)
+  public void resetIndexingStatesForPublishedSegments(Map<String, CompactionState> fingerprintToStateMap)
   {
     // No-op
   }
 
   @Override
-  public Optional<CompactionState> getCompactionStateByFingerprint(String fingerprint)
+  public Optional<CompactionState> getIndexingStateByFingerprint(String fingerprint)
   {
     return Optional.empty();
   }
 
   @Override
-  public Map<String, CompactionState> getPublishedCompactionStateMap()
+  public Map<String, CompactionState> getPublishedIndexingStateMap()
   {
     return Collections.emptyMap();
   }

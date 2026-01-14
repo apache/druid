@@ -30,24 +30,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * In-memory cache of compaction states used by {@link org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache}.
+ * In-memory cache of indexing states used by {@link org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache}.
  * <p>
- * This cache stores compaction states for published segments polled from the metadata store.
- * It is the PRIMARY way to read compaction states in production.
+ * This cache stores indexing states for published segments polled from the metadata store.
+ * It is the primary way to read indexing states in production.
  * <p>
  * The cache is populated during segment metadata cache sync operations and provides fast lookups
  * without hitting the database.
  */
 @LazySingleton
-public class CompactionStateCache
+public class IndexingStateCache
 {
-  private static final Logger log = new Logger(CompactionStateCache.class);
+  private static final Logger log = new Logger(IndexingStateCache.class);
 
   /**
-   * Atomically updated reference to published compaction states.
+   * Atomically updated reference to published indexing states.
    */
-  private final AtomicReference<PublishedCompactionStates> publishedCompactionStates
-      = new AtomicReference<>(PublishedCompactionStates.EMPTY);
+  private final AtomicReference<PublishedIndexingStates> publishedIndexingStates
+      = new AtomicReference<>(PublishedIndexingStates.EMPTY);
 
   private final AtomicInteger cacheMissCount = new AtomicInteger(0);
   private final AtomicInteger cacheHitCount = new AtomicInteger(0);
@@ -59,35 +59,35 @@ public class CompactionStateCache
   }
 
   /**
-   * Resets the cache with compaction states polled from the metadata store.
+   * Resets the cache with indexing states polled from the metadata store.
    * Called after each successful poll in HeapMemorySegmentMetadataCache.
    *
-   * @param fingerprintToStateMap Complete map of all active compaction state fingerprints
+   * @param fingerprintToStateMap Complete fp:state map of all active indexing state fingerprints
    */
-  public void resetCompactionStatesForPublishedSegments(
+  public void resetIndexingStatesForPublishedSegments(
       Map<String, CompactionState> fingerprintToStateMap
   )
   {
-    this.publishedCompactionStates.set(
-        new PublishedCompactionStates(fingerprintToStateMap)
+    this.publishedIndexingStates.set(
+        new PublishedIndexingStates(fingerprintToStateMap)
     );
-    log.debug("Reset compaction state cache with [%d] fingerprints", fingerprintToStateMap.size());
+    log.debug("Reset indexing state cache with [%d] fingerprints", fingerprintToStateMap.size());
   }
 
   /**
-   * Retrieves a compaction state by its fingerprint.
-   * This is the PRIMARY method for reading compaction states.
+   * Retrieves an indexing state by its fingerprint.
+   * This is the indexing method for reading indexing states.
    *
    * @param fingerprint The fingerprint to look up
-   * @return The compaction state, or Optional.empty() if not cached
+   * @return The cached indexing state, or Optional.empty() if not cached
    */
-  public Optional<CompactionState> getCompactionStateByFingerprint(String fingerprint)
+  public Optional<CompactionState> getIndexingStateByFingerprint(String fingerprint)
   {
     if (fingerprint == null) {
       return Optional.empty();
     }
 
-    CompactionState state = publishedCompactionStates.get()
+    CompactionState state = publishedIndexingStates.get()
                                                      .fingerprintToStateMap
                                                      .get(fingerprint);
     if (state == null) {
@@ -100,7 +100,7 @@ public class CompactionStateCache
   }
 
   /**
-   * Adds or updates a single compaction state in the cache.
+   * Adds or updates a single indexing state in the cache.
    * <p>
    * This is called when a new compaction state is persisted to the database via upsertCompactionState
    * to ensure the cache is immediately consistent without waiting for the next sync.
@@ -108,25 +108,25 @@ public class CompactionStateCache
    * This method checks if the state is already cached before performing the atomic update.
    *
    * @param fingerprint The fingerprint key
-   * @param state       The compaction state to cache
+   * @param state       The indexing state to cache
    */
-  public void addCompactionState(String fingerprint, CompactionState state)
+  public void addIndexingState(String fingerprint, CompactionState state)
   {
     if (fingerprint == null || state == null) {
       return;
     }
 
     // Check if the state is already cached - avoid expensive update if not needed
-    CompactionState existing = publishedCompactionStates.get()
+    CompactionState existing = publishedIndexingStates.get()
                                                         .fingerprintToStateMap
                                                         .get(fingerprint);
     if (state.equals(existing)) {
-      log.debug("Compaction state for fingerprint[%s] already cached, skipping update", fingerprint);
+      log.debug("Indexing state for fingerprint[%s] already cached, skipping update", fingerprint);
       return;
     }
 
     // State is not cached or different - perform atomic update
-    publishedCompactionStates.updateAndGet(current -> {
+    publishedIndexingStates.updateAndGet(current -> {
       // Double-check in case another thread updated between our check and now
       if (state.equals(current.fingerprintToStateMap.get(fingerprint))) {
         return current;
@@ -134,19 +134,19 @@ public class CompactionStateCache
 
       Map<String, CompactionState> newMap = new HashMap<>(current.fingerprintToStateMap);
       newMap.put(fingerprint, state);
-      return new PublishedCompactionStates(newMap);
+      return new PublishedIndexingStates(newMap);
     });
 
-    log.debug("Added compaction state to cache for fingerprint[%s]", fingerprint);
+    log.debug("Added indexing state to cache for fingerprint[%s]", fingerprint);
   }
 
   /**
    * Gets the full cached map (immutable copy).
    * Used by HeapMemorySegmentMetadataCache for delta sync calculations.
    */
-  public Map<String, CompactionState> getPublishedCompactionStateMap()
+  public Map<String, CompactionState> getPublishedIndexingStateMap()
   {
-    return publishedCompactionStates.get().fingerprintToStateMap;
+    return publishedIndexingStates.get().fingerprintToStateMap;
   }
 
   /**
@@ -154,7 +154,7 @@ public class CompactionStateCache
    */
   public void clear()
   {
-    publishedCompactionStates.set(PublishedCompactionStates.EMPTY);
+    publishedIndexingStates.set(PublishedIndexingStates.EMPTY);
     resetStats();
   }
 
@@ -164,10 +164,10 @@ public class CompactionStateCache
   public Map<String, Integer> getAndResetStats()
   {
     return Map.of(
-        Metric.COMPACTION_STATE_CACHE_HITS, cacheHitCount.getAndSet(0),
-        Metric.COMPACTION_STATE_CACHE_MISSES, cacheMissCount.getAndSet(0),
-        Metric.COMPACTION_STATE_CACHE_FINGERPRINTS,
-            publishedCompactionStates.get().fingerprintToStateMap.size()
+        Metric.INDEXING_STATE_CACHE_HITS, cacheHitCount.getAndSet(0),
+        Metric.INDEXING_STATE_CACHE_MISSES, cacheMissCount.getAndSet(0),
+        Metric.INDEXING_STATE_CACHE_FINGERPRINTS,
+        publishedIndexingStates.get().fingerprintToStateMap.size()
     );
   }
 
@@ -181,16 +181,16 @@ public class CompactionStateCache
   }
 
   /**
-   * Immutable snapshot of compaction states polled from DB.
+   * Immutable snapshot of indexing states polled from DB.
    */
-  private static class PublishedCompactionStates
+  private static class PublishedIndexingStates
   {
-    private static final PublishedCompactionStates EMPTY =
-        new PublishedCompactionStates(Map.of());
+    private static final PublishedIndexingStates EMPTY =
+        new PublishedIndexingStates(Map.of());
 
     private final Map<String, CompactionState> fingerprintToStateMap;
 
-    private PublishedCompactionStates(Map<String, CompactionState> fingerprintToStateMap)
+    private PublishedIndexingStates(Map<String, CompactionState> fingerprintToStateMap)
     {
       this.fingerprintToStateMap = Map.copyOf(fingerprintToStateMap);
     }

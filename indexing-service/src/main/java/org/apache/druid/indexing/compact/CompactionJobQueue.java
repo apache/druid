@@ -36,9 +36,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -100,7 +100,7 @@ public class CompactionJobQueue
   private final Map<String, CompactionJob> submittedTaskIdToJob;
 
   private final CompactionStateStorage compactionStateStorage;
-  private final CompactionStateCache compactionStateCache;
+  private final IndexingStateCache indexingStateCache;
 
   public CompactionJobQueue(
       DataSourcesSnapshot dataSourcesSnapshot,
@@ -112,7 +112,7 @@ public class CompactionJobQueue
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
       CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache,
+      IndexingStateCache indexingStateCache,
       ObjectMapper deterministicCompactionStateMapper
   )
   {
@@ -130,11 +130,11 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        new DefaultCompactionFingerprintMapper(compactionStateCache, deterministicCompactionStateMapper)
+        new DefaultCompactionFingerprintMapper(indexingStateCache, deterministicCompactionStateMapper)
     );
 
     this.compactionStateStorage = compactionStateStorage;
-    this.compactionStateCache = compactionStateCache;
+    this.indexingStateCache = indexingStateCache;
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.overlordClient = overlordClient;
@@ -375,7 +375,7 @@ public class CompactionJobQueue
           job.getTargetCompactionState(),
           DateTimes.nowUtc()
       );
-      compactionStateCache.addCompactionState(job.getTargetCompactionStateFingerprint(), job.getTargetCompactionState());
+      indexingStateCache.addIndexingState(job.getTargetCompactionStateFingerprint(), job.getTargetCompactionState());
     }
   }
 

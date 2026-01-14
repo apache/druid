@@ -46,8 +46,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -144,7 +144,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final long schedulePeriodMillis;
 
   private final CompactionStateStorage compactionStateStorage;
-  private final CompactionStateCache compactionStateCache;
+  private final IndexingStateCache indexingStateCache;
   private final ObjectMapper deterministicMapper;
 
   @Inject
@@ -164,7 +164,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       ServiceEmitter emitter,
       ObjectMapper objectMapper,
       CompactionStateStorage compactionStateStorage,
-      CompactionStateCache compactionStateCache,
+      IndexingStateCache indexingStateCache,
       @Deterministic ObjectMapper deterministicMapper
   )
   {
@@ -192,7 +192,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.taskActionClientFactory = taskActionClientFactory;
     this.druidInputSourceFactory = druidInputSourceFactory;
     this.compactionStateStorage = compactionStateStorage;
-    this.compactionStateCache = compactionStateCache;
+    this.indexingStateCache = indexingStateCache;
     this.deterministicMapper = deterministicMapper;
     this.taskRunnerListener = new TaskRunnerListener()
     {
@@ -393,7 +393,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         brokerClient,
         objectMapper,
         compactionStateStorage,
-        compactionStateCache,
+        indexingStateCache,
         deterministicMapper
     );
     latestJobQueue.set(queue);

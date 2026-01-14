@@ -21,10 +21,10 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
-import org.apache.druid.segment.metadata.NoopCompactionStateCache;
+import org.apache.druid.segment.metadata.NoopIndexingStateCache;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -139,7 +139,7 @@ public class NewestSegmentFirstPolicyBenchmark
         compactionConfigs,
         dataSources,
         Collections.emptyMap(),
-        new DefaultCompactionFingerprintMapper(new NoopCompactionStateCache(), new DefaultObjectMapper()) // TODO fix
+        new DefaultCompactionFingerprintMapper(new NoopIndexingStateCache(), CompactionTestUtils.createDeterministicMapper())
     );
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());

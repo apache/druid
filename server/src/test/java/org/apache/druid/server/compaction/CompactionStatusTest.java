@@ -40,10 +40,10 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
-import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -72,16 +72,16 @@ public class CompactionStatusTest
                    .build();
 
   private HeapMemoryCompactionStateStorage compactionStateStorage;
-  private CompactionStateCache compactionStateCache;
+  private IndexingStateCache indexingStateCache;
   private CompactionFingerprintMapper fingerprintMapper;
 
   @Before
   public void setUp()
   {
     compactionStateStorage = new HeapMemoryCompactionStateStorage();
-    compactionStateCache = new CompactionStateCache();
+    indexingStateCache = new IndexingStateCache();
     fingerprintMapper = new DefaultCompactionFingerprintMapper(
-        compactionStateCache,
+        indexingStateCache,
         CompactionTestUtils.createDeterministicMapper()
     );
   }
@@ -91,7 +91,7 @@ public class CompactionStatusTest
    */
   private void syncCacheFromManager()
   {
-    compactionStateCache.resetCompactionStatesForPublishedSegments(compactionStateStorage.getAllStoredStates());
+    indexingStateCache.resetIndexingStatesForPublishedSegments(compactionStateStorage.getAllStoredStates());
   }
 
   @Test

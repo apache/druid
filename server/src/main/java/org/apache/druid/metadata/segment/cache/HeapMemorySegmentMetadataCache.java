@@ -51,7 +51,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
-import org.apache.druid.segment.metadata.CompactionStateCache;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.CompactionState;
@@ -140,7 +140,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final SegmentSchemaCache segmentSchemaCache;
 
   private final boolean useCompactionStateCache;
-  private final CompactionStateCache compactionStateCache;
+  private final IndexingStateCache indexingStateCache;
 
   private final ListeningScheduledExecutorService pollExecutor;
   private final ServiceEmitter emitter;
@@ -173,7 +173,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
       SegmentSchemaCache segmentSchemaCache,
-      CompactionStateCache compactionStateCache,
+      IndexingStateCache indexingStateCache,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter
@@ -185,8 +185,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
-    this.useCompactionStateCache = compactionStateCache.isEnabled();
-    this.compactionStateCache = compactionStateCache;
+    this.useCompactionStateCache = indexingStateCache.isEnabled();
+    this.indexingStateCache = indexingStateCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
                         ? MoreExecutors.listeningDecorator(executorFactory.create(1, "SegmentMetadataCache-%s"))
@@ -241,7 +241,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
         if (useCompactionStateCache) {
-          compactionStateCache.clear();
+          indexingStateCache.clear();
         }
         syncFinishTime.set(null);
 
@@ -1124,7 +1124,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   /**
    * Retrieves required used compaction states from the metadata store and resets
-   * them in the {@link CompactionStateCache}. If this is the first sync, all used
+   * them in the {@link IndexingStateCache}. If this is the first sync, all used
    * compaction states are retrieved from the metadata store. If this is a delta sync,
    * first only the fingerprints of all used compaction states are retrieved. Payloads are
    * then fetched for only the fingerprints which are not present in the cache.
@@ -1133,7 +1133,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     final Stopwatch compactionStateSyncDuration = Stopwatch.createStarted();
 
-    // Reset the CompactionStateCache with latest compaction states
+    // Reset the IndexingStateCache with latest compaction states
     final Map<String, CompactionState> fingerprintToStateMap;
     if (syncFinishTime.get() == null) {
       fingerprintToStateMap = buildFingerprintToStateMapForFullSync();
@@ -1141,10 +1141,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       fingerprintToStateMap = buildFingerprintToStateMapForDeltaSync();
     }
 
-    compactionStateCache.resetCompactionStatesForPublishedSegments(fingerprintToStateMap);
+    indexingStateCache.resetIndexingStatesForPublishedSegments(fingerprintToStateMap);
 
     // Emit metrics for the current contents of the cache
-    compactionStateCache.getAndResetStats().forEach(this::emitMetric);
+    indexingStateCache.getAndResetStats().forEach(this::emitMetric);
     emitMetric(Metric.RETRIEVE_COMPACTION_STATES_DURATION_MILLIS, compactionStateSyncDuration.millisElapsed());
   }
 
@@ -1179,7 +1179,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     // Identify fingerprints in the cache and in the metadata store
     final Map<String, CompactionState> fingerprintToStateMap = new HashMap<>(
-        compactionStateCache.getPublishedCompactionStateMap()
+        indexingStateCache.getPublishedIndexingStateMap()
     );
     final Set<String> cachedFingerprints = Set.copyOf(fingerprintToStateMap.keySet());
     final Set<String> persistedFingerprints = query(

@@ -71,7 +71,7 @@ public class SqlCompactionStateStorageTest
     derbyConnector.createIndexingStatesTable();
     derbyConnector.createSegmentTable();
     fingerprintMapper = new DefaultCompactionFingerprintMapper(
-        new NoopCompactionStateCache(),
+        new NoopIndexingStateCache(),
         DETERMINISTIC_MAPPER
     );
   }

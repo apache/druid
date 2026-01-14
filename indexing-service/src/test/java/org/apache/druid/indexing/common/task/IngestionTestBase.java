@@ -87,8 +87,8 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.HeapMemoryCompactionStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -141,7 +141,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TestDataSegmentKiller dataSegmentKiller;
   private SegmentMetadataCache segmentMetadataCache;
   private SegmentSchemaCache segmentSchemaCache;
-  private CompactionStateCache compactionStateCache;
+  private IndexingStateCache indexingStateCache;
   protected File reportsFile;
 
   protected IngestionTestBase()
@@ -176,7 +176,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
 
     segmentSchemaCache = new SegmentSchemaCache();
-    compactionStateCache = new CompactionStateCache();
+    indexingStateCache = new IndexingStateCache();
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         createTransactionFactory(),
         objectMapper,
@@ -343,7 +343,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         segmentSchemaCache,
-        compactionStateCache,
+        indexingStateCache,
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()

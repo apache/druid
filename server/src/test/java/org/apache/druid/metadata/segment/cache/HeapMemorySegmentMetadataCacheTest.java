@@ -38,8 +38,8 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.CompactionStateCache;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
@@ -77,7 +77,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
   private HeapMemorySegmentMetadataCache cache;
   private SegmentSchemaCache schemaCache;
-  private CompactionStateCache compactionStateCache;
+  private IndexingStateCache indexingStateCache;
   private SegmentSchemaTestUtils schemaTestUtils;
 
   @Before
@@ -122,13 +122,13 @@ public class HeapMemorySegmentMetadataCacheTest
     final SegmentsMetadataManagerConfig metadataManagerConfig
         = new SegmentsMetadataManagerConfig(null, cacheMode, null);
     schemaCache = useSchemaCache ? new SegmentSchemaCache() : new NoopSegmentSchemaCache();
-    compactionStateCache = new CompactionStateCache();
+    indexingStateCache = new IndexingStateCache();
     cache = new HeapMemorySegmentMetadataCache(
         TestHelper.JSON_MAPPER,
         () -> metadataManagerConfig,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         schemaCache,
-        compactionStateCache,
+        indexingStateCache,
         derbyConnector,
         executorFactory,
         serviceEmitter
