@@ -30,179 +30,40 @@ concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
-env:
-  MVN: mvn -B
-  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-  MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx8g
-
 jobs:
-  static-checks:
+  packaging-check:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '17', '21' ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch
-        uses: actions/checkout@v4
+        jdk: [ '17', '21' ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/packaging-check.sh
+      jdk: ${{ matrix.jdk }}
+      key: "packaging-check-jdk${{ matrix.jdk }}"
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.java }}
-          cache: 'maven'
-
-      - name: packaging check
-        run: |
-          ./.github/scripts/setup_generate_license.sh
-          ${MVN} clean install -Prat --fail-at-end \
-          -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
-          ${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
-          -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
-
-      - name: script checks
-        # who watches the watchers?
-        if: ${{ matrix.java == '17' }}
-        run: ./check_test_suite_test.py
-
-      - name: maven install
-        if: ${{ matrix.java == '17' }}
-        run: |
-          echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
-          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
-
-      - name: checkstyle
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
-
-      - name: license checks
-        if: ${{ matrix.java == '17' }}
-        run: ./.github/scripts/license_checks_script.sh
-
-      - name: analyze dependencies
-        if: ${{ matrix.java == '17' }}
-        run: |
-          ./.github/scripts/analyze_dependencies_script.sh
-
-      - name: animal sniffer checks
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} animal-sniffer:check --fail-at-end
-
-      - name: enforcer checks
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} enforcer:enforce --fail-at-end
-
-      - name: forbidden api checks
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
-
-      - name: pmd checks
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
-
-      - name: spotbugs checks
-        if: ${{ matrix.java == '17' }}
-        run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+  static-checks-maven:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/static-checks-maven.sh
+      key: "static-checks-maven"
 
   strict-compilation:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch
-        uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'maven'
-
-      - name: (openjdk17) strict compilation
-        # errorprone requires JDK 11+
-        # Strict compilation requires more than 2 GB
-        # safe to exclude embedded-tests, it's not in distribution
-        run: ${MVN} clean -DstrictCompile -pl '!embedded-tests' compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/strict-compilation.sh
+      key: "strict-compilation"
 
   openrewrite:
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch
-        uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '21'
-          cache: 'maven'
-
-      - name: maven install
-        run: |
-          echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
-          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
-
-      - name: rewrite:dryRun
-        id: rewrite-dryRun
-        run: |
-          ${MVN} rewrite:dryRun ${MAVEN_SKIP}
-
-      - name: Upload open rewrite patch
-        if: ${{ failure() && steps.rewrite-dryRun.conclusion == 'failure' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: Rewrite patch
-          path: ./target/rewrite/rewrite.patch
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/openrewrite.sh
+      key: "openrewrite"
+      artifact_prefix: "openrewrite-patch"
 
   web-checks:
-    strategy:
-      fail-fast: false
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch
-        uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'maven'
-
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18.0.0
-
-      - name: docs
-        run: |
-          (cd website && npm install)
-          cd website
-          npm run build
-          npm run link-lint
-          npm run spellcheck
-
-      - name: web console
-        run: |
-          ${MVN} test -pl 'web-console'
-          cd web-console
-          { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
-
-      - name: web console end-to-end test
-        id: web-console-test
-        run: |
-          ./.github/scripts/setup_generate_license.sh
-          web-console/script/druid build
-          web-console/script/druid start
-          (cd web-console && npm run test-e2e)
-          web-console/script/druid stop
-
-      - name: Tar druid logs
-        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log -C ./var druid/indexing-logs
-
-      - name: Upload druid logs to GitHub
-        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: Druid logs web-checks
-          path: druid-logs.tgz
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/web-checks.sh
+      key: "web-checks"
+      artifact_prefix: "web-checks-logs"

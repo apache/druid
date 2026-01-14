@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -52,7 +53,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -60,6 +60,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -145,9 +147,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
         throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         for (StorageLocation location : locations) {
-          location.setEvictImmediatelyOnHoldRelease(true);
+          location.setAreWeakEntriesEphemeral(true);
         }
       }
       virtualStorageLoadOnDemandExec =
@@ -230,22 +232,51 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    final List<DataSegment> cachedSegments = new ArrayList<>();
+    final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
+    final CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
+
+    // If there is no dedicated bootstrap executor, perform the loading sequentially on the current thread.
+    final boolean isLoadingSegmentsSequentially = loadOnBootstrapExec == null;
+    final ExecutorService executorService = isLoadingSegmentsSequentially
+                                            ? MoreExecutors.newDirectExecutorService()
+                                            : loadOnBootstrapExec;
 
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
 
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      final File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segment cache file.")
-           .addData("file", file)
-           .emit();
-      }
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Loading [%d] segments from disk to cache.", segmentsToLoad.length);
+
+    for (File file : segmentsToLoad) {
+      executorService.submit(() -> {
+        try {
+          addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to load segment from segment cache file.")
+             .addData("file", file)
+             .emit();
+        }
+        finally {
+          latch.countDown();
+        }
+      });
+    }
+
+    try {
+      latch.await();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.noStackTrace().error(e, "Interrupted when trying to retrieve cached segment metadata files");
+    }
+
+    stopwatch.stop();
+    log.info("Loaded [%d/%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+
+    if (isLoadingSegmentsSequentially) {
+      // Shutdown the direct executor service we created previously in this method.
+      executorService.shutdown();
     }
 
     if (ignoredFilesCounter.get() > 0) {
@@ -254,10 +285,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
          .emit();
     }
 
-    return cachedSegments;
+    return List.copyOf(cachedSegments);
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
+  private void addFilesToCachedSegments(
+      File file,
+      AtomicInteger ignored,
+      ConcurrentLinkedQueue<DataSegment> cachedSegments
+  ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
     if (!segment.getId().toString().equals(file.getName())) {
@@ -325,6 +360,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
+      FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
           segmentInfoCacheFile,
           out -> {
@@ -398,7 +434,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     final AcquireSegmentAction acquireExisting = acquireExistingSegment(identifier);
@@ -430,6 +466,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
               final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
               if (!segmentInfoCacheFile.exists()) {
+                FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
                   jsonMapper.writeValue(out, dataSegment);
                   return null;
@@ -496,9 +533,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         throw DruidException.defensive(
-            "load() should not be called when virtualStorageFabricEvictImmediatelyOnHoldRelease is enabled"
+            "load() should not be called when virtualStorageIsEphemeral is true"
         );
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
@@ -542,9 +579,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   ) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
-      if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+      if (config.isVirtualStorageEphemeral()) {
         throw DruidException.defensive(
-            "bootstrap() should not be called when virtualStorageFabricEvictImmediatelyOnHoldRelease is enabled"
+            "bootstrap() should not be called when virtualStorageIsEphemeral is true"
         );
       }
       // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
@@ -1046,7 +1083,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           unmount();
         }
 
-        if (config.isVirtualStorageFabricEvictImmediatelyOnHoldRelease()) {
+        if (config.isVirtualStorageEphemeral()) {
           setDeleteInfoFileOnUnmount();
         }
       }

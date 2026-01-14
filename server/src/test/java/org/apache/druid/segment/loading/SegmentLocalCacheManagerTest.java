@@ -407,7 +407,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 1000000000L, null);
     locations.add(locationConfig2);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locations);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
@@ -445,11 +445,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locations);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().withLocations(locations),
+        new SegmentLoaderConfig().setLocations(locations),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -485,11 +485,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10000000L, null);
     locations.add(locationConfig2);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locations);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().withLocations(locations),
+        new SegmentLoaderConfig().setLocations(locations),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -524,11 +524,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(localStorageFolder2, 10L, null);
     locations.add(locationConfig2);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locations);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().withLocations(locations),
+        new SegmentLoaderConfig().setLocations(locations),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -582,7 +582,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         locations,
-        new SegmentLoaderConfig().withLocations(locationConfigs),
+        new SegmentLoaderConfig().setLocations(locationConfigs),
         new RoundRobinStorageLocationSelectorStrategy(locations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -656,11 +656,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     locations.add(locationConfig2);
     locations.add(locationConfig3);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locations);
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
-        new SegmentLoaderConfig().withLocations(locations),
+        new SegmentLoaderConfig().setLocations(locations),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -737,7 +737,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     locationConfigs.add(locationConfig2);
     locationConfigs.add(locationConfig3);
 
-    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig().withLocations(locationConfigs);
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig().setLocations(locationConfigs);
 
     final List<StorageLocation> locations = segmentLoaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
@@ -819,7 +819,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   public void testGetBootstrapSegment() throws SegmentLoadingException
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(ImmutableList.of(locationConfig));
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(ImmutableList.of(locationConfig));
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
         storageLocations,
@@ -1197,7 +1197,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
+      public boolean isVirtualStorageEphemeral()
       {
         return true;
       }
@@ -1331,7 +1331,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final List<StorageLocationConfig> locationConfigs = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000000000L, null);
     locationConfigs.add(locationConfig);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locationConfigs);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(locationConfigs);
     final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         locations,
