@@ -202,21 +202,21 @@ public class GroupByStatsMonitorTest
     QueryResourceId r1 = new QueryResourceId("r1");
     GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(r1);
     stats1.mergeBufferAcquisitionTime(100);
-    stats1.mergeBufferTotalUsage(50);
+    stats1.mergeBufferTotalUsedBytes(50);
     stats1.spilledBytes(200);
     stats1.dictionarySize(100);
 
     QueryResourceId r2 = new QueryResourceId("r2");
     GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(r2);
     stats2.mergeBufferAcquisitionTime(500);
-    stats2.mergeBufferTotalUsage(30);
+    stats2.mergeBufferTotalUsedBytes(30);
     stats2.spilledBytes(100);
     stats2.dictionarySize(300);
 
     QueryResourceId r3 = new QueryResourceId("r3");
     GroupByStatsProvider.PerQueryStats stats3 = statsProvider.getPerQueryStatsContainer(r3);
     stats3.mergeBufferAcquisitionTime(200);
-    stats3.mergeBufferTotalUsage(150);
+    stats3.mergeBufferTotalUsedBytes(150);
     stats3.spilledBytes(800);
     stats3.dictionarySize(200);
 

@@ -219,15 +219,15 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
-    perQueryStats.mergeBufferTotalUsage(getMergeBufferUsage());
+    perQueryStats.mergeBufferTotalUsedBytes(getMergeBufferUsedBytes());
     grouper.close();
     keySerde.reset();
     deleteFiles();
   }
 
-  private long getMergeBufferUsage()
+  private long getMergeBufferUsedBytes()
   {
-    return grouper.isInitialized() ? grouper.getMergeBufferUsage() : 0L;
+    return grouper.isInitialized() ? grouper.getMergeBufferUsedBytes() : 0L;
   }
 
   private long getDictionarySizeEstimate()

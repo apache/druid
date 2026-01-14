@@ -177,9 +177,9 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
    * This method is implemented to return the highest memory value claimed by the Grouper. This is only
    * used for monitoring the size of the merge buffers used.
    */
-  public long getMergeBufferUsage()
+  public long getMergeBufferUsedBytes()
   {
-    return hashTable.getMaxTableBufferUsage();
+    return hashTable.getMaxTableBufferUsedBytes();
   }
 
   /**

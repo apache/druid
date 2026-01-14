@@ -459,14 +459,14 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   }
 
   @Override
-  public long getMergeBufferUsage()
+  public long getMergeBufferUsedBytes()
   {
     if (!initialized) {
       return 0L;
     }
 
-    long hashTableUsage = super.getMergeBufferUsage();
-    long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsageBytes();
+    long hashTableUsage = super.getMergeBufferUsedBytes();
+    long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsedBytes();
     return hashTableUsage + offSetHeapUsage;
   }
 
@@ -515,7 +515,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       subHashTable2Buffer = subHashTable2Buffer.slice();
 
       subHashTableBuffers = new ByteBuffer[]{subHashTable1Buffer, subHashTable2Buffer};
-      updateMaxTableBufferUsage();
+      updateMaxTableBufferUsedBytes();
     }
 
     @Override
@@ -528,7 +528,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
       }
       tableBuffer = subHashTableBuffers[0];
-      updateMaxTableBufferUsage();
+      updateMaxTableBufferUsedBytes();
     }
 
     @Override
@@ -585,19 +585,19 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
       size = numCopied;
       tableBuffer = newTableBuffer;
-      updateMaxTableBufferUsage();
+      updateMaxTableBufferUsedBytes();
       growthCount++;
     }
 
     @Override
-    protected void updateMaxTableBufferUsage()
+    protected void updateMaxTableBufferUsedBytes()
     {
-      long currentBufferUsage = 0;
+      long currentBufferUsedBytes = 0;
       for (ByteBuffer buffer : subHashTableBuffers) {
-        currentBufferUsage += buffer.capacity();
+        currentBufferUsedBytes += buffer.capacity();
       }
 
-      maxTableBufferUsage = Math.max(maxTableBufferUsage, currentBufferUsage);
+      maxTableBufferUsedBytes = Math.max(maxTableBufferUsedBytes, currentBufferUsedBytes);
     }
   }
 }

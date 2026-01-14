@@ -70,9 +70,9 @@ public class GroupByStatsProvider
   {
     private long mergeBufferQueries = 0;
     private long mergeBufferAcquisitionTimeNs = 0;
-    private long mergeBufferTotalUsage = 0;
+    private long totalMergeBufferUsedBytes = 0;
     private long maxMergeBufferAcquisitionTimeNs = 0;
-    private long maxMergeBufferUsage = 0;
+    private long maxMergeBufferUsedBytes = 0;
     private long spilledQueries = 0;
     private long spilledBytes = 0;
     private long maxSpilledBytes = 0;
@@ -88,9 +88,9 @@ public class GroupByStatsProvider
       this(
           aggregateStats.mergeBufferQueries,
           aggregateStats.mergeBufferAcquisitionTimeNs,
-          aggregateStats.mergeBufferTotalUsage,
+          aggregateStats.totalMergeBufferUsedBytes,
           aggregateStats.maxMergeBufferAcquisitionTimeNs,
-          aggregateStats.maxMergeBufferUsage,
+          aggregateStats.maxMergeBufferUsedBytes,
           aggregateStats.spilledQueries,
           aggregateStats.spilledBytes,
           aggregateStats.maxSpilledBytes,
@@ -102,9 +102,9 @@ public class GroupByStatsProvider
     public AggregateStats(
         long mergeBufferQueries,
         long mergeBufferAcquisitionTimeNs,
-        long mergeBufferTotalUsage,
+        long totalMergeBufferUsedBytes,
         long maxMergeBufferAcquisitionTimeNs,
-        long maxMergeBufferUsage,
+        long maxMergeBufferUsedBytes,
         long spilledQueries,
         long spilledBytes,
         long maxSpilledBytes,
@@ -114,9 +114,9 @@ public class GroupByStatsProvider
     {
       this.mergeBufferQueries = mergeBufferQueries;
       this.mergeBufferAcquisitionTimeNs = mergeBufferAcquisitionTimeNs;
-      this.mergeBufferTotalUsage = mergeBufferTotalUsage;
+      this.totalMergeBufferUsedBytes = totalMergeBufferUsedBytes;
       this.maxMergeBufferAcquisitionTimeNs = maxMergeBufferAcquisitionTimeNs;
-      this.maxMergeBufferUsage = maxMergeBufferUsage;
+      this.maxMergeBufferUsedBytes = maxMergeBufferUsedBytes;
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
       this.maxSpilledBytes = maxSpilledBytes;
@@ -134,19 +134,19 @@ public class GroupByStatsProvider
       return mergeBufferAcquisitionTimeNs;
     }
 
-    public long getMergeBufferTotalUsage()
-    {
-      return mergeBufferTotalUsage;
-    }
-
     public long getMaxMergeBufferAcquisitionTimeNs()
     {
       return maxMergeBufferAcquisitionTimeNs;
     }
 
-    public long getMaxMergeBufferUsage()
+    public long getTotalMergeBufferUsedBytes()
     {
-      return maxMergeBufferUsage;
+      return totalMergeBufferUsedBytes;
+    }
+
+    public long getMaxMergeBufferUsedBytes()
+    {
+      return maxMergeBufferUsedBytes;
     }
 
     public long getSpilledQueries()
@@ -183,8 +183,8 @@ public class GroupByStatsProvider
             maxMergeBufferAcquisitionTimeNs,
             perQueryStats.getMergeBufferAcquisitionTimeNs()
         );
-        mergeBufferTotalUsage += perQueryStats.getMergeBufferTotalUsage();
-        maxMergeBufferUsage = Math.max(maxMergeBufferUsage, perQueryStats.getMergeBufferTotalUsage());
+        totalMergeBufferUsedBytes += perQueryStats.getMergeBufferTotalUsedBytes();
+        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMergeBufferTotalUsedBytes());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
@@ -201,9 +201,9 @@ public class GroupByStatsProvider
     {
       this.mergeBufferQueries = 0;
       this.mergeBufferAcquisitionTimeNs = 0;
-      this.mergeBufferTotalUsage = 0;
       this.maxMergeBufferAcquisitionTimeNs = 0;
-      this.maxMergeBufferUsage = 0;
+      this.totalMergeBufferUsedBytes = 0;
+      this.maxMergeBufferUsedBytes = 0;
       this.spilledQueries = 0;
       this.spilledBytes = 0;
       this.maxSpilledBytes = 0;
@@ -215,7 +215,7 @@ public class GroupByStatsProvider
   public static class PerQueryStats
   {
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
-    private final AtomicLong mergeBufferTotalUsage = new AtomicLong(0);
+    private final AtomicLong mergeBufferTotalUsedBytes = new AtomicLong(0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
@@ -224,9 +224,9 @@ public class GroupByStatsProvider
       mergeBufferAcquisitionTimeNs.addAndGet(delay);
     }
 
-    public void mergeBufferTotalUsage(long bytes)
+    public void mergeBufferTotalUsedBytes(long bytes)
     {
-      mergeBufferTotalUsage.addAndGet(bytes);
+      mergeBufferTotalUsedBytes.addAndGet(bytes);
     }
 
     public void spilledBytes(long bytes)
@@ -244,9 +244,9 @@ public class GroupByStatsProvider
       return mergeBufferAcquisitionTimeNs.get();
     }
 
-    public long getMergeBufferTotalUsage()
+    public long getMergeBufferTotalUsedBytes()
     {
-      return mergeBufferTotalUsage.get();
+      return mergeBufferTotalUsedBytes.get();
     }
 
     public long getSpilledBytes()
