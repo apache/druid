@@ -126,7 +126,7 @@ public class DataSegmentPlusTest
     );
 
     // verify dataSegment
-    Assert.assertEquals(13, segmentObjectMap.size());
+    Assert.assertEquals(14, segmentObjectMap.size());
     Assert.assertEquals("something", segmentObjectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), segmentObjectMap.get("interval"));
     Assert.assertEquals("1", segmentObjectMap.get("version"));

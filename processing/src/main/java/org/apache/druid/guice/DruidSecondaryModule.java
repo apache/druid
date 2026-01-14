@@ -31,10 +31,10 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.druid.guice.annotations.Deterministic;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.frame.wire.FrameWireTransferable;
+import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
@@ -171,12 +171,15 @@ public class DruidSecondaryModule implements Module
   @Provides
   @LazySingleton
   @Deterministic
-  public ObjectMapper getSortedMapper(Injector injector)
+  public ObjectMapper getSortedMapper(
+      Injector injector,
+      Map<ByteBuffer, WireTransferable.Deserializer> wtDeserializers
+  )
   {
     final ObjectMapper sortedMapper = new DefaultObjectMapper();
     sortedMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     sortedMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-    setupJackson(injector, sortedMapper);
+    setupJackson(injector, sortedMapper, wtDeserializers, isUseLegacyFrameSerialization());
     return sortedMapper;
   }
 
