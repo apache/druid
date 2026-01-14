@@ -68,10 +68,10 @@ public class GroupByStatsMonitor extends AbstractMonitor
       emitter.emit(
           builder.setMetric("mergeBuffer/acquisitionTimeNs", statsContainer.getMergeBufferAcquisitionTimeNs())
       );
-      emitter.emit(builder.setMetric("mergeBuffer/bytesUsed", statsContainer.getTotalMergeBufferUsedBytes()));
       emitter.emit(
           builder.setMetric("mergeBuffer/maxAcquisitionTimeNs", statsContainer.getMaxMergeBufferAcquisitionTimeNs())
       );
+      emitter.emit(builder.setMetric("mergeBuffer/bytesUsed", statsContainer.getTotalMergeBufferUsedBytes()));
       emitter.emit(builder.setMetric("mergeBuffer/maxBytesUsed", statsContainer.getMaxMergeBufferUsedBytes()));
     }
 
@@ -83,9 +83,7 @@ public class GroupByStatsMonitor extends AbstractMonitor
 
     if (statsContainer.getMergeDictionarySize() > 0) {
       emitter.emit(builder.setMetric("groupBy/mergeDictionarySize", statsContainer.getMergeDictionarySize()));
-      emitter.emit(
-          builder.setMetric("groupBy/maxMergeDictionarySize", statsContainer.getMaxMergeDictionarySize())
-      );
+      emitter.emit(builder.setMetric("groupBy/maxMergeDictionarySize", statsContainer.getMaxMergeDictionarySize()));
     }
 
     return true;

@@ -55,8 +55,8 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(0L, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
-    Assert.assertEquals(0L, aggregateStats.getTotalMergeBufferUsedBytes());
     Assert.assertEquals(0L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(0L, aggregateStats.getTotalMergeBufferUsedBytes());
     Assert.assertEquals(0L, aggregateStats.getMaxMergeBufferUsedBytes());
     Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
@@ -70,8 +70,8 @@ public class GroupByStatsProviderTest
     aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(2, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(1100L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
     Assert.assertEquals(150L, aggregateStats.getTotalMergeBufferUsedBytes());
-    Assert.assertEquals(1100L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs()); 
     Assert.assertEquals(100L, aggregateStats.getMaxMergeBufferUsedBytes());
     Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());
