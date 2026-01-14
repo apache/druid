@@ -88,6 +88,7 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
@@ -125,7 +126,8 @@ public class DumpSegment extends GuiceRunnable
     ROWS,
     METADATA,
     BITMAPS,
-    NESTED
+    NESTED,
+    METADATA_V10
   }
 
   public DumpSegment()
@@ -192,6 +194,11 @@ public class DumpSegment extends GuiceRunnable
     }
     catch (Exception e) {
       throw new IAE("Not a valid dump type: %s", dumpTypeString);
+    }
+
+    if (dumpType == DumpType.METADATA_V10) {
+      dumpV10Metadata(injector, directory, outputFileName);
+      return;
     }
 
     try (final QueryableIndex index = indexIO.loadIndex(new File(directory))) {
@@ -689,6 +696,28 @@ public class DumpSegment extends GuiceRunnable
         },
         outputFileName
     );
+  }
+  @VisibleForTesting
+  public static void dumpV10Metadata(Injector injector, String segmentFile, String output)
+  {
+    final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    try (SegmentFileMapperV10 fileMapperV10 = SegmentFileMapperV10.create(new File(segmentFile), objectMapper)) {
+      withOutputStream(
+          (Function<OutputStream, Object>) outStream -> {
+            try {
+              objectMapper.writeValue(outStream, fileMapperV10.getSegmentFileMetadata());
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+            return null;
+          },
+          output
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @VisibleForTesting
