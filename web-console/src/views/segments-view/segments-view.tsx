@@ -308,7 +308,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, signal, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, signal, { setIntermediateQuery }) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 

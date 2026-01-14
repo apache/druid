@@ -2542,4 +2542,106 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testMultiValueRegexFilterOnVirtualMV()
+  {
+    // Test MV_FILTER_REGEX with a virtual multi-value column created by STRING_TO_MV.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX(STRING_TO_MV('abc,def,abd', ','), '^ab')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[\"abc\",\"abd\"]"}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnVirtualMV()
+  {
+    // Test MV_FILTER_PREFIX with a virtual multi-value column created by STRING_TO_MV.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX(STRING_TO_MV('a,b,c', ','), 'a')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"a"}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnVirtualMVWithRawLiteral()
+  {
+    // Test MV_FILTER_PREFIX with a virtual multi-value column created by raw string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX('apple', 'a')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"apple"}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX('apple', 'b')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValueRegexFilterOnVirtualMVWithRawLiteral()
+  {
+    // Test MV_FILTER_REGEX with a virtual multi-value column created by raw string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX('apple', '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"apple"}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX('apple', 'a$')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValueRegexFilterOnNullReturnsNull()
+  {
+    // Test MV_FILTER_REGEX with a null string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX(null, '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnNullReturnsNull()
+  {
+    // Test MV_FILTER_PREFIX with a null string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX(null, '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
 }

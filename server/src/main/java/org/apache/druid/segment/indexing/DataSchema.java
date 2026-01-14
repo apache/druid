@@ -46,9 +46,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
@@ -421,7 +421,7 @@ public class DataSchema
   /**
    * Validates that each {@link AggregateProjectionSpec} does not have duplicate column names in
    * {@link AggregateProjectionSpec#groupingColumns} and {@link AggregateProjectionSpec#aggregators} and that segment
-   * {@link Granularity} is at least as coarse as {@link AggregateProjectionMetadata.Schema#effectiveGranularity}
+   * {@link Granularity} is at least as coarse as {@link AggregateProjectionSchema#effectiveGranularity}
    */
   public static void validateProjections(
       @Nullable List<AggregateProjectionSpec> projections,
@@ -435,7 +435,7 @@ public class DataSchema
           throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
         }
         names.add(projection.getName());
-        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
+        final AggregateProjectionSchema schema = projection.toMetadataSchema();
 
         if (schema.getTimeColumnName() != null) {
           final Granularity projectionGranularity = schema.getEffectiveGranularity();

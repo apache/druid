@@ -149,10 +149,13 @@ to represent the task ID are deprecated and will be removed in a future release.
 |Metric|Description|Normal value|
 |------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
-|`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to `threadPoolNumIdleThreads` + `threadPoolNumBusyThreads`.|
-|`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to `threadPoolNumTotalThreads`. Non zero number means there is less work to do than configured capacity.|
-|`jetty/threadPool/busy`|Number of busy threads that has work to do from the worker queue.|Less than or equal to `threadPoolNumTotalThreads`.|
-|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue.|0|
+|`jetty/threadPool/total`|Number of total threads allocated. This includes internal threads and threads that are ready to serve requests.|Equals the total number of threads in the Jetty thread pool. i.e., `jetty/threadPool/ready` + `jetty/threadPool/utilized` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/ready`|Number of threads that are ready to serve requests.|Equals the total number of usable threads in the Jetty thread pool to serve requests. i.e., `jetty/threadPool/idle` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/utilized`|Number of threads currently in use by the thread pool to serve requests.|Value < `jetty/threadPool/ready`.|
+|`jetty/threadPool/utilizationRate`|Fraction of thread pool capacity currently in use to serve requests.|0.0 ≤ Value ≤ 1. A value of 0.0 means that the thread pool is not utilized, while a value of 1.0 means that the thread pool is fully utilized.|
+|`jetty/threadPool/idle`|Number of idle threads.|Value ≤ (`jetty/threadPool/ready` - any reserved threads for internal Jetty usage). A non-zero value means there is less work to do than configured capacity.|
+|`jetty/threadPool/busy`|Number of busy threads that have work to do from the worker queue.|Value ≤ (`jetty/threadPool/utilized` + any reserved threads for internal Jetty usage).|
+|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether the number of total workable threads allocated is enough to handle the work in the work queue.|0|
 |`jetty/threadPool/min`|Number of minimum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/max`|Number of maximum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than `druid.server.http.queueSize`.|
@@ -470,7 +473,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`segment/max`|Maximum byte limit available for segments.| |Varies.|
+|`segment/max`|Maximum byte limit available for segments.|`tier`, `priority`|Varies.|
 |`segment/used`|Bytes used for served segments.|`dataSource`, `tier`, `priority`|< max|
 |`segment/usedPercent`|Percentage of space used by served segments.|`dataSource`, `tier`, `priority`|< 100%|
 |`segment/count`|Number of served segments.|`dataSource`, `tier`, `priority`|Varies|

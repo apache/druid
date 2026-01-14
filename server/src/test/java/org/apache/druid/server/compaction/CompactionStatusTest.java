@@ -292,10 +292,12 @@ public class CompactionStatusTest
         compactionConfig,
         "'indexSpec' mismatch: "
         + "required[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
+        + " metadataCompression=none,"
         + " dimensionCompression=lz4, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
         + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}], "
         + "current[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
+        + " metadataCompression=none,"
         + " dimensionCompression=zstd, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
         + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}]"

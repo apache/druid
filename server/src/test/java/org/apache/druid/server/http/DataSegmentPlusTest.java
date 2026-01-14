@@ -38,6 +38,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,13 +61,14 @@ public class DataSegmentPlusTest
     injectableValues.addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
   }
+
   @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(DataSegmentPlus.class)
-        .withNonnullFields("dataSegment", "createdDate")
-        .usingGetClass()
-        .verify();
+                  .withNonnullFields("dataSegment", "createdDate")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
@@ -81,31 +83,28 @@ public class DataSegmentPlusTest
     DateTime createdDate = DateTimes.of(createdDateStr);
     DateTime usedStatusLastUpdatedDate = DateTimes.of(usedStatusLastUpdatedDateStr);
     DataSegmentPlus segmentPlus = new DataSegmentPlus(
-        new DataSegment(
-            "something",
-            interval,
-            "1",
-            loadSpec,
-            Arrays.asList("dim1", "dim2"),
-            Arrays.asList("met1", "met2"),
-            null,
-            new NumberedShardSpec(3, 0),
-            new CompactionState(
-                new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
-                ),
-                ImmutableList.of(new CountAggregatorFactory("cnt")),
-                new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-                MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
-                MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                null
-            ),
-            TEST_VERSION,
-            1,
-            indexingStateFingerprint,
-            DataSegment.PruneSpecsHolder.DEFAULT
-        ),
+        DataSegment.builder(SegmentId.of("something", interval, "1", new NumberedShardSpec(3, 0)))
+                   .shardSpec(new NumberedShardSpec(3, 0))
+                   .loadSpec(loadSpec)
+                   .dimensions(Arrays.asList("dim1", "dim2"))
+                   .metrics(Arrays.asList("met1", "met2"))
+                   .projections(Arrays.asList("proj1", "proj2"))
+                   .lastCompactionState(new CompactionState(
+                       new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+                       new DimensionsSpec(
+                           DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "bar", "foo"))
+                       ),
+                       ImmutableList.of(new CountAggregatorFactory("cnt")),
+                       new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                       MAPPER.convertValue(ImmutableMap.of(), IndexSpec.class),
+                       MAPPER.convertValue(ImmutableMap.of(), GranularitySpec.class),
+                       null
+                   ))
+                   .indexingStateFingerprint(indexingStateFingerprint)
+                   .binaryVersion(TEST_VERSION)
+                   .size(123L)
+                   .totalRows(12)
+                   .build(),
         createdDate,
         usedStatusLastUpdatedDate,
         null,
@@ -127,16 +126,21 @@ public class DataSegmentPlusTest
     );
 
     // verify dataSegment
-    Assert.assertEquals(12, segmentObjectMap.size());
+    Assert.assertEquals(13, segmentObjectMap.size());
     Assert.assertEquals("something", segmentObjectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), segmentObjectMap.get("interval"));
     Assert.assertEquals("1", segmentObjectMap.get("version"));
     Assert.assertEquals(loadSpec, segmentObjectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", segmentObjectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", segmentObjectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), segmentObjectMap.get("shardSpec"));
+    Assert.assertEquals("proj1,proj2", segmentObjectMap.get("projections"));
+    Assert.assertEquals(
+        ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0),
+        segmentObjectMap.get("shardSpec")
+    );
     Assert.assertEquals(TEST_VERSION, segmentObjectMap.get("binaryVersion"));
-    Assert.assertEquals(1, segmentObjectMap.get("size"));
+    Assert.assertEquals(123, segmentObjectMap.get("size"));
+    Assert.assertEquals(12, segmentObjectMap.get("totalRows"));
     Assert.assertEquals(6, ((Map) segmentObjectMap.get("lastCompactionState")).size());
     Assert.assertEquals("abc123", segmentObjectMap.get("indexingStateFingerprint"));
 
@@ -144,23 +148,22 @@ public class DataSegmentPlusTest
     Assert.assertEquals(createdDateStr, objectMap.get("createdDate"));
     Assert.assertEquals(usedStatusLastUpdatedDateStr, objectMap.get("usedStatusLastUpdatedDate"));
 
-    DataSegmentPlus deserializedSegmentPlus = MAPPER.readValue(MAPPER.writeValueAsString(segmentPlus), DataSegmentPlus.class);
+    DataSegmentPlus deserializedSegmentPlus = MAPPER.readValue(
+        MAPPER.writeValueAsString(segmentPlus),
+        DataSegmentPlus.class
+    );
 
     // verify dataSegment
-    Assert.assertEquals(segmentPlus.getDataSegment().getDataSource(), deserializedSegmentPlus.getDataSegment().getDataSource());
-    Assert.assertEquals(segmentPlus.getDataSegment().getInterval(), deserializedSegmentPlus.getDataSegment().getInterval());
-    Assert.assertEquals(segmentPlus.getDataSegment().getVersion(), deserializedSegmentPlus.getDataSegment().getVersion());
-    Assert.assertEquals(segmentPlus.getDataSegment().getLoadSpec(), deserializedSegmentPlus.getDataSegment().getLoadSpec());
-    Assert.assertEquals(segmentPlus.getDataSegment().getDimensions(), deserializedSegmentPlus.getDataSegment().getDimensions());
-    Assert.assertEquals(segmentPlus.getDataSegment().getMetrics(), deserializedSegmentPlus.getDataSegment().getMetrics());
-    Assert.assertEquals(segmentPlus.getDataSegment().getShardSpec(), deserializedSegmentPlus.getDataSegment().getShardSpec());
-    Assert.assertEquals(segmentPlus.getDataSegment().getSize(), deserializedSegmentPlus.getDataSegment().getSize());
-    Assert.assertEquals(segmentPlus.getDataSegment().getId(), deserializedSegmentPlus.getDataSegment().getId());
-    Assert.assertEquals(segmentPlus.getDataSegment().getLastCompactionState(), deserializedSegmentPlus.getDataSegment().getLastCompactionState());
-    Assert.assertEquals(segmentPlus.getDataSegment().getIndexingStateFingerprint(), deserializedSegmentPlus.getDataSegment().getIndexingStateFingerprint());
+    Assert.assertEquals(
+        segmentPlus.getDataSegment().toString(),
+        deserializedSegmentPlus.getDataSegment().toString()
+    );
 
     // verify extra metadata
     Assert.assertEquals(segmentPlus.getCreatedDate(), deserializedSegmentPlus.getCreatedDate());
-    Assert.assertEquals(segmentPlus.getUsedStatusLastUpdatedDate(), deserializedSegmentPlus.getUsedStatusLastUpdatedDate());
+    Assert.assertEquals(
+        segmentPlus.getUsedStatusLastUpdatedDate(),
+        deserializedSegmentPlus.getUsedStatusLastUpdatedDate()
+    );
   }
 }

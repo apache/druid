@@ -47,7 +47,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
@@ -83,6 +82,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Interval;
 
@@ -840,7 +840,7 @@ public class WorkerImpl implements Worker
               return new WorkerOrLocalInputChannelFactory(
                   id(),
                   workerIds,
-                  new WorkerInputChannelFactory(workerClient, workerIds),
+                  new WorkerInputChannelFactory(workerClient, workerIds, getWireTransferableContext()),
                   this::getOrCreateStageOutputHolder
               );
 
@@ -850,7 +850,8 @@ public class WorkerImpl implements Worker
                   task.getControllerTaskId(),
                   MSQTasks.makeStorageConnector(context.injector()),
                   closer,
-                  outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+                  outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS,
+                  getWireTransferableContext()
               );
 
             default:
@@ -975,8 +976,17 @@ public class WorkerImpl implements Worker
 
   private StageOutputHolder getOrCreateStageOutputHolder(final StageId stageId, final int partitionNumber)
   {
-    return stageOutputs.computeIfAbsent(stageId, ignored1 -> new ConcurrentHashMap<>())
-                       .computeIfAbsent(partitionNumber, ignored -> new StageOutputHolder());
+    return stageOutputs
+        .computeIfAbsent(stageId, ignored1 -> new ConcurrentHashMap<>())
+        .computeIfAbsent(partitionNumber, ignored -> new StageOutputHolder(getWireTransferableContext()));
+  }
+
+  /**
+   * Retrieve {@link WireTransferableContext} from our injector.
+   */
+  private WireTransferableContext getWireTransferableContext()
+  {
+    return context.injector().getInstance(WireTransferableContext.class);
   }
 
   /**

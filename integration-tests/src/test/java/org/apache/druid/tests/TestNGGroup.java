@@ -25,14 +25,6 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
-  public static final String KAFKA_INDEX = "kafka-index";
-
-  public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
-
-  public static final String TRANSACTIONAL_KAFKA_INDEX = "kafka-transactional-index";
-
-  public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
-
   /**
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
    */

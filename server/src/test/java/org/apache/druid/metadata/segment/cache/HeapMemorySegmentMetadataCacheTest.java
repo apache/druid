@@ -797,7 +797,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     final DataSegmentPlus usedSegmentPlus
         = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
-                            .withNumRows(10L).withSchemaFingerprint(fingerprint)
+                            .withNumRows(10).withSchemaFingerprint(fingerprint)
                             .updatedNow().markUsed().asPlus();
     insertSegmentsInMetadataStoreWithSchema(usedSegmentPlus);
 

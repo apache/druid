@@ -30,8 +30,11 @@ import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.QueryInfo;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -102,9 +105,9 @@ public interface SqlEngine
   /**
    * Create a {@link QueryMaker} for an INSERT ... SELECT query.
    *
-   * @param destination      destination for the INSERT portion of the query
-   * @param relRoot          planned and validated rel for the SELECT portion of the query
-   * @param plannerContext   context for this query
+   * @param destination    destination for the INSERT portion of the query
+   * @param relRoot        planned and validated rel for the SELECT portion of the query
+   * @param plannerContext context for this query
    *
    * @return an executor for the provided query
    *
@@ -132,14 +135,41 @@ public interface SqlEngine
   /**
    * Returns a list of {@link QueryInfo} containing the currently running queries using this engine. Returns an empty
    * list if the operation is not supported.
+   *
+   * @param selfOnly               whether to only include queries running on this server. If false, this server should
+   *                               contact all other servers to build a full list of all running queries.
+   * @param authenticationResult   implementations should use this for filtering the list of visible queries
+   * @param stateReadAuthorization authorization for the STATE READ resource. If this is authorized, implementations
+   *                               should allow all queries to be visible
    */
-  default List<QueryInfo> getRunningQueries(
+  default GetQueriesResponse getRunningQueries(
       boolean selfOnly,
       AuthenticationResult authenticationResult,
-      AuthorizationResult authorizationResult
+      AuthorizationResult stateReadAuthorization
   )
   {
-    return List.of();
+    return new GetQueriesResponse(List.of());
+  }
+
+  /**
+   * Retrieves the report for a query, if available.
+   *
+   * @param sqlQueryId             SQL query ID to retrieve the report for
+   * @param selfOnly               whether to only include queries running on this server. If false, this server should
+   *                               contact all other servers to find this query, if necessary.
+   * @param authenticationResult   implementations should use this to determine if a query should be visible to a user
+   * @param stateReadAuthorization authorization for the STATE READ resource. If this is authorized, implementations
+   *                               should allow all queries to be visible
+   */
+  @Nullable
+  default GetQueryReportResponse getQueryReport(
+      String sqlQueryId,
+      boolean selfOnly,
+      AuthenticationResult authenticationResult,
+      AuthorizationResult stateReadAuthorization
+  )
+  {
+    return null;
   }
 
   /**

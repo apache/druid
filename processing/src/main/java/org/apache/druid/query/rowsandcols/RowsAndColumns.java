@@ -19,29 +19,12 @@
 
 package org.apache.druid.query.rowsandcols;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.ByteTracker;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
-import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.channels.Channels;
 import java.util.Collection;
 
 /**
@@ -127,72 +110,7 @@ public interface RowsAndColumns
    * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
    * through a local implementation of the interface.
    */
-  @SuppressWarnings("unchecked")
   @Nullable
-  default <T> T as(Class<T> clazz)
-  {
-    if (clazz.isInstance(this)) {
-      return (T) this;
-    }
-    return null;
-  }
+  <T> T as(Class<T> clazz);
 
-  /**
-   * Serializer for {@link RowsAndColumns} by converting the instance to {@link FrameRowsAndColumns}
-   */
-  class RowsAndColumnsSerializer extends StdSerializer<RowsAndColumns>
-  {
-    public RowsAndColumnsSerializer()
-    {
-      super(RowsAndColumns.class);
-    }
-
-    @Override
-    public void serialize(
-        RowsAndColumns rac,
-        JsonGenerator jsonGenerator,
-        SerializerProvider serializerProvider
-    ) throws IOException
-    {
-      FrameRowsAndColumns frameRAC = rac.as(FrameRowsAndColumns.class);
-      if (frameRAC == null) {
-        throw DruidException.defensive("Unable to serialize RAC");
-      }
-      JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializerProvider, frameRAC.getSignature());
-
-      Frame frame = frameRAC.getFrame();
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      frame.writeTo(Channels.newChannel(baos), false, null, ByteTracker.unboundedTracker());
-
-      jsonGenerator.writeBinary(baos.toByteArray());
-    }
-  }
-
-  /**
-   * Deserializer for {@link RowsAndColumns} returning as an instance of {@link FrameRowsAndColumns}
-   */
-  class RowsAndColumnsDeserializer extends StdDeserializer<RowsAndColumns>
-  {
-    public RowsAndColumnsDeserializer()
-    {
-      super(RowsAndColumns.class);
-    }
-
-    @Override
-    public FrameRowsAndColumns deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-        throws IOException
-    {
-      RowSignature sig = jsonParser.readValueAs(RowSignature.class);
-      jsonParser.nextValue();
-
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      jsonParser.readBinaryValue(baos);
-      Frame frame = Frame.wrap(baos.toByteArray());
-      if (frame.type().isColumnar()) {
-        return new ColumnBasedFrameRowsAndColumns(frame, sig);
-      } else {
-        return new RowBasedFrameRowsAndColumns(frame, sig);
-      }
-    }
-  }
 }

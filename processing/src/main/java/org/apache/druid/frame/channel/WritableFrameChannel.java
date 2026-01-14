@@ -21,36 +21,67 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * Interface for writing a sequence of frames. Supports nonblocking writes through the {@link #writabilityFuture()}
- * method.
+ * Interface for writing a sequence of result batches. Supports nonblocking writes through the
+ * {@link #writabilityFuture()} method.
  *
  * May be implemented using an in-memory queue, disk file, stream, etc.
  *
  * Channels implementing this interface are used by a single writer; they do not support concurrent writes.
+ *
+ * Despite its name, instances of this class can typically accept any {@link RowsAndColumns} through the
+ * {@link #write(RowsAndColumns)} method.
  */
 public interface WritableFrameChannel extends Closeable
 {
   /**
-   * Writes a frame with an attached partition number.
+   * Partition number used when there is no meaningful partition to associate with a batch of data.
+   */
+  int NO_PARTITION = -1;
+
+  /**
+   * Writes a batch of data with an attached partition number.
    *
    * May throw an exception if {@link #writabilityFuture()} is unresolved.
    */
-  void write(FrameWithPartition frameWithPartition) throws IOException;
+  void write(RowsAndColumns rac, int partitionNumber) throws IOException;
 
   /**
-   * Writes a frame without an attached partition number.
+   * Writes a batch of data without an attached partition number.
+   *
+   * May throw an exception if {@link #writabilityFuture()} is unresolved.
+   */
+  default void write(RowsAndColumns rac) throws IOException
+  {
+    write(rac, NO_PARTITION);
+  }
+
+  /**
+   * Writes a frame with an attached partition number. Equivalent to calling {@link #write(RowsAndColumns, int)}
+   * with {@link Frame#asRAC()}.
+   *
+   * May throw an exception if {@link #writabilityFuture()} is unresolved.
+   */
+  default void write(Frame frame, int partitionNumber) throws IOException
+  {
+    write(frame.asRAC(), partitionNumber);
+  }
+
+  /**
+   * Writes a frame without an attached partition number. Equivalent to calling {@link #write(RowsAndColumns)} with
+   * {@link Frame#asRAC()}.
    *
    * May throw an exception if {@link #writabilityFuture()} is unresolved.
    */
   default void write(Frame frame) throws IOException
   {
-    write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+    write(frame.asRAC(), NO_PARTITION);
   }
 
   /**
@@ -79,8 +110,8 @@ public interface WritableFrameChannel extends Closeable
   boolean isClosed();
 
   /**
-   * Returns a future that resolves when {@link #write} is able to receive a new frame without blocking or throwing
-   * an exception. The future never resolves to an exception.
+   * Returns a future that resolves when {@link #write} is able to receive a new batch of data without blocking or
+   * throwing an exception. The future never resolves to an exception.
    */
   ListenableFuture<?> writabilityFuture();
 }

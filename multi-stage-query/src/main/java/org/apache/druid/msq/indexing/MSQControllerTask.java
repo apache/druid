@@ -285,11 +285,11 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     );
 
     final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-        querySpec.getDestination(),
         () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
         toolbox.getJsonMapper(),
         getId(),
-        getContext()
+        getContext(),
+        querySpec.getDestination().getRowsInTaskReport()
     );
 
     controller.run(queryListener);

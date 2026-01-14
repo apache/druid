@@ -1374,6 +1374,28 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.verify(newSpec.getIoConfig());
   }
 
+  @Test
+  public void test_handoffTaskGroups_returnsAccepted()
+  {
+    final SupervisorSpec spec = createTestSpec(1, 1);
+    final SupervisorResource.HandoffTaskGroupsRequest handoffRequest
+        = new SupervisorResource.HandoffTaskGroupsRequest(List.of(0));
+
+    EasyMock.expect(taskMaster.getSupervisorManager())
+            .andReturn(Optional.of(supervisorManager))
+            .times(1);
+    EasyMock.expect(supervisorManager.handoffTaskGroupsEarly(spec.getId(), handoffRequest.getTaskGroupIds()))
+            .andReturn(true)
+            .times(1);
+    replayAll();
+
+    final Response response = supervisorResource.handoffTaskGroups(spec.getId(), handoffRequest);
+    Assert.assertEquals(202, response.getStatus());
+    Assert.assertNull(response.getEntity());
+
+    verifyAll();
+  }
+
   private TestSeekableStreamSupervisorSpec createTestSpec(Integer taskCount, int taskCountMin)
   {
     HashMap<String, Object> autoScalerConfig = new HashMap<>();

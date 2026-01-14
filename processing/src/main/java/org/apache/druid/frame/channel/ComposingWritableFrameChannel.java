@@ -28,6 +28,7 @@ import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -87,25 +88,25 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void write(FrameWithPartition frameWithPartition) throws IOException
+  public void write(RowsAndColumns rac, int partitionNum) throws IOException
   {
     if (currentIndex >= writableChannelSuppliers.size()) {
       throw new ISE("No more channels available to write. Total available channels : " + writableChannelSuppliers.size());
     }
 
     if (partitionNumber != null
-        && frameWithPartition.partition() != FrameWithPartition.NO_PARTITION
-        && frameWithPartition.partition() != partitionNumber) {
+        && partitionNum != WritableFrameChannel.NO_PARTITION
+        && partitionNum != partitionNumber) {
       throw DruidException.defensive(
           "Invalid partition number[%d], expected[%d]",
-          frameWithPartition.partition(),
+          partitionNum,
           partitionNumber
       );
     }
 
     try {
-      final int writtenPartition = partitionNumber != null ? partitionNumber : frameWithPartition.partition();
-      writableChannelSuppliers.get(currentIndex).get().write(frameWithPartition);
+      final int writtenPartition = partitionNumber != null ? partitionNumber : partitionNum;
+      writableChannelSuppliers.get(currentIndex).get().write(rac, partitionNum);
       partitionToChannelMap.computeIfAbsent(writtenPartition, k -> Sets.newHashSetWithExpectedSize(1))
                            .add(currentIndex);
     }
@@ -124,7 +125,7 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
       if (currentIndex >= writableChannelSuppliers.size()) {
         throw rlee;
       }
-      write(frameWithPartition);
+      write(rac, partitionNum);
     }
   }
 

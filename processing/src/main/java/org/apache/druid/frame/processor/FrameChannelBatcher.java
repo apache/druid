@@ -97,7 +97,7 @@ public class FrameChannelBatcher implements FrameProcessor<Pair<List<Frame>, Int
       if (readableInputs.contains(channelNumber) && channelsToRead.contains(channelNumber)) {
         final ReadableFrameChannel channel = channels.get(channelNumber);
         if (channel.canRead()) {
-          out.add(channel.read());
+          out.add(channel.readFrame());
         } else if (channel.isFinished()) {
           channelsToRead.remove(channelNumber);
         }
