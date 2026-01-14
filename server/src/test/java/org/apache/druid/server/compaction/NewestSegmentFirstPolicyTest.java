@@ -46,9 +46,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
 import org.apache.druid.segment.metadata.CompactionTestUtils;
-import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.NoopIndexingStateCache;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -84,7 +84,7 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = CompactionTestUtils.createDeterministicMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-  private final CompactionFingerprintMapper fingerprintMapper = new DefaultCompactionFingerprintMapper(new NoopIndexingStateCache(), mapper);
+  private final IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(new NoopIndexingStateCache(), mapper);
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()

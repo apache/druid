@@ -24,12 +24,12 @@ import org.apache.druid.timeline.CompactionState;
 import java.util.Optional;
 
 /**
- * Provides operations for mapping between compaction state fingerprints and their corresponding states.
+ * Provides operations for mapping between indexing state fingerprints and their corresponding states.
  * <p>
  * This interface abstracts the fingerprint generation and lookup operations, simplifying
  * dependencies and improving testability for classes that need both operations.
  */
-public interface CompactionFingerprintMapper
+public interface IndexingStateFingerprintMapper
 {
   /**
    * Generates a deterministic fingerprint for the given compaction state and datasource.

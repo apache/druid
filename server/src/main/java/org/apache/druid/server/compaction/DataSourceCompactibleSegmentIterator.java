@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -69,7 +69,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
-  private final CompactionFingerprintMapper fingerprintMapper;
+  private final IndexingStateFingerprintMapper fingerprintMapper;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -87,13 +87,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
       CompactionCandidateSearchPolicy searchPolicy,
-      CompactionFingerprintMapper compactionFingerprintMapper
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
     this.config = config;
     this.dataSource = config.getDataSource();
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
-    this.fingerprintMapper = compactionFingerprintMapper;
+    this.fingerprintMapper = indexingStateFingerprintMapper;
 
     populateQueue(timeline, skipIntervals);
   }

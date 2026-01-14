@@ -61,7 +61,7 @@ public class SqlIndexingStateStorageTest
   private static MetadataStorageTablesConfig tablesConfig;
   private SqlIndexingStateStorage manager;
 
-  private static DefaultCompactionFingerprintMapper fingerprintMapper;
+  private static DefaultIndexingStateFingerprintMapper fingerprintMapper;
 
   @BeforeAll
   public static void setUpClass()
@@ -70,7 +70,7 @@ public class SqlIndexingStateStorageTest
     tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
     derbyConnector.createIndexingStatesTable();
     derbyConnector.createSegmentTable();
-    fingerprintMapper = new DefaultCompactionFingerprintMapper(
+    fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
         new NoopIndexingStateCache(),
         DETERMINISTIC_MAPPER
     );

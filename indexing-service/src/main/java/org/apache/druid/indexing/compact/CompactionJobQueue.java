@@ -36,7 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.metadata.DefaultCompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionCandidate;
@@ -130,7 +130,7 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        new DefaultCompactionFingerprintMapper(indexingStateCache, deterministicCompactionStateMapper)
+        new DefaultIndexingStateFingerprintMapper(indexingStateCache, deterministicCompactionStateMapper)
     );
 
     this.indexingStateStorage = indexingStateStorage;

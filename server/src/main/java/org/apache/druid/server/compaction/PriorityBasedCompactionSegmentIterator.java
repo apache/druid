@@ -22,7 +22,7 @@ package org.apache.druid.server.compaction;
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
@@ -50,7 +50,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      CompactionFingerprintMapper compactionFingerprintMapper
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
@@ -72,7 +72,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
               searchPolicy,
-              compactionFingerprintMapper
+              indexingStateFingerprintMapper
           )
       );
       addNextItemForDatasourceToQueue(datasource);

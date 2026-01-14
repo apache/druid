@@ -31,16 +31,16 @@ import org.apache.druid.timeline.CompactionState;
 import java.util.Optional;
 
 /**
- * Default implementation of {@link CompactionFingerprintMapper} that delegates to
+ * Default implementation of {@link IndexingStateFingerprintMapper} that delegates to
  * {@link IndexingStateStorage} for fingerprint generation and {@link IndexingStateCache}
  * for state lookups.
  */
-public class DefaultCompactionFingerprintMapper implements CompactionFingerprintMapper
+public class DefaultIndexingStateFingerprintMapper implements IndexingStateFingerprintMapper
 {
   private final IndexingStateCache indexingStateCache;
   private final ObjectMapper deterministicMapper;
 
-  public DefaultCompactionFingerprintMapper(
+  public DefaultIndexingStateFingerprintMapper(
       IndexingStateCache indexingStateCache,
       @Deterministic ObjectMapper deterministicMapper
   )

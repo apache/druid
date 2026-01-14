@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.metadata.CompactionFingerprintMapper;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -260,7 +260,7 @@ public class CompactionStatus
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
-      @Nullable CompactionFingerprintMapper fingerprintMapper
+      @Nullable IndexingStateFingerprintMapper fingerprintMapper
   )
   {
     final CompactionState expectedState = config.toCompactionState();
@@ -358,13 +358,13 @@ public class CompactionStatus
 
     @Nullable
     private final String targetFingerprint;
-    private final CompactionFingerprintMapper fingerprintMapper;
+    private final IndexingStateFingerprintMapper fingerprintMapper;
 
     private Evaluator(
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         @Nullable String targetFingerprint,
-        @Nullable CompactionFingerprintMapper fingerprintMapper
+        @Nullable IndexingStateFingerprintMapper fingerprintMapper
     )
     {
       this.candidateSegments = candidateSegments;
