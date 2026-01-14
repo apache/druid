@@ -195,7 +195,7 @@ public class GroupByStatsMonitorTest
   }
 
   @Test
-  public void testMonitoringWithoutMockingGroupByStatsProvider()
+  public void testMonitoringWithMultipleResources()
   {
     GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
