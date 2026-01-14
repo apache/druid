@@ -209,15 +209,18 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       }
 
       // Sort offsets in-place.
-      wrappedOffsets.sort((lhs, rhs) -> {
-        final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-        return comparator.compare(
-            tableBuffer,
-            tableBuffer,
-            lhs + HASH_SIZE,
-            rhs + HASH_SIZE
-        );
-      });
+      Collections.sort(
+          wrappedOffsets,
+          (lhs, rhs) -> {
+            final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+            return comparator.compare(
+                tableBuffer,
+                tableBuffer,
+                lhs + HASH_SIZE,
+                rhs + HASH_SIZE
+            );
+          }
+      );
 
       return new CloseableIterator<>()
       {
