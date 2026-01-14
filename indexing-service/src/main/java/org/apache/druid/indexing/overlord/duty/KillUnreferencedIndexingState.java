@@ -27,6 +27,17 @@ import org.joda.time.DateTime;
 import javax.inject.Inject;
 import java.util.List;
 
+/**
+ * Duty that cleans up unreferenced indexing states from the indexing state storage.
+ * <p>
+ * The cleanup process involves:
+ * <ol>
+ *   <li>Marking unreferenced indexing states as unused.</li>
+ *   <li>Repairing any unused states that are still referenced by segments.</li>
+ *   <li>Deleting unused indexing states older than the configured retention duration.</li>
+ *   <li>Deleting any pending indexing states that are older than the configured retention duration.</li>
+ * </ol>
+ */
 public class KillUnreferencedIndexingState extends OverlordMetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedIndexingState.class);

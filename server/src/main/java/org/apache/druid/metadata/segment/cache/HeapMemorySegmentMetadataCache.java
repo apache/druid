@@ -139,7 +139,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final boolean useSchemaCache;
   private final SegmentSchemaCache segmentSchemaCache;
 
-  private final boolean useCompactionStateCache;
+  private final boolean useIndexingStateCache;
   private final IndexingStateCache indexingStateCache;
 
   private final ListeningScheduledExecutorService pollExecutor;
@@ -185,7 +185,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
-    this.useCompactionStateCache = indexingStateCache.isEnabled();
+    this.useIndexingStateCache = indexingStateCache.isEnabled();
     this.indexingStateCache = indexingStateCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
@@ -240,7 +240,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
-        if (useCompactionStateCache) {
+        if (useIndexingStateCache) {
           indexingStateCache.clear();
         }
         syncFinishTime.set(null);
@@ -587,8 +587,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAndResetUsedSegmentSchemas(datasourceToSummary);
     }
 
-    if (useCompactionStateCache) {
-      retrieveAndResetUsedCompactionStates();
+    if (useIndexingStateCache) {
+      retrieveAndResetUsedIndexingStates();
     }
 
     markCacheSynced(syncStartTime);
@@ -1123,36 +1123,36 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Retrieves required used compaction states from the metadata store and resets
+   * Retrieves required used indexing states from the metadata store and resets
    * them in the {@link IndexingStateCache}. If this is the first sync, all used
-   * compaction states are retrieved from the metadata store. If this is a delta sync,
-   * first only the fingerprints of all used compaction states are retrieved. Payloads are
+   * indexing states are retrieved from the metadata store. If this is a delta sync,
+   * first only the fingerprints of all used indexing states are retrieved. Payloads are
    * then fetched for only the fingerprints which are not present in the cache.
    */
-  private void retrieveAndResetUsedCompactionStates()
+  private void retrieveAndResetUsedIndexingStates()
   {
-    final Stopwatch compactionStateSyncDuration = Stopwatch.createStarted();
+    final Stopwatch indexingStateSyncDuration = Stopwatch.createStarted();
 
-    // Reset the IndexingStateCache with latest compaction states
+    // Reset the IndexingStateCache with latest indexing states
     final Map<String, CompactionState> fingerprintToStateMap;
     if (syncFinishTime.get() == null) {
-      fingerprintToStateMap = buildFingerprintToStateMapForFullSync();
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForFullSync();
     } else {
-      fingerprintToStateMap = buildFingerprintToStateMapForDeltaSync();
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForDeltaSync();
     }
 
     indexingStateCache.resetIndexingStatesForPublishedSegments(fingerprintToStateMap);
 
     // Emit metrics for the current contents of the cache
     indexingStateCache.getAndResetStats().forEach(this::emitMetric);
-    emitMetric(Metric.RETRIEVE_COMPACTION_STATES_DURATION_MILLIS, compactionStateSyncDuration.millisElapsed());
+    emitMetric(Metric.RETRIEVE_INDEXING_STATES_DURATION_MILLIS, indexingStateSyncDuration.millisElapsed());
   }
 
   /**
-   * Retrieves all used compaction states from the metadata store and builds a
-   * fresh map from compaction state fingerprint to state.
+   * Retrieves all used indexing states from the metadata store and builds a
+   * fresh map from indexing state fingerprint to state.
    */
-  private Map<String, CompactionState> buildFingerprintToStateMapForFullSync()
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForFullSync()
   {
     final List<IndexingStateRecord> records = query(
         SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates
@@ -1167,15 +1167,15 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Retrieves compaction states from the metadata store if they are not present
+   * Retrieves indexing states from the metadata store if they are not present
    * in the cache or have been recently updated in the metadata store. These
-   * compaction states along with those already present in the cache are used to
-   * build a complete updated map from compaction state fingerprint to state.
+   * indexing states along with those already present in the cache are used to
+   * build a complete updated map from indexing state fingerprint to state.
    *
-   * @return Complete updated map from compaction state fingerprint to state for all
-   * used compaction states currently persisted in the metadata store.
+   * @return Complete updated map from indexing state fingerprint to state for all
+   * used indexing states currently persisted in the metadata store.
    */
-  private Map<String, CompactionState> buildFingerprintToStateMapForDeltaSync()
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForDeltaSync()
   {
     // Identify fingerprints in the cache and in the metadata store
     final Map<String, CompactionState> fingerprintToStateMap = new HashMap<>(
@@ -1186,12 +1186,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints
     );
 
-    // Remove entry for compaction states that have been deleted from the metadata store
+    // Remove entry for indexing states that have been deleted from the metadata store
     final Set<String> deletedFingerprints = Sets.difference(cachedFingerprints, persistedFingerprints);
     deletedFingerprints.forEach(fingerprintToStateMap::remove);
-    emitMetric(Metric.DELETED_COMPACTION_STATES, deletedFingerprints.size());
+    emitMetric(Metric.DELETED_INDEXING_STATES, deletedFingerprints.size());
 
-    // Retrieve and add entry for compaction states that have been added to the metadata store
+    // Retrieve and add entry for indexing states that have been added to the metadata store
     final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
     final List<IndexingStateRecord> addedIndexingStateRecords = query(
         sql -> sql.retrieveIndexingStatesForFingerprints(addedFingerprints)
@@ -1200,7 +1200,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     addedIndexingStateRecords.forEach(
         record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
     );
-    emitMetric(Metric.ADDED_COMPACTION_STATES, addedIndexingStateRecords.size());
+    emitMetric(Metric.ADDED_INDEXING_STATES, addedIndexingStateRecords.size());
 
     return fingerprintToStateMap;
   }

@@ -49,19 +49,9 @@ public class DefaultIndexingStateFingerprintMapper implements IndexingStateFinge
     this.deterministicMapper = deterministicMapper;
   }
 
-  /**
-   * Generates a deterministic fingerprint for the given compaction state and datasource.
-   * <p>
-   * The fingerprint is a SHA-256 hash of the datasource name and serialized compaction state that is globally unique in
-   * the segment space.
-   *
-   * @param compactionState     The compaction configuration to fingerprint
-   * @param dataSource          The datasource name
-   * @return A hex-encoded SHA-256 fingerprint string
-   */
   @SuppressWarnings("UnstableApiUsage")
   @Override
-  public String generateFingerprint(String dataSource, CompactionState compactionState)
+  public String generateFingerprint(String dataSource, CompactionState indexingState)
   {
     final Hasher hasher = Hashing.sha256().newHasher();
 
@@ -69,10 +59,10 @@ public class DefaultIndexingStateFingerprintMapper implements IndexingStateFinge
     hasher.putByte((byte) 0xff);
 
     try {
-      hasher.putBytes(deterministicMapper.writeValueAsBytes(compactionState));
+      hasher.putBytes(deterministicMapper.writeValueAsBytes(indexingState));
     }
     catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to serialize CompactionState for fingerprinting", e);
+      throw new RuntimeException("Failed to serialize CompactionState object for fingerprinting", e);
     }
     hasher.putByte((byte) 0xff);
 

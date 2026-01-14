@@ -45,7 +45,7 @@ import java.util.List;
 /**
  * Database-backed implementation of {@link IndexingStateStorage}.
  * <p>
- * Manages the persistence and retrieval of {@link CompactionState} (AKA IndexinState) objects in the metadata storage.
+ * Manages the persistence and retrieval of {@link CompactionState} (AKA IndexingState) objects in the metadata storage.
  * Indexing states are uniquely identified by their fingerprints, which are SHA-256 hashes of their content.
  * </p>
  * <p>
@@ -79,7 +79,7 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
   public void upsertIndexingState(
       @NotEmpty final String dataSource,
       @NotEmpty final String fingerprint,
-      @Nonnull final CompactionState compactionState,
+      @Nonnull final CompactionState indexingState,
       @Nonnull final DateTime updateTime
   )
   {
@@ -91,8 +91,8 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
     if (fingerprint == null || fingerprint.isEmpty()) {
       errors.append("fingerprint cannot be empty; ");
     }
-    if (compactionState == null) {
-      errors.append("compactionState cannot be null; ");
+    if (indexingState == null) {
+      errors.append("indexingState cannot be null; ");
     }
     if (updateTime == null) {
       errors.append("updateTime cannot be null; ");
@@ -155,7 +155,7 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
                     .bind("created_date", now)
                     .bind("dataSource", dataSource)
                     .bind("fingerprint", fingerprint)
-                    .bind("payload", jsonMapper.writeValueAsBytes(compactionState))
+                    .bind("payload", jsonMapper.writeValueAsBytes(indexingState))
                     .bind("used", true)
                     .bind("pending", true)
                     .bind("used_status_last_updated", now)

@@ -102,7 +102,7 @@ public class IndexingStateCache
   /**
    * Adds or updates a single indexing state in the cache.
    * <p>
-   * This is called when a new compaction state is persisted to the database via upsertIndexingState
+   * This is called when a new indexing state is persisted to the database via upsertIndexingState
    * to ensure the cache is immediately consistent without waiting for the next sync.
    * <p>
    * This method checks if the state is already cached before performing the atomic update.

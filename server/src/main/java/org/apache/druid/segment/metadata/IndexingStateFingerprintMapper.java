@@ -32,13 +32,16 @@ import java.util.Optional;
 public interface IndexingStateFingerprintMapper
 {
   /**
-   * Generates a deterministic fingerprint for the given compaction state and datasource.
+   * Generates a deterministic fingerprint for the given indexing state and datasource.
+   * <p>
+   * The fingerprint is a SHA-256 hash of the datasource name and serialized indexing state that is globally unique in
+   * the segment space.
    *
-   * @param dataSource      The datasource name
-   * @param compactionState The compaction configuration to fingerprint
+   * @param dataSource    The datasource name
+   * @param indexingState The compaction configuration to fingerprint
    * @return A hex-encoded SHA-256 fingerprint string
    */
-  String generateFingerprint(String dataSource, CompactionState compactionState);
+  String generateFingerprint(String dataSource, CompactionState indexingState);
 
   /**
    * Retrieves a compaction state by its fingerprint.

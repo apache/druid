@@ -67,7 +67,7 @@ public class CompactionStatus
   }
 
   /**
-   * List of checks performed to determine if compaction is already complete based on compaction state fingerprints.
+   * List of checks performed to determine if compaction is already complete based on indexing state fingerprints.
    */
   private static final List<Function<Evaluator, CompactionStatus>> FINGERPRINT_CHECKS = List.of(
       Evaluator::allFingerprintedCandidatesHaveExpectedFingerprint
@@ -434,7 +434,7 @@ public class CompactionStatus
      * <p>
      * If all fingerprinted segments have the expected fingerprint, the check can quickly pass as COMPLETE. However,
      * if any fingerprinted segment has a mismatched fingerprint, we need to investigate further by adding them to
-     * {@link #unknownStateToSegments} where their compaction states will be analyzed.
+     * {@link #unknownStateToSegments} where their indexing states will be analyzed.
      * </p>
      */
     private CompactionStatus allFingerprintedCandidatesHaveExpectedFingerprint()
@@ -475,7 +475,7 @@ public class CompactionStatus
         String fingerprint = e.getKey();
         CompactionState stateToValidate = fingerprintMapper.getStateForFingerprint(fingerprint).orElse(null);
         if (stateToValidate == null) {
-          log.warn("No compaction state found for fingerprint[%s]", fingerprint);
+          log.warn("No indexing state found for fingerprint[%s]", fingerprint);
           fingerprintedSegmentWithoutCachedStateFound = true;
           uncompactedSegments.addAll(e.getValue());
         } else {
@@ -493,7 +493,7 @@ public class CompactionStatus
       }
 
       if (fingerprintedSegmentWithoutCachedStateFound) {
-        return CompactionStatus.pending("One or more fingerprinted segments do not have a cached compaction state");
+        return CompactionStatus.pending("One or more fingerprinted segments do not have a cached indexing state");
       } else {
         return COMPLETE;
       }
@@ -513,7 +513,7 @@ public class CompactionStatus
         } else if (segmentState == null) {
           uncompactedSegments.add(segment);
         } else {
-          unknownStateToSegments.computeIfAbsent(segmentState, k -> new ArrayList<>()).add(segment);
+          unknownStateToSegments.computeIfAbsent(segmentState, s -> new ArrayList<>()).add(segment);
         }
       }
 
@@ -803,5 +803,4 @@ public class CompactionStatus
       return CompactionStatistics.create(totalBytes, segments.size(), segmentIntervals.size());
     }
   }
-
 }

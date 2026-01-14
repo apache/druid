@@ -368,14 +368,14 @@ public class CompactionJobQueue
    */
   private void persistPendingIndexingState(CompactionJob job)
   {
-    if (job.getTargetCompactionState() != null && job.getTargetIndexingStateFingerprint() != null) {
+    if (job.getTargetIndexingState() != null && job.getTargetIndexingStateFingerprint() != null) {
       indexingStateStorage.upsertIndexingState(
           job.getDataSource(),
           job.getTargetIndexingStateFingerprint(),
-          job.getTargetCompactionState(),
+          job.getTargetIndexingState(),
           DateTimes.nowUtc()
       );
-      indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetCompactionState());
+      indexingStateCache.addIndexingState(job.getTargetIndexingStateFingerprint(), job.getTargetIndexingState());
     }
   }
 

@@ -38,16 +38,16 @@ public interface IndexingStateStorage
    * If a fingerprint already exists, update to reflect proper used state and timestamp.
    * If a fingerprint doesn't exist, inserts a new row with the full state payload.
    *
-   * @param dataSource      The datasource name
-   * @param fingerprint     The fingerprint of the compaction state
-   * @param compactionState The compaction state to upsert
-   * @param updateTime      The timestamp for this update
+   * @param dataSource    The datasource name
+   * @param fingerprint   The fingerprint of the indexing state
+   * @param indexingState The indexing state to upsert
+   * @param updateTime    The timestamp for this update
    */
 
   void upsertIndexingState(
       String dataSource,
       String fingerprint,
-      CompactionState compactionState,
+      CompactionState indexingState,
       DateTime updateTime
   );
 

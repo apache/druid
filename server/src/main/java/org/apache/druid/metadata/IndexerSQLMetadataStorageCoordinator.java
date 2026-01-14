@@ -469,7 +469,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Mark compaction state fingerprints as active after successful publish
       if (result.isSuccess()) {
-        markCompactionFingerprintsAsActive(result.getSegments());
+        markIndexingStateFingerprintsAsActive(result.getSegments());
       }
 
       return result;
@@ -534,7 +534,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Mark compaction state fingerprints as active after successful publish
       if (result.isSuccess()) {
-        markCompactionFingerprintsAsActive(result.getSegments());
+        markIndexingStateFingerprintsAsActive(result.getSegments());
       }
 
       return result;
@@ -1275,7 +1275,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Mark compaction state fingerprints as active after successful publish
       if (result.isSuccess()) {
-        markCompactionFingerprintsAsActive(result.getSegments());
+        markIndexingStateFingerprintsAsActive(result.getSegments());
       }
 
       return result;
@@ -2714,24 +2714,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Marks compaction state fingerprints as active (non-pending) for successfully published segments.
+   * Marks indexing state fingerprints as active (non-pending) for successfully published segments.
    * <p>
-   * Extracts unique compaction state fingerprints from the given segments and marks them as active
-   * in the compaction state storage. This is called after successful segment publishing to indicate
-   * that the compaction state is no longer pending and can be retained with the regular grace period.
-   * <p>
-   * Most calls result in 0-row updates since fingerprints are stable and the first task already
-   * marked them as active.
+   * Extracts unique indexing state fingerprints from the given segments and marks them as active
+   * in the inexing state storage. This is called after successful segment publishing to indicate
+   * that the indexing state is no longer pending and can be retained with the regular grace period.
    *
    * @param segments The segments that were successfully published
    */
-  private void markCompactionFingerprintsAsActive(Set<DataSegment> segments)
+  private void markIndexingStateFingerprintsAsActive(Set<DataSegment> segments)
   {
     if (segments == null || segments.isEmpty()) {
       return;
     }
 
-    // Collect unique non-null compaction state fingerprints
+    // Collect unique non-null indexing state fingerprints
     final Set<String> fingerprints = segments.stream()
                                              .map(DataSegment::getIndexingStateFingerprint)
                                              .filter(fp -> fp != null && !fp.isEmpty())
@@ -2742,13 +2739,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       try {
         int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprint);
         if (rowsUpdated > 0) {
-          log.info("Marked compaction state fingerprint[%s] as active (non-pending).", fingerprint);
+          log.info("Marked indexing state fingerprint[%s] as active.", fingerprint);
         }
       }
       catch (Exception e) {
         // Log but don't fail the overall operation - the fingerprint will stay pending
         // and be cleaned up by the pending grace period
-        log.warn(e, "Failed to mark compaction state fingerprint[%s] as active. Will retry on next publish.", fingerprint);
+        log.warn(e, "Failed to mark indexing state fingerprint[%s] as active. Future segments publishes may remediate", fingerprint);
       }
     }
   }

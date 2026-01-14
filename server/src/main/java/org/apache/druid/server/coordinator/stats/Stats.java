@@ -170,8 +170,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
         = CoordinatorStat.toDebugAndEmit("killedDatasources", "metadata/kill/datasource/count");
-    public static final CoordinatorStat COMPACTION_STATE
-        = CoordinatorStat.toDebugAndEmit("killedCompactionState", "metadata/kill/compactionState/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
         = CoordinatorStat.toDebugAndEmit("killAvailSlots", "killTask/availableSlot/count");
     public static final CoordinatorStat MAX_SLOTS

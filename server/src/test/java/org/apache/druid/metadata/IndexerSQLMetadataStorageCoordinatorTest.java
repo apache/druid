@@ -118,7 +118,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private StubServiceEmitter emitter;
   private SqlSegmentMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
-  private SqlIndexingStateStorage compactionStateStorage;
+  private SqlIndexingStateStorage indexingStateStorage;
 
   private final SegmentMetadataCache.UsageMode cacheMode;
 
@@ -155,7 +155,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     fingerprintGenerator = new FingerprintGenerator(mapper);
     segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
-    compactionStateStorage = new SqlIndexingStateStorage(
+    indexingStateStorage = new SqlIndexingStateStorage(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
         derbyConnector
@@ -213,7 +213,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create(),
-        compactionStateStorage
+        indexingStateStorage
     )
     {
       @Override
@@ -4333,12 +4333,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testCommitSegmentsAndMetadata_marksPendingCompactionStateAsActive()
+  public void testCommitSegmentsAndMetadata_marksPendingIndexingStateAsActive()
   {
     String fingerprint = "vanillaFingerprint";
-    CompactionState state = createTestCompactionState();
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
-    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
@@ -4354,16 +4354,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         null
     );
 
-    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
   }
 
   @Test
-  public void testCommitReplaceSegments_marksPendingCompactionStateAsActive()
+  public void testCommitReplaceSegments_marksPendingIndexingStateAsActive()
   {
     String fingerprint = "replaceFingerprint";
-    CompactionState state = createTestCompactionState();
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
-    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
@@ -4384,16 +4384,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         null
     );
 
-    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
   }
 
   @Test
-  public void testCCommitAppendSegments_marksPendingCompactionStateAsActive()
+  public void testCommitAppendSegments_marksPendingIndexingStateAsActive()
   {
     String fingerprint = "appendFingerprint";
-    CompactionState state = createTestCompactionState();
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
-    Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    CompactionState state = createTestIndexingState();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, fingerprint, state, DateTimes.nowUtc());
+    Assert.assertEquals(Boolean.TRUE, indexingStateStorage.isIndexingStatePending(fingerprint));
 
     final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .startingAt("2023-01-01")
@@ -4410,10 +4410,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         null
     );
 
-    Assert.assertEquals(Boolean.FALSE, compactionStateStorage.isIndexingStatePending(fingerprint));
+    Assert.assertEquals(Boolean.FALSE, indexingStateStorage.isIndexingStatePending(fingerprint));
   }
 
-  private CompactionState createTestCompactionState()
+  private CompactionState createTestIndexingState()
   {
     return new CompactionState(
         new DynamicPartitionsSpec(100, null),

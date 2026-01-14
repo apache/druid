@@ -64,6 +64,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
@@ -236,7 +237,7 @@ public class OverlordCompactionSchedulerTest
         OBJECT_MAPPER,
         new HeapMemoryIndexingStateStorage(),
         new IndexingStateCache(),
-        OBJECT_MAPPER // TODO fix
+        CompactionTestUtils.createDeterministicMapper()
     );
   }
 

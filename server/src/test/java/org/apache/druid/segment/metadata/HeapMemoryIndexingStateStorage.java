@@ -51,12 +51,12 @@ public class HeapMemoryIndexingStateStorage implements IndexingStateStorage
   public void upsertIndexingState(
       final String dataSource,
       final String fingerprint,
-      final CompactionState compactionState,
+      final CompactionState indexingState,
       final DateTime updateTime
   )
   {
     // Store in memory for lookup during simulations/tests
-    this.fingerprintToStateMap.put(fingerprint, compactionState);
+    this.fingerprintToStateMap.put(fingerprint, indexingState);
   }
 
   @Override

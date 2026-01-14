@@ -91,7 +91,7 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_upsertIndexingState_successfullyInsertsIntoDatabase()
   {
-    CompactionState state1 = createTestCompactionState();
+    CompactionState state1 = createTestIndexingState();
     String fingerprint = "fingerprint_abc123";
 
     manager.upsertIndexingState(
@@ -114,9 +114,9 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_upsertCompactionState_andThen_markUnreferencedCompactionStateAsUnused_andThen_markIndexingStatesAsUsed()
+  public void test_upsertIndexingState_andThen_markUnreferencedIndexingStateAsUnused_andThen_markIndexingStatesAsUsed()
   {
-    CompactionState state1 = createTestCompactionState();
+    CompactionState state1 = createTestIndexingState();
     String fingerprint = "fingerprint_abc123";
 
     manager.upsertIndexingState(
@@ -134,7 +134,7 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_findReferencedIndexingStateMarkedAsUnused()
   {
-    CompactionState state1 = createTestCompactionState();
+    CompactionState state1 = createTestIndexingState();
     String fingerprint = "fingerprint_abc123";
 
     manager.upsertIndexingState(
@@ -177,7 +177,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_deleteCompactionStatesOlderThan_deletesOnlyOldUnusedStates()
+  public void test_deleteIndexingStatesOlderThan_deletesOnlyOldUnusedStates()
   {
     DateTime now = DateTimes.nowUtc();
     DateTime oldTime = now.minusDays(60);
@@ -187,8 +187,8 @@ public class SqlIndexingStateStorageTest
     String oldFingerprint = "old_fp_should_delete";
     String recentFingerprint = "recent_fp_should_keep";
 
-    CompactionState oldState = createTestCompactionState();
-    CompactionState recentState = createTestCompactionState();
+    CompactionState oldState = createTestIndexingState();
+    CompactionState recentState = createTestIndexingState();
 
     // Insert old unused state (60 days old)
     derbyConnector.retryWithHandle(handle -> {
@@ -248,8 +248,8 @@ public class SqlIndexingStateStorageTest
     );
 
     assertTrue(
-        exception.getMessage().contains("compactionState cannot be null"),
-        "Exception message should contain 'compactionState cannot be null'"
+        exception.getMessage().contains("indexingState cannot be null"),
+        "Exception message should contain 'indexingState cannot be null'"
     );
   }
 
@@ -259,7 +259,7 @@ public class SqlIndexingStateStorageTest
     // The exception ends up wrapped in a sql exception doe to the retryWithHandle so we will just check the message
     Exception exception = assertThrows(
         Exception.class,
-        () -> manager.upsertIndexingState("ds", "", createBasicCompactionState(), DateTimes.nowUtc())
+        () -> manager.upsertIndexingState("ds", "", createBasicIndexingState(), DateTimes.nowUtc())
     );
 
     assertTrue(
@@ -272,7 +272,7 @@ public class SqlIndexingStateStorageTest
   public void test_upsertIndexingState_verifyExistingFingerprintMarkedUsed()
   {
     String fingerprint = "existing_fingerprint";
-    CompactionState state = createTestCompactionState();
+    CompactionState state = createTestIndexingState();
 
     // Persist initially
     manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
@@ -323,7 +323,7 @@ public class SqlIndexingStateStorageTest
   public void test_upsertIndexingState_whenAlreadyUsed_skipsUpdate()
   {
     String fingerprint = "already_used_fingerprint";
-    CompactionState state = createTestCompactionState();
+    CompactionState state = createTestIndexingState();
     DateTime initialTime = DateTimes.of("2024-01-01T00:00:00.000Z");
 
     // Insert fingerprint as used initially
@@ -371,7 +371,7 @@ public class SqlIndexingStateStorageTest
   }
 
   @Test
-  public void test_markCompactionStateAsUsed_withEmptyList_returnsZero()
+  public void test_markIndexingStateAsUsed_withEmptyList_returnsZero()
   {
     assertEquals(0, manager.markIndexingStatesAsUsed(List.of()));
   }
@@ -380,7 +380,7 @@ public class SqlIndexingStateStorageTest
   public void test_markIndexingStatesAsActive_marksPendingStateAsActive()
   {
     String fingerprint = "pending_fingerprint";
-    CompactionState state = createTestCompactionState();
+    CompactionState state = createTestIndexingState();
 
     manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
@@ -408,7 +408,7 @@ public class SqlIndexingStateStorageTest
   public void test_markIndexingStatesAsActive_idempotent_returnsZeroWhenAlreadyActive()
   {
     String fingerprint = "already_active_fingerprint";
-    CompactionState state = createTestCompactionState();
+    CompactionState state = createTestIndexingState();
 
     manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
@@ -439,11 +439,11 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_generateIndexingStateFingerprint_deterministicFingerprinting()
   {
-    CompactionState compactionState1 = createBasicCompactionState();
-    CompactionState compactionState2 = createBasicCompactionState();
+    CompactionState indexingState1 = createBasicIndexingState();
+    CompactionState indexingState2 = createBasicIndexingState();
 
-    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", compactionState1);
-    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", compactionState2);
+    String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", indexingState1);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", indexingState2);
 
     assertEquals(
         fingerprint1,
@@ -455,10 +455,10 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_generateIndexingStateFingerprint_differentDatasourcesWithSameState_differentFingerprints()
   {
-    CompactionState compactionState = createBasicCompactionState();
+    CompactionState indexingState = createBasicIndexingState();
 
-    String fingerprint1 = fingerprintMapper.generateFingerprint("ds1", compactionState);
-    String fingerprint2 = fingerprintMapper.generateFingerprint("ds2", compactionState);
+    String fingerprint1 = fingerprintMapper.generateFingerprint("ds1", indexingState);
+    String fingerprint2 = fingerprintMapper.generateFingerprint("ds2", indexingState);
 
     assertNotEquals(
         fingerprint1,
@@ -584,7 +584,7 @@ public class SqlIndexingStateStorageTest
     );
   }
 
-  private CompactionState createBasicCompactionState()
+  private CompactionState createBasicIndexingState()
   {
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, null),
@@ -597,7 +597,7 @@ public class SqlIndexingStateStorageTest
     );
   }
 
-  private CompactionState createTestCompactionState()
+  private CompactionState createTestIndexingState()
   {
     return new CompactionState(
         new DynamicPartitionsSpec(100, null),

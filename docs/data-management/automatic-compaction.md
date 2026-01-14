@@ -246,8 +246,8 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 
 To use compaction supervisors, the following configuration requirements must be met:
 
-* You mut be using incremental segment metadata caching:
-  * `druid.manager.segments.useIncrementalCache` set to `always` or `ifSynced` in your Overlord runtime properties.
+* You must be using incremental segment metadata caching:
+  * `druid.manager.segments.useIncrementalCache` set to `always` or `ifSynced` in your Overlord and Coordinator runtime properties.
     * See [Segment metadata caching](../configuration/index.md#metadata-retrieval) for full configuration documentation.
 
 * update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:

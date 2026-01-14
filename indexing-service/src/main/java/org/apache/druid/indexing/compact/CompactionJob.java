@@ -33,21 +33,21 @@ public class CompactionJob extends BatchIndexingJob
   private final CompactionCandidate candidate;
   private final int maxRequiredTaskSlots;
   private final String targetIndexingStateFingerprint;
-  private final CompactionState targetCompactionState;
+  private final CompactionState targetIndexingState;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
       String targetIndexingStateFingerprint,
-      CompactionState targetCompactionState
+      CompactionState targetIndexingState
   )
   {
     super(task, null);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
     this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
-    this.targetCompactionState = targetCompactionState;
+    this.targetIndexingState = targetIndexingState;
   }
 
   public CompactionJob(
@@ -55,14 +55,14 @@ public class CompactionJob extends BatchIndexingJob
       CompactionCandidate candidate,
       int maxRequiredTaskSlots,
       String targetIndexingStateFingerprint,
-      CompactionState targetCompactionState
+      CompactionState targetIndexingState
   )
   {
     super(null, msqQuery);
     this.candidate = candidate;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
     this.targetIndexingStateFingerprint = targetIndexingStateFingerprint;
-    this.targetCompactionState = targetCompactionState;
+    this.targetIndexingState = targetIndexingState;
   }
 
   public String getDataSource()
@@ -85,9 +85,9 @@ public class CompactionJob extends BatchIndexingJob
     return targetIndexingStateFingerprint;
   }
 
-  public CompactionState getTargetCompactionState()
+  public CompactionState getTargetIndexingState()
   {
-    return targetCompactionState;
+    return targetIndexingState;
   }
 
   @Override
@@ -98,7 +98,7 @@ public class CompactionJob extends BatchIndexingJob
            ", candidate=" + candidate +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
            ", targetIndexingStateFingerprint='" + targetIndexingStateFingerprint + '\'' +
-           ", targetCompactionState=" + targetCompactionState +
+           ", targetIndexingState=" + targetIndexingState +
            '}';
   }
 }

@@ -71,14 +71,14 @@ public class CompactionStatusTest
                    .size(100_000_000L)
                    .build();
 
-  private HeapMemoryIndexingStateStorage compactionStateStorage;
+  private HeapMemoryIndexingStateStorage indexingStateStorage;
   private IndexingStateCache indexingStateCache;
   private IndexingStateFingerprintMapper fingerprintMapper;
 
   @Before
   public void setUp()
   {
-    compactionStateStorage = new HeapMemoryIndexingStateStorage();
+    indexingStateStorage = new HeapMemoryIndexingStateStorage();
     indexingStateCache = new IndexingStateCache();
     fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
         indexingStateCache,
@@ -91,7 +91,7 @@ public class CompactionStatusTest
    */
   private void syncCacheFromManager()
   {
-    indexingStateCache.resetIndexingStatesForPublishedSegments(compactionStateStorage.getAllStoredStates());
+    indexingStateCache.resetIndexingStatesForPublishedSegments(indexingStateStorage.getAllStoredStates());
   }
 
   @Test
@@ -603,7 +603,7 @@ public class CompactionStatusTest
 
     CompactionState expectedState = compactionConfig.toCompactionState();
 
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
@@ -638,8 +638,8 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).indexingStateFingerprint("wrongFingerprint").build()
     );
 
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
@@ -650,7 +650,7 @@ public class CompactionStatusTest
   }
 
   @Test
-  public void test_evaluate_noCompacationIfUnexpectedFingerprintHasExpectedCompactionState()
+  public void test_evaluate_noCompacationIfUnexpectedFingerprintHasExpectedIndexingState()
   {
     List<DataSegment> segments = List.of(
         DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint("wrongFingerprint").build()
@@ -662,7 +662,7 @@ public class CompactionStatusTest
         .build();
 
     CompactionState expectedState = compactionConfig.toCompactionState();
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     final CompactionStatus status = CompactionStatus.compute(
@@ -688,7 +688,7 @@ public class CompactionStatusTest
     verifyEvaluationNeedsCompactionBecauseWithCustomSegments(
         CompactionCandidate.from(segments, null),
         compactionConfig,
-        "One or more fingerprinted segments do not have a cached compaction state"
+        "One or more fingerprinted segments do not have a cached indexing state"
     );
   }
 
@@ -730,7 +730,7 @@ public class CompactionStatusTest
     CompactionState expectedState = compactionConfig.toCompactionState();
     String expectedFingerprint = fingerprintMapper.generateFingerprint(TestDataSource.WIKI, expectedState);
 
-    compactionStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, expectedFingerprint, expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
     List<DataSegment> segments = List.of(
