@@ -21,8 +21,8 @@ package org.apache.druid.testing.embedded;
 
 import com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.http.client.utils.URIBuilder;
+import org.testcontainers.DockerClientFactory;
 
 import java.net.InetAddress;
 import java.net.URISyntaxException;
@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
  */
 public class EmbeddedHostname
 {
+  private static final String DOCKER_HOST_INTERNAL = "host.docker.internal";
   private static final EmbeddedHostname LOCALHOST = new EmbeddedHostname("localhost");
 
   private final String hostname;
@@ -53,17 +54,27 @@ public class EmbeddedHostname
   }
 
   /**
-   * Hostname for the host machine running the containers. When a service uses
-   * this hostname instead of {@link #localhost}, it is reachable by Druid
-   * containers and EmbeddedDruidServers alike.
+   * Special hostname for the Docker host that is reachable from both Docker
+   * containers and the JVM running the tests.
+   * <p>
+   * Uses {@code host.docker.internal} which communication patterns where:
+   * <ul>
+   *   <li>Embedded JVM services can reach Docker containers via host port bindings</li>
+   *   <li>Docker containers can reach the host (and other containers via host ports)</li>
+   * </ul>
    */
   public static EmbeddedHostname containerFriendly()
   {
+    // Prefer host.docker.internal if available (Docker Desktop)
     try {
-      return new EmbeddedHostname(InetAddress.getLocalHost().getHostAddress());
+      InetAddress.getByName(DOCKER_HOST_INTERNAL);
+      return new EmbeddedHostname(DOCKER_HOST_INTERNAL);
     }
     catch (UnknownHostException e) {
-      throw new ISE(e, "Unable to determine host name");
+      // Fallback: use testcontainers' host IP detection
+      // Returns Docker bridge gateway on Linux (e.g., 172.17.0.1)
+      String hostIp = DockerClientFactory.instance().dockerHostIpAddress();
+      return new EmbeddedHostname(hostIp);
     }
   }
 
