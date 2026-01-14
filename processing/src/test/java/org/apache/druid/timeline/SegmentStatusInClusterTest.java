@@ -41,7 +41,7 @@ public class SegmentStatusInClusterTest
   private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
   private static final boolean OVERSHADOWED = true;
   private static final Integer REPLICATION_FACTOR = 2;
-  private static final Integer NUM_ROWS = 10;
+  private static final Integer TOTAL_ROWS = 10;
   private static final boolean REALTIME = true;
   private static final int TEST_VERSION = 0x9;
   private static final SegmentStatusInCluster SEGMENT = createSegmentForTest();
@@ -65,7 +65,7 @@ public class SegmentStatusInClusterTest
                                          .loadSpec(LOAD_SPEC)
                                          .binaryVersion(TEST_VERSION)
                                          .size(1)
-                                         .totalRows(NUM_ROWS)
+                                         .totalRows(TOTAL_ROWS)
                                          .build();
     return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME);
   }
@@ -91,8 +91,8 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
     Assert.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
-    Assert.assertEquals(20, objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
-    Assert.assertEquals(NUM_ROWS, objectMap.get("totalRows"));  // From DataSegment
+    Assert.assertNull(objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
+    Assert.assertEquals(TOTAL_ROWS, objectMap.get("totalRows"));  // From DataSegment
     Assert.assertEquals(REALTIME, objectMap.get("realtime"));
 
     final SegmentStatusInCluster deserializedSegment = MAPPER.readValue(

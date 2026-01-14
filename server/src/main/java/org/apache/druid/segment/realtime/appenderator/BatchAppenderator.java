@@ -841,7 +841,7 @@ public class BatchAppenderator implements Appenderator
         mergedSegment =
             sink.getSegment()
                 .toBuilder()
-                .dimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec()))
+                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
                 .totalRows(index.getNumRows())
                 .build();
       }
