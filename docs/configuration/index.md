@@ -389,7 +389,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|`druid_segments`|
 |`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|`druid_rules`|
 |`druid.metadata.storage.tables.config`|The table to use to look for configs.|`druid_config`|
-|`druid.metadata.storage.tables.compactionStates`|The table that stores compaction state payloads and fingerprints.|`druid_compactionStates`|
+|`druid.metadata.storage.tables.indexingStates`|The table that stores indexing state payloads and fingerprints.|`druid_indexingStates`|
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|`druid_tasks`|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|`druid_tasklogs`|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|`druid_tasklocks`|
