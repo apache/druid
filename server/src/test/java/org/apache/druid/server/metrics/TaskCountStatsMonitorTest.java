@@ -36,9 +36,11 @@ public class TaskCountStatsMonitorTest
   private TaskCountStatsProvider statsProvider;
   private static final RowKey TASK_METRIC_KEY1 = RowKey.with(Dimension.DATASOURCE, "d1")
                                                        .with(Dimension.TASK_TYPE, "index")
+                                                       .with(Dimension.SUPERVISOR_ID, "null")
                                                        .build();
   private static final RowKey TASK_METRIC_KEY2 = RowKey.with(Dimension.DATASOURCE, "d1")
                                                        .with(Dimension.TASK_TYPE, "kill")
+                                                       .with(Dimension.SUPERVISOR_ID, "null")
                                                        .build();
 
   @Before
@@ -96,13 +98,13 @@ public class TaskCountStatsMonitorTest
 
     Assert.assertEquals(9, emitter.getNumEmittedEvents());
 
-    emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
-    emitter.verifyValue("task/running/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
-    emitter.verifyValue("task/pending/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
-    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "index"), 2L);
-    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "kill"), 1L);
+    emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index", "supervisorId", "null"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index", "supervisorId", "null"), 1L);
+    emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "kill", "supervisorId", "null"), 1L);
+    emitter.verifyValue("task/running/count", Map.of("dataSource", "d1", "taskType", "index", "supervisorId", "null"), 1L);
+    emitter.verifyValue("task/pending/count", Map.of("dataSource", "d1", "taskType", "index", "supervisorId", "null"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "index", "supervisorId", "null"), 2L);
+    emitter.verifyValue("task/waiting/count", Map.of("dataSource", "d1", "taskType", "kill", "supervisorId", "null"), 1L);
 
     emitter.verifyValue(Stat.INFO_1.getMetricName(), 10L);
     emitter.verifyValue(Stat.DEBUG_1.getMetricName(), Map.of("tier", "hot", "dataSource", "wiki"), 20L);
