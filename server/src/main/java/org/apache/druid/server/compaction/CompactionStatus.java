@@ -267,14 +267,14 @@ public class CompactionStatus
    *
    * @param candidateSegments
    * @param expectedFilter
-   * @param compactionStateCache
+   * @param fingerprintMapper
    * @return the set of unapplied filter rules wrapped in a NotDimFilter, or null if all rules have been applied
    */
   @Nullable
   public static NotDimFilter computeRequiredSetOfFilterRulesForCandidate(
       CompactionCandidate candidateSegments,
       NotDimFilter expectedFilter,
-      CompactionStateCache compactionStateCache
+      IndexingStateFingerprintMapper fingerprintMapper
   )
   {
     if (!(expectedFilter.getField() instanceof OrDimFilter)) {
@@ -285,7 +285,7 @@ public class CompactionStatus
 
     // Collect unique fingerprints
     Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
-                                                 .map(DataSegment::getCompactionStateFingerprint)
+                                                 .map(DataSegment::getIndexingStateFingerprint)
                                                  .filter(Objects::nonNull)
                                                  .collect(Collectors.toSet());
 
@@ -298,7 +298,7 @@ public class CompactionStatus
     Set<DimFilter> unappliedRules = new HashSet<>();
 
     for (String fingerprint : uniqueFingerprints) {
-      CompactionState state = compactionStateCache.getCompactionStateByFingerprint(fingerprint).orElse(null);
+      CompactionState state = fingerprintMapper.getStateForFingerprint(fingerprint).orElse(null);
 
       if (state == null) {
         // Safety: if state is missing, return all filters eagerly since we can't determine applied filters

@@ -24,22 +24,22 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 /**
  * Functional interface for customizing a {@link DataSourceCompactionConfig} for a specific
- * {@link CompactionCandidate} before creating a compaction job. This allows template-specific
+ * {@link CompactionCandidate} before creating a reindexing job. This allows template-specific
  * logic to be injected without hardcoding behavior in {@link CompactionConfigBasedJobTemplate}.
  * <p>
- * For example, cascading compaction templates can use this to optimize filter rules based on
- * the candidate's compaction state, while simpler templates can use the identity finalizer.
+ * For example, cascading reindexing templates can use this to optimize filter rules based on
+ * the candidate's indexing state, while simpler templates can use the identity finalizer.
  */
 @FunctionalInterface
-public interface CompactionConfigFinalizer
+public interface ReindexingConfigFinalizer
 {
   /**
-   * Customize the compaction config for a specific candidate.
+   * Customize the reindexing config for a specific candidate.
    *
-   * @param config the base compaction config
-   * @param candidate the segment candidate being compacted
-   * @param params the compaction job parameters
-   * @return the finalized config to use for this candidate (may be the same as input or a modified version)
+   * @param config the base reindexing config
+   * @param candidate the segment candidate being reindexed
+   * @param params the reindexing job parameters
+   * @return the finalized config to use for this candidate (this may be the same as input or a modified version)
    */
   DataSourceCompactionConfig finalizeConfig(
       DataSourceCompactionConfig config,
@@ -51,5 +51,5 @@ public interface CompactionConfigFinalizer
    * Identity finalizer that returns the config unchanged.
    * Use this for templates that don't need per-candidate customization.
    */
-  CompactionConfigFinalizer IDENTITY = (config, candidate, params) -> config;
+  ReindexingConfigFinalizer IDENTITY = (config, candidate, params) -> config;
 }

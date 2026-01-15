@@ -27,12 +27,12 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-public class CompactionProjectionRuleTest
+public class ReindexingProjectionRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_45_DAYS = Period.days(45);
 
-  private final CompactionProjectionRule rule = new CompactionProjectionRule(
+  private final ReindexingProjectionRule rule = new ReindexingProjectionRule(
       "test-projection-rule",
       "Add aggregate projections",
       PERIOD_45_DAYS,
@@ -53,9 +53,9 @@ public class CompactionProjectionRuleTest
     // Interval ends at 2025-11-01, which is fully before threshold
     Interval interval = new Interval("2025-10-31T00:00:00Z/2025-11-01T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -65,9 +65,9 @@ public class CompactionProjectionRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-11-03T12:00:00Z/2025-11-04T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -77,9 +77,9 @@ public class CompactionProjectionRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-11-03T00:00:00Z/2025-11-05T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -89,9 +89,9 @@ public class CompactionProjectionRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -124,7 +124,7 @@ public class CompactionProjectionRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionProjectionRule(null, "description", PERIOD_45_DAYS, Collections.emptyList())
+        () -> new ReindexingProjectionRule(null, "description", PERIOD_45_DAYS, Collections.emptyList())
     );
   }
 
@@ -133,7 +133,7 @@ public class CompactionProjectionRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionProjectionRule("test-id", "description", null, Collections.emptyList())
+        () -> new ReindexingProjectionRule("test-id", "description", null, Collections.emptyList())
     );
   }
 
@@ -143,7 +143,7 @@ public class CompactionProjectionRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionProjectionRule("test-id", "description", zeroPeriod, Collections.emptyList())
+        () -> new ReindexingProjectionRule("test-id", "description", zeroPeriod, Collections.emptyList())
     );
   }
 
@@ -153,7 +153,7 @@ public class CompactionProjectionRuleTest
     Period negativePeriod = Period.days(-45);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionProjectionRule("test-id", "description", negativePeriod, Collections.emptyList())
+        () -> new ReindexingProjectionRule("test-id", "description", negativePeriod, Collections.emptyList())
     );
   }
 
@@ -162,7 +162,7 @@ public class CompactionProjectionRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionProjectionRule("test-id", "description", PERIOD_45_DAYS, null)
+        () -> new ReindexingProjectionRule("test-id", "description", PERIOD_45_DAYS, null)
     );
   }
 }

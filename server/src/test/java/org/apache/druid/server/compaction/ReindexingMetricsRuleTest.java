@@ -28,7 +28,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionMetricsRuleTest
+public class ReindexingMetricsRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_90_DAYS = Period.days(90);
@@ -38,7 +38,7 @@ public class CompactionMetricsRuleTest
       new LongSumAggregatorFactory("total_value", "value")
   };
 
-  private final CompactionMetricsRule rule = new CompactionMetricsRule(
+  private final ReindexingMetricsRule rule = new ReindexingMetricsRule(
       "test-metrics-rule",
       "Aggregate metrics for old data",
       PERIOD_90_DAYS,
@@ -59,9 +59,9 @@ public class CompactionMetricsRuleTest
     // Interval ends at 2025-09-15, which is fully before threshold
     Interval interval = new Interval("2025-09-14T00:00:00Z/2025-09-15T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -71,9 +71,9 @@ public class CompactionMetricsRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-09-19T12:00:00Z/2025-09-20T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -83,9 +83,9 @@ public class CompactionMetricsRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-09-19T00:00:00Z/2025-09-21T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -95,9 +95,9 @@ public class CompactionMetricsRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-01T00:00:00Z/2025-12-02T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -134,7 +134,7 @@ public class CompactionMetricsRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionMetricsRule(null, "description", PERIOD_90_DAYS, testMetrics)
+        () -> new ReindexingMetricsRule(null, "description", PERIOD_90_DAYS, testMetrics)
     );
   }
 
@@ -143,7 +143,7 @@ public class CompactionMetricsRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionMetricsRule("test-id", "description", null, testMetrics)
+        () -> new ReindexingMetricsRule("test-id", "description", null, testMetrics)
     );
   }
 
@@ -153,7 +153,7 @@ public class CompactionMetricsRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionMetricsRule("test-id", "description", zeroPeriod, testMetrics)
+        () -> new ReindexingMetricsRule("test-id", "description", zeroPeriod, testMetrics)
     );
   }
 
@@ -163,7 +163,7 @@ public class CompactionMetricsRuleTest
     Period negativePeriod = Period.days(-90);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionMetricsRule("test-id", "description", negativePeriod, testMetrics)
+        () -> new ReindexingMetricsRule("test-id", "description", negativePeriod, testMetrics)
     );
   }
 
@@ -172,7 +172,7 @@ public class CompactionMetricsRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionMetricsRule("test-id", "description", PERIOD_90_DAYS, null)
+        () -> new ReindexingMetricsRule("test-id", "description", PERIOD_90_DAYS, null)
     );
   }
 }

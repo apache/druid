@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
+import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.scheduledbatch.ScheduledBatchSupervisorSpec;
@@ -49,7 +49,7 @@ public class SupervisorModule implements DruidModule
             .registerSubtypes(
                 new NamedType(CompactionSupervisorSpec.class, CompactionSupervisorSpec.TYPE),
                 new NamedType(ScheduledBatchSupervisorSpec.class, ScheduledBatchSupervisorSpec.TYPE),
-                new NamedType(CascadingCompactionTemplate.class, CascadingCompactionTemplate.TYPE)
+                new NamedType(CascadingReindexingTemplate.class, CascadingReindexingTemplate.TYPE)
             )
     );
   }

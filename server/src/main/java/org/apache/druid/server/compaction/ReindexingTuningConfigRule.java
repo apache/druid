@@ -57,12 +57,12 @@ import java.util.Objects;
  * }
  * }</pre>
  */
-public class CompactionTuningConfigRule extends AbstractCompactionRule
+public class ReindexingTuningConfigRule extends AbstractReindexingRule
 {
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
 
   @JsonCreator
-  public CompactionTuningConfigRule(
+  public ReindexingTuningConfigRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,

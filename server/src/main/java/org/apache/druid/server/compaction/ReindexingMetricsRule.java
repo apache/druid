@@ -21,69 +21,65 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
 /**
- * A compaction projection rule that specifies aggregate projections to add to segments older than a specified period.
+ * A compaction metrics rule that specifies aggregation metrics for segments older than a specified period.
  * <p>
- * This rule defines pre-aggregated views of data that can accelerate specific query patterns. Projections are
- * particularly useful for older data where query patterns are well-understood and storage efficiency is valuable.
+ * This rule defines the metrics specification used during compaction, enabling rollup and pre-aggregation
+ * of older data. For example, applying sum and count aggregators to historical data can significantly
+ * reduce storage size while preserving queryability for common aggregation queries.
  * <p>
  * Rules are evaluated at compaction time based on segment age. A rule with period P90D will apply
  * to any segment where the segment's end time is before ("now" - 90 days).
  * <p>
- * This is an additive rule. Multiple projection rules can apply to the same interval, and all projections
- * are combined into a single list on the compacted segment.
+ * This is a non-additive rule. Multiple metrics rules cannot be applied to the same interval safely,
+ * as a segment can only have one metrics specification.
  * <p>
  * Example usage:
  * <pre>{@code
  * {
- *   "id": "hourly-projection-90d",
+ *   "id": "rollup-90d",
  *   "period": "P90D",
- *   "projections": [
- *     {
- *       "name": "hourly_agg",
- *       "dimensions": ["country"],
- *       "metrics": [
- *         { "type": "longSum", "name": "total_views", "fieldName": "views" }
- *       ]
- *     }
+ *   "metricsSpec": [
+ *     { "type": "count", "name": "count" },
+ *     { "type": "longSum", "name": "total_views", "fieldName": "views" }
  *   ],
- *   "description": "Add hourly aggregation projection for data older than 90 days"
+ *   "description": "Enable rollup for data older than 90 days"
  * }
  * }</pre>
  */
-public class CompactionProjectionRule extends AbstractCompactionRule
+public class ReindexingMetricsRule extends AbstractReindexingRule
 {
-  private final List<AggregateProjectionSpec> projections;
+  private final AggregatorFactory[] metricsSpec;
 
   @JsonCreator
-  public CompactionProjectionRule(
+  public ReindexingMetricsRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,
-      @JsonProperty("projections") @Nonnull List<AggregateProjectionSpec> projections
+      @JsonProperty("metricsSpec") @Nonnull AggregatorFactory[] metricsSpec
   )
   {
     super(id, description, period);
-    this.projections = Objects.requireNonNull(projections, "projections cannot be null");
+    this.metricsSpec = Objects.requireNonNull(metricsSpec, "metricsSpec cannot be null");
   }
 
   @Override
   public boolean isAdditive()
   {
-    return true;
+    return false;
   }
 
   @JsonProperty
-  public List<AggregateProjectionSpec> getProjections()
+  @Nonnull
+  public AggregatorFactory[] getMetricsSpec()
   {
-    return projections;
+    return metricsSpec;
   }
 }

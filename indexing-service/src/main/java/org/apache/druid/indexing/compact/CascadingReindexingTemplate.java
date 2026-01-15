@@ -32,15 +32,16 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.server.compaction.CompactionDimensionsRule;
-import org.apache.druid.server.compaction.CompactionFilterRule;
-import org.apache.druid.server.compaction.CompactionGranularityRule;
-import org.apache.druid.server.compaction.CompactionIOConfigRule;
-import org.apache.druid.server.compaction.CompactionMetricsRule;
-import org.apache.druid.server.compaction.CompactionProjectionRule;
-import org.apache.druid.server.compaction.CompactionRuleProvider;
 import org.apache.druid.server.compaction.CompactionStatus;
-import org.apache.druid.server.compaction.CompactionTuningConfigRule;
+import org.apache.druid.server.compaction.ReindexingDimensionsRule;
+import org.apache.druid.server.compaction.ReindexingFilterRule;
+import org.apache.druid.server.compaction.ReindexingGranularityRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
+import org.apache.druid.server.compaction.ReindexingMetricsRule;
+import org.apache.druid.server.compaction.ReindexingProjectionRule;
+import org.apache.druid.server.compaction.ReindexingRule;
+import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -60,8 +61,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Template to perform period-based cascading compaction. Contains a list of
- * {@link org.apache.druid.server.compaction.CompactionRule} which divide the segment timeline into compactible
+ * Template to perform period-based cascading reindexing. Contains a list of
+ * {@link ReindexingRule} which divide the segment timeline into reindexable
  * intervals. Each rule specifies a period relative to the current time which is
  * used to determine its applicable interval:
  * <ul>
@@ -72,23 +73,23 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * If two adjacent rules explicitly specify a segment granularity, the boundary
- * between them may be adjusted to ensure that there are no uncompacted gaps in the timeline.
+ * between them may be adjusted to ensure that there are no unprocessed gaps in the timeline.
  * <p>
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate}
  */
-public class CascadingCompactionTemplate implements CompactionJobTemplate, DataSourceCompactionConfig
+public class CascadingReindexingTemplate implements CompactionJobTemplate, DataSourceCompactionConfig
 {
-  private static final Logger LOG = new Logger(CascadingCompactionTemplate.class);
+  private static final Logger LOG = new Logger(CascadingReindexingTemplate.class);
 
-  public static final String TYPE = "compactCascade";
+  public static final String TYPE = "reindexCascade";
 
   private final String dataSource;
-  private final CompactionRuleProvider ruleProvider;
+  private final ReindexingRuleProvider ruleProvider;
 
   @JsonCreator
-  public CascadingCompactionTemplate(
+  public CascadingReindexingTemplate(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("ruleProvider") CompactionRuleProvider ruleProvider
+      @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider
   )
   {
     this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
@@ -103,15 +104,15 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Creates a config finalizer that optimizes filter rules for cascading compaction.
-   * When a candidate segment has already been compacted with a subset of filter rules,
+   * Creates a config finalizer that optimizes filter rules for cascading reindexing.
+   * When a candidate segment has already been reindexed with a subset of filter rules,
    * this finalizer computes the minimal set of additional filter rules needed.
-   * This optimization reduces bitmap operations during compaction.
+   * This optimization reduces bitmap operations during reindexing.
    */
-  private static CompactionConfigFinalizer createCascadingFinalizer()
+  private static ReindexingConfigFinalizer createCascadingFinalizer()
   {
     return (config, candidate, params) -> {
-      // Only optimize if candidate has been compacted before and config has a NotDimFilter
+      // Only optimize if candidate has been reindexed before and config has a NotDimFilter
       if (candidate.getCurrentStatus() != null &&
           !candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON) &&
           config.getTransformSpec() != null &&
@@ -122,7 +123,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
         NotDimFilter reducedTransformSpecFilter = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
             candidate,
             (NotDimFilter) config.getTransformSpec().getFilter(),
-            params.getCompactionStateCache()
+            params.getFingerprintMapper()
         );
 
         // Safe cast: we know this is InlineSchemaDataSourceCompactionConfig because we just built it
@@ -144,7 +145,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
     // Check if the rule provider is ready before attempting to create jobs
     if (!ruleProvider.isReady()) {
       LOG.info(
-          "Rule provider [%s] is not ready, skipping compaction job creation for dataSource[%s]",
+          "Rule provider [%s] is not ready, skipping reindexing job creation for dataSource[%s]",
           ruleProvider.getType(),
           dataSource
       );
@@ -161,26 +162,26 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
 
     // Generate intervals from periods and create jobs for each
     List<Interval> intervals = generateIntervalsFromPeriods(sortedPeriods, currentTime, ruleProvider.getGranularityRules());
-    for (Interval compactionInterval : intervals) {
+    for (Interval reindexingInterval : intervals) {
       InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig.builder()
           .forDataSource(dataSource)
           .withSkipOffsetFromLatest(Period.ZERO);
 
-      // Apply all applicable compaction rules to the builder
-      int ruleCount = applyRulesToBuilder(builder, compactionInterval, currentTime);
+      // Apply all applicable reindexing rules to the builder
+      int ruleCount = applyRulesToBuilder(builder, reindexingInterval, currentTime);
 
       if (ruleCount > 0) {
-        LOG.info("Creating compaction jobs for interval[%s] with %d rules", compactionInterval, ruleCount);
+        LOG.info("Creating reindexing jobs for interval[%s] with %d rules", reindexingInterval, ruleCount);
         allJobs.addAll(
             createJobsForSearchInterval(
                 new CompactionConfigBasedJobTemplate(builder.build(), createCascadingFinalizer()),
-                compactionInterval,
+                reindexingInterval,
                 source,
                 jobParams
             )
         );
       } else {
-        LOG.info("No applicable compaction rules found for interval[%s]", compactionInterval);
+        LOG.info("No applicable reindexing rules found for interval[%s]", reindexingInterval);
       }
     }
     return allJobs;
@@ -212,7 +213,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
    * and the HOUR-granularity rule starts cleanly at a day boundary.
    * </pre>
    */
-  private List<Interval> generateIntervalsFromPeriods(List<Period> sortedPeriods, DateTime referenceTime, List<CompactionGranularityRule> granularityRules)
+  private List<Interval> generateIntervalsFromPeriods(List<Period> sortedPeriods, DateTime referenceTime, List<ReindexingGranularityRule> granularityRules)
   {
     List<Interval> intervals = new ArrayList<>();
     DateTime previousAdjustedBoundary = null;
@@ -229,12 +230,12 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
         // We may need to adjust the start time to avoid gaps if both adjacent rules have segment granularities defined.
         final DateTime calculatedStartTime = referenceTime.minus(sortedPeriods.get(i + 1));
         final int finalI = i;
-        CompactionGranularityRule currentRule = granularityRules.stream()
+        ReindexingGranularityRule currentRule = granularityRules.stream()
                                                                 .filter(rule ->
                                                                             rule.getPeriod().equals(sortedPeriods.get(finalI)) && rule.getGranularityConfig().getSegmentGranularity() != null)
                                                                 .findFirst()
                                                                 .orElse(null);
-        CompactionGranularityRule beforeRule = granularityRules.stream()
+        ReindexingGranularityRule beforeRule = granularityRules.stream()
                                                                .filter(rule ->
                                                                            rule.getPeriod().equals(sortedPeriods.get(finalI + 1)) && rule.getGranularityConfig().getSegmentGranularity() != null)
                                                                .findFirst()
@@ -267,62 +268,62 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Applies all applicable compaction rules to the builder for the given interval.
+   * Applies all applicable reindexing rules to the builder for the given interval.
    *
    * @return number of rules applied
    */
   private int applyRulesToBuilder(
       InlineSchemaDataSourceCompactionConfig.Builder builder,
-      Interval compactionInterval,
+      Interval reindexingInterval,
       DateTime referenceTime
   )
   {
     int ruleCount = 0;
 
     // Granularity rules (non-additive, take first)
-    List<CompactionGranularityRule> granularityRules = ruleProvider.getGranularityRules(compactionInterval, referenceTime);
+    List<ReindexingGranularityRule> granularityRules = ruleProvider.getGranularityRules(reindexingInterval, referenceTime);
     if (!granularityRules.isEmpty()) {
-      LOG.info("Applying granularity rule %s for interval %s", granularityRules.get(0).getId(), compactionInterval);
+      LOG.info("Applying granularity rule %s for interval %s", granularityRules.get(0).getId(), reindexingInterval);
       builder.withGranularitySpec(granularityRules.get(0).getGranularityConfig());
       ruleCount += 1;
     }
 
     // Tuning config rules (non-additive, take first)
-    List<CompactionTuningConfigRule> tuningConfigRules = ruleProvider.getTuningConfigRules(compactionInterval, referenceTime);
+    List<ReindexingTuningConfigRule> tuningConfigRules = ruleProvider.getTuningConfigRules(reindexingInterval, referenceTime);
     if (!tuningConfigRules.isEmpty()) {
-      LOG.info("Applying tuning config rule %s for interval %s", tuningConfigRules.get(0).getId(), compactionInterval);
+      LOG.info("Applying tuning config rule %s for interval %s", tuningConfigRules.get(0).getId(), reindexingInterval);
       builder.withTuningConfig(tuningConfigRules.get(0).getTuningConfig());
       ruleCount += 1;
     }
 
     // Metrics rules (non-additive, take first)
-    List<CompactionMetricsRule> metricsRules = ruleProvider.getMetricsRules(compactionInterval, referenceTime);
+    List<ReindexingMetricsRule> metricsRules = ruleProvider.getMetricsRules(reindexingInterval, referenceTime);
     if (!metricsRules.isEmpty()) {
-      LOG.info("Applying metrics rule %s for interval %s", metricsRules.get(0).getId(), compactionInterval);
+      LOG.info("Applying metrics rule %s for interval %s", metricsRules.get(0).getId(), reindexingInterval);
       builder.withMetricsSpec(metricsRules.get(0).getMetricsSpec());
       ruleCount += 1;
     }
 
     // Dimensions rules (non-additive, take first)
-    List<CompactionDimensionsRule> dimensionsRules = ruleProvider.getDimensionsRules(compactionInterval, referenceTime);
+    List<ReindexingDimensionsRule> dimensionsRules = ruleProvider.getDimensionsRules(reindexingInterval, referenceTime);
     if (!dimensionsRules.isEmpty()) {
-      LOG.info("Applying dimensions rule %s for interval %s", dimensionsRules.get(0).getId(), compactionInterval);
+      LOG.info("Applying dimensions rule %s for interval %s", dimensionsRules.get(0).getId(), reindexingInterval);
       builder.withDimensionsSpec(dimensionsRules.get(0).getDimensionsSpec());
       ruleCount += 1;
     }
 
     // IO config rules (non-additive, take first)
-    List<CompactionIOConfigRule> ioConfigRules = ruleProvider.getIOConfigRules(compactionInterval, referenceTime);
+    List<ReindexingIOConfigRule> ioConfigRules = ruleProvider.getIOConfigRules(reindexingInterval, referenceTime);
     if (!ioConfigRules.isEmpty()) {
-      LOG.info("Applying IO config rule %s for interval %s", ioConfigRules.get(0).getId(), compactionInterval);
+      LOG.info("Applying IO config rule %s for interval %s", ioConfigRules.get(0).getId(), reindexingInterval);
       builder.withIoConfig(ioConfigRules.get(0).getIoConfig());
       ruleCount += 1;
     }
 
     // Projection rules (additive, combine all)
-    List<CompactionProjectionRule> projectionRules = ruleProvider.getProjectionRules(compactionInterval, referenceTime);
+    List<ReindexingProjectionRule> projectionRules = ruleProvider.getProjectionRules(reindexingInterval, referenceTime);
     if (!projectionRules.isEmpty()) {
-      LOG.info("Applying [%d] projection rules for interval %s", projectionRules.size(), compactionInterval);
+      LOG.info("Applying [%d] projection rules for interval %s", projectionRules.size(), reindexingInterval);
       builder.withProjections(
           projectionRules.stream()
                          .flatMap(rule -> rule.getProjections().stream())
@@ -332,11 +333,11 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
     }
 
     // Filter rules (additive, combine with OR and wrap in NOT)
-    List<CompactionFilterRule> filterRules = ruleProvider.getFilterRules(compactionInterval, referenceTime);
+    List<ReindexingFilterRule> filterRules = ruleProvider.getFilterRules(reindexingInterval, referenceTime);
     if (!filterRules.isEmpty()) {
-      LOG.info("Applying up to [%d] filter rules for interval %s", filterRules.size(), compactionInterval);
+      LOG.info("Applying up to [%d] filter rules for interval %s", filterRules.size(), reindexingInterval);
       List<DimFilter> removeConditions = filterRules.stream()
-                                                    .map(CompactionFilterRule::getFilter)
+                                                    .map(ReindexingFilterRule::getFilter)
                                                     .collect(Collectors.toList());
 
       DimFilter removeFilter = removeConditions.size() == 1
@@ -467,7 +468,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
   }
 
   @JsonProperty
-  private CompactionRuleProvider getRuleProvider()
+  private ReindexingRuleProvider getRuleProvider()
   {
     return ruleProvider;
   }

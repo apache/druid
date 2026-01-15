@@ -31,7 +31,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 
-public class InlineCompactionRuleProviderTest
+public class InlineReindexingRuleProviderTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
 
@@ -55,17 +55,17 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getFilterRules_noRulesMatch_returnsEmpty()
   {
-    CompactionFilterRule rule30d = new CompactionFilterRule(
+    ReindexingFilterRule rule30d = new ReindexingFilterRule(
         "filter-30d",
         null,
         Period.days(30),
         new SelectorDimFilter("dim", "val", null)
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().filterRules(List.of(rule30d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d)).build();
 
     // Interval is only 5 days old, rule requires 30 days
-    List<CompactionFilterRule> result = provider.getFilterRules(INTERVAL_5_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_5_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertTrue("Should return empty when no rules match", result.isEmpty());
   }
@@ -73,17 +73,17 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getFilterRules_oneRuleMatchesFull_returnsThatRule()
   {
-    CompactionFilterRule rule30d = new CompactionFilterRule(
+    ReindexingFilterRule rule30d = new ReindexingFilterRule(
         "filter-30d",
         null,
         Period.days(30),
         new SelectorDimFilter("dim", "val", null)
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().filterRules(List.of(rule30d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d)).build();
 
     // Interval is 50 days old, rule requires 30 days - FULL match
-    List<CompactionFilterRule> result = provider.getFilterRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("filter-30d", result.get(0).getId());
@@ -93,21 +93,21 @@ public class InlineCompactionRuleProviderTest
   public void test_getFilterRules_multipleAdditiveRulesMatchFull_returnsAll()
   {
     // Filter rules are additive - should return all matching rules
-    CompactionFilterRule rule30d = new CompactionFilterRule(
+    ReindexingFilterRule rule30d = new ReindexingFilterRule(
         "filter-30d",
         null,
         Period.days(30),
         new SelectorDimFilter("dim1", "val1", null)
     );
 
-    CompactionFilterRule rule60d = new CompactionFilterRule(
+    ReindexingFilterRule rule60d = new ReindexingFilterRule(
         "filter-60d",
         null,
         Period.days(60),
         new SelectorDimFilter("dim2", "val2", null)
     );
 
-    CompactionFilterRule rule90d = new CompactionFilterRule(
+    ReindexingFilterRule rule90d = new ReindexingFilterRule(
         "filter-90d",
         null,
         Period.days(90),
@@ -115,10 +115,10 @@ public class InlineCompactionRuleProviderTest
     );
 
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().filterRules(List.of(rule30d, rule60d, rule90d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d, rule60d, rule90d)).build();
 
     // Interval is 100 days old - all three rules match
-    List<CompactionFilterRule> result = provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertEquals("Should return all matching additive rules", 3, result.size());
     Assert.assertTrue(result.stream().anyMatch(r -> r.getId().equals("filter-30d")));
@@ -130,32 +130,32 @@ public class InlineCompactionRuleProviderTest
   public void test_getGranularityRules_multipleNonAdditiveRulesMatchFull_returnsOldestThreshold()
   {
     // Granularity rules are NOT additive - should return only the one with oldest threshold
-    CompactionGranularityRule rule30d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule30d = new ReindexingGranularityRule(
         "gran-30d",
         null,
         Period.days(30),
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
     );
 
-    CompactionGranularityRule rule60d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule60d = new ReindexingGranularityRule(
         "gran-60d",
         null,
         Period.days(60),
         new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
     );
 
-    CompactionGranularityRule rule90d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule90d = new ReindexingGranularityRule(
         "gran-90d",
         null,
         Period.days(90),
         new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().granularityRules(List.of(rule30d, rule60d, rule90d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule30d, rule60d, rule90d)).build();
 
     // Interval is 100 days old - all three rules match FULL
     // Should return rule90d because it has the oldest threshold (now - 90d)
-    List<CompactionGranularityRule> result = provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertEquals("Should return only one non-additive rule", 1, result.size());
     Assert.assertEquals("gran-90d", result.get(0).getId());
@@ -165,18 +165,18 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getGranularityRules_partialMatchNotReturned()
   {
-    CompactionGranularityRule rule30d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule30d = new ReindexingGranularityRule(
         "gran-30d",
         null,
         Period.days(30),
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().granularityRules(List.of(rule30d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule30d)).build();
 
     // Interval is 20 days old, but rule requires 30 days
     // The interval likely has PARTIAL or NONE match, not FULL
-    List<CompactionGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertTrue("Should not return rules with PARTIAL match", result.isEmpty());
   }
@@ -184,20 +184,20 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_returnsDistinctSortedPeriods()
   {
-    CompactionFilterRule filter30d = new CompactionFilterRule(
+    ReindexingFilterRule filter30d = new ReindexingFilterRule(
         "f1", null, Period.days(30), new SelectorDimFilter("d", "v", null)
     );
-    CompactionFilterRule filter60d = new CompactionFilterRule(
+    ReindexingFilterRule filter60d = new ReindexingFilterRule(
         "f2", null, Period.days(60), new SelectorDimFilter("d", "v", null)
     );
-    CompactionGranularityRule gran30d = new CompactionGranularityRule(
+    ReindexingGranularityRule gran30d = new ReindexingGranularityRule(
         "g1", null, Period.days(30), new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
     );
-    CompactionGranularityRule gran90d = new CompactionGranularityRule(
+    ReindexingGranularityRule gran90d = new ReindexingGranularityRule(
         "g2", null, Period.days(90), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().filterRules(List.of(filter30d, filter60d)).granularityRules(List.of(gran30d, gran90d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(filter30d, filter60d)).granularityRules(List.of(gran30d, gran90d)).build();
 
     List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
 
@@ -212,7 +212,7 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_withEmptyRules_returnsEmpty()
   {
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().filterRules(Collections.emptyList()).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(Collections.emptyList()).build();
 
     List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
 
@@ -223,17 +223,17 @@ public class InlineCompactionRuleProviderTest
   public void test_getProjectionRules_multipleAdditiveRulesMatchFull_returnsAll()
   {
     // Projection rules are additive
-    CompactionProjectionRule proj30d = new CompactionProjectionRule(
+    ReindexingProjectionRule proj30d = new ReindexingProjectionRule(
         "proj-30d", null, Period.days(30), Collections.emptyList()
     );
-    CompactionProjectionRule proj60d = new CompactionProjectionRule(
+    ReindexingProjectionRule proj60d = new ReindexingProjectionRule(
         "proj-60d", null, Period.days(60), Collections.emptyList()
     );
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().projectionRules(List.of(proj30d, proj60d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().projectionRules(List.of(proj30d, proj60d)).build();
 
     // Interval is 100 days old - both rules match
-    List<CompactionProjectionRule> result = provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingProjectionRule> result = provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
 
     Assert.assertEquals("Should return all matching additive projection rules", 2, result.size());
   }
@@ -242,35 +242,35 @@ public class InlineCompactionRuleProviderTest
   public void test_getApplicableRules_mixOfFullPartialNone_onlyReturnsFull()
   {
     // Create rules that will have different AppliesToMode results
-    CompactionGranularityRule rule10d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule10d = new ReindexingGranularityRule(
         "gran-10d",
         null,
         Period.days(10),
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
     ); // Will match FULL for 20-day-old interval
 
-    CompactionGranularityRule rule25d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule25d = new ReindexingGranularityRule(
         "gran-25d",
         null,
         Period.days(25),
         new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
     ); // Will match FULL for 20-day-old interval
 
-    CompactionGranularityRule rule50d = new CompactionGranularityRule(
+    ReindexingGranularityRule rule50d = new ReindexingGranularityRule(
         "gran-50d",
         null,
         Period.days(50),
         new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
     ); // Will be NONE for 20-day-old interval
 
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().granularityRules(List.of(rule10d, rule25d, rule50d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule10d, rule25d, rule50d)).build();
 
     // Interval is 20 days old (ends at 2025-11-21, reference is 2025-12-19)
     // rule10d: threshold = now - 10d = 2025-12-09, interval ends 2025-11-21 < 2025-12-09 -> FULL
     // rule25d: threshold = now - 25d = 2025-11-24, interval ends 2025-11-21 < 2025-11-24 -> FULL
     // rule50d: threshold = now - 50d = 2025-10-30, interval ends 2025-11-21 > 2025-10-30 -> NONE
     // When multiple rules match, select the one with oldest threshold (smallest millis) = rule25d
-    List<CompactionGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
 
     // Should return rule25d (has oldest threshold among FULL matches)
     Assert.assertEquals(1, result.size());
@@ -280,7 +280,7 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_constructor_nullListsDefaultToEmpty()
   {
-    InlineCompactionRuleProvider provider = new InlineCompactionRuleProvider(
+    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(
         null,
         null,
         null,
@@ -301,7 +301,7 @@ public class InlineCompactionRuleProviderTest
   @Test
   public void test_getType_returnsInline()
   {
-    InlineCompactionRuleProvider provider = InlineCompactionRuleProvider.builder().build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
 
     Assert.assertEquals("inline", provider.getType());
   }

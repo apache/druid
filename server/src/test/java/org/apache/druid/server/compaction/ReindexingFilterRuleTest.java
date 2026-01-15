@@ -27,13 +27,13 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionFilterRuleTest
+public class ReindexingFilterRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_30_DAYS = Period.days(30);
 
   private final DimFilter testFilter = new SelectorDimFilter("isRobot", "true", null);
-  private final CompactionFilterRule rule = new CompactionFilterRule(
+  private final ReindexingFilterRule rule = new ReindexingFilterRule(
       "test-filter-rule",
       "Remove robot traffic",
       PERIOD_30_DAYS,
@@ -54,9 +54,9 @@ public class CompactionFilterRuleTest
     // Interval ends at 2025-11-15, which is fully before threshold
     Interval interval = new Interval("2025-11-14T00:00:00Z/2025-11-15T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -66,9 +66,9 @@ public class CompactionFilterRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-11-18T12:00:00Z/2025-11-19T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -78,9 +78,9 @@ public class CompactionFilterRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-11-18T00:00:00Z/2025-11-20T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -90,9 +90,9 @@ public class CompactionFilterRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -127,7 +127,7 @@ public class CompactionFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionFilterRule(null, "description", PERIOD_30_DAYS, testFilter)
+        () -> new ReindexingFilterRule(null, "description", PERIOD_30_DAYS, testFilter)
     );
   }
 
@@ -136,7 +136,7 @@ public class CompactionFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionFilterRule("test-id", "description", null, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", null, testFilter)
     );
   }
 
@@ -146,7 +146,7 @@ public class CompactionFilterRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionFilterRule("test-id", "description", zeroPeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter)
     );
   }
 
@@ -156,7 +156,7 @@ public class CompactionFilterRuleTest
     Period negativePeriod = Period.days(-30);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionFilterRule("test-id", "description", negativePeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter)
     );
   }
 
@@ -165,7 +165,7 @@ public class CompactionFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionFilterRule("test-id", "description", PERIOD_30_DAYS, null)
+        () -> new ReindexingFilterRule("test-id", "description", PERIOD_30_DAYS, null)
     );
   }
 
@@ -176,7 +176,7 @@ public class CompactionFilterRuleTest
   {
     // P6M should work - months are valid even though they're variable length
     Period period = Period.months(6);
-    CompactionFilterRule rule = new CompactionFilterRule(
+    ReindexingFilterRule rule = new ReindexingFilterRule(
         "test-id",
         "6 month rule",
         period,
@@ -191,7 +191,7 @@ public class CompactionFilterRuleTest
   {
     // P1Y should work - years are valid even though they're variable length
     Period period = Period.years(1);
-    CompactionFilterRule rule = new CompactionFilterRule(
+    ReindexingFilterRule rule = new ReindexingFilterRule(
         "test-id",
         "1 year rule",
         period,
@@ -206,7 +206,7 @@ public class CompactionFilterRuleTest
   {
     // P6M15D should work - mixed months and days
     Period period = Period.months(6).plusDays(15);
-    CompactionFilterRule rule = new CompactionFilterRule(
+    ReindexingFilterRule rule = new ReindexingFilterRule(
         "test-id",
         "6 months 15 days rule",
         period,
@@ -221,7 +221,7 @@ public class CompactionFilterRuleTest
   {
     // P1Y3M10D should work - complex period with years, months, and days
     Period period = Period.years(1).plusMonths(3).plusDays(10);
-    CompactionFilterRule rule = new CompactionFilterRule(
+    ReindexingFilterRule rule = new ReindexingFilterRule(
         "test-id",
         "1 year 3 months 10 days rule",
         period,
@@ -238,7 +238,7 @@ public class CompactionFilterRuleTest
     Period zeroPeriod = Period.months(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionFilterRule("test-id", "description", zeroPeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter)
     );
   }
 
@@ -249,7 +249,7 @@ public class CompactionFilterRuleTest
     Period negativePeriod = Period.months(-6);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionFilterRule("test-id", "description", negativePeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter)
     );
   }
 
@@ -262,7 +262,7 @@ public class CompactionFilterRuleTest
     // Expected threshold: 2025-06-19T12:00:00Z (6 months before reference)
 
     Period sixMonths = Period.months(6);
-    CompactionFilterRule monthRule = new CompactionFilterRule(
+    ReindexingFilterRule monthRule = new ReindexingFilterRule(
         "test-month-rule",
         "6 months rule",
         sixMonths,
@@ -272,21 +272,21 @@ public class CompactionFilterRuleTest
     // Interval ending before 6-month threshold - should be FULL
     Interval beforeThreshold = new Interval("2025-06-01T00:00:00Z/2025-06-15T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.FULL,
+        ReindexingRule.AppliesToMode.FULL,
         monthRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 6-month threshold - should be PARTIAL
     Interval spanningThreshold = new Interval("2025-06-15T00:00:00Z/2025-07-15T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.PARTIAL,
+        ReindexingRule.AppliesToMode.PARTIAL,
         monthRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 6-month threshold - should be NONE
     Interval afterThreshold = new Interval("2025-07-01T00:00:00Z/2025-07-15T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.NONE,
+        ReindexingRule.AppliesToMode.NONE,
         monthRule.appliesTo(afterThreshold, REFERENCE_TIME)
     );
   }
@@ -300,7 +300,7 @@ public class CompactionFilterRuleTest
     // Expected threshold: 2024-12-19T12:00:00Z (1 year before reference)
 
     Period oneYear = Period.years(1);
-    CompactionFilterRule yearRule = new CompactionFilterRule(
+    ReindexingFilterRule yearRule = new ReindexingFilterRule(
         "test-year-rule",
         "1 year rule",
         oneYear,
@@ -310,21 +310,21 @@ public class CompactionFilterRuleTest
     // Interval ending before 1-year threshold - should be FULL
     Interval beforeThreshold = new Interval("2024-11-01T00:00:00Z/2024-12-01T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.FULL,
+        ReindexingRule.AppliesToMode.FULL,
         yearRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 1-year threshold - should be PARTIAL
     Interval spanningThreshold = new Interval("2024-12-01T00:00:00Z/2025-01-01T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.PARTIAL,
+        ReindexingRule.AppliesToMode.PARTIAL,
         yearRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 1-year threshold - should be NONE
     Interval afterThreshold = new Interval("2025-01-01T00:00:00Z/2025-02-01T00:00:00Z");
     Assert.assertEquals(
-        CompactionRule.AppliesToMode.NONE,
+        ReindexingRule.AppliesToMode.NONE,
         yearRule.appliesTo(afterThreshold, REFERENCE_TIME)
     );
   }

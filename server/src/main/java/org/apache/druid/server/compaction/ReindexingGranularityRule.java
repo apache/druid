@@ -54,13 +54,13 @@ import java.util.Objects;
  * }
  * }</pre>
  */
-public class CompactionGranularityRule extends AbstractCompactionRule
+public class ReindexingGranularityRule extends AbstractReindexingRule
 {
 
   private final UserCompactionTaskGranularityConfig granularityConfig;
 
   @JsonCreator
-  public CompactionGranularityRule(
+  public ReindexingGranularityRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,

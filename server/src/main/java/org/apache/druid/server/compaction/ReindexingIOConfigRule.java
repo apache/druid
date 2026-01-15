@@ -21,7 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
@@ -29,45 +29,39 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * A compaction metrics rule that specifies aggregation metrics for segments older than a specified period.
+ * A compaction IO config rule that specifies input/output configuration for segments older than a specified period.
  * <p>
- * This rule defines the metrics specification used during compaction, enabling rollup and pre-aggregation
- * of older data. For example, applying sum and count aggregators to historical data can significantly
- * reduce storage size while preserving queryability for common aggregation queries.
+ * Rules are evaluated at compaction time based on segment age. A rule with period P30D will apply
+ * to any segment where the segment's end time is before ("now" - 30 days).
  * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P90D will apply
- * to any segment where the segment's end time is before ("now" - 90 days).
- * <p>
- * This is a non-additive rule. Multiple metrics rules cannot be applied to the same interval safely,
- * as a segment can only have one metrics specification.
+ * This is a non-additive rule. Multiple IO config rules cannot be applied to the same interval safely,
+ * as a compaction job can only use one IO configuration.
  * <p>
  * Example usage:
  * <pre>{@code
  * {
- *   "id": "rollup-90d",
+ *   "id": "dropExistingFalse-false",
  *   "period": "P90D",
- *   "metricsSpec": [
- *     { "type": "count", "name": "count" },
- *     { "type": "longSum", "name": "total_views", "fieldName": "views" }
- *   ],
- *   "description": "Enable rollup for data older than 90 days"
+ *   "ioConfig": {
+ *     "dropExisting": false
+ *   },
  * }
  * }</pre>
  */
-public class CompactionMetricsRule extends AbstractCompactionRule
+public class ReindexingIOConfigRule extends AbstractReindexingRule
 {
-  private final AggregatorFactory[] metricsSpec;
+  private final UserCompactionTaskIOConfig ioConfig;
 
   @JsonCreator
-  public CompactionMetricsRule(
+  public ReindexingIOConfigRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,
-      @JsonProperty("metricsSpec") @Nonnull AggregatorFactory[] metricsSpec
+      @JsonProperty("ioConfig") @Nonnull UserCompactionTaskIOConfig ioConfig
   )
   {
     super(id, description, period);
-    this.metricsSpec = Objects.requireNonNull(metricsSpec, "metricsSpec cannot be null");
+    this.ioConfig = Objects.requireNonNull(ioConfig, "ioConfig cannot be null");
   }
 
   @Override
@@ -77,9 +71,8 @@ public class CompactionMetricsRule extends AbstractCompactionRule
   }
 
   @JsonProperty
-  @Nonnull
-  public AggregatorFactory[] getMetricsSpec()
+  public UserCompactionTaskIOConfig getIoConfig()
   {
-    return metricsSpec;
+    return ioConfig;
   }
 }

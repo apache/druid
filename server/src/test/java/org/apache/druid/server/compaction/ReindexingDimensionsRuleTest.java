@@ -26,12 +26,12 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionDimensionsRuleTest
+public class ReindexingDimensionsRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_14_DAYS = Period.days(14);
 
-  private final CompactionDimensionsRule rule = new CompactionDimensionsRule(
+  private final ReindexingDimensionsRule rule = new ReindexingDimensionsRule(
       "test-dimensions-rule",
       "Custom dimensions config",
       PERIOD_14_DAYS,
@@ -52,9 +52,9 @@ public class CompactionDimensionsRuleTest
     // Interval ends at 2025-12-03, which is fully before threshold
     Interval interval = new Interval("2025-12-02T00:00:00Z/2025-12-03T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -64,9 +64,9 @@ public class CompactionDimensionsRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-12-04T12:00:00Z/2025-12-05T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -76,9 +76,9 @@ public class CompactionDimensionsRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-12-04T00:00:00Z/2025-12-06T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -88,9 +88,9 @@ public class CompactionDimensionsRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-18T00:00:00Z/2025-12-19T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -125,7 +125,7 @@ public class CompactionDimensionsRuleTest
     UserCompactionTaskDimensionsConfig config = new UserCompactionTaskDimensionsConfig(null);
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionDimensionsRule(null, "description", PERIOD_14_DAYS, config)
+        () -> new ReindexingDimensionsRule(null, "description", PERIOD_14_DAYS, config)
     );
   }
 
@@ -135,7 +135,7 @@ public class CompactionDimensionsRuleTest
     UserCompactionTaskDimensionsConfig config = new UserCompactionTaskDimensionsConfig(null);
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionDimensionsRule("test-id", "description", null, config)
+        () -> new ReindexingDimensionsRule("test-id", "description", null, config)
     );
   }
 
@@ -146,7 +146,7 @@ public class CompactionDimensionsRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionDimensionsRule("test-id", "description", zeroPeriod, config)
+        () -> new ReindexingDimensionsRule("test-id", "description", zeroPeriod, config)
     );
   }
 
@@ -157,7 +157,7 @@ public class CompactionDimensionsRuleTest
     Period negativePeriod = Period.days(-14);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionDimensionsRule("test-id", "description", negativePeriod, config)
+        () -> new ReindexingDimensionsRule("test-id", "description", negativePeriod, config)
     );
   }
 
@@ -166,7 +166,7 @@ public class CompactionDimensionsRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionDimensionsRule("test-id", "description", PERIOD_14_DAYS, null)
+        () -> new ReindexingDimensionsRule("test-id", "description", PERIOD_14_DAYS, null)
     );
   }
 }

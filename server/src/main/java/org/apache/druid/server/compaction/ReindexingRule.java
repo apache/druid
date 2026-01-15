@@ -26,12 +26,12 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 
 /**
- * Defines a compaction configuration that applies to data based on age thresholds.
+ * Defines a reindexing configuration that applies to data based on age thresholds.
  * <p>
- * Rules encapsulate specific aspects of compaction (granularity, filters, tuning, etc.)
+ * Rules encapsulate specific aspects of reindexing (granularity, filters, tuning, etc.)
  * and specify when they should apply via a period threshold.
  */
-public interface CompactionRule
+public interface ReindexingRule
 {
   /**
    * Indicates how a rule applies to a given time interval based on the rule's period threshold.

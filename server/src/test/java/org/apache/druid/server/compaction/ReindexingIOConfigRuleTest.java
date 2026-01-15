@@ -26,12 +26,12 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionIOConfigRuleTest
+public class ReindexingIOConfigRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_60_DAYS = Period.days(60);
 
-  private final CompactionIOConfigRule rule = new CompactionIOConfigRule(
+  private final ReindexingIOConfigRule rule = new ReindexingIOConfigRule(
       "test-ioconfig-rule",
       "Custom IO config",
       PERIOD_60_DAYS,
@@ -52,9 +52,9 @@ public class CompactionIOConfigRuleTest
     // Interval ends at 2025-10-15, which is fully before threshold
     Interval interval = new Interval("2025-10-14T00:00:00Z/2025-10-15T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -64,9 +64,9 @@ public class CompactionIOConfigRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-10-19T12:00:00Z/2025-10-20T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -76,9 +76,9 @@ public class CompactionIOConfigRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-10-19T00:00:00Z/2025-10-21T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -88,9 +88,9 @@ public class CompactionIOConfigRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -125,7 +125,7 @@ public class CompactionIOConfigRuleTest
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionIOConfigRule(null, "description", PERIOD_60_DAYS, config)
+        () -> new ReindexingIOConfigRule(null, "description", PERIOD_60_DAYS, config)
     );
   }
 
@@ -135,7 +135,7 @@ public class CompactionIOConfigRuleTest
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionIOConfigRule("test-id", "description", null, config)
+        () -> new ReindexingIOConfigRule("test-id", "description", null, config)
     );
   }
 
@@ -146,7 +146,7 @@ public class CompactionIOConfigRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionIOConfigRule("test-id", "description", zeroPeriod, config)
+        () -> new ReindexingIOConfigRule("test-id", "description", zeroPeriod, config)
     );
   }
 
@@ -157,7 +157,7 @@ public class CompactionIOConfigRuleTest
     Period negativePeriod = Period.days(-60);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionIOConfigRule("test-id", "description", negativePeriod, config)
+        () -> new ReindexingIOConfigRule("test-id", "description", negativePeriod, config)
     );
   }
 
@@ -166,7 +166,7 @@ public class CompactionIOConfigRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionIOConfigRule("test-id", "description", PERIOD_60_DAYS, null)
+        () -> new ReindexingIOConfigRule("test-id", "description", PERIOD_60_DAYS, null)
     );
   }
 }

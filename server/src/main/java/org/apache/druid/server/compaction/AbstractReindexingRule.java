@@ -31,25 +31,25 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Base implementation for compaction rules that apply based on data age thresholds.
+ * Base implementation for reindexing rules that apply based on data age thresholds.
  * <p>
  * Provides period-based applicability logic: a rule with period P7D applies to data
- * older than 7 days. Subclasses define specific compaction configuration (granularity,
+ * older than 7 days. Subclasses define specific reindexing configuration (granularity,
  * filters, tuning, etc.) and whether multiple rules can combine (additive vs non-additive).
  * <p>
  * The {@link #appliesTo(Interval, DateTime)} method determines if an interval is fully,
- * partially, or not covered by this rule's threshold, enabling cascading compaction
+ * partially, or not covered by this rule's threshold, enabling cascading reindexing
  * strategies where different rules apply to different age tiers of data.
  */
-public abstract class AbstractCompactionRule implements CompactionRule
+public abstract class AbstractReindexingRule implements ReindexingRule
 {
-  private static final Logger LOG = new Logger(AbstractCompactionRule.class);
+  private static final Logger LOG = new Logger(AbstractReindexingRule.class);
 
   private final String id;
   private final String description;
   private final Period period;
 
-  public AbstractCompactionRule(
+  public AbstractReindexingRule(
       @Nonnull String id,
       @Nullable String description,
       @Nonnull Period period
@@ -144,13 +144,13 @@ public abstract class AbstractCompactionRule implements CompactionRule
     DateTime threshold = now.minus(period);
 
     if (intervalEnd.isBefore(threshold) || intervalEnd.isEqual(threshold)) {
-      LOG.debug("Compaction rule [%s] applies FULLY to interval [%s]. Threshold: [%s]", id, interval, threshold);
+      LOG.debug("Reindexing rule [%s] applies FULLY to interval [%s]. Threshold: [%s]", id, interval, threshold);
       return AppliesToMode.FULL;
     } else if (intervalStart.isAfter(threshold)) {
-      LOG.debug("Compaction rule [%s] does NOT apply to interval [%s]. Threshold: [%s]", id, interval, threshold);
+      LOG.debug("Reindexing rule [%s] does NOT apply to interval [%s]. Threshold: [%s]", id, interval, threshold);
       return AppliesToMode.NONE;
     } else {
-      LOG.debug("Compaction rule [%s] applies PARTIALLY to interval [%s]. Threshold: [%s]", id, interval, threshold);
+      LOG.debug("Reindexing rule [%s] applies PARTIALLY to interval [%s]. Threshold: [%s]", id, interval, threshold);
       return AppliesToMode.PARTIAL;
     }
   }

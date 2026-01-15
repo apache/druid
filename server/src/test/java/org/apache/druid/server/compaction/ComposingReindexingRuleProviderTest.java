@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ComposingCompactionRuleProviderTest
+public class ComposingReindexingRuleProviderTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
 
@@ -42,20 +42,20 @@ public class ComposingCompactionRuleProviderTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ComposingCompactionRuleProvider(null)
+        () -> new ComposingReindexingRuleProvider(null)
     );
   }
 
   @Test
   public void test_constructor_nullProviderInList_throwsNullPointerException()
   {
-    List<CompactionRuleProvider> providers = new ArrayList<>();
+    List<ReindexingRuleProvider> providers = new ArrayList<>();
     providers.add(createEmptyInlineProvider());
     providers.add(null); // Null provider
 
     NullPointerException exception = Assert.assertThrows(
         NullPointerException.class,
-        () -> new ComposingCompactionRuleProvider(providers)
+        () -> new ComposingReindexingRuleProvider(providers)
     );
 
     Assert.assertTrue(exception.getMessage().contains("index 1"));
@@ -64,7 +64,7 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_constructor_emptyProviderList_succeeds()
   {
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         Collections.emptyList()
     );
 
@@ -76,7 +76,7 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getType_returnsComposing()
   {
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(createEmptyInlineProvider())
     );
 
@@ -86,10 +86,10 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_isReady_allProvidersReady_returnsTrue()
   {
-    CompactionRuleProvider provider1 = createEmptyInlineProvider(); // Always ready
-    CompactionRuleProvider provider2 = createEmptyInlineProvider(); // Always ready
+    ReindexingRuleProvider provider1 = createEmptyInlineProvider(); // Always ready
+    ReindexingRuleProvider provider2 = createEmptyInlineProvider(); // Always ready
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
@@ -99,10 +99,10 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_isReady_someProvidersNotReady_returnsFalse()
   {
-    CompactionRuleProvider readyProvider = createEmptyInlineProvider();
-    CompactionRuleProvider notReadyProvider = createNotReadyProvider();
+    ReindexingRuleProvider readyProvider = createEmptyInlineProvider();
+    ReindexingRuleProvider notReadyProvider = createNotReadyProvider();
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(readyProvider, notReadyProvider)
     );
 
@@ -112,7 +112,7 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_isReady_emptyProviderList_returnsTrue()
   {
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         Collections.emptyList()
     );
 
@@ -122,17 +122,17 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getFilterRules_firstWins_returnsFirstNonEmpty()
   {
-    CompactionFilterRule rule1 = createFilterRule("rule1", Period.days(30));
-    CompactionFilterRule rule2 = createFilterRule("rule2", Period.days(60));
+    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(30));
+    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(60));
 
-    CompactionRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    CompactionRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
+    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
-    List<CompactionFilterRule> result = composing.getFilterRules();
+    List<ReindexingFilterRule> result = composing.getFilterRules();
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("rule1", result.get(0).getId());
@@ -141,16 +141,16 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getFilterRules_firstProviderEmpty_returnsSecond()
   {
-    CompactionFilterRule rule2 = createFilterRule("rule2", Period.days(60));
+    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(60));
 
-    CompactionRuleProvider emptyProvider = createEmptyInlineProvider();
-    CompactionRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
+    ReindexingRuleProvider emptyProvider = createEmptyInlineProvider();
+    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(emptyProvider, provider2)
     );
 
-    List<CompactionFilterRule> result = composing.getFilterRules();
+    List<ReindexingFilterRule> result = composing.getFilterRules();
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("rule2", result.get(0).getId());
@@ -159,14 +159,14 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getFilterRules_allProvidersEmpty_returnsEmpty()
   {
-    CompactionRuleProvider provider1 = createEmptyInlineProvider();
-    CompactionRuleProvider provider2 = createEmptyInlineProvider();
+    ReindexingRuleProvider provider1 = createEmptyInlineProvider();
+    ReindexingRuleProvider provider2 = createEmptyInlineProvider();
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
-    List<CompactionFilterRule> result = composing.getFilterRules();
+    List<ReindexingFilterRule> result = composing.getFilterRules();
 
     Assert.assertTrue(result.isEmpty());
   }
@@ -174,17 +174,17 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getGranularityRules_firstWins_returnsFirstNonEmpty()
   {
-    CompactionGranularityRule rule1 = createGranularityRule("rule1", Period.days(7));
-    CompactionGranularityRule rule2 = createGranularityRule("rule2", Period.days(30));
+    ReindexingGranularityRule rule1 = createGranularityRule("rule1", Period.days(7));
+    ReindexingGranularityRule rule2 = createGranularityRule("rule2", Period.days(30));
 
-    CompactionRuleProvider provider1 = createInlineProviderWithGranularityRules(ImmutableList.of(rule1));
-    CompactionRuleProvider provider2 = createInlineProviderWithGranularityRules(ImmutableList.of(rule2));
+    ReindexingRuleProvider provider1 = createInlineProviderWithGranularityRules(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = createInlineProviderWithGranularityRules(ImmutableList.of(rule2));
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
-    List<CompactionGranularityRule> result = composing.getGranularityRules();
+    List<ReindexingGranularityRule> result = composing.getGranularityRules();
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("rule1", result.get(0).getId());
@@ -194,16 +194,16 @@ public class ComposingCompactionRuleProviderTest
   public void test_getFilterRulesWithInterval_firstWins_delegatesToFirstProvider()
   {
     Interval interval = new Interval("2025-11-01T00:00:00Z/2025-11-15T00:00:00Z");
-    CompactionFilterRule rule1 = createFilterRule("rule1", Period.days(30));
+    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(30));
 
-    CompactionRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    CompactionRuleProvider provider2 = createEmptyInlineProvider();
+    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = createEmptyInlineProvider();
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
-    List<CompactionFilterRule> result = composing.getFilterRules(interval, REFERENCE_TIME);
+    List<ReindexingFilterRule> result = composing.getFilterRules(interval, REFERENCE_TIME);
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("rule1", result.get(0).getId());
@@ -212,14 +212,14 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_mergesFromAllProviders()
   {
-    CompactionFilterRule rule1 = createFilterRule("rule1", Period.days(7));
-    CompactionFilterRule rule2 = createFilterRule("rule2", Period.days(30));
-    CompactionFilterRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
+    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(7));
+    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(30));
+    ReindexingFilterRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
 
-    CompactionRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    CompactionRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2, rule3));
+    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2, rule3));
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
     );
 
@@ -234,14 +234,14 @@ public class ComposingCompactionRuleProviderTest
   @Test
   public void test_singleProvider_delegatesDirectly()
   {
-    CompactionFilterRule rule = createFilterRule("rule1", Period.days(30));
-    CompactionRuleProvider provider = createInlineProviderWithFilterRules(ImmutableList.of(rule));
+    ReindexingFilterRule rule = createFilterRule("rule1", Period.days(30));
+    ReindexingRuleProvider provider = createInlineProviderWithFilterRules(ImmutableList.of(rule));
 
-    ComposingCompactionRuleProvider composing = new ComposingCompactionRuleProvider(
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider)
     );
 
-    List<CompactionFilterRule> result = composing.getFilterRules();
+    List<ReindexingFilterRule> result = composing.getFilterRules();
 
     Assert.assertEquals(1, result.size());
     Assert.assertEquals("rule1", result.get(0).getId());
@@ -249,9 +249,9 @@ public class ComposingCompactionRuleProviderTest
 
   // ========== Helper Methods ==========
 
-  private CompactionRuleProvider createEmptyInlineProvider()
+  private ReindexingRuleProvider createEmptyInlineProvider()
   {
-    return new InlineCompactionRuleProvider(
+    return new InlineReindexingRuleProvider(
         Collections.emptyList(),
         Collections.emptyList(),
         Collections.emptyList(),
@@ -262,9 +262,9 @@ public class ComposingCompactionRuleProviderTest
     );
   }
 
-  private CompactionRuleProvider createInlineProviderWithFilterRules(List<CompactionFilterRule> rules)
+  private ReindexingRuleProvider createInlineProviderWithFilterRules(List<ReindexingFilterRule> rules)
   {
-    return new InlineCompactionRuleProvider(
+    return new InlineReindexingRuleProvider(
         rules,
         Collections.emptyList(),
         Collections.emptyList(),
@@ -275,9 +275,9 @@ public class ComposingCompactionRuleProviderTest
     );
   }
 
-  private CompactionRuleProvider createInlineProviderWithGranularityRules(List<CompactionGranularityRule> rules)
+  private ReindexingRuleProvider createInlineProviderWithGranularityRules(List<ReindexingGranularityRule> rules)
   {
-    return new InlineCompactionRuleProvider(
+    return new InlineReindexingRuleProvider(
         Collections.emptyList(),
         Collections.emptyList(),
         Collections.emptyList(),
@@ -288,9 +288,9 @@ public class ComposingCompactionRuleProviderTest
     );
   }
 
-  private CompactionRuleProvider createNotReadyProvider()
+  private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new CompactionRuleProvider()
+    return new ReindexingRuleProvider()
     {
       @Override
       public String getType()
@@ -311,94 +311,94 @@ public class ComposingCompactionRuleProviderTest
       }
 
       @Override
-      public List<CompactionFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionFilterRule> getFilterRules()
+      public List<ReindexingFilterRule> getFilterRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionMetricsRule> getMetricsRules()
+      public List<ReindexingMetricsRule> getMetricsRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionDimensionsRule> getDimensionsRules()
+      public List<ReindexingDimensionsRule> getDimensionsRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionIOConfigRule> getIOConfigRules()
+      public List<ReindexingIOConfigRule> getIOConfigRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionProjectionRule> getProjectionRules()
+      public List<ReindexingProjectionRule> getProjectionRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionGranularityRule> getGranularityRules()
+      public List<ReindexingGranularityRule> getGranularityRules()
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
+      public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
       {
         return Collections.emptyList();
       }
 
       @Override
-      public List<CompactionTuningConfigRule> getTuningConfigRules()
+      public List<ReindexingTuningConfigRule> getTuningConfigRules()
       {
         return Collections.emptyList();
       }
     };
   }
 
-  private CompactionFilterRule createFilterRule(String id, Period period)
+  private ReindexingFilterRule createFilterRule(String id, Period period)
   {
-    return new CompactionFilterRule(
+    return new ReindexingFilterRule(
         id,
         "Test rule",
         period,
@@ -406,9 +406,9 @@ public class ComposingCompactionRuleProviderTest
     );
   }
 
-  private CompactionGranularityRule createGranularityRule(String id, Period period)
+  private ReindexingGranularityRule createGranularityRule(String id, Period period)
   {
-    return new CompactionGranularityRule(
+    return new ReindexingGranularityRule(
         id,
         "Test granularity rule",
         period,

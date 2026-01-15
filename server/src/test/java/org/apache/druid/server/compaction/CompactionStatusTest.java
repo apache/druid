@@ -58,6 +58,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +68,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -911,7 +911,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     Assert.assertEquals(expectedFilter, result);
@@ -925,7 +925,7 @@ public class CompactionStatusTest
     DimFilter filterC = new SelectorDimFilter("country", "FR", null);
 
     CompactionState state = createStateWithFilters("fp1", filterA, filterB, filterC);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state), DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
@@ -934,7 +934,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     Assert.assertNull(result);
@@ -948,7 +948,7 @@ public class CompactionStatusTest
     DimFilter filterC = new SelectorDimFilter("country", "FR", null);
 
     CompactionState state = createStateWithoutFilters("fp1");
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state), DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
@@ -957,7 +957,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     OrDimFilter innerOr = (OrDimFilter) result.getField();
@@ -974,7 +974,7 @@ public class CompactionStatusTest
     DimFilter filterD = new SelectorDimFilter("country", "DE", null);
 
     CompactionState state = createStateWithFilters("fp1", filterA, filterB);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state), DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(
@@ -985,7 +985,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     OrDimFilter innerOr = (OrDimFilter) result.getField();
@@ -1005,7 +1005,9 @@ public class CompactionStatusTest
 
     CompactionState state1 = createStateWithFilters("fp1", filterA, filterB);
     CompactionState state2 = createStateWithFilters("fp2", filterA, filterC);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state1, "fp2", state2), DateTimes.nowUtc());
+    DateTime now = DateTimes.nowUtc();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state1, now);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp2", state2, now);
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(
@@ -1016,7 +1018,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     OrDimFilter innerOr = (OrDimFilter) result.getField();
@@ -1035,7 +1037,9 @@ public class CompactionStatusTest
 
     CompactionState state1 = createStateWithFilters("fp1", filterA);
     CompactionState state2 = createStateWithFilters("fp2", filterA);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state1, "fp2", state2), DateTimes.nowUtc());
+    DateTime now = DateTimes.nowUtc();
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state1, now);
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp2", state2, now);
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(
@@ -1046,7 +1050,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     OrDimFilter innerOr = (OrDimFilter) result.getField();
@@ -1072,7 +1076,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     Assert.assertEquals(expectedFilter, result);
@@ -1086,7 +1090,7 @@ public class CompactionStatusTest
     DimFilter filterC = new SelectorDimFilter("country", "FR", null);
 
     CompactionState state = createStateWithSingleFilter("fp1", filterA);
-    compactionStateManager.persistCompactionState(TestDataSource.WIKI, Map.of("fp1", state), DateTimes.nowUtc());
+    indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
     syncCacheFromManager();
 
     NotDimFilter expectedFilter = new NotDimFilter(
@@ -1097,7 +1101,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     OrDimFilter innerOr = (OrDimFilter) result.getField();
@@ -1121,7 +1125,7 @@ public class CompactionStatusTest
     NotDimFilter result = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
-        compactionStateCache
+        fingerprintMapper
     );
 
     Assert.assertEquals(expectedFilter, result);
@@ -1132,7 +1136,7 @@ public class CompactionStatusTest
   private CompactionCandidate createCandidateWithFingerprints(String... fingerprints)
   {
     List<DataSegment> segments = Arrays.stream(fingerprints)
-        .map(fp -> DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(fp).build())
+        .map(fp -> DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(fp).build())
         .collect(Collectors.toList());
     return CompactionCandidate.from(segments, null);
   }
@@ -1141,7 +1145,7 @@ public class CompactionStatusTest
   {
     List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      segments.add(DataSegment.builder(WIKI_SEGMENT).compactionStateFingerprint(null).build());
+      segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
     }
     return CompactionCandidate.from(segments, null);
   }

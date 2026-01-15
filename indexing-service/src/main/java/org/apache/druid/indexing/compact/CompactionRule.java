@@ -26,7 +26,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 /**
- * A single rule used inside {@link CascadingCompactionTemplate}.
+ * A single rule used inside {@link CascadingReindexingTemplate}.
  */
 public class CompactionRule
 {

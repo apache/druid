@@ -56,13 +56,13 @@ import java.util.Objects;
  * }
  * }</pre>
  */
-public class CompactionFilterRule extends AbstractCompactionRule
+public class ReindexingFilterRule extends AbstractReindexingRule
 {
 
   private final DimFilter filter;
 
   @JsonCreator
-  public CompactionFilterRule(
+  public ReindexingFilterRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,

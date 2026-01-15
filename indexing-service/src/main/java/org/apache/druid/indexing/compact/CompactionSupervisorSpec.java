@@ -98,8 +98,8 @@ public class CompactionSupervisorSpec implements SupervisorSpec
    */
   public CompactionJobTemplate getTemplate()
   {
-    if (spec instanceof CascadingCompactionTemplate) {
-      return (CascadingCompactionTemplate) spec;
+    if (spec instanceof CascadingReindexingTemplate) {
+      return (CascadingReindexingTemplate) spec;
     } else {
       return new CompactionConfigBasedJobTemplate(spec);
     }

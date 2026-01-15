@@ -27,12 +27,12 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionTuningConfigRuleTest
+public class ReindexingTuningConfigRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_21_DAYS = Period.days(21);
 
-  private final CompactionTuningConfigRule rule = new CompactionTuningConfigRule(
+  private final ReindexingTuningConfigRule rule = new ReindexingTuningConfigRule(
       "test-tuning-rule",
       "Custom tuning config",
       PERIOD_21_DAYS,
@@ -54,9 +54,9 @@ public class CompactionTuningConfigRuleTest
     // Interval ends at 2025-11-25, which is fully before threshold
     Interval interval = new Interval("2025-11-24T00:00:00Z/2025-11-25T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -66,9 +66,9 @@ public class CompactionTuningConfigRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-11-27T12:00:00Z/2025-11-28T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -78,9 +78,9 @@ public class CompactionTuningConfigRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-11-27T00:00:00Z/2025-11-29T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -90,9 +90,9 @@ public class CompactionTuningConfigRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -127,7 +127,7 @@ public class CompactionTuningConfigRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionTuningConfigRule(null, "description", PERIOD_21_DAYS, createTestTuningConfig())
+        () -> new ReindexingTuningConfigRule(null, "description", PERIOD_21_DAYS, createTestTuningConfig())
     );
   }
 
@@ -136,7 +136,7 @@ public class CompactionTuningConfigRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionTuningConfigRule("test-id", "description", null, createTestTuningConfig())
+        () -> new ReindexingTuningConfigRule("test-id", "description", null, createTestTuningConfig())
     );
   }
 
@@ -146,7 +146,7 @@ public class CompactionTuningConfigRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionTuningConfigRule("test-id", "description", zeroPeriod, createTestTuningConfig())
+        () -> new ReindexingTuningConfigRule("test-id", "description", zeroPeriod, createTestTuningConfig())
     );
   }
 
@@ -156,7 +156,7 @@ public class CompactionTuningConfigRuleTest
     Period negativePeriod = Period.days(-21);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionTuningConfigRule("test-id", "description", negativePeriod, createTestTuningConfig())
+        () -> new ReindexingTuningConfigRule("test-id", "description", negativePeriod, createTestTuningConfig())
     );
   }
 
@@ -165,7 +165,7 @@ public class CompactionTuningConfigRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionTuningConfigRule("test-id", "description", PERIOD_21_DAYS, null)
+        () -> new ReindexingTuningConfigRule("test-id", "description", PERIOD_21_DAYS, null)
     );
   }
 

@@ -32,7 +32,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * A meta-provider that composes multiple {@link CompactionRuleProvider}s with first-wins semantics.
+ * A meta-provider that composes multiple {@link ReindexingRuleProvider}s with first-wins semantics.
  * <p>
  * This provider delegates rule queries to a list of child providers in order. For each rule type,
  * it returns the result from the first provider that has non-empty rules of that type.
@@ -85,15 +85,15 @@ import java.util.stream.Collectors;
  *   <li>Filter rules come from the second provider (first provider with filters)</li>
  * </ul>
  */
-public class ComposingCompactionRuleProvider implements CompactionRuleProvider
+public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
 {
   public static final String TYPE = "composing";
 
-  private final List<CompactionRuleProvider> providers;
+  private final List<ReindexingRuleProvider> providers;
 
   @JsonCreator
-  public ComposingCompactionRuleProvider(
-      @JsonProperty("providers") List<CompactionRuleProvider> providers
+  public ComposingReindexingRuleProvider(
+      @JsonProperty("providers") List<ReindexingRuleProvider> providers
   )
   {
     this.providers = Objects.requireNonNull(providers, "providers cannot be null");
@@ -107,7 +107,7 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @JsonProperty("providers")
-  public List<CompactionRuleProvider> getProviders()
+  public List<ReindexingRuleProvider> getProviders()
   {
     return providers;
   }
@@ -122,7 +122,7 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   public boolean isReady()
   {
     // All providers must be ready
-    return providers.stream().allMatch(CompactionRuleProvider::isReady);
+    return providers.stream().allMatch(ReindexingRuleProvider::isReady);
   }
 
   @Override
@@ -137,17 +137,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionFilterRule> getFilterRules()
+  public List<ReindexingFilterRule> getFilterRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getFilterRules)
+                    .map(ReindexingRuleProvider::getFilterRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getFilterRules(interval, referenceTime))
@@ -157,17 +157,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionMetricsRule> getMetricsRules()
+  public List<ReindexingMetricsRule> getMetricsRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getMetricsRules)
+                    .map(ReindexingRuleProvider::getMetricsRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getMetricsRules(interval, referenceTime))
@@ -177,17 +177,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionDimensionsRule> getDimensionsRules()
+  public List<ReindexingDimensionsRule> getDimensionsRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getDimensionsRules)
+                    .map(ReindexingRuleProvider::getDimensionsRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getDimensionsRules(interval, referenceTime))
@@ -197,17 +197,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionIOConfigRule> getIOConfigRules()
+  public List<ReindexingIOConfigRule> getIOConfigRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getIOConfigRules)
+                    .map(ReindexingRuleProvider::getIOConfigRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getIOConfigRules(interval, referenceTime))
@@ -217,17 +217,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionProjectionRule> getProjectionRules()
+  public List<ReindexingProjectionRule> getProjectionRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getProjectionRules)
+                    .map(ReindexingRuleProvider::getProjectionRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getProjectionRules(interval, referenceTime))
@@ -237,17 +237,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionGranularityRule> getGranularityRules()
+  public List<ReindexingGranularityRule> getGranularityRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getGranularityRules)
+                    .map(ReindexingRuleProvider::getGranularityRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getGranularityRules(interval, referenceTime))
@@ -257,17 +257,17 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   }
 
   @Override
-  public List<CompactionTuningConfigRule> getTuningConfigRules()
+  public List<ReindexingTuningConfigRule> getTuningConfigRules()
   {
     return providers.stream()
-                    .map(CompactionRuleProvider::getTuningConfigRules)
+                    .map(ReindexingRuleProvider::getTuningConfigRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<CompactionTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
                     .map(p -> p.getTuningConfigRules(interval, referenceTime))
@@ -285,7 +285,7 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ComposingCompactionRuleProvider that = (ComposingCompactionRuleProvider) o;
+    ComposingReindexingRuleProvider that = (ComposingReindexingRuleProvider) o;
     return Objects.equals(providers, that.providers);
   }
 
@@ -298,7 +298,7 @@ public class ComposingCompactionRuleProvider implements CompactionRuleProvider
   @Override
   public String toString()
   {
-    return "ComposingCompactionRuleProvider{" +
+    return "ComposingReindexingRuleProvider{" +
            "providers=" + providers +
            ", ready=" + isReady() +
            '}';

@@ -28,19 +28,19 @@ import org.joda.time.Period;
 import java.util.List;
 
 /**
- * Provides compaction rules for different aspects of compaction configuration.
+ * Provides compaction rules for different aspects of reindexing configuration.
  * <p>
  * This abstraction allows rules to be sourced from different locations: inline definitions,
  * database storage, external services, or dynamically generated based on metrics. Each method
- * returns rules for a specific compaction aspect (granularity, filters, tuning, etc.), either
+ * returns rules for a specific reindexing aspect (granularity, filters, tuning, etc.), either
  * for all rules or filtered by interval applicability.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = InlineCompactionRuleProvider.TYPE, value = InlineCompactionRuleProvider.class),
-    @JsonSubTypes.Type(name = ComposingCompactionRuleProvider.TYPE, value = ComposingCompactionRuleProvider.class)
+    @JsonSubTypes.Type(name = InlineReindexingRuleProvider.TYPE, value = InlineReindexingRuleProvider.class),
+    @JsonSubTypes.Type(name = ComposingReindexingRuleProvider.TYPE, value = ComposingReindexingRuleProvider.class)
 })
-public interface CompactionRuleProvider
+public interface ReindexingRuleProvider
 {
   /**
    * Returns the type identifier for this provider implementation.
@@ -56,7 +56,7 @@ public interface CompactionRuleProvider
    * Returns true if this provider is ready to supply rules.
    * <p>
    * Providers that depend on external state (HTTP services, databases) should return false
-   * until they have successfully initialized and loaded their rules. Compaction supervisors
+   * until they have successfully initialized and loaded their rules. Reindexing supervisors
    * should check this before generating tasks to avoid creating tasks with incomplete rule sets.
    * <p>
    * The default implementation returns true, which is appropriate for providers that have
@@ -78,112 +78,112 @@ public interface CompactionRuleProvider
   List<Period> getCondensedAndSortedPeriods(DateTime referenceTime);
 
   /**
-   * Returns all compaction filter rules that apply to the given interval.
+   * Returns all reindexing filter rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionFilterRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingFilterRule} rules that apply to the given interval.
    */
-  List<CompactionFilterRule> getFilterRules(Interval interval, DateTime referenceTime);
+  List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL compaction filter rules.
+   * Returns ALL reindexing filter rules.
    */
-  List<CompactionFilterRule> getFilterRules();
+  List<ReindexingFilterRule> getFilterRules();
 
   /**
-   * Returns all compaction metrics rules that apply to the given interval.
+   * Returns all reindexing metrics rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionMetricsRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingMetricsRule} rules that apply to the given interval.
    */
-  List<CompactionMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime);
+  List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL compaction metrics rules.
+   * Returns ALL reindexing metrics rules.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    */
-  List<CompactionMetricsRule> getMetricsRules();
+  List<ReindexingMetricsRule> getMetricsRules();
 
   /**
-   * Returns all compaction dimensions rules that apply to the given interval.
-   * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
-   * </p>
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionDimensionsRule} rules that apply to the given interval.
-   */
-  List<CompactionDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime);
-
-  /**
-   * Returns ALL compaction dimensions rules.
-   */
-  List<CompactionDimensionsRule> getDimensionsRules();
-
-  /**
-   * Returns all compaction IO config rules that apply to the given interval.
+   * Returns all reindexing dimensions rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionIOConfigRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingDimensionsRule} rules that apply to the given interval.
    */
-  List<CompactionIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime);
+  List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime);
 
   /**
-    * Returns ALL compaction IO config rules.
+   * Returns ALL reindexing dimensions rules.
    */
-  List<CompactionIOConfigRule> getIOConfigRules();
+  List<ReindexingDimensionsRule> getDimensionsRules();
 
   /**
-   * Returns all compaction projection rules that apply to the given interval.
+   * Returns all reindexing IO config rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionProjectionRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingIOConfigRule} rules that apply to the given interval.
    */
-  List<CompactionProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime);
+  List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL compaction projection rules.
+    * Returns ALL reindexing IO config rules.
    */
-  List<CompactionProjectionRule> getProjectionRules();
+  List<ReindexingIOConfigRule> getIOConfigRules();
 
   /**
-   * Returns all compaction granularity rules that apply to the given interval.
+   * Returns all reindexing projection rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link CompactionGranularityRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingProjectionRule} rules that apply to the given interval.
    */
-  List<CompactionGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime);
+  List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL compaction granularity rules.
+   * Returns ALL reindexing projection rules.
    */
-  List<CompactionGranularityRule> getGranularityRules();
+  List<ReindexingProjectionRule> getProjectionRules();
 
   /**
-   * Returns all compaction tuning config rules that apply to the given interval.
+   * Returns all reindexing granularity rules that apply to the given interval.
+   * <p>
+   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * </p>
+   * @param interval      The interval to check applicability against.
+   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
+   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
+   * @return The list of {@link ReindexingGranularityRule} rules that apply to the given interval.
+   */
+  List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime);
+
+  /**
+   * Returns ALL reindexing granularity rules.
+   */
+  List<ReindexingGranularityRule> getGranularityRules();
+
+  /**
+   * Returns all reindexing tuning config rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
@@ -191,10 +191,10 @@ public interface CompactionRuleProvider
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
    */
-  List<CompactionTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime);
+  List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL compaction tuning config rules.
+   * Returns ALL reindexing tuning config rules.
    */
-  List<CompactionTuningConfigRule> getTuningConfigRules();
+  List<ReindexingTuningConfigRule> getTuningConfigRules();
 }

@@ -25,7 +25,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
+import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,10 +38,9 @@ import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
-import org.apache.druid.server.compaction.CompactionGranularityRule;
-import org.apache.druid.server.compaction.CompactionStatus;
-import org.apache.druid.server.compaction.CompactionTuningConfigRule;
-import org.apache.druid.server.compaction.InlineCompactionRuleProvider;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -314,20 +313,20 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(16, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
 
-    CompactionGranularityRule hourRule = new CompactionGranularityRule(
+    ReindexingGranularityRule hourRule = new ReindexingGranularityRule(
         "hourRule",
         "Compact to HOUR granularity for data older than 1 days",
         Period.days(1),
         new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
     );
-    CompactionGranularityRule dayRule = new CompactionGranularityRule(
+    ReindexingGranularityRule dayRule = new ReindexingGranularityRule(
         "dayRule",
         "Compact to DAY granularity for data older than 2 days",
         Period.days(7),
         new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
     );
 
-    CompactionTuningConfigRule tuningConfigRule = new CompactionTuningConfigRule(
+    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
         "tuningConfigRule",
         "Use dimension range partitioning with max 1000 rows per segment",
         Period.days(1),
@@ -354,13 +353,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
 
-    InlineCompactionRuleProvider ruleProvider = InlineCompactionRuleProvider.builder()
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider.builder()
                                                                             .granularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
                                                                             .build();
 
-    CascadingCompactionTemplate cascadingCompactionTemplate = new CascadingCompactionTemplate(dataSource, ruleProvider);
-    runCompactionWithSpec(cascadingCompactionTemplate);
+    CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(dataSource, ruleProvider);
+    runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));

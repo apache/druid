@@ -27,12 +27,12 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CompactionGranularityRuleTest
+public class ReindexingGranularityRuleTest
 {
   private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
   private static final Period PERIOD_7_DAYS = Period.days(7);
 
-  private final CompactionGranularityRule rule = new CompactionGranularityRule(
+  private final ReindexingGranularityRule rule = new ReindexingGranularityRule(
       "test-rule",
       "Test granularity rule",
       PERIOD_7_DAYS,
@@ -53,9 +53,9 @@ public class CompactionGranularityRuleTest
     // Interval ends at 2025-12-10, which is fully before threshold
     Interval interval = new Interval("2025-12-09T00:00:00Z/2025-12-10T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -65,9 +65,9 @@ public class CompactionGranularityRuleTest
     // Interval ends exactly at threshold - should be FULL (boundary case)
     Interval interval = new Interval("2025-12-11T12:00:00Z/2025-12-12T12:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.FULL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -77,9 +77,9 @@ public class CompactionGranularityRuleTest
     // Interval starts before threshold and ends after - PARTIAL
     Interval interval = new Interval("2025-12-11T00:00:00Z/2025-12-13T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.PARTIAL, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -89,9 +89,9 @@ public class CompactionGranularityRuleTest
     // Interval starts after threshold - NONE
     Interval interval = new Interval("2025-12-18T00:00:00Z/2025-12-19T00:00:00Z");
 
-    CompactionRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
+    ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(CompactionRule.AppliesToMode.NONE, result);
+    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -131,7 +131,7 @@ public class CompactionGranularityRuleTest
     );
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionGranularityRule(null, "description", PERIOD_7_DAYS, config)
+        () -> new ReindexingGranularityRule(null, "description", PERIOD_7_DAYS, config)
     );
   }
 
@@ -145,7 +145,7 @@ public class CompactionGranularityRuleTest
     );
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionGranularityRule("test-id", "description", null, config)
+        () -> new ReindexingGranularityRule("test-id", "description", null, config)
     );
   }
 
@@ -160,7 +160,7 @@ public class CompactionGranularityRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionGranularityRule("test-id", "description", zeroPeriod, config)
+        () -> new ReindexingGranularityRule("test-id", "description", zeroPeriod, config)
     );
   }
 
@@ -175,7 +175,7 @@ public class CompactionGranularityRuleTest
     Period negativePeriod = Period.days(-7);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new CompactionGranularityRule("test-id", "description", negativePeriod, config)
+        () -> new ReindexingGranularityRule("test-id", "description", negativePeriod, config)
     );
   }
 
@@ -184,7 +184,7 @@ public class CompactionGranularityRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new CompactionGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
+        () -> new ReindexingGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
     );
   }
 }

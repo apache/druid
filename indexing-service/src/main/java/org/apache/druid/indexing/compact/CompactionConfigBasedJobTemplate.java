@@ -48,16 +48,16 @@ import java.util.Objects;
 public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
   private final DataSourceCompactionConfig config;
-  private final CompactionConfigFinalizer configFinalizer;
+  private final ReindexingConfigFinalizer configFinalizer;
 
   public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
   {
-    this(config, CompactionConfigFinalizer.IDENTITY);
+    this(config, ReindexingConfigFinalizer.IDENTITY);
   }
 
   public CompactionConfigBasedJobTemplate(
       DataSourceCompactionConfig config,
-      CompactionConfigFinalizer configFinalizer
+      ReindexingConfigFinalizer configFinalizer
   )
   {
     this.config = config;
