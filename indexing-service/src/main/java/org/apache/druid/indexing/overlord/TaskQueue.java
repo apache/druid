@@ -1212,13 +1212,17 @@ public class TaskQueue
       return RowKey.empty();
     }
 
-    String supervisorId = "null";
+    String supervisorId = null;
     if (task instanceof SeekableStreamIndexTask) {
       supervisorId = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
     }
 
-    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
-                 .with(Dimension.TASK_TYPE, task.getType())
-                 .and(Dimension.SUPERVISOR_ID, supervisorId);
+    RowKey.Builder builder = RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                                   .with(Dimension.TASK_TYPE, task.getType());
+
+    if (supervisorId != null) {
+      builder.with(Dimension.SUPERVISOR_ID, supervisorId);
+    }
+    return builder.build();
   }
 }
