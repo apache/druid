@@ -61,11 +61,13 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected Worker getWorkerFor(String workerTaskId)
   {
-    final WorkerRunRef workerRunRef = inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker);
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
-    // Wait for the worker to exist
-    while (!workerRunRef.hasWorker()) {
+    // Wait for the worker to exist. It may not have been created or started up yet, especially if this is
+    // a worker trying to contact another worker.
+    WorkerRunRef workerRunRef;
+    while ((workerRunRef = inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker)) == null
+           || !workerRunRef.hasWorker()) {
       if (stopwatch.millisElapsed() > WORKER_WAIT_TIMEOUT_MS) {
         throw new ISE(
             "Timed out after [%,d]ms waiting for worker[%s] to be registered",
@@ -88,7 +90,8 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected WorkerRunRef newWorker(String workerId)
   {
-    throw new RuntimeException("Not implemented!");
+    // Return null so getWorkerFor waits for inMemoryWorkers to be populated
+    return null;
   }
 
   @Override
