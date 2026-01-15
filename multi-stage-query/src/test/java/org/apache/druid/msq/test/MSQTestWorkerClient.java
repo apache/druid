@@ -63,7 +63,8 @@ public class MSQTestWorkerClient implements WorkerClient
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
-    // Wait for the worker to exist
+    // Wait for the worker to exist. It may not have been created or started up yet, especially if this is
+    // a worker trying to contact another worker.
     WorkerRunRef workerRunRef;
     while ((workerRunRef = inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker)) == null
            || !workerRunRef.hasWorker()) {
