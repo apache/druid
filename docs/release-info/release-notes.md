@@ -61,6 +61,13 @@ This section contains important information about new and existing features.
 
 This section contains detailed release notes separated by areas.
 
+#### Druid operator
+
+Druid Operator is a Kubernetes controller that manages the lifecycle of your Druid clusters. The operator simplifies the management of Druid clusters with its custom logic that is configurable through
+Kubernetes CRDs.
+
+[#18435](https://github.com/apache/druid/pull/18435)
+
 #### Cost-based autoscaling for streaming ingestion
 
 Druid now supports cost-based autoscaling for streaming ingestion that optimizes task count by balancing lag reduction against resource efficiency.. This autoscaling strategy uses the following formula:
@@ -238,6 +245,7 @@ The following metrics have been added to the default list for statsd:
 
 #### Other metrics and monitoring improvements
 
+* Added logging for all handlers for a stage before they start or stop, which can help you understand execution order [#18662](https://github.com/apache/druid/pull/18662)
 * Added new Jetty thread pool metrics to capture request-serving thread statistics: `jetty/threadPool/utilized`, `jetty/threadPool/ready` and `jetty/threadPool/utilizationRate` [#18883](https://github.com/apache/druid/pull/18883)
 * Added `tier` and `priority` dimensions to the `segments/max` metric [#18890](https://github.com/apache/druid/pull/18890)
 * Added `GroupByStatsMonitor`, which includes `dataSource` and `taskId` dimensions for metrics emitted on peons [#18711](https://github.com/apache/druid/pull/18711)
@@ -247,7 +255,8 @@ The following metrics have been added to the default list for statsd:
 * Druid now logs the following: 
   * total bytes gathered when the max scatter-gather bytes limit is reached [#18841](https://github.com/apache/druid/pull/18841)
   * `query/bytes` metric for even for failed requests [#18842](https://github.com/apache/druid/pull/18842)
-* Changed  Prometheus emitter TTL tracking to consider all label value combinations instead of just the metric name. Labels aren't tracked when the TTL isn't set [#18718](https://github.com/apache/druid/pull/18718) [#18689](https://github.com/apache/druid/pull/18689)
+* Changed Prometheus emitter TTL tracking to consider all label value combinations instead of just the metric name. Labels aren't tracked when the TTL isn't set [#18718](https://github.com/apache/druid/pull/18718) [#18689](https://github.com/apache/druid/pull/18689)
+* Changed lifecycle `stop()` to be logged at the `info` level to match `start()` [#18640](https://github.com/apache/druid/pull/18640)
 * Improved the metrics emitter so that it emits metrics for all task completions [#18766](https://github.com/apache/druid/pull/18766)
 
 ### Extensions
@@ -256,8 +265,6 @@ The following metrics have been added to the default list for statsd:
 
 * Added `SPECTATOR_COUNT` and `SPECTATOR_PERCENTILE` SQL functions [#18885](https://github.com/apache/druid/pull/18885)
 * Improved the performance of the SpectatorHistogram extension through vectorization [#18813](https://github.com/apache/druid/pull/18813)
-
-### Documentation improvements
 
 ## Upgrade notes and incompatible changes
 
@@ -269,21 +276,34 @@ Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`
 
 [#18709](https://github.com/apache/druid/pull/18709)
 
-#### Some statsd metrics removed
+#### Removed metrics
 
 The following obsolete metrics have been removed:
 
-* `segment/cost/raw`
-* `segment/cost/normalized`
-* `segment/cost/normalization`
-
-[#18846](https://github.com/apache/druid/pull/18846)
+* `segment/cost/raw` [#18846](https://github.com/apache/druid/pull/18846)
+* `segment/cost/normalized` [#18846](https://github.com/apache/druid/pull/18846)
+* `segment/cost/normalization` [#18846](https://github.com/apache/druid/pull/18846)
+* `task/action/log/time` [#18649](https://github.com/apache/druid/pull/18649)
 
 ### Developer notes
 
+#### Segment file interfaces
+
+New `SegmentFileBuilder` and `SegmentFileMapper` interfaces have been defined to replace direct usages of `FileSmoosher` and `SmooshedFileMapper` to abstract the segment building and reading process.
+
+The main developer visible changes for extension writers with custom column implementations is that the `Serializer` interface has changed the `writeTo` method:
+
+* It now accepts a `SegmentFileBuilder` instead of a `FileSmoosher`
+* The `ColumnBuilder` method `getFileMapper` now returns a `SegmentFileMapper` instead of `SmooshedFileMapper`. 
+
+Extensions which do not provide custom column implementations should not be impacted by these changes.
+
+[#18608](https://github.com/apache/druid/pull/18608)
+
+#### Other developer improvements
+
 * Added the ability to override the default Kafka image for testing [#18739](https://github.com/apache/druid/pull/18739)
 * Extensions can now provide query kit implementations [#18875](https://github.com/apache/druid/pull/18875)
-* `log4j` uses have been standardized to 
 * Removed version overrides in individual `pom` files. For a full list, see the pull request [#18708](https://github.com/apache/druid/pull/18708)
 
 #### Dependency updates
