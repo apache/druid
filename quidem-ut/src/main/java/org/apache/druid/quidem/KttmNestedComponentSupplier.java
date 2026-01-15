@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -57,9 +58,12 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
+  )
   {
-    walker = super.addSegmentsToWalker(walker);
+    walker = super.addSegmentsToWalker(walker, jsonMapper);
     QueryableIndex idx = makeKttmIndex(tempDirProducer.newTempFolder());
 
     walker.add(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -41,7 +42,6 @@ import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -72,10 +72,13 @@ public abstract class AbstractDartComponentSupplier extends AbstractMSQComponent
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
+  )
   {
-    walker.add(TestDataSet.NUMBERS, TestHelper.JSON_MAPPER, getTempDirProducer().newTempFolder("tmp_numbers"));
-    return super.addSegmentsToWalker(walker);
+    walker.add(TestDataSet.NUMBERS, jsonMapper, getTempDirProducer().newTempFolder("tmp_numbers"));
+    return super.addSegmentsToWalker(walker, jsonMapper);
   }
   @Override
   public DruidModule getCoreModule()
