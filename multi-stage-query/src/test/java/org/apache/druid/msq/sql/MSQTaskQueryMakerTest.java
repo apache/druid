@@ -177,9 +177,12 @@ public class MSQTaskQueryMakerTest
   @Before
   public void setUp() throws Exception
   {
+    objectMapper = TestHelper.makeJsonMapper();
+    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     walker = TestDataBuilder.addDataSetsToWalker(
         FileUtils.getTempDir().toFile(),
-        SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER))
+        SpecificSegmentsQuerySegmentWalker.createWalker(QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER)),
+        objectMapper
     );
     final TestSegmentManager testSegmentManager = new TestSegmentManager();
     for (SpecificSegmentsQuerySegmentWalker.CompleteSegment completeSegment : walker.getCompleteSegments()) {
@@ -187,9 +190,7 @@ public class MSQTaskQueryMakerTest
     }
     segmentManager = testSegmentManager.getSegmentManager();
 
-    objectMapper = TestHelper.makeJsonMapper();
     jsonMapper = new DefaultObjectMapper();
-    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     queryProcessingPool = new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool"));
     groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig(),
