@@ -144,10 +144,17 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return taskPriority;
   }
 
+  @JsonProperty
   @Override
   public long getInputSegmentSizeBytes()
   {
     return inputSegmentSizeBytes;
+  }
+
+  @Override
+  public String getType()
+  {
+    return TYPE;
   }
 
   @JsonProperty
@@ -419,12 +426,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         inputSource.withInterval(searchInterval),
         jobParams
     );
-  }
-
-  @Override
-  public String getType()
-  {
-    return TYPE;
   }
 
   // Legacy fields from DataSourceCompactionConfig that are not used by this template
