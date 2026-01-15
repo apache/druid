@@ -38,6 +38,70 @@ For more information, see [Migration guide: front-coded dictionaries](./migr-fro
 
 If you're already using this feature, you don't need to take any action. 
 
+## 36.0.0
+
+### Upgrade notes
+
+#### Deprecated metrics
+
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
+
+[#18709](https://github.com/apache/druid/pull/18709)
+
+#### Some statsd metrics removed
+
+The following obsolete metrics have been removed:
+
+* `segment/cost/raw`
+* `segment/cost/normalized`
+* `segment/cost/normalization`
+
+[#18846](https://github.com/apache/druid/pull/18846)
+
+## 35.0.0
+
+### Upgrade notes
+
+#### Fallback vectorization on by default
+
+The `druid.expressions.allowVectorizeFallback` now defaults to `true`. Additionally, `SAFE_DIVIDE` can now vectorize as a fallback.
+
+[#18549](https://github.com/apache/druid/pull/18549)
+
+#### Java 11 support removed
+
+Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Jetty 12 
+
+A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of `RFC3986` URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Kerberos authentication
+
+The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mandatory. 
+
+[#18368](https://github.com/apache/druid/pull/18368)
+
+#### Multi-stage query task engine
+
+The MSQ task engine is now a core capability of Druid rather than an extension. It has been in the default extension load list for several releases. 
+
+Remove `druid-multi-stage-query` from `druid.extensions.loadList` in `common.runtimes.properties` before you upgrade.
+
+Druid 35.0.0 will ignore the extension if it's in the load list. Future versions of Druid will fail to start since it cannot locate the extension.
+
+[#18394](https://github.com/apache/druid/pull/18394)
+
+#### pac4j extension
+
+Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
+
+[#18259](https://github.com/apache/druid/pull/18259)
+
 ## 34.0.0
 
 ### Upgrade notes
