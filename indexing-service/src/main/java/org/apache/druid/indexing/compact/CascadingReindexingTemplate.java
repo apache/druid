@@ -85,15 +85,33 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
   private final String dataSource;
   private final ReindexingRuleProvider ruleProvider;
+  @Nullable
+  private final Map<String, Object> taskContext;
+  @Nullable
+  private final CompactionEngine engine;
+  private final int taskPriority;
+  private final long inputSegmentSizeBytes;
 
   @JsonCreator
   public CascadingReindexingTemplate(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider
+      @JsonProperty("taskPriority") @Nullable Integer taskPriority,
+      @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
+      @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider,
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
+      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
     this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
     this.ruleProvider = Objects.requireNonNull(ruleProvider, "'ruleProvider' cannot be null");
+    this.engine = engine;
+    this.taskContext = taskContext;
+    this.taskPriority = taskPriority == null
+                        ? DEFAULT_COMPACTION_TASK_PRIORITY
+                        : taskPriority;
+    this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
+                                 ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
+                                 : inputSegmentSizeBytes;
   }
 
   @Override
@@ -101,6 +119,41 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskContext()
+  {
+    return taskContext;
+  }
+
+  @JsonProperty
+  @Nullable
+  @Override
+  public CompactionEngine getEngine()
+  {
+    return engine;
+  }
+
+  @JsonProperty
+  @Override
+  public int getTaskPriority()
+  {
+    return taskPriority;
+  }
+
+  @Override
+  public long getInputSegmentSizeBytes()
+  {
+    return inputSegmentSizeBytes;
+  }
+
+  @JsonProperty
+  private ReindexingRuleProvider getRuleProvider()
+  {
+    return ruleProvider;
   }
 
   /**
@@ -165,6 +218,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     for (Interval reindexingInterval : intervals) {
       InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig.builder()
           .forDataSource(dataSource)
+          .withTaskPriority(taskPriority)
+          .withInputSegmentSizeBytes(inputSegmentSizeBytes)
+          .withEngine(engine)
+          .withTaskContext(taskContext)
           .withSkipOffsetFromLatest(Period.ZERO);
 
       // Apply all applicable reindexing rules to the builder
@@ -374,25 +431,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
   @Nullable
   @Override
-  public CompactionEngine getEngine()
-  {
-    return null;
-  }
-
-  @Override
-  public int getTaskPriority()
-  {
-    return 0;
-  }
-
-  @Override
-  public long getInputSegmentSizeBytes()
-  {
-    return 0;
-  }
-
-  @Nullable
-  @Override
   public Integer getMaxRowsPerSegment()
   {
     return 0;
@@ -416,13 +454,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public UserCompactionTaskIOConfig getIoConfig()
   {
     return null;
-  }
-
-  @Nullable
-  @Override
-  public Map<String, Object> getTaskContext()
-  {
-    return Map.of();
   }
 
   @Nullable
@@ -465,11 +496,5 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public AggregatorFactory[] getMetricsSpec()
   {
     return new AggregatorFactory[0];
-  }
-
-  @JsonProperty
-  private ReindexingRuleProvider getRuleProvider()
-  {
-    return ruleProvider;
   }
 }
