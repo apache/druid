@@ -102,9 +102,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
@@ -280,7 +282,9 @@ public class SystemSchemaTest extends CalciteTestBase
         overlordClient,
         druidNodeDiscoveryProvider,
         MAPPER,
-        httpClient
+        httpClient,
+        () -> new SqlEngineRegistry(Collections.emptySet()),
+        new PlannerConfig()
     );
   }
 

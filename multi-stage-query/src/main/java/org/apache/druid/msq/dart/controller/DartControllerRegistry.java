@@ -35,10 +35,14 @@ import org.apache.druid.msq.exec.Controller;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +72,7 @@ public class DartControllerRegistry
   private final LinkedHashMap<String, QueryInfoAndReport> completeReports = new LinkedHashMap<>();
 
   /**
-   * Map of SQL query ID -> Dart query ID. Used by {@link #getQueryInfoAndReportBySqlQueryId(String)}. Contains an
+   * Map of SQL query ID -> Dart query ID. Used by {@link #getQueryDetailsBySqlQueryId(String)}. Contains an
    * entry for every query in either {@link #controllerMap} or {@link #completeReports}.
    *
    * It is possible for the same SQL query ID to map to multiple Dart query IDs, because SQL query IDs can be set
@@ -195,21 +199,12 @@ public class DartControllerRegistry
    * Gets execution details and report for a query.
    */
   @Nullable
-  public QueryInfoAndReport getQueryInfoAndReport(final String queryId)
+  public QueryInfoAndReport getQueryDetails(final String queryId)
   {
     final ControllerHolder runningController = getController(queryId);
 
     if (runningController != null) {
-      final TaskReport.ReportMap liveReportMap = runningController.getController().liveReports();
-      if (liveReportMap != null) {
-        return new QueryInfoAndReport(
-            DartQueryInfo.fromControllerHolder(runningController),
-            liveReportMap,
-            DateTimes.nowUtc()
-        );
-      } else {
-        return null;
-      }
+      return getQueryDetails(runningController);
     } else {
       synchronized (completeReports) {
         return completeReports.get(queryId);
@@ -221,13 +216,40 @@ public class DartControllerRegistry
    * Gets execution details and report for a query by SQL query ID.
    */
   @Nullable
-  public QueryInfoAndReport getQueryInfoAndReportBySqlQueryId(final String sqlQueryId)
+  public QueryInfoAndReport getQueryDetailsBySqlQueryId(final String sqlQueryId)
   {
     final String dartQueryId = sqlQueryIdToDartQueryId.get(sqlQueryId);
     if (dartQueryId == null) {
       return null;
     }
-    return getQueryInfoAndReport(dartQueryId);
+    return getQueryDetails(dartQueryId);
+  }
+
+  /**
+   * Gets execution details and reports for all completed queries.
+   */
+  public List<QueryInfoAndReport> getAllQueryDetails(final boolean includeComplete)
+  {
+    final Set<String> queryIds = new HashSet<>();
+    final List<QueryInfoAndReport> retVal = new ArrayList<>();
+
+    for (final ControllerHolder controllerHolder : getAllControllers()) {
+      if (queryIds.add(controllerHolder.getController().queryId())) {
+        retVal.add(getQueryDetails(controllerHolder));
+      }
+    }
+
+    if (includeComplete) {
+      synchronized (completeReports) {
+        for (Map.Entry<String, QueryInfoAndReport> entry : completeReports.entrySet()) {
+          if (queryIds.add(entry.getKey())) {
+            retVal.add(entry.getValue());
+          }
+        }
+      }
+    }
+
+    return retVal;
   }
 
   /**
@@ -251,5 +273,14 @@ public class DartControllerRegistry
         }
       }
     }
+  }
+
+  private static QueryInfoAndReport getQueryDetails(final ControllerHolder controllerHolder)
+  {
+    return new QueryInfoAndReport(
+        DartQueryInfo.fromControllerHolder(controllerHolder),
+        controllerHolder.getController().liveReports(),
+        DateTimes.nowUtc()
+    );
   }
 }

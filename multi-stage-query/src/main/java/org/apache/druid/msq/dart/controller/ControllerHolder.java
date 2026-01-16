@@ -21,13 +21,16 @@ package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.dart.worker.WorkerId;
+import org.apache.druid.msq.exec.CaptureReportQueryListener;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.sql.http.StandardQueryState;
 import org.joda.time.DateTime;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,17 +45,39 @@ public class ControllerHolder
     /**
      * Query has been accepted, but not yet {@link Controller#run(QueryListener)}.
      */
-    ACCEPTED,
+    ACCEPTED(StandardQueryState.ACCEPTED),
 
     /**
      * Query has had {@link Controller#run(QueryListener)} called.
      */
-    RUNNING,
+    RUNNING(StandardQueryState.RUNNING),
 
     /**
      * Query has been canceled.
      */
-    CANCELED
+    CANCELED(StandardQueryState.CANCELED),
+
+    /**
+     * Query has exited successfully.
+     */
+    SUCCESS(StandardQueryState.SUCCESS),
+
+    /**
+     * Query has failed.
+     */
+    FAILED(StandardQueryState.FAILED);
+
+    private final String statusString;
+
+    State(String statusString)
+    {
+      this.statusString = statusString;
+    }
+
+    public String getStatusString()
+    {
+      return statusString;
+    }
   }
 
   private final Controller controller;
@@ -152,7 +177,7 @@ public class ControllerHolder
    */
   public void cancel(CancellationReason reason)
   {
-    if (state.getAndSet(State.CANCELED) == State.RUNNING) {
+    if (state.compareAndSet(State.RUNNING, State.CANCELED)) {
       controller.stop(reason);
     }
   }
@@ -166,10 +191,25 @@ public class ControllerHolder
   public boolean run(final QueryListener listener) throws Exception
   {
     if (state.compareAndSet(State.ACCEPTED, State.RUNNING)) {
-      controller.run(listener);
+      final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
+      controller.run(reportListener);
+      updateStateOnQueryComplete(reportListener.getReport());
       return true;
     } else {
       return false;
+    }
+  }
+
+  private void updateStateOnQueryComplete(final MSQTaskReportPayload report)
+  {
+    switch (report.getStatus().getStatus()) {
+      case SUCCESS:
+        state.compareAndSet(State.RUNNING, State.SUCCESS);
+        break;
+
+      case FAILED:
+        state.compareAndSet(State.RUNNING, State.FAILED);
+        break;
     }
   }
 }

@@ -20,15 +20,25 @@
 package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.security.basic.BasicSecurityDruidModule;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedResource;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import java.util.List;
 
 /**
  * Resource to enable the basic auth extension in embedded tests.
  */
 public class EmbeddedBasicAuthResource implements EmbeddedResource
 {
+  public static final String ADMIN_USER = "admin";
   public static final String ADMIN_PASSWORD = "priest";
   public static final String SYSTEM_PASSWORD = "warlock";
   public static final String SYSTEM_USER = "druid_system";
@@ -65,19 +75,100 @@ public class EmbeddedBasicAuthResource implements EmbeddedResource
   {
     // Do nothing
   }
-  
+
   private String authenticatorProp(String name)
   {
     return StringUtils.format("druid.auth.authenticator.%s.%s", AUTHENTICATOR_NAME, name);
   }
-  
+
   private String authorizerProp(String name)
   {
     return StringUtils.format("druid.auth.authorizer.%s.%s", AUTHORIZER_NAME, name);
   }
-  
+
   private String escalatorProp(String name)
   {
     return StringUtils.format("druid.escalator.%s", name);
+  }
+
+  /**
+   * Creates a user with specified permissions using the basic auth security API.
+   *
+   * @param adminClient  HTTP client authenticated as admin
+   * @param coordinator  the coordinator server to make API calls against
+   * @param username     the username to create
+   * @param password     the password for the user
+   * @param roleName     the role name to create and assign
+   * @param permissions  the permissions to grant to the role
+   */
+  public static void createUserWithPermissions(
+      HttpClient adminClient,
+      EmbeddedDruidServer<?> coordinator,
+      String username,
+      String password,
+      String roleName,
+      List<ResourceAction> permissions
+  )
+  {
+    final DruidNode coordinatorDruidNode = coordinator.bindings().selfNode();
+    final String baseUrl = StringUtils.format(
+        "%s://%s/druid-ext/basic-security",
+        coordinatorDruidNode.getServiceScheme(),
+        coordinatorDruidNode.getHostAndPortToUse()
+    );
+
+    // Create user in authentication DB
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authentication/db/basic/users/%s", baseUrl, username),
+        null,
+        HttpResponseStatus.OK
+    );
+
+    // Set password
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authentication/db/basic/users/%s/credentials", baseUrl, username),
+        new BasicAuthenticatorCredentialUpdate(password, 5000),
+        HttpResponseStatus.OK
+    );
+
+    // Create user in authorization DB
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authorization/db/basic/users/%s", baseUrl, username),
+        null,
+        HttpResponseStatus.OK
+    );
+
+    // Create role
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authorization/db/basic/roles/%s", baseUrl, roleName),
+        null,
+        HttpResponseStatus.OK
+    );
+
+    // Assign role to user
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authorization/db/basic/users/%s/roles/%s", baseUrl, username, roleName),
+        null,
+        HttpResponseStatus.OK
+    );
+
+    // Grant permissions
+    HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format("%s/authorization/db/basic/roles/%s/permissions", baseUrl, roleName),
+        permissions,
+        HttpResponseStatus.OK
+    );
   }
 }

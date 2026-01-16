@@ -336,3 +336,36 @@ For example, to retrieve properties for a specific server, use the query
 ```sql
 SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```
+
+### QUERIES table
+
+:::info
+ The `sys.queries` table is an experimental feature. You must enable it by setting the runtime property
+ `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. Currently, this table only shows
+ queries from the Dart (MSQ) engine.
+:::
+
+The queries table provides information about currently running and recently completed SQL queries.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|id|VARCHAR|Execution ID for the query. For Dart queries, this is the `dartQueryId`.|
+|engine|VARCHAR|SQL engine that executed the query, e.g., `msq-dart`|
+|state|VARCHAR|Query status: `ACCEPTED`, `RUNNING`, `SUCCESS`, `FAILED`, or `CANCELED`|
+|info|VARCHAR|JSON-serialized query information including `sqlQueryId`, `sql`, `identity`, `startTime`, and other engine-specific details|
+
+For example, to retrieve all recently completed Dart queries:
+
+```sql
+SELECT *
+FROM sys.queries
+WHERE
+  engine = 'msq-dart'
+  AND state IN ('SUCCESS', 'FAILED', 'CANCELED')
+```
+
+:::info
+ The retention of completed query information is controlled by Dart controller configuration.
+ See `druid.msq.dart.controller.maxRetainedReportCount` and `druid.msq.dart.controller.maxRetainedReportDuration`
+ for details on how long completed queries are retained.
+:::
