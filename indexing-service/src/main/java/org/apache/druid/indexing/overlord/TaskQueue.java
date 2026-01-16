@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelI
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -1210,7 +1211,18 @@ public class TaskQueue
     if (task == null) {
       return RowKey.empty();
     }
-    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
-                 .and(Dimension.TASK_TYPE, task.getType());
+
+    String supervisorId = null;
+    if (task instanceof SeekableStreamIndexTask) {
+      supervisorId = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
+    }
+
+    RowKey.Builder builder = RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                                   .with(Dimension.TASK_TYPE, task.getType());
+
+    if (supervisorId != null) {
+      builder.with(Dimension.SUPERVISOR_ID, supervisorId);
+    }
+    return builder.build();
   }
 }
