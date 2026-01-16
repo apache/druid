@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.joda.time.DateTime;
@@ -29,7 +31,7 @@ import org.junit.Test;
 
 public class ReindexingFilterRuleTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_30_DAYS = Period.days(30);
 
   private final DimFilter testFilter = new SelectorDimFilter("isRobot", "true", null);
@@ -52,7 +54,7 @@ public class ReindexingFilterRuleTest
   {
     // Threshold is 2025-11-19T12:00:00Z (30 days before reference time)
     // Interval ends at 2025-11-15, which is fully before threshold
-    Interval interval = new Interval("2025-11-14T00:00:00Z/2025-11-15T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-14T00:00:00Z/2025-11-15T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -64,7 +66,7 @@ public class ReindexingFilterRuleTest
   {
     // Threshold is 2025-11-19T12:00:00Z (30 days before reference time)
     // Interval ends exactly at threshold - should be FULL (boundary case)
-    Interval interval = new Interval("2025-11-18T12:00:00Z/2025-11-19T12:00:00Z");
+    Interval interval = Intervals.of("2025-11-18T12:00:00Z/2025-11-19T12:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -76,7 +78,7 @@ public class ReindexingFilterRuleTest
   {
     // Threshold is 2025-11-19T12:00:00Z (30 days before reference time)
     // Interval starts before threshold and ends after - PARTIAL
-    Interval interval = new Interval("2025-11-18T00:00:00Z/2025-11-20T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-18T00:00:00Z/2025-11-20T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -88,7 +90,7 @@ public class ReindexingFilterRuleTest
   {
     // Threshold is 2025-11-19T12:00:00Z (30 days before reference time)
     // Interval starts after threshold - NONE
-    Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
+    Interval interval = Intervals.of("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -270,21 +272,21 @@ public class ReindexingFilterRuleTest
     );
 
     // Interval ending before 6-month threshold - should be FULL
-    Interval beforeThreshold = new Interval("2025-06-01T00:00:00Z/2025-06-15T00:00:00Z");
+    Interval beforeThreshold = Intervals.of("2025-06-01T00:00:00Z/2025-06-15T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.FULL,
         monthRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 6-month threshold - should be PARTIAL
-    Interval spanningThreshold = new Interval("2025-06-15T00:00:00Z/2025-07-15T00:00:00Z");
+    Interval spanningThreshold = Intervals.of("2025-06-15T00:00:00Z/2025-07-15T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.PARTIAL,
         monthRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 6-month threshold - should be NONE
-    Interval afterThreshold = new Interval("2025-07-01T00:00:00Z/2025-07-15T00:00:00Z");
+    Interval afterThreshold = Intervals.of("2025-07-01T00:00:00Z/2025-07-15T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.NONE,
         monthRule.appliesTo(afterThreshold, REFERENCE_TIME)
@@ -308,21 +310,21 @@ public class ReindexingFilterRuleTest
     );
 
     // Interval ending before 1-year threshold - should be FULL
-    Interval beforeThreshold = new Interval("2024-11-01T00:00:00Z/2024-12-01T00:00:00Z");
+    Interval beforeThreshold = Intervals.of("2024-11-01T00:00:00Z/2024-12-01T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.FULL,
         yearRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 1-year threshold - should be PARTIAL
-    Interval spanningThreshold = new Interval("2024-12-01T00:00:00Z/2025-01-01T00:00:00Z");
+    Interval spanningThreshold = Intervals.of("2024-12-01T00:00:00Z/2025-01-01T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.PARTIAL,
         yearRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 1-year threshold - should be NONE
-    Interval afterThreshold = new Interval("2025-01-01T00:00:00Z/2025-02-01T00:00:00Z");
+    Interval afterThreshold = Intervals.of("2025-01-01T00:00:00Z/2025-02-01T00:00:00Z");
     Assert.assertEquals(
         ReindexingRule.AppliesToMode.NONE,
         yearRule.appliesTo(afterThreshold, REFERENCE_TIME)

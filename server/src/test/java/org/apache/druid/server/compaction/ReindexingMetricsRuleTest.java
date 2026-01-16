@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -30,7 +32,7 @@ import org.junit.Test;
 
 public class ReindexingMetricsRuleTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_90_DAYS = Period.days(90);
 
   private final AggregatorFactory[] testMetrics = new AggregatorFactory[]{
@@ -57,7 +59,7 @@ public class ReindexingMetricsRuleTest
   {
     // Threshold is 2025-09-20T12:00:00Z (90 days before reference time)
     // Interval ends at 2025-09-15, which is fully before threshold
-    Interval interval = new Interval("2025-09-14T00:00:00Z/2025-09-15T00:00:00Z");
+    Interval interval = Intervals.of("2025-09-14T00:00:00Z/2025-09-15T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -69,7 +71,7 @@ public class ReindexingMetricsRuleTest
   {
     // Threshold is 2025-09-20T12:00:00Z (90 days before reference time)
     // Interval ends exactly at threshold - should be FULL (boundary case)
-    Interval interval = new Interval("2025-09-19T12:00:00Z/2025-09-20T12:00:00Z");
+    Interval interval = Intervals.of("2025-09-19T12:00:00Z/2025-09-20T12:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -81,7 +83,7 @@ public class ReindexingMetricsRuleTest
   {
     // Threshold is 2025-09-20T12:00:00Z (90 days before reference time)
     // Interval starts before threshold and ends after - PARTIAL
-    Interval interval = new Interval("2025-09-19T00:00:00Z/2025-09-21T00:00:00Z");
+    Interval interval = Intervals.of("2025-09-19T00:00:00Z/2025-09-21T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -93,7 +95,7 @@ public class ReindexingMetricsRuleTest
   {
     // Threshold is 2025-09-20T12:00:00Z (90 days before reference time)
     // Interval starts after threshold - NONE
-    Interval interval = new Interval("2025-12-01T00:00:00Z/2025-12-02T00:00:00Z");
+    Interval interval = Intervals.of("2025-12-01T00:00:00Z/2025-12-02T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 

@@ -20,6 +20,8 @@
 package org.apache.druid.server.compaction;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -35,7 +37,7 @@ import java.util.List;
 
 public class ComposingReindexingRuleProviderTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
 
   @Test
   public void test_constructor_nullProviders_throwsNullPointerException()
@@ -193,7 +195,7 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_getFilterRulesWithInterval_firstWins_delegatesToFirstProvider()
   {
-    Interval interval = new Interval("2025-11-01T00:00:00Z/2025-11-15T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-01T00:00:00Z/2025-11-15T00:00:00Z");
     ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(30));
 
     ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));

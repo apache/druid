@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -29,7 +31,7 @@ import java.util.Collections;
 
 public class ReindexingProjectionRuleTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_45_DAYS = Period.days(45);
 
   private final ReindexingProjectionRule rule = new ReindexingProjectionRule(
@@ -51,7 +53,7 @@ public class ReindexingProjectionRuleTest
   {
     // Threshold is 2025-11-04T12:00:00Z (45 days before reference time)
     // Interval ends at 2025-11-01, which is fully before threshold
-    Interval interval = new Interval("2025-10-31T00:00:00Z/2025-11-01T00:00:00Z");
+    Interval interval = Intervals.of("2025-10-31T00:00:00Z/2025-11-01T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -63,7 +65,7 @@ public class ReindexingProjectionRuleTest
   {
     // Threshold is 2025-11-04T12:00:00Z (45 days before reference time)
     // Interval ends exactly at threshold - should be FULL (boundary case)
-    Interval interval = new Interval("2025-11-03T12:00:00Z/2025-11-04T12:00:00Z");
+    Interval interval = Intervals.of("2025-11-03T12:00:00Z/2025-11-04T12:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -75,7 +77,7 @@ public class ReindexingProjectionRuleTest
   {
     // Threshold is 2025-11-04T12:00:00Z (45 days before reference time)
     // Interval starts before threshold and ends after - PARTIAL
-    Interval interval = new Interval("2025-11-03T00:00:00Z/2025-11-05T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-03T00:00:00Z/2025-11-05T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -87,7 +89,7 @@ public class ReindexingProjectionRuleTest
   {
     // Threshold is 2025-11-04T12:00:00Z (45 days before reference time)
     // Interval starts after threshold - NONE
-    Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
+    Interval interval = Intervals.of("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 

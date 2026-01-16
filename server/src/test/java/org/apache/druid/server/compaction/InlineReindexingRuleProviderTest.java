@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -33,22 +35,22 @@ import java.util.List;
 
 public class InlineReindexingRuleProviderTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
 
   // Test intervals
-  private static final Interval INTERVAL_100_DAYS_OLD = new Interval(
+  private static final Interval INTERVAL_100_DAYS_OLD = Intervals.of(
       "2025-09-01T00:00:00Z/2025-09-02T00:00:00Z"
   ); // Ends 109 days before reference time
 
-  private static final Interval INTERVAL_50_DAYS_OLD = new Interval(
+  private static final Interval INTERVAL_50_DAYS_OLD = Intervals.of(
       "2025-10-20T00:00:00Z/2025-10-21T00:00:00Z"
   ); // Ends 59 days before reference time
 
-  private static final Interval INTERVAL_20_DAYS_OLD = new Interval(
+  private static final Interval INTERVAL_20_DAYS_OLD = Intervals.of(
       "2025-11-20T00:00:00Z/2025-11-21T00:00:00Z"
   ); // Ends 28 days before reference time
 
-  private static final Interval INTERVAL_5_DAYS_OLD = new Interval(
+  private static final Interval INTERVAL_5_DAYS_OLD = Intervals.of(
       "2025-12-13T00:00:00Z/2025-12-14T00:00:00Z"
   ); // Ends 5 days before reference time
 

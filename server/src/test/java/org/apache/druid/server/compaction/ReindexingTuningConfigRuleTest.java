@@ -20,6 +20,8 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -29,7 +31,7 @@ import org.junit.Test;
 
 public class ReindexingTuningConfigRuleTest
 {
-  private static final DateTime REFERENCE_TIME = new DateTime("2025-12-19T12:00:00Z");
+  private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_21_DAYS = Period.days(21);
 
   private final ReindexingTuningConfigRule rule = new ReindexingTuningConfigRule(
@@ -52,7 +54,7 @@ public class ReindexingTuningConfigRuleTest
   {
     // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
     // Interval ends at 2025-11-25, which is fully before threshold
-    Interval interval = new Interval("2025-11-24T00:00:00Z/2025-11-25T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-24T00:00:00Z/2025-11-25T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -64,7 +66,7 @@ public class ReindexingTuningConfigRuleTest
   {
     // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
     // Interval ends exactly at threshold - should be FULL (boundary case)
-    Interval interval = new Interval("2025-11-27T12:00:00Z/2025-11-28T12:00:00Z");
+    Interval interval = Intervals.of("2025-11-27T12:00:00Z/2025-11-28T12:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -76,7 +78,7 @@ public class ReindexingTuningConfigRuleTest
   {
     // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
     // Interval starts before threshold and ends after - PARTIAL
-    Interval interval = new Interval("2025-11-27T00:00:00Z/2025-11-29T00:00:00Z");
+    Interval interval = Intervals.of("2025-11-27T00:00:00Z/2025-11-29T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
@@ -88,7 +90,7 @@ public class ReindexingTuningConfigRuleTest
   {
     // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)
     // Interval starts after threshold - NONE
-    Interval interval = new Interval("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
+    Interval interval = Intervals.of("2025-12-15T00:00:00Z/2025-12-16T00:00:00Z");
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
