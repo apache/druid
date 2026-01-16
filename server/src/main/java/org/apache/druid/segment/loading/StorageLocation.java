@@ -80,6 +80,11 @@ import java.util.function.Supplier;
  * is repeated until either a sufficient amount of space has been reclaimed, or no additional space is able to be
  * reclaimed, in which case the new reservation fails.
  * <p>
+ * There is an auxilary mode for weak references when {@link #areWeakEntriesEphemeral} is set to true. In this mode, weak
+ * entries are short-lived entries that only exist while one or more reservation hold are active, and are unmounted when
+ * the holds are released. This is useful in cases where entries are unlikely to be re-used such as in asynchronous
+ * tasks.
+ * <p>
  * This class is thread-safe, so that multiple threads can update its state at the same time.
  * One example usage is that a historical server can use multiple threads to load different segments in parallel
  * from deep storage.
@@ -106,7 +111,7 @@ public class StorageLocation
   @GuardedBy("lock")
   private WeakCacheEntry hand;
 
-  private volatile boolean evictImmediatelyOnHoldRelease = false;
+  private volatile boolean areWeakEntriesEphemeral = false;
 
   /**
    * Current total size of files in bytes, including weak entries.
@@ -170,11 +175,12 @@ public class StorageLocation
   }
 
   /**
-   * Sets whether weak cache entries should be immediately evicted once all holds are released.
+   * Sets whether weak cache entries should be retained after all holds are released. If true, weak references are
+   * removed and unmounted immediately after all holds are released
    */
-  public void setEvictImmediatelyOnHoldRelease(final boolean evictImmediatelyOnHoldRelease)
+  public void setAreWeakEntriesEphemeral(final boolean areWeakEntriesEphemeral)
   {
-    this.evictImmediatelyOnHoldRelease = evictImmediatelyOnHoldRelease;
+    this.areWeakEntriesEphemeral = areWeakEntriesEphemeral;
   }
 
   public <T extends CacheEntry> T getStaticCacheEntry(CacheEntryIdentifier entryId)
@@ -448,7 +454,7 @@ public class StorageLocation
     return () -> {
       weakEntry.release();
 
-      if (!isNewEntry && !evictImmediatelyOnHoldRelease) {
+      if (!isNewEntry && !areWeakEntriesEphemeral) {
         // No need to consider removal from weakCacheEntries on hold release.
         return;
       }
@@ -462,7 +468,7 @@ public class StorageLocation
               // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
               final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
               if ((isNewEntry && !isMounted)
-                  || (evictImmediatelyOnHoldRelease && !weakCacheEntry.isHeld())) {
+                  || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
                 unlinkWeakEntry(weakCacheEntry);
                 weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
                 if (isMounted) {

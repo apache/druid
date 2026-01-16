@@ -27,6 +27,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -78,9 +79,15 @@ public class ChannelCounters implements QueryCounter
     add(NO_PARTITION, nRows, nBytes, 0, 1);
   }
 
-  public void addFrame(final int partitionNumber, final Frame frame)
+  /**
+   * Increment counts by one frame, and if this {@link RowsAndColumns} is a {@link Frame}, also increment
+   * bytes by {@link Frame#numBytes()}.
+   */
+  public void addRAC(final RowsAndColumns rac, final int partitionNumber)
   {
-    add(partitionNumber, frame.numRows(), frame.numBytes(), 1, 0);
+    final Frame frame = rac.as(Frame.class);
+    final long numBytes = frame != null ? frame.numBytes() : 0;
+    add(partitionNumber, rac.numRows(), numBytes, 1, 0);
   }
 
   public ChannelCounters setTotalFiles(final long nFiles)

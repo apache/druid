@@ -33,6 +33,7 @@ import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
@@ -133,6 +134,12 @@ public class DartFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return workerContext.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return workerContext.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

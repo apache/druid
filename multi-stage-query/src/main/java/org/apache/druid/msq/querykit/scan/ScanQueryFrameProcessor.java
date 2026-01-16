@@ -29,7 +29,6 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -374,7 +373,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   {
     if (cursor == null || cursor.isDone()) {
       if (inputChannel.canRead()) {
-        final Frame frame = inputChannel.read();
+        final Frame frame = inputChannel.readFrame();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
 
         final Segment mappedSegment = mapUnmanagedSegment(frameSegment);
@@ -506,7 +505,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   {
     if (frameWriter != null && frameWriter.getNumRows() > 0) {
       final Frame frame = Frame.wrap(frameWriter.toByteArray());
-      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      Iterables.getOnlyElement(outputChannels()).write(frame);
       frameWriter.close();
       frameWriter = null;
       return frame.numRows();

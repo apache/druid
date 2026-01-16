@@ -164,7 +164,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
     if (AppendableRowsAndColumns.class.equals(clazz)) {
       return (T) new AppendableMapOfColumns(this);
     }
-    return RowsAndColumns.super.as(clazz);
+    return null;
   }
 
   public static class Builder

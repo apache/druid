@@ -195,7 +195,7 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
 
       if (!channel.isFinished()) {
         // Need row-based frame so we can hash memory directly.
-        final Frame frame = channel.read().ensureRowBased();
+        final Frame frame = channel.readFrame().ensureRowBased();
 
         final HashPartitionVirtualColumn hashPartitionVirtualColumn =
             new HashPartitionVirtualColumn(

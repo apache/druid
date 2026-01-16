@@ -45,6 +45,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -270,6 +271,12 @@ public class MSQTestWorkerContext implements WorkerContext
     public ObjectMapper jsonMapper()
     {
       return mapper;
+    }
+
+    @Override
+    public WireTransferableContext wireTransferableContext()
+    {
+      return injector.getInstance(WireTransferableContext.class);
     }
 
     @Override

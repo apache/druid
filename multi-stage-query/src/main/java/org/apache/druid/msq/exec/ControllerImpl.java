@@ -171,6 +171,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -2781,16 +2782,20 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
+      final WireTransferableContext wireTransferableContext =
+          context.injector().getInstance(WireTransferableContext.class);
+
       if (queryKernelConfig.isDurableStorage()
           || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
             closer,
-            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())
+            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination()),
+            wireTransferableContext
         );
       } else {
-        inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
+        inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds, wireTransferableContext);
       }
 
       final FrameProcessorExecutor resultReaderExec = createResultReaderExec(queryId());

@@ -24,6 +24,8 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
@@ -71,6 +73,11 @@ public interface FrameContext extends Closeable
   File tempDir();
 
   ObjectMapper jsonMapper();
+
+  /**
+   * Context for {@link WireTransferable} serde.
+   */
+  WireTransferableContext wireTransferableContext();
 
   IndexIO indexIO();
 
