@@ -2732,7 +2732,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final List<String> fingerprints = segments.stream()
                                              .map(DataSegment::getIndexingStateFingerprint)
                                              .filter(fp -> fp != null && !fp.isEmpty())
-                                              .distinct()
+                                             .distinct()
                                              .collect(Collectors.toList());
 
     try {

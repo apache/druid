@@ -603,8 +603,6 @@ public class CompactionStatusTest
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
 
-    CompactionState expectedState = compactionConfig.toCompactionState();
-
     indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", wrongState, DateTimes.nowUtc());
     syncCacheFromManager();
 
