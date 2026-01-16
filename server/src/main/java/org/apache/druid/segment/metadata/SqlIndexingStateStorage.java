@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -40,6 +41,7 @@ import org.skife.jdbi.v2.Update;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotEmpty;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -65,9 +67,9 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
 
   @Inject
   public SqlIndexingStateStorage(
-      @Nonnull MetadataStorageTablesConfig dbTables,
-      @Nonnull ObjectMapper jsonMapper,
-      @Nonnull SQLMetadataConnector connector
+      MetadataStorageTablesConfig dbTables,
+      @Json ObjectMapper jsonMapper,
+      SQLMetadataConnector connector
   )
   {
     this.dbTables = dbTables;
@@ -120,60 +122,11 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
             break;
 
           case EXISTS_AND_UNUSED:
-            // Fingerprint exists but is marked as unused - update the used flag
-            log.info(
-                "Found existing indexing state in DB for fingerprint[%s] in dataSource[%s]. Marking as used.",
-                fingerprint,
-                dataSource
-            );
-            String updateSql = StringUtils.format(
-                "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
-                + "WHERE fingerprint = :fingerprint",
-                dbTables.getIndexingStatesTable()
-            );
-            handle.createStatement(updateSql)
-                  .bind("used", true)
-                  .bind("used_status_last_updated", now)
-                  .bind("fingerprint", fingerprint)
-                  .execute();
-
-            log.info("Updated existing indexing state for datasource[%s].", dataSource);
+            updateExistingUnusedState(handle, fingerprint, dataSource, now);
             break;
 
           case DOES_NOT_EXIST:
-            // Fingerprint doesn't exist - insert new state
-            log.info("Inserting new indexing state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
-
-            String insertSql = StringUtils.format(
-                "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
-                + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :pending, :used_status_last_updated)",
-                dbTables.getIndexingStatesTable()
-            );
-
-            try {
-              handle.createStatement(insertSql)
-                    .bind("created_date", now)
-                    .bind("dataSource", dataSource)
-                    .bind("fingerprint", fingerprint)
-                    .bind("payload", jsonMapper.writeValueAsBytes(indexingState))
-                    .bind("used", true)
-                    .bind("pending", true)
-                    .bind("used_status_last_updated", now)
-                    .execute();
-
-              log.info(
-                  "Published indexing state for fingerprint[%s] to DB for datasource[%s].",
-                  fingerprint,
-                  dataSource
-              );
-            }
-            catch (JsonProcessingException e) {
-              throw InternalServerError.exception(
-                  e,
-                  "Failed to serialize indexing state for fingerprint[%s]",
-                  fingerprint
-              );
-            }
+            insertNewState(handle, fingerprint, dataSource, indexingState, now);
             break;
 
           default:
@@ -256,16 +209,27 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
   }
 
   @Override
-  public int markIndexingStatesAsActive(String stateFingerprint)
+  public int markIndexingStatesAsActive(List<String> stateFingerprints)
   {
+    if (stateFingerprints.isEmpty()) {
+      return 0;
+    }
+
     return connector.retryWithHandle(
-        handle -> handle.createStatement(
-                            StringUtils.format(
-                                "UPDATE %s SET pending = false WHERE fingerprint = :fingerprint AND pending = true",
-                                dbTables.getIndexingStatesTable()
-                            ))
-                        .bind("fingerprint", stateFingerprint)
-                        .execute()
+        handle -> {
+          Update statement = handle.createStatement(
+              StringUtils.format(
+                  "UPDATE %s SET pending = false"
+                  + " WHERE pending = true AND fingerprint IN (%s)",
+                  dbTables.getIndexingStatesTable(),
+                  buildParameterizedInClause("fp", stateFingerprints.size())
+              )
+          );
+
+          bindValuesToInClause(new ArrayList<>(stateFingerprints), "fp", statement);
+
+          return statement.execute();
+        }
     );
   }
 
@@ -333,6 +297,81 @@ public class SqlIndexingStateStorage implements IndexingStateStorage
     EXISTS_AND_USED,
     /** Fingerprint exists but is marked as unused */
     EXISTS_AND_UNUSED
+  }
+
+  /**
+   * Updates an existing unused indexing state to mark it as used.
+   */
+  private void updateExistingUnusedState(
+      Handle handle,
+      String fingerprint,
+      String dataSource,
+      String updateTime
+  )
+  {
+    log.info(
+        "Found existing indexing state in DB for fingerprint[%s] in dataSource[%s]. Marking as used.",
+        fingerprint,
+        dataSource
+    );
+
+    String updateSql = StringUtils.format(
+        "UPDATE %s SET used = :used, used_status_last_updated = :used_status_last_updated "
+        + "WHERE fingerprint = :fingerprint",
+        dbTables.getIndexingStatesTable()
+    );
+    handle.createStatement(updateSql)
+          .bind("used", true)
+          .bind("used_status_last_updated", updateTime)
+          .bind("fingerprint", fingerprint)
+          .execute();
+
+    log.info("Updated existing indexing state for datasource[%s].", dataSource);
+  }
+
+  /**
+   * Inserts a new indexing state into the database.
+   */
+  private void insertNewState(
+      Handle handle,
+      String fingerprint,
+      String dataSource,
+      CompactionState indexingState,
+      String updateTime
+  )
+  {
+    log.info("Inserting new indexing state for fingerprint[%s] in dataSource[%s].", fingerprint, dataSource);
+
+    String insertSql = StringUtils.format(
+        "INSERT INTO %s (created_date, dataSource, fingerprint, payload, used, pending, used_status_last_updated) "
+        + "VALUES (:created_date, :dataSource, :fingerprint, :payload, :used, :pending, :used_status_last_updated)",
+        dbTables.getIndexingStatesTable()
+    );
+
+    try {
+      handle.createStatement(insertSql)
+            .bind("created_date", updateTime)
+            .bind("dataSource", dataSource)
+            .bind("fingerprint", fingerprint)
+            .bind("payload", jsonMapper.writeValueAsBytes(indexingState))
+            .bind("used", true)
+            .bind("pending", true)
+            .bind("used_status_last_updated", updateTime)
+            .execute();
+
+      log.info(
+          "Published indexing state for fingerprint[%s] to DB for datasource[%s].",
+          fingerprint,
+          dataSource
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw InternalServerError.exception(
+          e,
+          "Failed to serialize indexing state for fingerprint[%s]",
+          fingerprint
+      );
+    }
   }
 
   /**

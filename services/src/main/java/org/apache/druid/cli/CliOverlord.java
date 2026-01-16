@@ -90,8 +90,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
+import org.apache.druid.indexing.overlord.config.IndexingStateCleanupConfig;
 import org.apache.druid.indexing.overlord.config.OverlordKillConfigs;
-import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.KillUnreferencedIndexingState;
@@ -414,7 +414,7 @@ public class CliOverlord extends ServerRunnable
 
               @Provides
               @LazySingleton
-              public OverlordMetadataCleanupConfig provideCompactionStateCleanupConfig(OverlordKillConfigs killConfigs)
+              public IndexingStateCleanupConfig provideIndexingStateCleanupConfig(OverlordKillConfigs killConfigs)
               {
                 return killConfigs.indexingStates();
               }

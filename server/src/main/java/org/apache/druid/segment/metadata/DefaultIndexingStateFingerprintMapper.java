@@ -20,11 +20,12 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.CompactionState;
 
@@ -42,11 +43,11 @@ public class DefaultIndexingStateFingerprintMapper implements IndexingStateFinge
 
   public DefaultIndexingStateFingerprintMapper(
       IndexingStateCache indexingStateCache,
-      @Deterministic ObjectMapper deterministicMapper
+      ObjectMapper jsonMapper
   )
   {
     this.indexingStateCache = indexingStateCache;
-    this.deterministicMapper = deterministicMapper;
+    this.deterministicMapper = createDeterministicMapper(jsonMapper);
   }
 
   @SuppressWarnings("UnstableApiUsage")
@@ -73,5 +74,16 @@ public class DefaultIndexingStateFingerprintMapper implements IndexingStateFinge
   public Optional<CompactionState> getStateForFingerprint(String fingerprint)
   {
     return indexingStateCache.getIndexingStateByFingerprint(fingerprint);
+  }
+
+  /**
+   * Decorate the provided {@link ObjectMapper} to ensure deterministic serialization of IndexingState objects.
+   */
+  private static ObjectMapper createDeterministicMapper(ObjectMapper baseMapper)
+  {
+    ObjectMapper sortedMapper = baseMapper.copy();
+    sortedMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    sortedMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+    return sortedMapper;
   }
 }

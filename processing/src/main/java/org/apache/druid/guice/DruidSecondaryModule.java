@@ -20,9 +20,7 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
@@ -34,11 +32,9 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.frame.wire.FrameWireTransferable;
-import org.apache.druid.guice.annotations.Deterministic;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
@@ -167,22 +163,6 @@ public class DruidSecondaryModule implements Module
   {
     return new WireTransferableContext(smileMapper, concreteDeserializer, isUseLegacyFrameSerialization());
   }
-
-  @Provides
-  @LazySingleton
-  @Deterministic
-  public ObjectMapper getSortedMapper(
-      Injector injector,
-      Map<ByteBuffer, WireTransferable.Deserializer> wtDeserializers
-  )
-  {
-    final ObjectMapper sortedMapper = new DefaultObjectMapper();
-    sortedMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    sortedMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-    setupJackson(injector, sortedMapper, wtDeserializers, isUseLegacyFrameSerialization());
-    return sortedMapper;
-  }
-
 
   public static void setupJackson(
       final Injector injector,

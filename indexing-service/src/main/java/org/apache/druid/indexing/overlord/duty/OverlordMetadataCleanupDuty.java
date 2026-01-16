@@ -19,9 +19,10 @@
 
 package org.apache.druid.indexing.overlord.duty;
 
-import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.joda.time.DateTime;
 
 /**
@@ -29,7 +30,7 @@ import org.joda.time.DateTime;
  * <p>
  * In every invocation of {@link #run}, the duty checks if the {@code cleanupPeriod}
  * has elapsed since the {@link #lastCleanupTime}. If it has, then the method
- * {@link #cleanupEntriesCreatedBeforeDurationToRetain(DateTime)} is invoked. Otherwise, the duty
+ * {@link #cleanupEntriesCreatedBefore(DateTime)} is invoked. Otherwise, the duty
  * completes immediately without making any changes.
  */
 public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
@@ -37,11 +38,11 @@ public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
   private static final Logger log = new Logger(OverlordMetadataCleanupDuty.class);
 
   private final String entryType;
-  private final OverlordMetadataCleanupConfig cleanupConfig;
+  private final MetadataCleanupConfig cleanupConfig;
 
   private DateTime lastCleanupTime = DateTimes.utc(0);
 
-  protected OverlordMetadataCleanupDuty(String entryType, OverlordMetadataCleanupConfig cleanupConfig)
+  protected OverlordMetadataCleanupDuty(String entryType, MetadataCleanupConfig cleanupConfig)
   {
     this.entryType = entryType;
     this.cleanupConfig = cleanupConfig;
@@ -63,26 +64,35 @@ public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
 
     final DateTime now = getCurrentTime();
 
-    // Perform cleanup only if cleanup period has elapsed
     if (lastCleanupTime.plus(cleanupConfig.getCleanupPeriod()).isBefore(now)) {
-      lastCleanupTime = now;
+      setLastCleanupTime(now);
 
       try {
         DateTime minCreatedTime = now.minus(cleanupConfig.getDurationToRetain());
-        int deletedEntries = cleanupEntriesCreatedBeforeDurationToRetain(minCreatedTime);
+        int deletedEntries = cleanupEntriesCreatedBefore(minCreatedTime);
         if (deletedEntries > 0) {
           log.info("Removed [%,d] [%s] created before [%s].", deletedEntries, entryType, minCreatedTime);
-        }
-        DateTime pendingMinCreatedTime = now.minus(cleanupConfig.getPendingDurationToRetain());
-        int deletedPendingEntries = cleanupEntriesCreatedBeforePendingDurationToRetain(pendingMinCreatedTime);
-        if (deletedPendingEntries > 0) {
-          log.info("Removed [%,d] pending entries [%s] created before [%s].", deletedPendingEntries, entryType, pendingMinCreatedTime);
         }
       }
       catch (Exception e) {
         log.error(e, "Failed to perform cleanup of [%s]", entryType);
       }
     }
+  }
+
+  protected String getEntryType()
+  {
+    return entryType;
+  }
+
+  protected DateTime getLastCleanupTime()
+  {
+    return lastCleanupTime;
+  }
+
+  protected void setLastCleanupTime(DateTime time)
+  {
+    lastCleanupTime = time;
   }
 
   @Override
@@ -102,23 +112,20 @@ public abstract class OverlordMetadataCleanupDuty implements OverlordDuty
   }
 
   /**
-   * Cleans up metadata entries created before the {@code minCreatedTime} calculated with {@link OverlordMetadataCleanupConfig#durationToRetain}.
+   * Cleans up metadata entries created before the {@code minCreatedTime}.
    * <p>
    * This method is not invoked if the {@code cleanupPeriod} has not elapsed since the {@link #lastCleanupTime}.
    *
    * @return Number of deleted metadata entries
    */
-  protected abstract int cleanupEntriesCreatedBeforeDurationToRetain(DateTime minCreatedTime);
+  protected abstract int cleanupEntriesCreatedBefore(DateTime minCreatedTime);
 
   /**
-   * Cleans up pending metadata entries created before the {@code minCreatedTime} calculated with {@link OverlordMetadataCleanupConfig#pendingDurationToRetain}.
+   * Returns the current time.
    * <p>
-   * This method is not invoked if the {@code cleanupPeriod} has not elapsed since the {@link #lastCleanupTime}.
-   *
-   * @return Number of deleted pending metadata entries
+   * Exists so testing can spoof the current time to validate behavior Duty behavior.
    */
-  protected abstract int cleanupEntriesCreatedBeforePendingDurationToRetain(DateTime minCreatedTime);
-
+  @VisibleForTesting
   protected DateTime getCurrentTime()
   {
     return DateTimes.nowUtc();

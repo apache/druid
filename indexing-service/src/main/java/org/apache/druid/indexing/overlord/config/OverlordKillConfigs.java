@@ -27,16 +27,16 @@ public class OverlordKillConfigs
   public static OverlordKillConfigs DEFAULT = new OverlordKillConfigs(null);
 
   @JsonProperty("indexingStates")
-  private final OverlordMetadataCleanupConfig indexingStates;
+  private final IndexingStateCleanupConfig indexingStates;
 
   public OverlordKillConfigs(
-      @JsonProperty("indexingStates") OverlordMetadataCleanupConfig indexingStates
+      @JsonProperty("indexingStates") IndexingStateCleanupConfig indexingStates
   )
   {
-    this.indexingStates = Configs.valueOrDefault(indexingStates, OverlordMetadataCleanupConfig.DEFAULT);
+    this.indexingStates = Configs.valueOrDefault(indexingStates, IndexingStateCleanupConfig.DEFAULT);
   }
 
-  public OverlordMetadataCleanupConfig indexingStates()
+  public IndexingStateCleanupConfig indexingStates()
   {
     return indexingStates;
   }

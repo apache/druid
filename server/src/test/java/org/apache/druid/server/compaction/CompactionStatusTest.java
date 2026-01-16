@@ -30,6 +30,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -39,7 +40,6 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
@@ -82,7 +82,7 @@ public class CompactionStatusTest
     indexingStateCache = new IndexingStateCache();
     fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
         indexingStateCache,
-        CompactionTestUtils.createDeterministicMapper()
+        new DefaultObjectMapper()
     );
   }
 

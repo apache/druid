@@ -53,7 +53,6 @@ public class SqlIndexingStateStorageTest
   @RegisterExtension
   public static final TestDerbyConnector.DerbyConnectorRule5 DERBY_CONNECTOR_RULE =
       new TestDerbyConnector.DerbyConnectorRule5();
-  private static final ObjectMapper DETERMINISTIC_MAPPER = CompactionTestUtils.createDeterministicMapper();
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -72,7 +71,7 @@ public class SqlIndexingStateStorageTest
     derbyConnector.createSegmentTable();
     fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
         new NoopIndexingStateCache(),
-        DETERMINISTIC_MAPPER
+        new DefaultObjectMapper()
     );
   }
 
@@ -125,7 +124,7 @@ public class SqlIndexingStateStorageTest
         state1,
         DateTimes.nowUtc()
     );
-    manager.markIndexingStatesAsActive(fingerprint);
+    manager.markIndexingStatesAsActive(List.of(fingerprint));
 
     assertEquals(1, manager.markUnreferencedIndexingStatesAsUnused());
     assertEquals(1, manager.markIndexingStatesAsUsed(List.of(fingerprint)));
@@ -143,7 +142,7 @@ public class SqlIndexingStateStorageTest
         state1,
         DateTimes.nowUtc()
     );
-    manager.markIndexingStatesAsActive(fingerprint);
+    manager.markIndexingStatesAsActive(List.of(fingerprint));
 
     manager.markUnreferencedIndexingStatesAsUnused();
     assertEquals(0, manager.findReferencedIndexingStateMarkedAsUnused().size());
@@ -380,9 +379,11 @@ public class SqlIndexingStateStorageTest
   public void test_markIndexingStatesAsActive_marksPendingStateAsActive()
   {
     String fingerprint = "pending_fingerprint";
+    String fingerprint2 = "other_pending_fingerprint";
     CompactionState state = createTestIndexingState();
 
     manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
+    manager.upsertIndexingState("ds1", fingerprint2, state, DateTimes.nowUtc());
 
     Boolean pendingBefore = derbyConnector.retryWithHandle(handle ->
         handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
@@ -392,8 +393,8 @@ public class SqlIndexingStateStorageTest
     );
     assertTrue(pendingBefore);
 
-    int rowsUpdated = manager.markIndexingStatesAsActive(fingerprint);
-    assertEquals(1, rowsUpdated);
+    int rowsUpdated = manager.markIndexingStatesAsActive(List.of(fingerprint, fingerprint2));
+    assertEquals(2, rowsUpdated);
 
     Boolean pendingAfter = derbyConnector.retryWithHandle(handle ->
         handle.createQuery("SELECT pending FROM " + tablesConfig.getIndexingStatesTable() + " WHERE fingerprint = :fp")
@@ -412,10 +413,10 @@ public class SqlIndexingStateStorageTest
 
     manager.upsertIndexingState("ds1", fingerprint, state, DateTimes.nowUtc());
 
-    int firstUpdate = manager.markIndexingStatesAsActive(fingerprint);
+    int firstUpdate = manager.markIndexingStatesAsActive(List.of(fingerprint));
     assertEquals(1, firstUpdate);
 
-    int secondUpdate = manager.markIndexingStatesAsActive(fingerprint);
+    int secondUpdate = manager.markIndexingStatesAsActive(List.of(fingerprint));
     assertEquals(0, secondUpdate);
 
     Boolean pending = derbyConnector.retryWithHandle(handle ->
@@ -430,7 +431,7 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_markIndexingStatesAsActive_nonExistentFingerprint_returnsZero()
   {
-    int rowsUpdated = manager.markIndexingStatesAsActive("does_not_exist");
+    int rowsUpdated = manager.markIndexingStatesAsActive(List.of("does_not_exist"));
     assertEquals(0, rowsUpdated);
   }
 

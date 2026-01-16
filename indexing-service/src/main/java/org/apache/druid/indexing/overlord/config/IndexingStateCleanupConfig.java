@@ -22,58 +22,38 @@ package org.apache.druid.indexing.overlord.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.joda.time.Duration;
 
 import java.util.Objects;
 
-public class OverlordMetadataCleanupConfig
+/**
+ * Configuration for cleaning up indexing state metadata.
+ * <p>
+ * Extends {@link MetadataCleanupConfig} to add support for pending state retention.
+ */
+public class IndexingStateCleanupConfig extends MetadataCleanupConfig
 {
-  public static final OverlordMetadataCleanupConfig DEFAULT = new OverlordMetadataCleanupConfig(null, null, null, null);
-
-  @JsonProperty("on")
-  private final boolean cleanupEnabled;
-
-  @JsonProperty("period")
-  private final Duration cleanupPeriod;
-
-  @JsonProperty("durationToRetain")
-  private final Duration durationToRetain;
+  public static final IndexingStateCleanupConfig DEFAULT = new IndexingStateCleanupConfig(null, null, null, null);
 
   @JsonProperty("pendingDurationToRetain")
   private final Duration pendingDurationToRetain;
 
   @JsonCreator
-  public OverlordMetadataCleanupConfig(
+  public IndexingStateCleanupConfig(
       @JsonProperty("on") Boolean cleanupEnabled,
       @JsonProperty("period") Duration cleanupPeriod,
       @JsonProperty("durationToRetain") Duration durationToRetain,
       @JsonProperty("pendingDurationToRetain") Duration pendingDurationToRetain
   )
   {
-    this.cleanupEnabled = Configs.valueOrDefault(cleanupEnabled, true);
-    this.cleanupPeriod = Configs.valueOrDefault(cleanupPeriod, Duration.standardDays(1));
-    this.durationToRetain = Configs.valueOrDefault(durationToRetain, Duration.standardDays(7));
+    super(cleanupEnabled, cleanupPeriod, durationToRetain);
     this.pendingDurationToRetain = Configs.valueOrDefault(pendingDurationToRetain, Duration.standardDays(7));
-  }
-
-  public Duration getCleanupPeriod()
-  {
-    return cleanupPeriod;
-  }
-
-  public Duration getDurationToRetain()
-  {
-    return durationToRetain;
   }
 
   public Duration getPendingDurationToRetain()
   {
     return pendingDurationToRetain;
-  }
-
-  public boolean isCleanupEnabled()
-  {
-    return cleanupEnabled;
   }
 
   @Override
@@ -85,16 +65,16 @@ public class OverlordMetadataCleanupConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    OverlordMetadataCleanupConfig that = (OverlordMetadataCleanupConfig) o;
-    return cleanupEnabled == that.cleanupEnabled
-           && Objects.equals(cleanupPeriod, that.cleanupPeriod)
-           && Objects.equals(durationToRetain, that.durationToRetain)
-           && Objects.equals(pendingDurationToRetain, that.pendingDurationToRetain);
+    if (!super.equals(o)) {
+      return false;
+    }
+    IndexingStateCleanupConfig that = (IndexingStateCleanupConfig) o;
+    return Objects.equals(pendingDurationToRetain, that.pendingDurationToRetain);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(cleanupEnabled, cleanupPeriod, durationToRetain, pendingDurationToRetain);
+    return Objects.hash(super.hashCode(), pendingDurationToRetain);
   }
 }

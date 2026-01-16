@@ -30,6 +30,7 @@ import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -46,7 +47,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.NoopIndexingStateCache;
@@ -82,7 +82,7 @@ import java.util.stream.Collectors;
 public class NewestSegmentFirstPolicyTest
 {
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
-  private final ObjectMapper mapper = CompactionTestUtils.createDeterministicMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
   private final IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(new NoopIndexingStateCache(), mapper);
 

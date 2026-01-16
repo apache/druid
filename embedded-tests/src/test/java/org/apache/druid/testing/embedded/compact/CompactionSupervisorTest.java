@@ -27,11 +27,11 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
-import org.apache.druid.segment.metadata.CompactionTestUtils;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
@@ -291,7 +291,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     IndexingStateCache cache = overlord.bindings().getInstance(IndexingStateCache.class);
     IndexingStateFingerprintMapper fingerprintMapper = new DefaultIndexingStateFingerprintMapper(
         cache,
-        CompactionTestUtils.createDeterministicMapper()
+        new DefaultObjectMapper()
     );
     String expectedFingerprint = fingerprintMapper.generateFingerprint(
         dataSource,

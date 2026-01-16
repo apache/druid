@@ -78,7 +78,7 @@ public class HeapMemoryIndexingStateStorage implements IndexingStateStorage
   }
 
   @Override
-  public int markIndexingStatesAsActive(String stateFingerprint)
+  public int markIndexingStatesAsActive(List<String> stateFingerprints)
   {
     return 0;
   }

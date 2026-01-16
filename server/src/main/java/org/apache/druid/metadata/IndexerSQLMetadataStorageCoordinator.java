@@ -2729,24 +2729,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Collect unique non-null indexing state fingerprints
-    final Set<String> fingerprints = segments.stream()
+    final List<String> fingerprints = segments.stream()
                                              .map(DataSegment::getIndexingStateFingerprint)
                                              .filter(fp -> fp != null && !fp.isEmpty())
-                                             .collect(Collectors.toSet());
+                                              .distinct()
+                                             .collect(Collectors.toList());
 
-    // Mark each fingerprint as active
-    for (String fingerprint : fingerprints) {
-      try {
-        int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprint);
-        if (rowsUpdated > 0) {
-          log.info("Marked indexing state fingerprint[%s] as active.", fingerprint);
-        }
+    try {
+      int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprints);
+      if (rowsUpdated > 0) {
+        log.info("Marked indexing states active for the following fingerprints: %s", fingerprints);
       }
-      catch (Exception e) {
-        // Log but don't fail the overall operation - the fingerprint will stay pending
-        // and be cleaned up by the pending grace period
-        log.warn(e, "Failed to mark indexing state fingerprint[%s] as active. Future segments publishes may remediate", fingerprint);
-      }
+    }
+    catch (Exception e) {
+      // Log but don't fail the overall operation - the fingerprint will stay pending
+      // and be cleaned up by the pending grace period
+      log.warn(e, "Failed to mark indexing states for the following fingerprints as active (Future segments publishes may remediate): %s", fingerprints);
     }
   }
 

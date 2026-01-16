@@ -493,6 +493,12 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
+    public boolean isUniqueConstraintViolation(Throwable t)
+    {
+      return false;
+    }
+
+    @Override
     public String getQuoteString()
     {
       return null;

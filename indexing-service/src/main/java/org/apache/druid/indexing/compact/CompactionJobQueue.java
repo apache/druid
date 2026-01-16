@@ -112,8 +112,7 @@ public class CompactionJobQueue
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
       IndexingStateStorage indexingStateStorage,
-      IndexingStateCache indexingStateCache,
-      ObjectMapper deterministicCompactionStateMapper
+      IndexingStateCache indexingStateCache
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -130,7 +129,7 @@ public class CompactionJobQueue
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder,
-        new DefaultIndexingStateFingerprintMapper(indexingStateCache, deterministicCompactionStateMapper)
+        new DefaultIndexingStateFingerprintMapper(indexingStateCache, objectMapper)
     );
 
     this.indexingStateStorage = indexingStateStorage;

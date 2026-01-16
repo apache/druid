@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.overlord.duty;
 
-import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
+import org.apache.druid.indexing.overlord.config.IndexingStateCleanupConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.joda.time.DateTime;
@@ -42,38 +42,76 @@ public class KillUnreferencedIndexingState extends OverlordMetadataCleanupDuty
 {
   private static final Logger log = new Logger(KillUnreferencedIndexingState.class);
   private final IndexingStateStorage indexingStateStorage;
+  private final IndexingStateCleanupConfig config;
 
   @Inject
   public KillUnreferencedIndexingState(
-      OverlordMetadataCleanupConfig config,
+      IndexingStateCleanupConfig config,
       IndexingStateStorage indexingStateStorage
   )
   {
     super("indexingStates", config);
+    this.config = config;
     this.indexingStateStorage = indexingStateStorage;
   }
 
   @Override
-  protected int cleanupEntriesCreatedBeforeDurationToRetain(DateTime minCreatedTime)
+  public void run()
   {
-    // 1: Mark unreferenced states as unused
+    if (!config.isCleanupEnabled()) {
+      return;
+    }
+
+    final DateTime now = getCurrentTime();
+
+    if (getLastCleanupTime().plus(config.getCleanupPeriod()).isBefore(now)) {
+      try {
+        // Pending cleanup (specific to indexing states)
+        DateTime pendingMinCreatedTime = now.minus(config.getPendingDurationToRetain());
+        int deletedPendingEntries = indexingStateStorage.deletePendingIndexingStatesOlderThan(
+            pendingMinCreatedTime.getMillis()
+        );
+        if (deletedPendingEntries > 0) {
+          log.info(
+              "Removed [%,d] pending [%s] created before [%s].",
+              deletedPendingEntries,
+              getEntryType(),
+              pendingMinCreatedTime
+          );
+        }
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to perform pending cleanup of [%s]", getEntryType());
+      }
+
+      // Delegate to parent for the non-specialized cleanup
+      super.run();
+    }
+  }
+
+  /**
+   * Cleans up unreferenced indexing states created before the specified time.
+   * <p>
+   * Before deletion, it executes the following steps to ensure data integrity:
+   * <ol>
+   *   <li>Marks unreferenced indexing states as unused.</li>
+   *   <li>Finds any unused indexing states that are still referenced by used segments and marks them as used to avoid unwanted deletion.</li>
+   * </ol>
+   * @param minCreatedTime the minimum creation time for indexing states to be considered for deletion
+   * @return the number of indexing states deleted
+   */
+  @Override
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
+  {
     int unused = indexingStateStorage.markUnreferencedIndexingStatesAsUnused();
     log.info("Marked [%s] unreferenced indexing states as unused.", unused);
 
-    // 2: Repair - find unused states still referenced by segments
     List<String> stateFingerprints = indexingStateStorage.findReferencedIndexingStateMarkedAsUnused();
     if (!stateFingerprints.isEmpty()) {
       int numUpdated = indexingStateStorage.markIndexingStatesAsUsed(stateFingerprints);
       log.info("Marked [%s] unused indexing states referenced by used segments as used.", numUpdated);
     }
 
-    // 3: Delete unused states older than threshold
     return indexingStateStorage.deleteUnusedIndexingStatesOlderThan(minCreatedTime.getMillis());
-  }
-
-  @Override
-  protected int cleanupEntriesCreatedBeforePendingDurationToRetain(DateTime minCreatedTime)
-  {
-    return indexingStateStorage.deletePendingIndexingStatesOlderThan(minCreatedTime.getMillis());
   }
 }

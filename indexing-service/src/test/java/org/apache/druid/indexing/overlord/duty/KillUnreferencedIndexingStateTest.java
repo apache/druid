@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.overlord.config.OverlordMetadataCleanupConfig;
+import org.apache.druid.indexing.overlord.config.IndexingStateCleanupConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -71,10 +71,13 @@ public class KillUnreferencedIndexingStateTest
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
     dateTimes.add(now);
+    dateTimes.add(now);
+    dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(6 * 60 + 1));
+    dateTimes.add(now.plusMinutes(6 * 60 + 1));
 
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration(), // Unused and over 6 hours old should be deleted
@@ -88,7 +91,7 @@ public class KillUnreferencedIndexingStateTest
     CompactionState state = createTestCompactionState();
 
     compactionStateStorage.upsertIndexingState("test-ds", fingerprint, state, DateTimes.nowUtc());
-    compactionStateStorage.markIndexingStatesAsActive(fingerprint);
+    compactionStateStorage.markIndexingStatesAsActive(List.of(fingerprint));
 
     Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
 
@@ -111,9 +114,11 @@ public class KillUnreferencedIndexingStateTest
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
     dateTimes.add(now);
+    dateTimes.add(now);
+    dateTimes.add(now.plusMinutes(61));
     dateTimes.add(now.plusMinutes(61));
 
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration(),
@@ -128,7 +133,7 @@ public class KillUnreferencedIndexingStateTest
     CompactionState state = createTestCompactionState();
 
     compactionStateStorage.upsertIndexingState("test-ds", fingerprint, state, DateTimes.nowUtc());
-    compactionStateStorage.markIndexingStatesAsActive(fingerprint);
+    compactionStateStorage.markIndexingStatesAsActive(List.of(fingerprint));
 
     Assert.assertEquals(Boolean.TRUE, getCompactionStateUsedStatus(fingerprint));
     duty.run();
@@ -166,7 +171,7 @@ public class KillUnreferencedIndexingStateTest
   @Test
   public void test_killUnreferencedCompactionState_disabled()
   {
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         false, // cleanup disabled
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("PT6H").toStandardDuration(),
@@ -179,7 +184,7 @@ public class KillUnreferencedIndexingStateTest
     // Insert compaction state
     String fingerprint = "disabled_fingerprint";
     compactionStateStorage.upsertIndexingState("test-ds", fingerprint, createTestCompactionState(), DateTimes.nowUtc());
-    compactionStateStorage.markIndexingStatesAsActive(fingerprint);
+    compactionStateStorage.markIndexingStatesAsActive(List.of(fingerprint));
 
     // Run duty - should do nothing
     duty.run();
@@ -194,9 +199,11 @@ public class KillUnreferencedIndexingStateTest
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
     dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(15));
     dateTimes.add(now.plusDays(15));
 
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("P7D").toStandardDuration(),
@@ -228,9 +235,11 @@ public class KillUnreferencedIndexingStateTest
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
     dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(8));
+    dateTimes.add(now.plusDays(31));
     dateTimes.add(now.plusDays(31));
 
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("P7D").toStandardDuration(),
@@ -246,7 +255,7 @@ public class KillUnreferencedIndexingStateTest
 
     compactionStateStorage.upsertIndexingState("test-ds", pendingFingerprint, state, DateTimes.nowUtc());
     compactionStateStorage.upsertIndexingState("test-ds", nonPendingFingerprint, state, DateTimes.nowUtc());
-    compactionStateStorage.markIndexingStatesAsActive(nonPendingFingerprint);
+    compactionStateStorage.markIndexingStatesAsActive(List.of(nonPendingFingerprint));
 
     Assert.assertEquals(Boolean.TRUE, compactionStateStorage.isIndexingStatePending(pendingFingerprint));
     Assert.assertNotNull(getCompactionStateUsedStatus(nonPendingFingerprint));
@@ -266,8 +275,9 @@ public class KillUnreferencedIndexingStateTest
     List<DateTime> dateTimes = new ArrayList<>();
     DateTime now = DateTimes.nowUtc();
     dateTimes.add(now.plusDays(31)); // The state would be removed if it was still pending
+    dateTimes.add(now.plusDays(31)); // The state would be removed if it was still pending
 
-    OverlordMetadataCleanupConfig cleanupConfig = new OverlordMetadataCleanupConfig(
+    IndexingStateCleanupConfig cleanupConfig = new IndexingStateCleanupConfig(
         true,
         Period.parse("PT1H").toStandardDuration(),
         Period.parse("P7D").toStandardDuration(),
@@ -307,7 +317,7 @@ public class KillUnreferencedIndexingStateTest
       return null;
     });
 
-    compactionStateStorage.markIndexingStatesAsActive(fingerprint);
+    compactionStateStorage.markIndexingStatesAsActive(List.of(fingerprint));
     Assert.assertNotEquals(Boolean.TRUE, compactionStateStorage.isIndexingStatePending(fingerprint));
 
     duty.run();
@@ -340,7 +350,7 @@ public class KillUnreferencedIndexingStateTest
     private int index = -1;
 
     public TestKillUnreferencedIndexingState(
-        OverlordMetadataCleanupConfig config,
+        IndexingStateCleanupConfig config,
         IndexingStateStorage indexingStateStorage,
         List<DateTime> dateTimes
     )

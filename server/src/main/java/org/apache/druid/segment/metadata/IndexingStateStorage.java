@@ -80,12 +80,12 @@ public interface IndexingStateStorage
   int markIndexingStatesAsUsed(List<String> stateFingerprints);
 
   /**
-   * Marks indexing states as active for a given fingerprint.
+   * Marks indexing states as active
    *
-   * @param stateFingerprint The fingerprint to mark as active
+   * @param stateFingerprints List of fingerprints to mark as active
    * @return Number of rows updated, or 0 if not applicable
    */
-  int markIndexingStatesAsActive(String stateFingerprint);
+  int markIndexingStatesAsActive(List<String> stateFingerprints);
 
   /**
    * Deletes pending indexing states older than the given timestamp.

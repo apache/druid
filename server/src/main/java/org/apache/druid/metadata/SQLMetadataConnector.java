@@ -232,13 +232,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    *  Checks if the root cause of the given exception is a unique constraint violation.
    *
-   * @return false by default. Specific implementations should override this method
-   * to correctly classify their unique constraint violation exceptions.
+   * @return true if t is a unique constraint violation, false otherwise
    */
-  public boolean isUniqueConstraintViolation(Throwable t)
-  {
-    return false;
-  }
+  public abstract boolean isUniqueConstraintViolation(Throwable t);
 
   /**
    * Creates the given table and indexes if the table doesn't already exist.
@@ -1300,15 +1296,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         (tableHasColumn(segmentsTables, "schema_fingerprint")
          && tableHasColumn(segmentsTables, "num_rows"));
 
-    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet && tableHasColumn(segmentsTables, "indexing_state_fingerprint")) {
-      // do nothing
-    } else {
+    StringBuilder missingColumns = new StringBuilder();
+    if (!tableHasColumn(segmentsTables, "used_status_last_updated")) {
+      missingColumns.append("used_status_last_updated, ");
+    }
+    if (!schemaPersistenceRequirementMet) {
+      missingColumns.append("schema_fingerprint, num_rows, ");
+    }
+    if (!tableHasColumn(segmentsTables, "indexing_state_fingerprint")) {
+      missingColumns.append("indexing_state_fingerprint, ");
+    }
+
+    if (missingColumns.length() > 0) {
       throw new ISE(
           "Cannot start Druid as table[%s] has an incompatible schema."
-          + " Reason: One or all of these columns [used_status_last_updated, schema_fingerprint, num_rows, indexing_state_fingerprint] does not exist in table."
+          + " Reason: The following columns do not exist in the table: [%s]"
           + " See https://druid.apache.org/docs/latest/operations/upgrade-prep.html for more info on remediation.",
-          tablesConfigSupplier.get().getSegmentsTable()
+          tablesConfigSupplier.get().getSegmentsTable(),
+          missingColumns.substring(0, missingColumns.length() - 2)
       );
+    } else {
+      // do nothing
     }
   }
 
