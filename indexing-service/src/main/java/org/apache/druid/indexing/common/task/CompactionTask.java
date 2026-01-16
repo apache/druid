@@ -36,6 +36,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -81,6 +82,7 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -88,7 +90,9 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -781,34 +785,38 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       SegmentCacheManager segmentCacheManager
   )
   {
-    return Pair.of(
-        dataSegment,
-        () -> {
-          try {
-            final Closer closer = Closer.create();
-            segmentCacheManager.load(dataSegment);
-            closer.register(() -> segmentCacheManager.drop(dataSegment));
-            final Segment segment = closer.register(segmentCacheManager.acquireCachedSegment(dataSegment).orElseThrow());
-            return new ResourceHolder<QueryableIndex>()
-            {
-              @Override
-              public QueryableIndex get()
-              {
-                return segment.as(QueryableIndex.class);
-              }
+    return Pair.of(dataSegment, () -> fetchSegmentInternal(dataSegment, segmentCacheManager));
+  }
 
-              @Override
-              public void close()
-              {
-                CloseableUtils.closeAndWrapExceptions(closer);
-              }
-            };
-          }
-          catch (Exception e) {
-            throw new RuntimeException(e);
-          }
+  private static ResourceHolder<QueryableIndex> fetchSegmentInternal(
+      DataSegment dataSegment,
+      SegmentCacheManager segmentCacheManager
+  )
+  {
+    final Closer closer = Closer.create();
+    try {
+      final AcquireSegmentAction acquireAction = closer.register(segmentCacheManager.acquireSegment(dataSegment));
+      final ReferenceCountedObjectProvider<Segment> segmentProvider =
+          FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
+      final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
+      return new ResourceHolder<>()
+      {
+        @Override
+        public QueryableIndex get()
+        {
+          return segment.as(QueryableIndex.class);
         }
-    );
+
+        @Override
+        public void close()
+        {
+          CloseableUtils.closeAndWrapExceptions(closer);
+        }
+      };
+    }
+    catch (Exception e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
+    }
   }
 
   /**
@@ -1134,7 +1142,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (metadata != null && metadata.getProjections() != null && !metadata.getProjections().isEmpty()) {
         projections = new HashMap<>();
         for (AggregateProjectionMetadata projectionMetadata : metadata.getProjections()) {
-          final AggregateProjectionMetadata.Schema schema = projectionMetadata.getSchema();
+          final AggregateProjectionSchema schema = projectionMetadata.getSchema();
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );

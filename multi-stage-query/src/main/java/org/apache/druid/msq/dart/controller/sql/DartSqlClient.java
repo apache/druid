@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.druid.sql.http.SqlResource;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,4 +40,15 @@ public interface DartSqlClient
    * @see SqlResource#doGetRunningQueries(String, HttpServletRequest) the server side
    */
   ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+
+  /**
+   * Get query report for a particular SQL query ID on this server.
+   *
+   * @param sqlQueryId SQL query ID
+   * @param selfOnly   true if only queries from this server should be examined; false if queries from all servers
+   *                   should be examined
+   *
+   * @see SqlResource#doGetQueryReport(String, String, HttpServletRequest) server side
+   */
+  ListenableFuture<GetQueryReportResponse> getQueryReport(String sqlQueryId, boolean selfOnly);
 }

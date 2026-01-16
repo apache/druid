@@ -20,7 +20,10 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.guice.MSQBinders;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.query.Query;
 
@@ -28,12 +31,17 @@ import java.util.Map;
 
 /**
  * Delegates to other {@link QueryKit} implementations based on the class of the {@link Query}.
+ *
+ * The map of query types to QueryKit implementations is populated via Guice MapBinder.
+ * Extensions can register additional QueryKit implementations using
+ * {@link MSQBinders#queryKitBinder(Binder)}.
  */
 @SuppressWarnings("rawtypes")
 public class MultiQueryKit implements QueryKit<Query<?>>
 {
   private final Map<Class<? extends Query>, QueryKit> toolKitMap;
 
+  @Inject
   public MultiQueryKit(final Map<Class<? extends Query>, QueryKit> toolKitMap)
   {
     this.toolKitMap = Preconditions.checkNotNull(toolKitMap, "toolKitMap");

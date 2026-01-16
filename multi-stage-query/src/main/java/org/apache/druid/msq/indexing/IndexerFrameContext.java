@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
@@ -29,15 +30,17 @@ import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.server.SegmentManager;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 public class IndexerFrameContext implements FrameContext
@@ -46,7 +49,9 @@ public class IndexerFrameContext implements FrameContext
   private final IndexerWorkerContext context;
   private final FrameWriterSpec frameWriterSpec;
   private final IndexIO indexIO;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  @Nullable
+  private final CoordinatorClient coordinatorClient;
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
   private final WorkerStorageParameters storageParameters;
@@ -57,7 +62,8 @@ public class IndexerFrameContext implements FrameContext
       IndexerWorkerContext context,
       FrameWriterSpec frameWriterSpec,
       IndexIO indexIO,
-      DataSegmentProvider dataSegmentProvider,
+      SegmentManager segmentManager,
+      @Nullable CoordinatorClient coordinatorClient,
       ResourceHolder<ProcessingBuffers> processingBuffers,
       IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters,
@@ -68,7 +74,8 @@ public class IndexerFrameContext implements FrameContext
     this.context = context;
     this.frameWriterSpec = frameWriterSpec;
     this.indexIO = indexIO;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.processingBuffers = processingBuffers;
     this.memoryParameters = memoryParameters;
     this.storageParameters = storageParameters;
@@ -100,9 +107,16 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public DataSegmentProvider dataSegmentProvider()
+  public SegmentManager segmentManager()
   {
-    return dataSegmentProvider;
+    return segmentManager;
+  }
+
+  @Override
+  @Nullable
+  public CoordinatorClient coordinatorClient()
+  {
+    return coordinatorClient;
   }
 
   @Override
@@ -123,6 +137,12 @@ public class IndexerFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return context.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return context.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

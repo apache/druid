@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>36.0.0-SNAPSHOT</version>
+        <version>37.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -181,17 +181,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.kafka</groupId>
-                    <artifactId>kafka-clients</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -237,11 +226,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>${apache.kafka.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>

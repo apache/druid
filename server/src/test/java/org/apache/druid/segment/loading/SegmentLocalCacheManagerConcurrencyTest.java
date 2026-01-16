@@ -489,7 +489,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
     assertNoLooseEnds();
   }
 
@@ -565,7 +567,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     // expect at least some empties from the segment not being cached
     Assertions.assertTrue(totalEmpty > 0);
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     assertNoLooseEnds();
   }
@@ -762,7 +766,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     // now ensure that we can successfully do stuff after all those interrupts
     int totalSuccess = 0;

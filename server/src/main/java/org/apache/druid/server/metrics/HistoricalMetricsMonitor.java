@@ -57,7 +57,12 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emitter.emit(new ServiceMetricEvent.Builder().setMetric("segment/max", serverConfig.getMaxSize()));
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .setDimension("tier", serverConfig.getTier())
+            .setDimension("priority", String.valueOf(serverConfig.getPriority()))
+            .setMetric("segment/max", serverConfig.getMaxSize())
+    );
 
     final Object2LongOpenHashMap<String> pendingDeleteSizes = new Object2LongOpenHashMap<>();
 

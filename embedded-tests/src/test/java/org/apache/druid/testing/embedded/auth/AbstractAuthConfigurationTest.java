@@ -996,7 +996,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
     adminServers =
         "server,host,plaintext_port,tls_port,server_type,tier,curr_size,max_size,is_leader\n"
-        + "localhost:8083,localhost,8083,-1,historical,_default_tier,1939,100000000,\n"
+        + "localhost:8083,localhost,8083,-1,historical,_default_tier,2024,100000000,\n"
         + "localhost:8091,localhost,8091,-1,indexer,_default_tier,0,0,";
 
     adminServerSegments = StringUtils.format(

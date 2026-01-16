@@ -22,6 +22,7 @@ package org.apache.druid.msq.shuffle.output;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.rpc.WorkerResource;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.servlet.http.HttpServletRequest;
@@ -44,10 +46,10 @@ public class StageOutputHolder implements Closeable
   private final SettableFuture<ReadableFrameChannel> channelFuture;
   private final ListenableFuture<StageOutputReader> readerFuture;
 
-  public StageOutputHolder()
+  public StageOutputHolder(final WireTransferableContext wireTransferableContext)
   {
     this.channelFuture = SettableFuture.create();
-    this.readerFuture = FutureUtils.transform(channelFuture, StageOutputHolder::createReader);
+    this.readerFuture = FutureUtils.transform(channelFuture, channel -> createReader(channel, wireTransferableContext));
   }
 
   /**
@@ -82,10 +84,11 @@ public class StageOutputHolder implements Closeable
   public void setChannel(final ReadableFrameChannel channel)
   {
     if (!channelFuture.set(channel)) {
-      if (FutureUtils.getUncheckedImmediately(channelFuture) == null) {
-        throw new ISE("Closed");
+      final ReadableFrameChannel existingChannel = FutureUtils.getUncheckedImmediately(channelFuture);
+      if (existingChannel == null) {
+        throw DruidException.defensive("Closed, cannot set to[%s]", channel);
       } else {
-        throw new ISE("Channel already set");
+        throw DruidException.defensive("Channel already set to[%s], cannot set to[%s]", existingChannel, channel);
       }
     }
   }
@@ -110,7 +113,10 @@ public class StageOutputHolder implements Closeable
     }
   }
 
-  private static StageOutputReader createReader(final ReadableFrameChannel channel)
+  private static StageOutputReader createReader(
+      final ReadableFrameChannel channel,
+      final WireTransferableContext wireTransferableContext
+  )
   {
     if (channel == null) {
       // Happens if close() was called before the channel resolved.
@@ -131,11 +137,11 @@ public class StageOutputHolder implements Closeable
         // Close original channel, so we don't leak a frame file reference.
         channel.close();
 
-        return new FileStageOutputReader(frameFile);
+        return new FileStageOutputReader(frameFile, wireTransferableContext.concreteDeserializer());
       }
     }
 
     // Generic implementation for any other type of channel.
-    return new ChannelStageOutputReader(channel);
+    return new ChannelStageOutputReader(channel, wireTransferableContext);
   }
 }

@@ -51,6 +51,7 @@ public class StorageMonitor extends AbstractMonitor
   public static final String DROP_BYTES = "storage/drop/bytes";
   public static final String VSF_USED_BYTES = "storage/virtual/used/bytes";
   public static final String VSF_HIT_COUNT = "storage/virtual/hit/count";
+  public static final String VSF_HIT_BYTES = "storage/virtual/hit/bytes";
   public static final String VSF_LOAD_COUNT = "storage/virtual/load/count";
   public static final String VSF_LOAD_BYTES = "storage/virtual/load/bytes";
   public static final String VSF_EVICT_COUNT = "storage/virtual/evict/count";
@@ -92,6 +93,7 @@ public class StorageMonitor extends AbstractMonitor
         );
         emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
         emitter.emit(builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount()));
+        emitter.emit(builder.setMetric(VSF_HIT_BYTES, weakStats.getHitBytes()));
         emitter.emit(builder.setMetric(VSF_LOAD_COUNT, weakStats.getLoadCount()));
         emitter.emit(builder.setMetric(VSF_LOAD_BYTES, weakStats.getLoadBytes()));
         emitter.emit(builder.setMetric(VSF_EVICT_COUNT, weakStats.getEvictionCount()));

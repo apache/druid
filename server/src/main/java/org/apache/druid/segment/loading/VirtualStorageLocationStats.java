@@ -32,6 +32,8 @@ public interface VirtualStorageLocationStats
    */
   long getHitCount();
 
+  long getHitBytes();
+
   /**
    * Number of operations for which an entry was missing and was loaded into the cache during the measurement period
    */

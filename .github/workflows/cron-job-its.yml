@@ -56,34 +56,6 @@ jobs:
         run: |
           ./it.sh ci
 
-  integration-index-tests-middleManager:
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, realtime-index]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    needs: build
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      use_indexer: middleManager
-      group: ${{ matrix.testing_group }}
-
-  integration-index-tests-indexer:
-    strategy:
-      fail-fast: false
-      matrix:
-        testing_group: [ kafka-index, kafka-transactional-index, kafka-index-slow, kafka-transactional-index-slow, kafka-data-format ]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    needs: build
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=${{ matrix.testing_group }}
-      use_indexer: indexer
-      group: ${{ matrix.testing_group }}
-
   integration-query-tests-middleManager:
     strategy:
       fail-fast: false
@@ -118,8 +90,12 @@ jobs:
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check
+        env:
+          OSS_INDEX_USERNAME: ${{ secrets.OSS_INDEX_USERNAME }}
+          OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          mvn dependency-check:purge dependency-check:check || { echo "
+          mvn -B dependency-check:purge dependency-check:check -DnvdApiKey=$NVD_API_KEY -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`

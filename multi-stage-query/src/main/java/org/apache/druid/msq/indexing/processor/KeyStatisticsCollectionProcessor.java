@@ -25,7 +25,6 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryRange;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
@@ -108,7 +107,7 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
       return ReturnOrAwait.returnObject(clusterByStatisticsCollector);
     }
 
-    final Frame frame = inputChannel.read();
+    final Frame frame = inputChannel.readFrame();
     final Cursor cursor = FrameProcessors.makeCursor(frame, frameReader);
     final IntSupplier rowWeightSupplier =
         makeRowWeightSupplier(frameReader, frame.type(), cursor.getColumnSelectorFactory());
@@ -119,8 +118,9 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
       clusterByStatisticsCollector.add(key, rowWeightSupplier.getAsInt());
     }
 
-    // Clears partition info (uses NO_PARTITION), but that's OK, because it isn't needed downstream of this processor.
-    outputChannel.write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+    // Clears partition info (writes without partition number), but that's OK, because it isn't needed
+    // downstream of this processor.
+    outputChannel.write(frame);
     return ReturnOrAwait.awaitAll(1);
   }
 

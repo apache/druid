@@ -427,14 +427,14 @@ public class FrameProcessorExecutor
    * @param cancellationId           optional cancellation id for {@link #runFully}.
    */
   public <T, R> ListenableFuture<R> runAllFully(
-      final ProcessorManager<T, R> processorManager,
+      final ProcessorManager<T, ? extends R> processorManager,
       final int maxOutstandingProcessors,
       final Bouncer bouncer,
       @Nullable final String cancellationId
   )
   {
     // Logic resides in a separate class in order to keep this one simpler.
-    return new RunAllFullyWidget<>(
+    return new RunAllFullyWidget<T, R>(
         processorManager,
         this,
         maxOutstandingProcessors,

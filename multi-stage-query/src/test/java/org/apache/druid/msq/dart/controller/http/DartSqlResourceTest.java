@@ -52,6 +52,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.DartQueryKitSpecFactory;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
@@ -243,7 +244,7 @@ public class DartSqlResourceTest extends MSQTestBase
             return super.queryKernelConfig(querySpec).toBuilder().workerIds(ImmutableList.of("some")).build();
           }
         },
-        controllerRegistry = new DartControllerRegistry()
+        controllerRegistry = new DartControllerRegistry(new DartControllerConfig())
         {
           @Override
           public void register(ControllerHolder holder)
@@ -258,6 +259,7 @@ public class DartSqlResourceTest extends MSQTestBase
             StringUtils.encodeForFormat(getClass().getSimpleName() + "-controller-exec")
         ),
         new DartQueryKitSpecFactory(new TestTimelineServerView(Collections.emptyList())),
+        injector.getInstance(MultiQueryKit.class),
         new ServerConfig(),
         new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
         toolbox,
@@ -296,7 +298,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     // Ensure that controllerRegistry has nothing in it at the conclusion of each test. Verifies that controllers
     // are fully cleaned up.
-    Assertions.assertEquals(0, controllerRegistry.getAllHolders().size(), "controllerRegistry.getAllHolders().size()");
+    Assertions.assertEquals(0, controllerRegistry.getAllControllers().size(), "controllerRegistry.getAllHolders().size()");
   }
 
   @Test
@@ -323,7 +325,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
+    controllerRegistry.deregister(holder, null);
   }
 
   /**
@@ -340,15 +342,15 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder holder2 = setUpMockRunningQuery(DIFFERENT_REGULAR_USER_NAME);
 
     // Regular users can see only their own queries, without authentication details.
-    Assertions.assertEquals(2, controllerRegistry.getAllHolders().size());
+    Assertions.assertEquals(2, controllerRegistry.getAllControllers().size());
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
         sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
-    controllerRegistry.deregister(holder2);
+    controllerRegistry.deregister(holder, null);
+    controllerRegistry.deregister(holder2, null);
   }
 
   /**
@@ -388,7 +390,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -415,7 +417,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -452,7 +454,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -488,7 +490,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
+    controllerRegistry.deregister(holder, null);
   }
 
   @Test

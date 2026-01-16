@@ -44,7 +44,7 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
   @Override
   public void messageReceived(ControllerMessage message)
   {
-    final ControllerHolder holder = controllerRegistry.get(message.getQueryId());
+    final ControllerHolder holder = controllerRegistry.getController(message.getQueryId());
     if (holder != null) {
       message.handle(holder.getController());
     }
@@ -59,7 +59,7 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
   @Override
   public void serverRemoved(DruidNode node)
   {
-    for (final ControllerHolder holder : controllerRegistry.getAllHolders()) {
+    for (final ControllerHolder holder : controllerRegistry.getAllControllers()) {
       final Controller controller = holder.getController();
       final WorkerId workerId = WorkerId.fromDruidNode(node, controller.queryId());
       holder.workerOffline(workerId);

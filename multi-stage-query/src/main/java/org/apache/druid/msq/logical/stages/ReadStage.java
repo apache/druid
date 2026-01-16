@@ -49,7 +49,6 @@ import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 
 import javax.annotation.Nonnull;
-
 import java.util.Collections;
 import java.util.Optional;
 

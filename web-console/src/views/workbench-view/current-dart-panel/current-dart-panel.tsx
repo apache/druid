@@ -29,7 +29,6 @@ import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { DartDetailsDialog } from '../dart-details-dialog/dart-details-dialog';
 import { getMsqDartVersion, WORK_STATE_STORE } from '../work-state-store';
 
 import './current-dart-panel.scss';
@@ -48,24 +47,22 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
 }
 
 export interface CurrentViberPanelProps {
+  onExecutionDetails(id: string): void;
   onClose(): void;
 }
 
 export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   props: CurrentViberPanelProps,
 ) {
-  const { onClose } = props;
+  const { onExecutionDetails, onClose } = props;
 
-  const [showSql, setShowSql] = useState<string | undefined>();
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, signal) => {
-      return (
-        (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
-          .queries as DartQueryEntry[]
-      ).filter(q => q.engine === 'msq-dart');
+      return (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
+        .queries as DartQueryEntry[];
     },
   });
 
@@ -89,9 +86,9 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
               <Menu>
                 <MenuItem
                   icon={IconNames.EYE_OPEN}
-                  text="Show SQL"
+                  text="Show details"
                   onClick={() => {
-                    setShowSql(w.sql);
+                    onExecutionDetails(w.sqlQueryId);
                   }}
                 />
                 <MenuItem
@@ -132,10 +129,13 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
-                <div onDoubleClick={() => setShowSql(w.sql)}>
-                  <div className="line1">
+                <div onDoubleClick={() => onExecutionDetails(w.sqlQueryId)}>
+                  <div
+                    className="line1"
+                    data-tooltip={`Engine: ${w.engine}\nSQL ID: ${w.sqlQueryId}`}
+                  >
                     <Icon
-                      className={'status-icon ' + w.state.toLowerCase()}
+                      className={`status-icon ${w.state.toLowerCase()}`}
                       icon={icon}
                       style={{ color }}
                       data-tooltip={`State: ${w.state}`}
@@ -187,7 +187,6 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
           onDismiss={() => setConfirmCancelId(undefined)}
         />
       )}
-      {showSql && <DartDetailsDialog sql={showSql} onClose={() => setShowSql(undefined)} />}
     </div>
   );
 });

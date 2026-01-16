@@ -702,7 +702,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         tempDir -> localFileStorageConnector,
         authorizerMapper,
         new DefaultQueryConfig(Map.of("debug", "true")),
-        new ServerConfig()
+        new ServerConfig(),
+        null
     );
   }
 

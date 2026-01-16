@@ -72,11 +72,11 @@ public class TaskReportQueryListenerTest
   public void test_taskReportDestination() throws IOException
   {
     final TaskReportQueryListener listener = new TaskReportQueryListener(
-        TaskReportMSQDestination.instance(),
         Suppliers.ofInstance(baos)::get,
         JSON_MAPPER,
         TASK_ID,
-        TASK_CONTEXT
+        TASK_CONTEXT,
+        TaskReportMSQDestination.instance().getRowsInTaskReport()
     );
 
     Assert.assertTrue(listener.readResults());
@@ -140,11 +140,11 @@ public class TaskReportQueryListenerTest
   public void test_durableDestination() throws IOException
   {
     final TaskReportQueryListener listener = new TaskReportQueryListener(
-        DurableStorageMSQDestination.instance(),
         Suppliers.ofInstance(baos)::get,
         JSON_MAPPER,
         TASK_ID,
-        TASK_CONTEXT
+        TASK_CONTEXT,
+        DurableStorageMSQDestination.instance().getRowsInTaskReport()
     );
 
     Assert.assertTrue(listener.readResults());
