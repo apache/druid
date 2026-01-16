@@ -64,6 +64,7 @@ import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -376,6 +377,8 @@ public class DataSourcePlan
     final List<SegmentDescriptor> segments;
     if (querySegmentSpec instanceof MultipleSpecificSegmentSpec) {
       segments = ((MultipleSpecificSegmentSpec) querySegmentSpec).getDescriptors();
+    } else if (querySegmentSpec instanceof SpecificSegmentSpec) {
+      segments = List.of(((SpecificSegmentSpec) querySegmentSpec).getDescriptor());
     } else {
       segments = null;
     }

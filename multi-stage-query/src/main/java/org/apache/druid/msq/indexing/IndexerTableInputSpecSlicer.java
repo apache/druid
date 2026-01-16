@@ -163,7 +163,8 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     if (timeline == null) {
       return Collections.emptySet();
     } else {
-      // A segment can overlap with multiple search intervals, thus the same segment can appear multiple times, but each is also bounded within the overlap search interval
+      // A segment can overlap with multiple search intervals, or even outside search intervals.
+      // The same segment can appear multiple times or 0 time, but each is also bounded within the overlapped search interval
       final Iterator<DataSegmentWithInterval> dataSegmentIterator =
           tableInputSpec.getIntervals().stream()
                         .flatMap(interval -> timeline.lookup(interval).stream())
@@ -185,6 +186,21 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     }
   }
 
+  /**
+   * Builds a timeline of segments for the given {@link TableInputSpec} by combining segments from both
+   * realtime servers and the metadata store.
+   * <p>
+   * Realtime segments are fetched first to avoid missing segments that may be handed off between the two calls.
+   * When a segment appears in both sources, the published version is used.
+   * <p>
+   * If the task is operating with a REPLACE lock, only segments that existed before the lock was acquired
+   * will be considered.
+   *
+   * @param inputSpec the table input specification containing datasource, intervals, and optional specific segments
+   * @return a timeline containing all matching segments, or null if no segments are found
+   * @throws MSQException if there's an IO error fetching segments from the metadata store
+   * @throws DruidException if specific segments were requested but some are missing or outdated
+   */
   @Nullable
   private VersionedIntervalTimeline<String, DataSegment> getTimeline(TableInputSpec inputSpec)
   {
@@ -194,10 +210,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
 
     final boolean includeRealtime = SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
     final Iterable<ImmutableSegmentLoadInfo> realtimeSegments;
-
     // Fetch the realtime segments. Do this first so that we don't miss any segment if they get handed off between the two calls.
-    // Segments loaded on historicals are deduplicated below,
-    // since we are only interested in realtime segments for now.
     if (includeRealtime) {
       realtimeSegments = coordinatorClient.fetchServerViewSegments(dataSource, intervals);
     } else {
@@ -243,7 +256,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
 
     int realtimeCount = 0;
-    // Iterate over the realtime segments and segments loaded on the historical
+    // Iterate over the realtime segments to attach server metadata
     for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeSegments) {
       Set<DruidServerMetadata> servers = segmentLoadInfo.getServers();
       // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.

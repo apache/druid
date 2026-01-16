@@ -44,6 +44,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
+        null,
         new SelectorDimFilter("dim", "val", null),
         Collections.singleton("dim")
     );
@@ -63,6 +64,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
+        null,
         new SelectorDimFilter("dim", "val", null),
         Collections.emptySet()
     );
@@ -82,6 +84,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Intervals.ONLY_ETERNITY,
+        null,
         new SelectorDimFilter("dim", "val", null),
         null
     );

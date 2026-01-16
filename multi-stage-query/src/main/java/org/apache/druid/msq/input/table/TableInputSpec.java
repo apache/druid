@@ -92,6 +92,10 @@ public class TableInputSpec implements InputSpec
     this.filterFields = filterFields;
   }
 
+  /**
+   * @deprecated Use {@link #TableInputSpec(String, List, List, DimFilter, Set)} with explicit null for segments instead.
+   */
+  @Deprecated
   public TableInputSpec(
       String dataSource,
       @Nullable List<Interval> intervals,
