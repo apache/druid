@@ -39,6 +39,7 @@ import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.QueryResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -81,7 +82,8 @@ public class DataServerClientTest
     target = new DataServerClient(
         serviceClientFactory,
         mock(ServiceLocation.class),
-        jsonMapper
+        jsonMapper,
+        StandardRetryPolicy.noRetries()
     );
   }
 
