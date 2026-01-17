@@ -177,6 +177,11 @@ public class ControllerHolder
    */
   public void cancel(CancellationReason reason)
   {
+    if (state.compareAndSet(State.ACCEPTED, State.CANCELED)) {
+      // No need to call stop() since run() wasn't called.
+      return;
+    }
+
     if (state.compareAndSet(State.RUNNING, State.CANCELED)) {
       controller.stop(reason);
     }

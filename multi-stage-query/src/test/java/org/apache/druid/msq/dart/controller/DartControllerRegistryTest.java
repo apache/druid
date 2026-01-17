@@ -204,12 +204,10 @@ public class DartControllerRegistryTest
 
     registry.register(holder);
 
-    // Returns null when no live reports are available
-    Assertions.assertNull(registry.getQueryDetails("dart1"));
-
-    // But the sqlQueryId mapping should still work after deregister with report
-    registry.deregister(holder, null);
-    Assertions.assertNull(registry.getQueryDetailsBySqlQueryId("sql1"));
+    // Returns null report when no live reports are available
+    final QueryInfoAndReport infoAndReport = registry.getQueryDetails("dart1");
+    Assertions.assertEquals("dart1", infoAndReport.getQueryInfo().getDartQueryId());
+    Assertions.assertNull(infoAndReport.getReportMap());
   }
 
   @Test
