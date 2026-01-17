@@ -145,6 +145,7 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
   public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
   public static final String CTX_MAX_PARTITIONS = "maxPartitions";
+  public static final String CTX_MAX_CLUSTERED_BY_COLUMNS = "maxClusteredByColumns";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -366,6 +367,20 @@ public class MultiStageQueryContext
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
+  }
+
+  public static int getMaxClusteredByColumns(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_CLUSTERED_BY_COLUMNS);
+    if (value == null) {
+      return Limits.MAX_CLUSTERED_BY_COLUMNS;
+    }
+    if (value <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("%s must be a positive integer, got[%d]", CTX_MAX_CLUSTERED_BY_COLUMNS, value);
     }
     return value;
   }

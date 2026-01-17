@@ -427,9 +427,10 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithHugeClusteringKeys()
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    final RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
 
-    final int numColumns = 1700;
+    final int numColumns = 20;
+    final int maxClusteredByColumns = 15;
 
     String columnNames = IntStream.range(1, numColumns)
                                   .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
@@ -444,6 +445,12 @@ public class MSQFaultsTest extends MSQTestBase
                                           i
                                       ))
                                       .collect(Collectors.joining(", "));
+
+    final Map<String, Object> context =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
+                    .build();
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -463,7 +470,8 @@ public class MSQFaultsTest extends MSQTestBase
         ))
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
+        .setQueryContext(context)
+        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, maxClusteredByColumns, 0))
         .verifyResults();
   }
 
