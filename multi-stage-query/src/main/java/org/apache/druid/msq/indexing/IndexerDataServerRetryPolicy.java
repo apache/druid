@@ -20,11 +20,9 @@
 package org.apache.druid.msq.indexing;
 
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.utils.Throwables;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-
-import java.util.concurrent.ExecutionException;
 
 /**
  * Retry policy for {@link IndexerDataServerQueryHandler}.
@@ -90,9 +88,7 @@ public class IndexerDataServerRetryPolicy implements ServiceRetryPolicy
   public boolean retryThrowable(Throwable t)
   {
     // Retry on all exceptions, except when the exception chain indicates explicit interruption.
-    return !(t instanceof ExecutionException
-             && t.getCause() instanceof QueryInterruptedException
-             && t.getCause().getCause() instanceof InterruptedException);
+    return Throwables.getCauseOfType(t, InterruptedException.class) == null;
   }
 
   @Override
