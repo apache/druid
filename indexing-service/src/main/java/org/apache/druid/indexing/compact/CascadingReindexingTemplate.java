@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -277,7 +278,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * and the HOUR-granularity rule starts cleanly at a day boundary.
    * </pre>
    */
-  private List<Interval> generateIntervalsFromPeriods(List<Period> sortedPeriods, DateTime referenceTime, List<ReindexingGranularityRule> granularityRules)
+  @VisibleForTesting
+  static List<Interval> generateIntervalsFromPeriods(List<Period> sortedPeriods, DateTime referenceTime, List<ReindexingGranularityRule> granularityRules)
   {
     List<Interval> intervals = new ArrayList<>();
     DateTime previousAdjustedBoundary = null;
