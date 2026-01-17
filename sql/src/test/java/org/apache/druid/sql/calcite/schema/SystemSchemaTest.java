@@ -103,12 +103,16 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.SystemSchema.QueriesTable;
 import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
+import org.apache.druid.sql.http.GetQueriesResponse;
+import org.apache.druid.sql.http.QueryInfo;
 import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -1589,6 +1593,76 @@ public class SystemSchemaTest extends CalciteTestBase
       Assert.assertArrayEquals(expectedRows.get(i), rows.get(i));
     }
 
+  }
+
+  @Test
+  public void testQueriesTable()
+  {
+    // Create mock SqlEngine that returns test queries
+    final SqlEngine mockEngine = EasyMock.createMock(SqlEngine.class);
+    EasyMock.expect(mockEngine.name()).andReturn("native").anyTimes();
+    EasyMock.expect(mockEngine.getRunningQueries(
+        EasyMock.eq(false),
+        EasyMock.eq(true),
+        EasyMock.anyObject(),
+        EasyMock.anyObject()
+    )).andReturn(new GetQueriesResponse(ImmutableList.of(
+        createTestQueryInfo("query-1", "native", "RUNNING"),
+        createTestQueryInfo("query-2", "native", "COMPLETED")
+    ))).once();
+    EasyMock.replay(mockEngine);
+
+    final SqlEngineRegistry registry = new SqlEngineRegistry(ImmutableSet.of(mockEngine));
+    final QueriesTable queriesTable = new QueriesTable(() -> registry, MAPPER, authMapper);
+
+    final DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = queriesTable.scan(dataContext, Collections.emptyList(), null).toList();
+
+    Assert.assertEquals(2, rows.size());
+
+    // Verify first row
+    Assert.assertEquals("query-1", rows.get(0)[0]);
+    Assert.assertEquals("native", rows.get(0)[1]);
+    Assert.assertEquals("RUNNING", rows.get(0)[2]);
+    Assert.assertNotNull(rows.get(0)[3]); // info should be serialized JSON
+
+    // Verify second row
+    Assert.assertEquals("query-2", rows.get(1)[0]);
+    Assert.assertEquals("native", rows.get(1)[1]);
+    Assert.assertEquals("COMPLETED", rows.get(1)[2]);
+    Assert.assertNotNull(rows.get(1)[3]); // info should be serialized JSON
+
+    // Verify value types
+    verifyTypes(rows, SystemSchema.QUERIES_SIGNATURE);
+
+    EasyMock.verify(mockEngine);
+  }
+
+  /**
+   * Creates a test QueryInfo implementation for testing purposes.
+   */
+  private QueryInfo createTestQueryInfo(final String executionId, final String engine, final String state)
+  {
+    return new QueryInfo()
+    {
+      @Override
+      public String engine()
+      {
+        return engine;
+      }
+
+      @Override
+      public String state()
+      {
+        return state;
+      }
+
+      @Override
+      public String executionId()
+      {
+        return executionId;
+      }
+    };
   }
 
   private String getStatusPropertiesUrl(DiscoveryDruidNode discoveryDruidNode)
