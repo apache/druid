@@ -139,7 +139,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
     // Perform only scale-up actions
-    return optimalTaskCount >= currentTaskCount ? optimalTaskCount : -1;
+    int taskCount = -1;
+    if (optimalTaskCount >= currentTaskCount) {
+      taskCount = optimalTaskCount;
+      log.info("New task count [%d]", taskCount);
+    }
+
+    return taskCount;
   }
 
   public CostBasedAutoScalerConfig getConfig()
