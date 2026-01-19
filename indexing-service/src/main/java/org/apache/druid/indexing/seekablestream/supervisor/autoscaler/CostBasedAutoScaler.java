@@ -140,11 +140,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     // Perform only scale-up actions
     int taskCount = -1;
-    if (optimalTaskCount >= currentTaskCount) {
+    if (optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
       log.info("New task count [%d] on supervisor [%s]", taskCount, supervisorId);
+    } else {
+      log.info("No scaling required for supervisor [%s]", supervisorId);
     }
-
     return taskCount;
   }
 

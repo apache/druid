@@ -110,11 +110,7 @@ public class CostBasedAutoScalerMockTest
 
     int result = autoScaler.computeTaskCountForScaleAction();
 
-    Assert.assertEquals(
-        "Should return optimal count when it equals current (no change needed)",
-        optimalCount,
-        result
-    );
+    Assert.assertEquals("Should return -1 when it equals current (no change needed)", -1, result);
   }
 
   @Test
