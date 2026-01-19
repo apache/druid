@@ -50,29 +50,18 @@ public class MetadataStoreRoleProvider implements RoleProvider
   @Override
   public Set<String> getRoles(String authorizerPrefix, AuthenticationResult authenticationResult)
   {
-    Set<String> roleNames = new HashSet<>();
 
     Map<String, BasicAuthorizerUser> userMap = cacheManager.getUserMap(authorizerPrefix);
     if (userMap == null) {
       throw new IAE("Could not load userMap for authorizer [%s]", authorizerPrefix);
     }
 
-    Set<String> claims = RoleProviderUtil.claimValuesFromCtx(authenticationResult.getContext());
-
-    if (claims != null) {
-      return RoleProviderUtil.getRolesByClaimValue(
-          authorizerPrefix,
-          claims,
-          roleNames,
-          cacheManager
-      );
-    } else {
-      return RoleProviderUtil.getRolesByIdentity(
-          userMap,
-          authenticationResult.getIdentity(),
-          roleNames
-      );
-    }
+    return new HashSet<>(RoleProviderUtil.getUserRoles(
+        userMap,
+        authorizerPrefix,
+        authenticationResult,
+        cacheManager
+    ));
   }
 
   @Override

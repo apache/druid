@@ -26,7 +26,6 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,7 +44,7 @@ public class RoleProviderUtilTest
 
     Map<String, BasicAuthorizerUser> userMap = Map.of("id", user);
 
-    Set<String> out = RoleProviderUtil.getRolesByIdentity(userMap, "id", new HashSet<>());
+    Set<String> out = RoleProviderUtil.getRolesByIdentity(userMap, "id");
     assertEquals(roles, out);
   }
 
@@ -53,7 +52,7 @@ public class RoleProviderUtilTest
   public void getRolesByIdentityNoopWhenUserMissing()
   {
     Map<String, BasicAuthorizerUser> userMap = Map.of();
-    Set<String> out = RoleProviderUtil.getRolesByIdentity(userMap, "missing", new HashSet<>());
+    Set<String> out = RoleProviderUtil.getRolesByIdentity(userMap, "missing");
     assertTrue(out.isEmpty());
   }
 
@@ -67,7 +66,7 @@ public class RoleProviderUtilTest
     BasicAuthorizerCacheManager cache = new StubCacheManager(Map.of(), roles);
 
     Set<String> claims = Set.of("r2", "nope");
-    Set<String> out = RoleProviderUtil.getRolesByClaimValue("authz", claims, new HashSet<>(), cache);
+    Set<String> out = RoleProviderUtil.getRolesByClaimValue("authz", claims, cache);
     assertEquals(Set.of("r2"), out);
   }
 
@@ -75,8 +74,6 @@ public class RoleProviderUtilTest
   public void getRolesByClaimValuesThrowsWhenRoleMapNull()
   {
     BasicAuthorizerCacheManager cache = new StubCacheManager(Map.of(), null);
-    assertTrue(RoleProviderUtil.getRolesByClaimValue("authz", Set.of("r2"),
-                                                     new HashSet<>(), cache
-    ).isEmpty());
+    assertTrue(RoleProviderUtil.getRolesByClaimValue("authz", Set.of("r2"), cache).isEmpty());
   }
 }

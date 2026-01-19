@@ -106,24 +106,14 @@ public class LDAPRoleProvider implements RoleProvider
       }
     }
 
-    Set<String> claims = RoleProviderUtil.claimValuesFromCtx(authenticationResult.getContext());
+    roleNames.addAll(RoleProviderUtil.getUserRoles(
+        userMap,
+        authorizerPrefix,
+        authenticationResult,
+        cacheManager
+    ));
 
-    // Get the roles assigned to LDAP user from the metastore.
-    // This allow us to authorize LDAP users regardless of whether they belong to any groups or not in LDAP.
-    if (claims != null) {
-      return RoleProviderUtil.getRolesByClaimValue(
-          authorizerPrefix,
-          claims,
-          roleNames,
-          cacheManager
-      );
-    } else {
-      return RoleProviderUtil.getRolesByIdentity(
-          userMap,
-          authenticationResult.getIdentity(),
-          roleNames
-      );
-    }
+    return roleNames;
   }
 
   @Override

@@ -19,9 +19,11 @@
 
 package org.apache.druid.security.basic.authorization;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
+import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -32,23 +34,48 @@ public class RoleProviderUtil
 {
   public static final String ROLE_CLAIM_CONTEXT_KEY = "druidRoles";
 
-  public static Set<String> getRolesByIdentity(
+  public static Set<String> getUserRoles(
       Map<String, BasicAuthorizerUser> userMap,
-      String identity,
-      Set<String> roleNames
+      String authorizerPrefix,
+      AuthenticationResult authenticationResult,
+      BasicAuthorizerCacheManager cacheManager
   )
   {
-    BasicAuthorizerUser user = userMap.get(identity);
-    if (user != null) {
-      roleNames.addAll(user.getRoles());
+    Set<String> claims = RoleProviderUtil.claimValuesFromCtx(authenticationResult.getContext());
+
+    if (claims != null) {
+      return getRolesByClaimValue(
+          authorizerPrefix,
+          claims,
+          cacheManager
+      );
+    } else {
+      return getRolesByIdentity(
+          userMap,
+          authenticationResult.getIdentity()
+      );
     }
-    return roleNames;
   }
 
+  @VisibleForTesting
+  public static Set<String> getRolesByIdentity(
+      Map<String, BasicAuthorizerUser> userMap,
+      String identity
+  )
+  {
+    Set<String> roles = new HashSet<>();
+
+    BasicAuthorizerUser user = userMap.get(identity);
+    if (user != null) {
+      roles.addAll(user.getRoles());
+    }
+    return roles;
+  }
+
+  @VisibleForTesting
   public static Set<String> getRolesByClaimValue(
       String authorizerPrefix,
       Set<String> claimValue,
-      Set<String> roleNames,
       BasicAuthorizerCacheManager cacheManager
   )
   {
@@ -58,12 +85,14 @@ public class RoleProviderUtil
       return Set.of();
     }
 
+    Set<String> roles = new HashSet<>();
+
     roleMap.keySet()
            .stream()
            .filter(claimValue::contains)
-           .forEach(roleNames::add);
+           .forEach(roles::add);
 
-    return roleNames;
+    return roles;
   }
 
   @Nullable
