@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = InlineSchemaDataSourceCompactionConfig.class)
 @JsonSubTypes(value = {
@@ -101,34 +102,39 @@ public interface DataSourceCompactionConfig
 
   /**
    * Converts this compaction config to a {@link CompactionState}.
+   * <p>
+   * For IndexSpec and DimensionsSpec, we convert to their effective specs so that the fingerprint and associated state
+   * reflect the actual layout of the segments after compaction (with all missing defaults not included in the compaction
+   * config filled in). This is consistent with how {@link org.apache.druid.timeline.DataSegment#lastCompactionState }
+   * has been computed historically.
    */
   default CompactionState toCompactionState()
   {
     ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(this);
 
-    // 1. PartitionsSpec - reuse existing method
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
 
-    // 2. DimensionsSpec
+    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
+                          ? IndexSpec.getDefault().getEffectiveSpec()
+                          : tuningConfig.getIndexSpec().getEffectiveSpec();
+
     DimensionsSpec dimensionsSpec = null;
     if (getDimensionsSpec() != null && getDimensionsSpec().getDimensions() != null) {
-      dimensionsSpec = new DimensionsSpec(getDimensionsSpec().getDimensions());
+      dimensionsSpec = DimensionsSpec.builder()
+                                     .setDimensions(
+                                         getDimensionsSpec().getDimensions()
+                                                       .stream()
+                                                       .map(dim -> dim.getEffectiveSchema(indexSpec))
+                                                       .collect(Collectors.toList())
+                                     ).build();
     }
 
-    // 3. Metrics
     List<AggregatorFactory> metricsSpec = getMetricsSpec() == null
                                           ? null
                                           : Arrays.asList(getMetricsSpec());
 
-    // 4. Transform
     CompactionTransformSpec transformSpec = getTransformSpec();
 
-    // 5. IndexSpec
-    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
-                          ? IndexSpec.getDefault()
-                          : tuningConfig.getIndexSpec();
-
-    // 6. GranularitySpec
     GranularitySpec granularitySpec = null;
     if (getGranularitySpec() != null) {
       UserCompactionTaskGranularityConfig userGranularityConfig = getGranularitySpec();
@@ -140,7 +146,6 @@ public interface DataSourceCompactionConfig
       );
     }
 
-    // 7. Projections
     List<AggregateProjectionSpec> projections = getProjections();
 
     return new CompactionState(
