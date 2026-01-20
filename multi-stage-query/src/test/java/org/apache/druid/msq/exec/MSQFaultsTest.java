@@ -594,7 +594,7 @@ public class MSQFaultsTest extends MSQTestBase
             new DruidExceptionMatcher(
                 DruidException.Persona.USER,
                 DruidException.Category.INVALID_INPUT,
-                "invalidInput"
+                "generic"
             ).expectMessageContains(
                 "SQL requires union between two tables and column names queried for each table are different "
                 + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
