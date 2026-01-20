@@ -48,7 +48,7 @@ Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`
 
 [#18709](https://github.com/apache/druid/pull/18709)
 
-#### Some statsd metrics removed
+#### Some `statsd` metrics removed
 
 The following obsolete metrics have been removed:
 

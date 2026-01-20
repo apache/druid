@@ -120,7 +120,7 @@ You can control the retention behavior for reports using the following configs:
 
 #### New segment format
 
-The new v10 segment format improves upon v9. v10 supports partial segment downloads, a feature provided by the experimental virtual storage fabric feature. To streamline partial fetches, the base segment contents are combined into a single file, `druid.segment.`
+The new version 10 segment format improves upon version 9. Version 10 supports partial segment downloads, a feature provided by the experimental virtual storage fabric feature. To streamline partial fetches, the base segment contents get combined into a single file, `druid.segment.`
 
 Set `druid.indexer.task.buildV10=true` to make segments in the new format.
 
@@ -232,9 +232,9 @@ The following metrics for streaming and batch tasks now emit the actual values i
 
 [#18866](https://github.com/apache/druid/pull/18866)
 
-##### statsd metrics
+##### `statsd` metrics
 
-The following metrics have been added to the default list for statsd:
+The following metrics have been added to the default list for `statsd`:
 
 * `task/action/run/time`
 * `task/status/queue/count`
