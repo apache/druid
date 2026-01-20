@@ -115,7 +115,8 @@ public class WorkerRunRef
     }
 
     // Also directly signal the run() thread to stop. Ideally this shouldn't be necessary, since the
-    // interrupt should be enough.
+    // interrupt should be enough. But, in case there are any code paths that erroneously swallow
+    // InterruptedException, this provides a failsafe cancellation mechanism.
     worker.stop();
   }
 
