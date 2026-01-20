@@ -46,11 +46,13 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingFilterRule;
 import org.apache.druid.server.compaction.ReindexingGranularityRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -399,9 +401,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       if (eventTime.isAfter(interval.getEnd())) {
         throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
       }
-      String item = (i % 2 == 1) ? "hat" : "shoes";
       int metricValue = 100 + i * 5;
-      events.add(eventTime + "," + item + "," + metricValue);
+      events.add(eventTime + "," + "hat" + "," + metricValue);
+      events.add(eventTime + "," + "shoes" + "," + metricValue);
     }
 
     return String.join("\n", events);
