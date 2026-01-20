@@ -72,8 +72,56 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         spec,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionMetadata.class)
     );
+    String legacy = "{\n"
+                    + "  \"type\" : \"aggregate\",\n"
+                    + "  \"schema\" : {\n"
+                    + "    \"name\" : \"some_projection\",\n"
+                    + "    \"timeColumnName\" : \"time\",\n"
+                    + "    \"filter\" : {\n"
+                    + "      \"type\" : \"equals\",\n"
+                    + "      \"column\" : \"a\",\n"
+                    + "      \"matchValueType\" : \"STRING\",\n"
+                    + "      \"matchValue\" : \"a\"\n"
+                    + "    },\n"
+                    + "    \"virtualColumns\" : [ {\n"
+                    + "      \"type\" : \"expression\",\n"
+                    + "      \"name\" : \"time\",\n"
+                    + "      \"expression\" : \"timestamp_floor(__time,'PT1H',null,'UTC')\",\n"
+                    + "      \"outputType\" : \"LONG\"\n"
+                    + "    } ],\n"
+                    + "    \"groupingColumns\" : [ \"a\", \"b\", \"time\", \"c\", \"d\" ],\n"
+                    + "    \"aggregators\" : [ {\n"
+                    + "      \"type\" : \"count\",\n"
+                    + "      \"name\" : \"count\"\n"
+                    + "    }, {\n"
+                    + "      \"type\" : \"longSum\",\n"
+                    + "      \"name\" : \"e\",\n"
+                    + "      \"fieldName\" : \"e\"\n"
+                    + "    } ],\n"
+                    + "    \"ordering\" : [ {\n"
+                    + "      \"columnName\" : \"a\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"b\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"time\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"c\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"d\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    } ]\n"
+                    + "  },\n"
+                    + "  \"numRows\" : 12345\n"
+                    + "}";
+    Assertions.assertEquals(
+        spec,
+        JSON_MAPPER.readValue(legacy, AggregateProjectionMetadata.class)
+    );
   }
-
 
   @Test
   void testComparator()
