@@ -32,7 +32,7 @@ Replace {{MILESTONE}} with the correct milestone number. For example: https://gi
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A{{MILESTONE}}+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
-Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid \{\{DRUIDVERSION}}.
+Review the [upgrade notes](#upgrade-notes) before you upgrade to Druid \{\{DRUIDVERSION}}.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
 
 <!-- 
