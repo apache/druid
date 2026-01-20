@@ -221,8 +221,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    // Generate intervals from periods and create jobs for each
-    List<Interval> intervals = generateIntervalsFromPeriods(sortedPeriods, currentTime, ruleProvider.getGranularityRules());
+    List<Interval> intervals = generateSearchIntervals(sortedPeriods, currentTime);
     for (Interval reindexingInterval : intervals) {
       InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig.builder()
           .forDataSource(dataSource)
@@ -236,7 +235,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       int ruleCount = applyRulesToBuilder(builder, reindexingInterval, currentTime);
 
       if (ruleCount > 0) {
-        LOG.info("Creating reindexing jobs for interval[%s] with %d rules", reindexingInterval, ruleCount);
+        LOG.info("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
         allJobs.addAll(
             createJobsForSearchInterval(
                 new CompactionConfigBasedJobTemplate(builder.build(), createCascadingFinalizer()),
@@ -252,82 +251,17 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return allJobs;
   }
 
-  /**
-   * Generates cascading intervals from sorted periods.
-   * <p>
-   * For periods [P7D, P30D, P90D], generates intervals:
-   * <ul>
-   *   <li>[now-30d, now-7d)</li>
-   *   <li>[now-90d, now-30d)</li>
-   *   <li>[DateTimes.MIN, now-90d)</li>
-   * </ul>
-   * <p>
-   * If adjacent rules have segment granularities defined, boundaries are adjusted
-   * to align with granularity buckets to prevent gaps in the timeline. Example:
-   * <pre>
-   * Given P7D rule with HOUR granularity and P30D rule with DAY granularity,
-   * and referenceTime = 2025-12-19 14:37:22:
-   *
-   * Without adjustment:
-   *   Calculated boundary: 2025-11-19 14:37:22 (now - 30 days)
-   *
-   * With adjustment:
-   *   Aligned boundary: 2025-11-20 00:00:00 (aligned to start of next day)
-   *
-   * This ensures the DAY-granularity rule creates complete day-aligned segments
-   * and the HOUR-granularity rule starts cleanly at a day boundary.
-   * </pre>
-   */
-  @VisibleForTesting
-  static List<Interval> generateIntervalsFromPeriods(List<Period> sortedPeriods, DateTime referenceTime, List<ReindexingGranularityRule> granularityRules)
+  private List<Interval> generateSearchIntervals(List<Period> sortedPeriods, DateTime referenceTime)
   {
-    List<Interval> intervals = new ArrayList<>();
-    DateTime previousAdjustedBoundary = null;
-
+    List<Interval> intervals = new ArrayList<>(sortedPeriods.size());
     for (int i = 0; i < sortedPeriods.size(); i++) {
-      // End is either the previous adjusted boundary, or the raw calculation for the first interval
-      DateTime end = previousAdjustedBoundary != null
-                     ? previousAdjustedBoundary
-                     : referenceTime.minus(sortedPeriods.get(i));
+      DateTime end = referenceTime.minus(sortedPeriods.get(i));
       DateTime start;
-
       if (i + 1 < sortedPeriods.size()) {
-        // Bounded interval: between two periods
-        // We may need to adjust the start time to avoid gaps if both adjacent rules have segment granularities defined.
-        final DateTime calculatedStartTime = referenceTime.minus(sortedPeriods.get(i + 1));
-        final int finalI = i;
-        ReindexingGranularityRule currentRule = granularityRules.stream()
-                                                                .filter(rule ->
-                                                                            rule.getPeriod().equals(sortedPeriods.get(finalI)) && rule.getGranularityConfig().getSegmentGranularity() != null)
-                                                                .findFirst()
-                                                                .orElse(null);
-        ReindexingGranularityRule beforeRule = granularityRules.stream()
-                                                               .filter(rule ->
-                                                                           rule.getPeriod().equals(sortedPeriods.get(finalI + 1)) && rule.getGranularityConfig().getSegmentGranularity() != null)
-                                                               .findFirst()
-                                                               .orElse(null);
-
-        if (currentRule == null || beforeRule == null) {
-          start = calculatedStartTime;
-        } else {
-          final Granularity granularity = currentRule.getGranularityConfig().getSegmentGranularity();
-          final Granularity beforeGranularity = beforeRule.getGranularityConfig().getSegmentGranularity();
-
-          final DateTime beforeRuleEffectiveEnd = beforeGranularity.bucketStart(calculatedStartTime);
-          final DateTime possibleStartTime = granularity.bucketStart(beforeRuleEffectiveEnd);
-          start = possibleStartTime.isBefore(beforeRuleEffectiveEnd)
-                  ? granularity.increment(possibleStartTime)
-                  : possibleStartTime;
-        }
-
-        // Save the adjusted start boundary for the next (older) interval's end
-        previousAdjustedBoundary = start;
+        start = referenceTime.minus(sortedPeriods.get(i + 1));
       } else {
-        // Unbounded interval: from the earliest time. This allows the last rule to cover all remaining segments
-        // into the past
         start = DateTimes.MIN;
       }
-
       intervals.add(new Interval(start, end));
     }
     return intervals;

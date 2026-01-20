@@ -265,9 +265,9 @@ public class CompactionStatus
    * the amount of work the compaction task needs to do and avoids re-applying filters that have already been applied.
    * </p>
    *
-   * @param candidateSegments
-   * @param expectedFilter
-   * @param fingerprintMapper
+   * @param candidateSegments the compaction candidate
+   * @param expectedFilter the expected filter (as a NotDimFilter wrapping an OrDimFilter)
+   * @param fingerprintMapper the fingerprint mapper to retrieve applied filters from segment fingerprints
    * @return the set of unapplied filter rules wrapped in a NotDimFilter, or null if all rules have been applied
    */
   @Nullable

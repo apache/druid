@@ -21,6 +21,7 @@ package org.apache.druid.testing.embedded.compact;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -30,15 +31,20 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingFilterRule;
 import org.apache.druid.server.compaction.ReindexingGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -64,6 +70,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -317,13 +324,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         "hourRule",
         "Compact to HOUR granularity for data older than 1 days",
         Period.days(1),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, false)
     );
     ReindexingGranularityRule dayRule = new ReindexingGranularityRule(
         "dayRule",
-        "Compact to DAY granularity for data older than 2 days",
+        "Compact to DAY granularity for data older than 7 days",
         Period.days(7),
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
+        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
     );
 
     ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
@@ -353,9 +360,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
 
+    ReindexingFilterRule filterRule = new ReindexingFilterRule(
+        "filterRule",
+        "Drop rows where item is 'hat'",
+        Period.days(7),
+        new SelectorDimFilter("item", "hat", null)
+    );
+
     InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider.builder()
                                                                             .granularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
+                                                                            .filterRules(List.of(filterRule))
                                                                             .build();
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
@@ -372,6 +387,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
     Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(7, getNumSegmentsWith(Granularities.DAY));
+    verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
   }
 
   private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
@@ -383,7 +399,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       if (eventTime.isAfter(interval.getEnd())) {
         throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
       }
-      events.add(eventTime + ",item" + i + "," + (100 + i * 5));
+      String item = (i % 2 == 1) ? "hat" : "shoes";
+      int metricValue = 100 + i * 5;
+      events.add(eventTime + "," + item + "," + metricValue);
     }
 
     return String.join("\n", events);
@@ -494,5 +512,48 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   public static List<CompactionEngine> getEngine()
   {
     return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
+  }
+
+  private void verifyEventCountOlderThan(Period period, String dimension, String value, int expectedCount)
+  {
+    DateTime now = DateTimes.nowUtc();
+    DateTime threshold = now.minus(period);
+
+    ClientSqlQuery query = new ClientSqlQuery(
+        StringUtils.format(
+            "SELECT COUNT(*) as cnt FROM \"%s\" WHERE %s = '%s' AND __time < MILLIS_TO_TIMESTAMP(%d)",
+            dataSource,
+            dimension,
+            value,
+            threshold.getMillis()
+        ),
+        null,
+        false,
+        false,
+        false,
+        null,
+        null
+    );
+
+    final String resultAsJson = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(query));
+
+    List<Map<String, Object>> result = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        resultAsJson.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals(
+        expectedCount,
+        result.get(0).get("cnt"),
+        StringUtils.format(
+            "Expected %d events where %s='%s' older than %s",
+            expectedCount,
+            dimension,
+            value,
+            period
+        )
+    );
   }
 }
