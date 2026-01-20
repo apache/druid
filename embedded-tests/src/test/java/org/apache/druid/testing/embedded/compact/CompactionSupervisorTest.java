@@ -19,9 +19,9 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -29,13 +29,13 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.http.ClientSqlQuery;

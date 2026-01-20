@@ -21,7 +21,6 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
