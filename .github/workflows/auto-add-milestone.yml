@@ -27,7 +27,7 @@ on:
 
 jobs:
   add-milestone:
-    if: github.event.pull_request.merged == true && github.event.pull_request.milestone == null
+    if: github.repository == 'apache/druid' && github.event.pull_request.merged == true && github.event.pull_request.milestone == null
     permissions:
       contents: read
       pull-requests: write
