@@ -156,6 +156,61 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testMaxMergeBufferUsedBytesWorksNormally()
+  {
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(1000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0,
+        0,
+        true
+    );
+    grouper.init();
+
+    long initialUsage = grouper.getMergeBufferUsedBytes();
+    Assert.assertEquals(0L, initialUsage);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+
+    grouper.aggregate(new IntKey(1));
+    final long expectedBucketSize = grouper.getMergeBufferUsedBytes();
+
+    grouper.aggregate(new IntKey(2));
+    grouper.aggregate(new IntKey(3));
+
+    Assert.assertEquals(3L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+
+    grouper.aggregate(new IntKey(4));
+    grouper.aggregate(new IntKey(5));
+
+    Assert.assertEquals(5L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+
+    grouper.reset();
+    Assert.assertEquals(0, grouper.getSize());
+    Assert.assertEquals(5L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+
+    grouper.aggregate(new IntKey(6));
+    grouper.aggregate(new IntKey(7));
+    grouper.aggregate(new IntKey(8));
+    grouper.aggregate(new IntKey(9));
+    grouper.aggregate(new IntKey(10));
+    grouper.aggregate(new IntKey(11));
+
+    Assert.assertEquals(6L * expectedBucketSize, grouper.getMergeBufferUsedBytes());
+
+    grouper.close();
+  }
+
   private ResourceHolder<Grouper<IntKey>> makeGrouper(
       GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
