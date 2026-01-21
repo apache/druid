@@ -21,8 +21,6 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.druid.java.util.common.logger.Logger;
 
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD;
-
 /**
  * Weighted cost function using compute time as the core metric.
  * Costs represent actual time in seconds, making them intuitive and debuggable.
@@ -34,8 +32,8 @@ public class WeightedCostFunction
   private static final double HIHG_LAG_SCALE_FACTOR = 100_000.0;
   private static final double LAG_AMPLIFICATION_MAX_MULTIPLIER = 2.0;
   private static final long LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION = 500_000L;
-  private static final double RAMP_DENOMINATOR = LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION
-                                                 - (double) LAG_ACTIVATION_THRESHOLD;
+  private static final double RAMP_DENOMINATOR =
+      LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION - (double) CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD;
 
   /**
    * Ideal idle ratio range boundaries.
@@ -152,8 +150,8 @@ public class WeightedCostFunction
     if (partitionCount > 0) {
       final double lagPerPartition = metrics.getAggregateLag() / partitionCount;
       // Lag-amplified idle decay
-      if (lagPerPartition >= LAG_ACTIVATION_THRESHOLD) {
-        double ramp = Math.max(0.0, (lagPerPartition - LAG_ACTIVATION_THRESHOLD) / RAMP_DENOMINATOR);
+      if (lagPerPartition >= CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD) {
+        double ramp = Math.max(0.0, (lagPerPartition - CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD) / RAMP_DENOMINATOR);
         ramp = Math.min(1.0, ramp);
 
         final double multiplier = 1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0);
