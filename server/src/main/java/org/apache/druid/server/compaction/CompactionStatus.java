@@ -400,23 +400,25 @@ public class CompactionStatus
         }
       }
 
-      reasonsForCompaction.addAll(
-          CHECKS.stream()
-                .map(f -> f.apply(this))
-                .filter(status -> !status.isComplete())
-                .map(CompactionStatus::getReason)
-                .collect(Collectors.toList())
-      );
+      if (!unknownStateToSegments.isEmpty()) {
+        // Run CHECKS against any states with uknown compaction status
+        reasonsForCompaction.addAll(
+            CHECKS.stream()
+                  .map(f -> f.apply(this))
+                  .filter(status -> !status.isComplete())
+                  .map(CompactionStatus::getReason)
+                  .collect(Collectors.toList())
+        );
 
-      // Consider segments which have passed all checks to be compacted
-      // Includes segments with correct fingerprints and segments that passed all state checks
-      this.compactedSegments.addAll(
-          unknownStateToSegments
-              .values()
-              .stream()
-              .flatMap(List::stream)
-              .collect(Collectors.toList())
-      );
+        // Any segments left in unknownStateToSegments passed all checks and are considered compacted
+        this.compactedSegments.addAll(
+            unknownStateToSegments
+                .values()
+                .stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList())
+        );
+      }
 
       if (reasonsForCompaction.isEmpty()) {
         return COMPLETE;
