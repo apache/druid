@@ -26,8 +26,6 @@ on:
 env:
   ISSUE_NUMBER: ${{ github.event.issue.number }}
   ISSUE_TITLE: ${{ github.event.issue.title }}
-  SOURCE_PR: ${{ fromJson(github.event.issue.body).source_pr }}
-  TARGET_VERSION: ${{ fromJson(github.event.issue.body).target_version }}
 
 jobs:
   backport:
@@ -46,6 +44,8 @@ jobs:
       - name: Parse issue and create backport PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_PR: ${{ fromJson(github.event.issue.body).source_pr }}
+          TARGET_VERSION: ${{ fromJson(github.event.issue.body).target_version }}
         run: |
           MERGE_COMMIT=$(gh api "repos/${{ github.repository }}/pulls/$SOURCE_PR" --jq '.merge_commit_sha')
 
