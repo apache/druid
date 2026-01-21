@@ -37,6 +37,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
       - name: Add milestone to PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
