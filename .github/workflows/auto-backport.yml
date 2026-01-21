@@ -57,7 +57,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          BODY=$(jq -n --arg backport_issue "$ISSUE_NUMBER" '$ARGS.named')
+          MESSAGE="Backport for #$ISSUE_NUMBER"
+          BODY=$(jq -n --arg backport_issue "$ISSUE_NUMBER" --arg message "$MESSAGE" '$ARGS.named')
 
           .github/scripts/backport-pr.sh "$MERGE_COMMIT" "$TARGET_VERSION" "[Backport] $ISSUE_TITLE" "$BODY"
 
