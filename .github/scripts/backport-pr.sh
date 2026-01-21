@@ -19,7 +19,7 @@ set -e
 
 if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
   echo "Usage: $0 <commit_hash> <target_branch> <pr_title> [body]"
-  echo "Example: $0 abc123def456 37.0.0 'Fix bug in query engine' 'Closes #12345'"
+  echo "Example: $0 abc123def456 37.0.0 'Fix bug in query engine' '{\"backport_issue\": \"12345\"}'"
   exit 1
 fi
 
@@ -33,13 +33,11 @@ BACKPORT_BRANCH="backport-$COMMIT_HASH-to-$TARGET_BRANCH"
 git fetch origin "$TARGET_BRANCH"
 git checkout -b "$BACKPORT_BRANCH" "origin/$TARGET_BRANCH"
 git cherry-pick -x "$COMMIT_HASH"
-git commit --amend -m "$(git log -1 --pretty=%B)
-
-$BODY"
 git push origin "$BACKPORT_BRANCH"
 
 gh pr create \
   --base "$TARGET_BRANCH" \
   --head "$BACKPORT_BRANCH" \
   --title "$PR_TITLE" \
-  --body "$BODY"
+  --body "$BODY" \
+  --label "backport"
