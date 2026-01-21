@@ -38,5 +38,5 @@ git push origin "$BACKPORT_BRANCH"
 gh pr create \
   --base "$TARGET_BRANCH" \
   --head "$BACKPORT_BRANCH" \
-  --title "[$TARGET_BRANCH] $PR_TITLE" \
+  --title "$PR_TITLE" \
   --body "$BODY"
