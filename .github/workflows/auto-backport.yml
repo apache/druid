@@ -25,8 +25,9 @@ on:
 
 env:
   ISSUE_NUMBER: ${{ github.event.issue.number }}
-  ISSUE_BODY: ${{ github.event.issue.body }}
   ISSUE_TITLE: ${{ github.event.issue.title }}
+  SOURCE_PR: ${{ fromJson(github.event.issue.body).source_pr }}
+  TARGET_VERSION: ${{ fromJson(github.event.issue.body).target_version }}
 
 jobs:
   backport:
@@ -46,14 +47,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SOURCE_PR=$(echo "$ISSUE_BODY" | grep "^Source-PR:" | sed 's/Source-PR: #//')
-          TARGET_VERSION=$(echo "$ISSUE_BODY" | grep "^Target-Version:" | sed 's/Target-Version: //')
-
-          if [ -z "$SOURCE_PR" ] || [ -z "$TARGET_VERSION" ]; then
-            echo "Error: Could not extract Source-PR or Target-Version from issue body"
-            exit 1
-          fi
-
           MERGE_COMMIT=$(gh api "repos/${{ github.repository }}/pulls/$SOURCE_PR" --jq '.merge_commit_sha')
 
           if [ -z "$MERGE_COMMIT" ]; then
