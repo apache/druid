@@ -515,7 +515,6 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       subHashTable2Buffer = subHashTable2Buffer.slice();
 
       subHashTableBuffers = new ByteBuffer[]{subHashTable1Buffer, subHashTable2Buffer};
-      updateMaxTableBufferUsedBytes();
     }
 
     @Override
@@ -528,7 +527,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
       }
       tableBuffer = subHashTableBuffers[0];
-      updateMaxTableBufferUsedBytes();
+      this.updateMaxTableBufferUsedBytes();
     }
 
     @Override
@@ -584,20 +583,9 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       }
 
       size = numCopied;
+      this.updateMaxTableBufferUsedBytes();
       tableBuffer = newTableBuffer;
-      updateMaxTableBufferUsedBytes();
       growthCount++;
-    }
-
-    @Override
-    protected void updateMaxTableBufferUsedBytes()
-    {
-      long currentBufferUsedBytes = 0;
-      for (ByteBuffer buffer : subHashTableBuffers) {
-        currentBufferUsedBytes += buffer.capacity();
-      }
-
-      maxTableBufferUsedBytes = Math.max(maxTableBufferUsedBytes, currentBufferUsedBytes);
     }
   }
 }
