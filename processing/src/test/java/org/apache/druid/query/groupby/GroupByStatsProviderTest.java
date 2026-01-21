@@ -53,9 +53,12 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(0L, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(0L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
     Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
+    Assert.assertEquals(0L, aggregateStats.getMaxSpilledBytes());
     Assert.assertEquals(0L, aggregateStats.getMergeDictionarySize());
+    Assert.assertEquals(0L, aggregateStats.getMaxMergeDictionarySize());
 
     statsProvider.closeQuery(id1);
     statsProvider.closeQuery(id2);
@@ -63,8 +66,11 @@ public class GroupByStatsProviderTest
     aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(2, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(1100L, aggregateStats.getMaxMergeBufferAcquisitionTimeNs());
     Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());
+    Assert.assertEquals(1000L, aggregateStats.getMaxSpilledBytes());
     Assert.assertEquals(1000L, aggregateStats.getMergeDictionarySize());
+    Assert.assertEquals(700L, aggregateStats.getMaxMergeDictionarySize());
   }
 }

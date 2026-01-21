@@ -59,8 +59,11 @@ public class GroupByStatsMonitorTest
         return new AggregateStats(
             1L,
             100L,
+            100L,
             2L,
             200L,
+            200L,
+            300L,
             300L
         );
       }
@@ -88,14 +91,17 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    Assert.assertEquals(10, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/maxAcquisitionTimeNs", 100L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
+    emitter.verifyValue("groupBy/maxSpilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
+    emitter.verifyValue("groupBy/maxMergeDictionarySize", 300L);
   }
 
   @Test
@@ -128,9 +134,12 @@ public class GroupByStatsMonitorTest
     verifyMetricValue(emitter, "mergeBuffer/used", dimFilters, 0L);
     verifyMetricValue(emitter, "mergeBuffer/queries", dimFilters, 1L);
     verifyMetricValue(emitter, "mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
+    verifyMetricValue(emitter, "mergeBuffer/maxAcquisitionTimeNs", dimFilters, 100L);
     verifyMetricValue(emitter, "groupBy/spilledQueries", dimFilters, 2L);
     verifyMetricValue(emitter, "groupBy/spilledBytes", dimFilters, 200L);
+    verifyMetricValue(emitter, "groupBy/maxSpilledBytes", dimFilters, 200L);
     verifyMetricValue(emitter, "groupBy/mergeDictionarySize", dimFilters, 300L);
+    verifyMetricValue(emitter, "groupBy/maxMergeDictionarySize", dimFilters, 300L);
   }
 
   @Test
