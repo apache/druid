@@ -41,6 +41,7 @@ create_backport_issue() {
     -f title="[Backport] $pr_title" \
     -f body="$body" \
     -f milestone="$milestone_number" \
+    -f labels[]="backport" \
     --jq '.number'
 }
 
