@@ -35,10 +35,13 @@ create_backport_issue() {
   local target_milestone="$3"
 
   local milestone_number=$(get_milestone_number "$target_milestone")
-  local body="Backport #$pr_number to release branch for version $target_milestone"
+  local body="Source-PR: #$pr_number
+Target-Version: $target_milestone
+
+Backport #$pr_number to release branch for version $target_milestone"
 
   gh api "repos/$REPOSITORY/issues" \
-    -f title="[Backport] $pr_title" \
+    -f title="[$target_milestone] $pr_title" \
     -f body="$body" \
     -f milestone="$milestone_number" \
     -f labels[]="backport" \

@@ -1,0 +1,77 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+name: "Auto Backport PR"
+
+on:
+  issues:
+    types: [opened]
+
+env:
+  ISSUE_NUMBER: ${{ github.event.issue.number }}
+  ISSUE_BODY: ${{ github.event.issue.body }}
+  ISSUE_TITLE: ${{ github.event.issue.title }}
+
+jobs:
+  backport:
+    if: github.repository == 'apache/druid' && contains(github.event.issue.labels.*.name, 'backport')
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse issue and create backport PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SOURCE_PR=$(echo "$ISSUE_BODY" | grep "^Source-PR:" | sed 's/Source-PR: #//')
+          TARGET_VERSION=$(echo "$ISSUE_BODY" | grep "^Target-Version:" | sed 's/Target-Version: //')
+
+          if [ -z "$SOURCE_PR" ] || [ -z "$TARGET_VERSION" ]; then
+            echo "Error: Could not extract Source-PR or Target-Version from issue body"
+            exit 1
+          fi
+
+          MERGE_COMMIT=$(gh api "repos/${{ github.repository }}/pulls/$SOURCE_PR" --jq '.merge_commit_sha')
+
+          if [ -z "$MERGE_COMMIT" ]; then
+            echo "Error: Could not find merge commit for PR #$SOURCE_PR"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BODY="Closes #$ISSUE_NUMBER"
+
+          .github/scripts/backport-pr.sh "$MERGE_COMMIT" "$TARGET_VERSION" "[Backport] $ISSUE_TITLE" "$BODY"
+
+      - name: Comment on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments" \
+            -f body="❌ Automatic backport failed. See workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
