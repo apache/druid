@@ -293,7 +293,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   {
     configureCompaction(compactionEngine);
 
-    // Step 1: Ingest data at DAY granularity
     runIngestionAtGranularity(
         "DAY",
         "2025-06-01T00:00:00.000Z,hat,105"
@@ -301,12 +300,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + "\n2025-06-03T00:00:00.000Z,shirt,150"
     );
 
-    // Verify initial segments were created
     int initialSegmentCount = getNumSegmentsWith(Granularities.DAY);
     Assertions.assertEquals(3, initialSegmentCount, "Should have 3 initial segments");
 
-    // Step 2: Run compaction with a transform filter that drops all rows
-    // Using expression filter "false" which filters out everything
     InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig
         .builder()
         .forDataSource(dataSource)
