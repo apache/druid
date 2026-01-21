@@ -762,16 +762,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         String msg = "No valid rows for hash partitioning."
                      + " All rows may have invalid timestamps or have been filtered out.";
 
-        if (getIngestionMode() == IngestionMode.REPLACE) {
-          // In REPLACE mode, publish segments (and tombstones, when called for) even when no new data was produced
-          publishSegments(toolbox, Collections.emptyMap());
-          TaskStatus taskStatus = TaskStatus.success(getId(), msg);
-          updateAndWriteCompletionReports(taskStatus);
-          return taskStatus;
-        } else {
           LOG.warn(msg);
           return TaskStatus.success(getId(), msg);
-        }
       }
 
       if (partitionsSpec.getNumShards() == null) {
