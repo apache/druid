@@ -3461,6 +3461,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (rolloverTaskCount > 0) {
         log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
         changeTaskCountInIOConfig(rolloverTaskCount);
+        autoScalerConfig.setTaskCountStart(rolloverTaskCount);
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
         clearAllocationInfo();

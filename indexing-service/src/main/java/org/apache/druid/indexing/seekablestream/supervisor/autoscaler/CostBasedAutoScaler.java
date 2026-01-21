@@ -181,12 +181,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    final int actualTaskCountMax = Math.min(config.getTaskCountMax(), partitionCount);
     final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
         partitionCount,
         currentTaskCount,
         (long) metrics.getAggregateLag(),
-        actualTaskCountMax
+        config.getTaskCountMax()
     );
 
     if (validTaskCounts.length == 0) {

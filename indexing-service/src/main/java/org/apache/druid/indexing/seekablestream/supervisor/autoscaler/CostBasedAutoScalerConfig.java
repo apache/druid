@@ -52,7 +52,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
   private final int taskCountMin;
-  private final Integer taskCountStart;
+  private Integer taskCountStart;
   private final long minTriggerScaleActionFrequencyMillis;
   private final Double stopTaskCountRatio;
   private final long scaleActionPeriodMillis;
@@ -155,6 +155,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   public Integer getTaskCountStart()
   {
     return taskCountStart;
+  }
+
+  @Override
+  public void setTaskCountStart(int taskCountStart)
+  {
+    this.taskCountStart = taskCountStart;
   }
 
   @Override
