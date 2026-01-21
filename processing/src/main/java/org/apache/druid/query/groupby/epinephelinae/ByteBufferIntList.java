@@ -32,7 +32,10 @@ public class ByteBufferIntList
 
   private int maxMergeBufferUsedBytes;
 
-  public ByteBufferIntList(ByteBuffer buffer, int maxElements)
+  public ByteBufferIntList(
+      ByteBuffer buffer,
+      int maxElements
+  )
   {
     this.buffer = buffer;
     this.maxElements = maxElements;
