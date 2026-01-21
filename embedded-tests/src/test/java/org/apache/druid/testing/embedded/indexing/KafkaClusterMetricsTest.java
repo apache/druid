@@ -197,7 +197,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     // Wait for a task to succeed
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/success/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorId),
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for some segments to be published

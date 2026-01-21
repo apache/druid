@@ -427,9 +427,10 @@ public class MSQFaultsTest extends MSQTestBase
   @Test
   public void testInsertWithHugeClusteringKeys()
   {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
+    final RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
 
-    final int numColumns = 1700;
+    final int numColumns = 20;
+    final int maxClusteredByColumns = 15;
 
     String columnNames = IntStream.range(1, numColumns)
                                   .mapToObj(i -> "col" + i).collect(Collectors.joining(", "));
@@ -444,6 +445,12 @@ public class MSQFaultsTest extends MSQTestBase
                                           i
                                       ))
                                       .collect(Collectors.joining(", "));
+
+    final Map<String, Object> context =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(MultiStageQueryContext.CTX_MAX_CLUSTERED_BY_COLUMNS, maxClusteredByColumns)
+                    .build();
 
     testIngestQuery()
         .setSql(StringUtils.format(
@@ -463,44 +470,13 @@ public class MSQFaultsTest extends MSQTestBase
         ))
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, 1500, 0))
+        .setQueryContext(context)
+        .setExpectedMSQFault(new TooManyClusteredByColumnsFault(numColumns + 2, maxClusteredByColumns, 0))
         .verifyResults();
   }
 
   @Test
   public void testTooManyInputFiles() throws IOException
-  {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
-
-    final int numFiles = 100000;
-
-    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
-
-    String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
-
-    testIngestQuery()
-        .setSql(StringUtils.format(
-            "insert into foo1 SELECT\n"
-            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
-            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
-            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
-            + "  )\n"
-            + ") PARTITIONED by day",
-            externalFiles
-        ))
-        .setQueryContext(Map.of("maxNumTasks", 8))
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, 10))
-        .verifyResults();
-  }
-
-  @Test
-  public void testTooManyInputFilesWithLowContextLimit() throws IOException
   {
     final RowSignature dummyRowSignature = RowSignature.builder().addTimeColumn().build();
 
@@ -513,7 +489,7 @@ public class MSQFaultsTest extends MSQTestBase
 
     final Map<String, Object> context =
         ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
+                    .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 8)
                     .put(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, maxInputFilesPerWorker)
                     .build();
 
@@ -748,7 +724,7 @@ public class MSQFaultsTest extends MSQTestBase
             new DruidExceptionMatcher(
                 DruidException.Persona.USER,
                 DruidException.Category.INVALID_INPUT,
-                "general"
+                "invalidInput"
             ).expectMessageContains(
                 errorMessage))
         .verifyPlanningErrors();

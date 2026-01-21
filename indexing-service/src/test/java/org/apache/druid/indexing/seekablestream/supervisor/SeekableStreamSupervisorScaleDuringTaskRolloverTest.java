@@ -48,7 +48,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   public void test_maybeScaleDuringTaskRollover_noAutoScaler_doesNotScale()
   {
     // Given
-    setupSpecExpectations(createIOConfig(5, null));
+    setupSpecExpectations(createIOConfig(DEFAULT_TASK_COUNT, null));
     EasyMock.expect(spec.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(spec);
 
