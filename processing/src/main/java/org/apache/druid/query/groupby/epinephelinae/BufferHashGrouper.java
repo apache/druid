@@ -159,7 +159,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       return 0L;
     }
 
-    long hashTableUsage = hashTable.getMaxTableBufferUsedBytes();
+    long hashTableUsage = hashTable.getMaxMergeBufferUsedBytes();
     long offSetListUsage = offsetList.getMaxMergeBufferUsedBytes();
     return hashTableUsage + offSetListUsage;
   }

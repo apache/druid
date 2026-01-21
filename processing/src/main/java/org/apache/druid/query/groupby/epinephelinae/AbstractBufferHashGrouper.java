@@ -179,7 +179,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
    */
   public long getMergeBufferUsedBytes()
   {
-    return hashTable.getMaxTableBufferUsedBytes();
+    return hashTable.getMaxMergeBufferUsedBytes();
   }
 
   /**

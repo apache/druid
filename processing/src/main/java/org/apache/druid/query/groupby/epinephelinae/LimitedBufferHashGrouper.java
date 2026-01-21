@@ -522,12 +522,12 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     {
       size = 0;
       growthCount = 0;
+      updateMaxMergeBufferUsedBytes();
       // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
         subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
       }
       tableBuffer = subHashTableBuffers[0];
-      this.updateMaxTableBufferUsedBytes();
     }
 
     @Override
@@ -583,7 +583,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       }
 
       size = numCopied;
-      this.updateMaxTableBufferUsedBytes();
+      updateMaxMergeBufferUsedBytes();
       tableBuffer = newTableBuffer;
       growthCount++;
     }
