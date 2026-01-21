@@ -17,7 +17,7 @@
 # under the License.
 #
 
-name: "Auto Add Milestone to Merged PRs"
+name: "PR Merged"
 
 on:
   pull_request:
@@ -48,7 +48,7 @@ jobs:
           fi
 
   add-milestone:
-    if: github.repository == 'apache/druid' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master' && !contains(github.event.pull_request.labels.*.name, 'backport')
+    if: github.repository == 'apache/druid' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master'
     permissions:
       contents: read
       pull-requests: write
