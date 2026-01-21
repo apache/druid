@@ -17,6 +17,33 @@
 
 set -e
 
+get_milestone_number() {
+  local milestone_title="$1"
+  local number=$(gh api "repos/$REPOSITORY/milestones" --jq ".[] | select(.title==\"$milestone_title\") | .number")
+
+  if [ -z "$number" ]; then
+    echo "Creating milestone: $milestone_title"
+    number=$(gh api "repos/$REPOSITORY/milestones" -f title="$milestone_title" --jq '.number')
+  fi
+
+  echo "$number"
+}
+
+create_backport_issue() {
+  local pr_number="$1"
+  local pr_title="$2"
+  local target_milestone="$3"
+
+  local milestone_number=$(get_milestone_number "$target_milestone")
+  local body="Backport #$pr_number to release branch for version $target_milestone"
+
+  gh api "repos/$REPOSITORY/issues" \
+    -f title="[Backport] $pr_title" \
+    -f body="$body" \
+    -f milestone="$milestone_number" \
+    --jq '.number'
+}
+
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 <pr_number> <repository>"
   echo "Example: $0 12345 apache/druid"
@@ -26,7 +53,6 @@ fi
 PR_NUMBER="$1"
 REPOSITORY="$2"
 
-# Extract version from pom.xml
 VERSION=$(xmllint --xpath "/*[local-name()='project']/*[local-name()='version']/text()" pom.xml | sed 's/-SNAPSHOT//')
 
 if [ -z "$VERSION" ]; then
@@ -36,18 +62,22 @@ fi
 
 echo "Extracted version: $VERSION"
 
-# Check if milestone exists
-MILESTONE_NUMBER=$(gh api "repos/$REPOSITORY/milestones" --jq ".[] | select(.title==\"$VERSION\") | .number")
+EXISTING_MILESTONE=$(gh api "repos/$REPOSITORY/issues/$PR_NUMBER" --jq '.milestone.title // empty')
 
-# Create milestone if it doesn't exist
-if [ -z "$MILESTONE_NUMBER" ]; then
-  echo "Creating milestone: $VERSION"
-  MILESTONE_NUMBER=$(gh api "repos/$REPOSITORY/milestones" -f title="$VERSION" --jq '.number')
-else
-  echo "Milestone $VERSION already exists (number: $MILESTONE_NUMBER)"
+if [ -n "$EXISTING_MILESTONE" ] && [ "$EXISTING_MILESTONE" != "$VERSION" ]; then
+  echo "PR #$PR_NUMBER has milestone $EXISTING_MILESTONE, but should be $VERSION"
+
+  PR_TITLE=$(gh api "repos/$REPOSITORY/issues/$PR_NUMBER" --jq '.title')
+  BACKPORT_ISSUE=$(create_backport_issue "$PR_NUMBER" "$PR_TITLE" "$EXISTING_MILESTONE")
+
+  echo "Created backport issue #$BACKPORT_ISSUE for milestone $EXISTING_MILESTONE"
+elif [ -n "$EXISTING_MILESTONE" ]; then
+  echo "PR #$PR_NUMBER already has correct milestone: $EXISTING_MILESTONE"
+  exit 0
 fi
 
-# Add PR to milestone
+MILESTONE_NUMBER=$(get_milestone_number "$VERSION")
+
 echo "Adding PR #$PR_NUMBER to milestone $VERSION"
 gh api "repos/$REPOSITORY/issues/$PR_NUMBER" -f milestone="$MILESTONE_NUMBER" -X PATCH
 echo "Successfully added PR #$PR_NUMBER to milestone $VERSION"
