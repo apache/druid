@@ -21,7 +21,7 @@ name: "Auto Backport PR"
 
 on:
   issues:
-    types: [opened]
+    types: [labeled]
 
 env:
   ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -29,7 +29,7 @@ env:
 
 jobs:
   backport:
-    if: contains(github.event.issue.labels.*.name, 'backport')
+    if: github.repository == 'apache/druid' && github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'backport')
     permissions:
       contents: write
       pull-requests: write

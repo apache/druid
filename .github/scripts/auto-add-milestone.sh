@@ -35,7 +35,8 @@ create_backport_issue() {
   local target_milestone="$3"
 
   local milestone_number=$(get_milestone_number "$target_milestone")
-  local body=$(jq -n --arg source_pr "$pr_number" --arg target_version "$target_milestone" '$ARGS.named')
+  local message="Backport #$pr_number to release branch for version $target_milestone"
+  local body=$(jq -n --arg source_pr "$pr_number" --arg target_version "$target_milestone" --arg message "$message" '$ARGS.named')
 
   gh api "repos/$REPOSITORY/issues" \
     -f title="[$target_milestone] $pr_title" \
