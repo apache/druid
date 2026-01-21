@@ -196,12 +196,13 @@ public class CompactionStatusTracker
 
       final CompactionTaskStatus updatedStatus;
       if (taskStatus.isSuccess()) {
-        updatedStatus = new CompactionTaskStatus(TaskState.SUCCESS, now, 0);
+        updatedStatus = new CompactionTaskStatus(taskStatus.getId(), TaskState.SUCCESS, now, 0);
       } else if (lastKnownStatus == null || lastKnownStatus.getState().isSuccess()) {
         // This is the first failure
-        updatedStatus = new CompactionTaskStatus(TaskState.FAILED, now, 1);
+        updatedStatus = new CompactionTaskStatus(taskStatus.getId(), TaskState.FAILED, now, 1);
       } else {
         updatedStatus = new CompactionTaskStatus(
+            taskStatus.getId(),
             TaskState.FAILED,
             now,
             lastKnownStatus.getNumConsecutiveFailures() + 1
@@ -217,11 +218,11 @@ public class CompactionStatusTracker
 
       final DateTime now = DateTimes.nowUtc();
       if (lastStatus == null || !lastStatus.getState().isFailure()) {
-        intervalToTaskStatus.put(interval, new CompactionTaskStatus(TaskState.RUNNING, now, 0));
+        intervalToTaskStatus.put(interval, new CompactionTaskStatus("", TaskState.RUNNING, now, 0));
       } else {
         intervalToTaskStatus.put(
             interval,
-            new CompactionTaskStatus(TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
+            new CompactionTaskStatus("", TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
         );
       }
     }
