@@ -26,19 +26,19 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -274,6 +274,125 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
+
+  /**
+   * Tests that when a compaction task filters out all rows using a transform spec,
+   * tombstones are created to properly drop the old segments. This test covers both
+   * hash and range partitioning strategies.
+   *
+   * This regression test addresses a bug where compaction with transforms that filter
+   * all rows would succeed but not create tombstones, leaving old segments visible
+   * and causing indefinite compaction retries.
+   */
+  @MethodSource("getEngineAndPartitionType")
+  @ParameterizedTest(name = "compactionEngine={0}, partitionType={1}")
+  public void test_compactionWithTransformFilteringAllRows_createsTombstones(
+      CompactionEngine compactionEngine,
+      String partitionType
+  )
+  {
+    configureCompaction(compactionEngine);
+
+    // Step 1: Ingest data at DAY granularity
+    runIngestionAtGranularity(
+        "DAY",
+        "2025-06-01T00:00:00.000Z,hat,105"
+        + "\n2025-06-02T00:00:00.000Z,shirt,210"
+        + "\n2025-06-03T00:00:00.000Z,shirt,150"
+    );
+
+    // Verify initial segments were created
+    int initialSegmentCount = getNumSegmentsWith(Granularities.DAY);
+    Assertions.assertEquals(3, initialSegmentCount, "Should have 3 initial segments");
+
+    // Step 2: Run compaction with a transform filter that drops all rows
+    // Using expression filter "false" which filters out everything
+    InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(dataSource)
+        .withSkipOffsetFromLatest(Period.seconds(0))
+        .withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
+        )
+        .withTransformSpec(
+            // This filter drops all rows: expression "false" always evaluates to false
+            new CompactionTransformSpec(
+                new NotDimFilter(new SelectorDimFilter("item", "shirt", null))
+            )
+        );
+
+    if (compactionEngine == CompactionEngine.NATIVE) {
+      builder = builder.withIoConfig(
+          // Enable REPLACE mode to create tombstones when no segments are produced
+          new UserCompactionTaskIOConfig(true)
+      );
+    }
+
+    // Add partitioning spec based on test parameter
+    if ("range".equals(partitionType)) {
+      builder.withTuningConfig(
+          new UserCompactionTaskQueryTuningConfig(
+              null,
+              null,
+              null,
+              null,
+              null,
+              new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+          )
+      );
+    } else {
+      // Hash partitioning
+      builder.withTuningConfig(
+          new UserCompactionTaskQueryTuningConfig(
+              null,
+              null,
+              null,
+              null,
+              null,
+              new HashedPartitionsSpec(null, 2, null),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+          )
+      );
+    }
+
+    InlineSchemaDataSourceCompactionConfig compactionConfig = builder.build();
+
+    runCompactionWithSpec(compactionConfig);
+    waitForAllCompactionTasksToFinish();
+
+    int finalSegmentCount = getNumSegmentsWith(Granularities.DAY);
+    Assertions.assertEquals(
+        1,
+        finalSegmentCount,
+        "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
+    );
+  }
+
   private void verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint()
   {
     overlord
@@ -380,125 +499,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   public static List<CompactionEngine> getEngine()
   {
     return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
-  }
-
-  /**
-   * Tests that when a compaction task filters out all rows using a transform spec,
-   * tombstones are created to properly drop the old segments. This test covers both
-   * hash and range partitioning strategies.
-   *
-   * This regression test addresses a bug where compaction with transforms that filter
-   * all rows would succeed but not create tombstones, leaving old segments visible
-   * and causing indefinite compaction retries.
-   */
-  @MethodSource("getEngineAndPartitionType")
-  @ParameterizedTest(name = "compactionEngine={0}, partitionType={1}")
-  public void test_compactionWithTransformFilteringAllRows_createsTombstones(
-      CompactionEngine compactionEngine,
-      String partitionType
-  )
-  {
-    configureCompaction(compactionEngine);
-
-    // Step 1: Ingest data at DAY granularity
-    runIngestionAtGranularity(
-        "DAY",
-        "2025-06-01T00:00:00.000Z,hat,105"
-        + "\n2025-06-02T00:00:00.000Z,shirt,210"
-        + "\n2025-06-03T00:00:00.000Z,shirt,150"
-    );
-
-    // Verify initial segments were created
-    int initialSegmentCount = getNumSegmentsWith(Granularities.DAY);
-    Assertions.assertEquals(3, initialSegmentCount, "Should have 3 initial segments");
-
-    // Step 2: Run compaction with a transform filter that drops all rows
-    // Using expression filter "false" which filters out everything
-    InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig
-        .builder()
-        .forDataSource(dataSource)
-        .withSkipOffsetFromLatest(Period.seconds(0))
-        .withGranularitySpec(
-            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
-        )
-        .withTransformSpec(
-            // This filter drops all rows: expression "false" always evaluates to false
-            new CompactionTransformSpec(
-                new NotDimFilter(new SelectorDimFilter("item", "shirt", null))
-            )
-        );
-
-    if (compactionEngine == CompactionEngine.NATIVE) {
-       builder = builder.withIoConfig(
-          // Enable REPLACE mode to create tombstones when no segments are produced
-          new UserCompactionTaskIOConfig(true)
-      );
-    }
-
-    // Add partitioning spec based on test parameter
-    if ("range".equals(partitionType)) {
-      builder.withTuningConfig(
-          new UserCompactionTaskQueryTuningConfig(
-              null,
-              null,
-              null,
-              null,
-              null,
-              new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
-      );
-    } else {
-      // Hash partitioning
-      builder.withTuningConfig(
-          new UserCompactionTaskQueryTuningConfig(
-              null,
-              null,
-              null,
-              null,
-              null,
-              new HashedPartitionsSpec(null, 2, null),
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
-      );
-    }
-
-    InlineSchemaDataSourceCompactionConfig compactionConfig = builder.build();
-
-    // Step 3: Run compaction and wait for completion
-    runCompactionWithSpec(compactionConfig);
-    waitForAllCompactionTasksToFinish();
-
-    int finalSegmentCount = getNumSegmentsWith(Granularities.DAY);
-    Assertions.assertEquals(
-        1,
-        finalSegmentCount,
-        "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
-    );
   }
 
   /**
