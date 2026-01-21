@@ -761,8 +761,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       if (cardinalityRunner.getReports().isEmpty()) {
         String msg = "No valid rows for hash partitioning."
                      + " All rows may have invalid timestamps or have been filtered out.";
-        LOG.warn(msg);
-        return TaskStatus.success(getId(), msg);
+
+        if (getIngestionMode() == IngestionMode.REPLACE) {
+          // In REPLACE mode, publish segments (and tombstones, when called for) even when no new data was produced
+          publishSegments(toolbox, Collections.emptyMap());
+          TaskStatus taskStatus = TaskStatus.success(getId(), msg);
+          updateAndWriteCompletionReports(taskStatus);
+          return taskStatus;
+        } else {
+          LOG.warn(msg);
+          return TaskStatus.success(getId(), msg);
+        }
       }
 
       if (partitionsSpec.getNumShards() == null) {
@@ -876,8 +885,17 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       if (intervalToPartitions.isEmpty()) {
         String msg = "No valid rows for range partitioning."
                      + " All rows may have invalid timestamps or multiple dimension values.";
-        LOG.warn(msg);
-        return TaskStatus.success(getId(), msg);
+
+        if (getIngestionMode() == IngestionMode.REPLACE) {
+          // In REPLACE mode, publish segments (and tombstones, when called for) even when no new data was produced
+          publishSegments(toolbox, Collections.emptyMap());
+          TaskStatus taskStatus = TaskStatus.success(getId(), msg);
+          updateAndWriteCompletionReports(taskStatus);
+          return taskStatus;
+        } else {
+          LOG.warn(msg);
+          return TaskStatus.success(getId(), msg);
+        }
       }
     }
     catch (Exception e) {
