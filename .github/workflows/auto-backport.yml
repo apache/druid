@@ -31,7 +31,7 @@ env:
 
 jobs:
   backport:
-    if: github.repository == 'apache/druid' && contains(github.event.issue.labels.*.name, 'backport')
+    if: contains(github.event.issue.labels.*.name, 'backport')
     permissions:
       contents: write
       pull-requests: write
