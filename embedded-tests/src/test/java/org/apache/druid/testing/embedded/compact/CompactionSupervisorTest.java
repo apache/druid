@@ -26,7 +26,6 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -510,6 +509,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     List<Object[]> params = new ArrayList<>();
     for (CompactionEngine engine : List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ)) {
       for (String partitionType : List.of("range", "hash")) {
+        if (engine == CompactionEngine.MSQ && "hash".equals(partitionType)) {
+          // MSQ does not support hash partitioning in this context
+          continue;
+        }
         params.add(new Object[]{engine, partitionType});
       }
     }
