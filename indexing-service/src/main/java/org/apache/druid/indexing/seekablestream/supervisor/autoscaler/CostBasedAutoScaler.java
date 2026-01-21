@@ -57,6 +57,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   private static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
   private static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+  private static final int LAG_STEP = 100_000;
+  private static final int BASE_RAW_EXTRA = 5;
+  static final int LAG_ACTIVATION_THRESHOLD = 50_000;
+  static final int LAG_AGGRESSIVE_THRESHOLD = 100_000;
+
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
@@ -100,7 +105,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void start()
   {
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
+        supervisor.buildDynamicAllocationTask(
+            this::computeTaskCountForScaleAction, () -> {
+            }, emitter
+        ),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
@@ -173,7 +181,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(partitionCount, currentTaskCount);
+    final int actualTaskCountMax = Math.min(config.getTaskCountMax(), partitionCount);
+    final int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(
+        partitionCount,
+        currentTaskCount,
+        (long) metrics.getAggregateLag(),
+        actualTaskCountMax
+    );
 
     if (validTaskCounts.length == 0) {
       log.warn("No valid task counts after applying constraints for supervisorId [%s]", supervisorId);
@@ -223,22 +237,35 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Generates valid task counts based on partitions-per-task ratios.
+   * Generates valid task counts based on partitions-per-task ratios and lag-driven PPT relaxation.
    * This enables gradual scaling and avoids large jumps.
    * Limits the range of task counts considered to avoid excessive computation.
    *
    * @return sorted list of valid task counts within bounds
    */
-  static int[] computeValidTaskCounts(int partitionCount, int currentTaskCount)
+  static int[] computeValidTaskCounts(
+      int partitionCount,
+      int currentTaskCount,
+      double aggregateLag,
+      int taskCountMax
+  )
   {
-    if (partitionCount <= 0) {
+    if (partitionCount <= 0 || currentTaskCount <= 0 || taskCountMax <= 0) {
       return new int[]{};
     }
 
     Set<Integer> result = new HashSet<>();
     final int currentPartitionsPerTask = partitionCount / currentTaskCount;
+    final int extraIncrease = computeExtraMaxPartitionsPerTaskIncrease(
+        aggregateLag,
+        partitionCount,
+        currentTaskCount,
+        taskCountMax
+    );
+    final int effectiveMaxIncrease = MAX_INCREASE_IN_PARTITIONS_PER_TASK + extraIncrease;
+
     // Minimum partitions per task correspond to the maximum number of tasks (scale up) and vice versa.
-    final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - MAX_INCREASE_IN_PARTITIONS_PER_TASK);
+    final int minPartitionsPerTask = Math.max(1, currentPartitionsPerTask - effectiveMaxIncrease);
     final int maxPartitionsPerTask = Math.min(
         partitionCount,
         currentPartitionsPerTask + MAX_DECREASE_IN_PARTITIONS_PER_TASK
@@ -246,9 +273,41 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask; partitionsPerTask--) {
       final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
-      result.add(taskCount);
+      if (taskCount <= taskCountMax) {
+        result.add(taskCount);
+      }
     }
-    return result.stream().mapToInt(Integer::intValue).toArray();
+    return result.stream().mapToInt(Integer::intValue).sorted().toArray();
+  }
+
+  /**
+   * Computes extra allowed increase in partitions-per-task in scenarios when the average
+   * per-partition lag is relatively high.
+   * Generally, one of the autoscaler priorities is to keep the lag as close to zero as possible.
+   */
+  static int computeExtraMaxPartitionsPerTaskIncrease(
+      double aggregateLag,
+      int partitionCount,
+      int currentTaskCount,
+      int taskCountMax
+  )
+  {
+    if (partitionCount <= 0 || taskCountMax <= 0) {
+      return 0;
+    }
+
+    final double lagPerPartition = aggregateLag / partitionCount;
+    if (lagPerPartition < LAG_ACTIVATION_THRESHOLD) {
+      return 0;
+    }
+
+    int rawExtra = BASE_RAW_EXTRA;
+    if (lagPerPartition > LAG_AGGRESSIVE_THRESHOLD) {
+      rawExtra += (int) ((lagPerPartition - LAG_AGGRESSIVE_THRESHOLD) / LAG_STEP);
+    }
+
+    final double headroomRatio = Math.max(0.0, 1.0 - (double) currentTaskCount / taskCountMax);
+    return (int) (rawExtra * headroomRatio);
   }
 
   /**
