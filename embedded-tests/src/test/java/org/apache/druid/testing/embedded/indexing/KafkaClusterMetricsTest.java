@@ -213,7 +213,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+        = new ClusterCompactionConfig(1.0, 10, null, true, null, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );
@@ -324,7 +324,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     final ClusterCompactionConfig updatedCompactionConfig
-        = new ClusterCompactionConfig(1.0, 10, null, true, null);
+        = new ClusterCompactionConfig(1.0, 10, null, true, null, null);
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
         o -> o.updateClusterCompactionConfig(updatedCompactionConfig)
     );

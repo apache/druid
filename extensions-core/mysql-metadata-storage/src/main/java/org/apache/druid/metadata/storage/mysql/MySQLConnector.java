@@ -271,6 +271,25 @@ public class MySQLConnector extends SQLMetadataConnector
     return dbi;
   }
 
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23000 for MySQL
+        if ("23000".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+    return false;
+  }
+
   @Nullable
   private Class<?> tryLoadDriverClass(String className, boolean failIfNotFound)
   {
