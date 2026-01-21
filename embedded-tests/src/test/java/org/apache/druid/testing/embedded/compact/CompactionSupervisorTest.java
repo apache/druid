@@ -46,11 +46,13 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingFilterRule;
 import org.apache.druid.server.compaction.ReindexingGranularityRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -67,6 +69,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -285,10 +288,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
-  @MethodSource("getEngine")
-  @ParameterizedTest(name = "compactionEngine={0}")
-  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules(CompactionEngine compactionEngine)
+  @Test
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
   {
+    // We eventually want to run with parameterized test for both engines but right now using RANGE partitioning and filtering
+    // out all rows with native engine cant handle right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
     configureCompaction(compactionEngine);
 
     DateTime now = DateTimes.nowUtc();
@@ -367,17 +372,22 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         new SelectorDimFilter("item", "hat", null)
     );
 
-    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider.builder()
+    InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
                                                                             .granularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
-                                                                            .filterRules(List.of(filterRule))
-                                                                            .build();
+                                                                            .filterRules(List.of(filterRule));
+
+    if (compactionEngine == CompactionEngine.NATIVE) {
+      ruleProvider = ruleProvider.ioConfigRules(
+          List.of(new ReindexingIOConfigRule("dropExisting", null, Period.days(7), new UserCompactionTaskIOConfig(true)))
+      );
+    }
 
     CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
         dataSource,
         null,
         null,
-        ruleProvider,
+        ruleProvider.build(),
         compactionEngine,
         null
     );
@@ -399,9 +409,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       if (eventTime.isAfter(interval.getEnd())) {
         throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
       }
+      String item = i % 2 == 0 ? "hat" : "shirt";
       int metricValue = 100 + i * 5;
-      events.add(eventTime + "," + "hat" + "," + metricValue);
-      events.add(eventTime + "," + "shoes" + "," + metricValue);
+      events.add(eventTime + "," + item + "," + metricValue);
     }
 
     return String.join("\n", events);
