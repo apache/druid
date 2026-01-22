@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -179,7 +180,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
+  public @NotNull List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     return Stream.of(
                      reindexingFilterRules,
@@ -253,14 +254,13 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
    */
   private <T extends ReindexingRule> List<T> getApplicableRules(List<T> rules, Interval interval, DateTime referenceTime)
   {
-    boolean areRulesAdditive = false;
     List<T> applicableRules = new ArrayList<>();
     for (T rule : rules) {
-      areRulesAdditive = rule.isAdditive();
       if (rule.appliesTo(interval, referenceTime) == ReindexingRule.AppliesToMode.FULL) {
         applicableRules.add(rule);
       }
     }
+    boolean areRulesAdditive = !rules.isEmpty() && rules.get(0).isAdditive();
     if (!areRulesAdditive && applicableRules.size() > 1) {
       // if rules are not additive, I want the period where (referenceTime - period) is the oldest date of all the rules
       T selectedRule = Collections.min(

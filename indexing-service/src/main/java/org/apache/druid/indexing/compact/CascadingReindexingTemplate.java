@@ -32,6 +32,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingDimensionsRule;
 import org.apache.druid.server.compaction.ReindexingFilterRule;
@@ -76,8 +77,8 @@ import java.util.stream.Collectors;
  *
  * You would end up with the following search intervals (assuming current time is T):
  * <ul>
- *   <li>Interval 2: [T-7days, T-1day)</li>
- *   <li>Interval 3: [T-30days, T-7days)</li>
+ *   <li>Interval 1: [T-7days, T-1day)</li>
+ *   <li>Interval 2: [T-30days, T-7days)</li>
  *   <li>Interval 3: [-inf, T-30days)</li>
  * </ul>
  * <p>
@@ -112,12 +113,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     this.ruleProvider = Objects.requireNonNull(ruleProvider, "'ruleProvider' cannot be null");
     this.engine = engine;
     this.taskContext = taskContext;
-    this.taskPriority = taskPriority == null
-                        ? DEFAULT_COMPACTION_TASK_PRIORITY
-                        : taskPriority;
-    this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
-                                 ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
-                                 : inputSegmentSizeBytes;
+    this.taskPriority = Objects.requireNonNullElse(taskPriority, DEFAULT_COMPACTION_TASK_PRIORITY);
+    this.inputSegmentSizeBytes = Objects.requireNonNullElse(inputSegmentSizeBytes, DEFAULT_INPUT_SEGMENT_SIZE_BYTES);
   }
 
   @Override
@@ -179,11 +176,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   {
     return (config, candidate, params) -> {
       // Only optimize if candidate has been reindexed before and config has a NotDimFilter
-      if (candidate.getCurrentStatus() != null &&
-          !candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON) &&
-          config.getTransformSpec() != null &&
-          config.getTransformSpec().getFilter() != null &&
-          config.getTransformSpec().getFilter() instanceof NotDimFilter) {
+      if (shouldOptimizeFilterRules(candidate, config)) {
 
         // Compute the minimal set of filter rules needed for this candidate
         NotDimFilter reducedTransformSpecFilter = ReindexingFilterRule.computeRequiredSetOfFilterRulesForCandidate(
@@ -200,6 +193,31 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
       return config; // No optimization needed, return original config
     };
+  }
+
+  /**
+   * Determines if we should optimize filter rules for this candidate.
+   * Returns true only if the candidate has been compacted before and has a NotDimFilter.
+   */
+  private static boolean shouldOptimizeFilterRules(
+      CompactionCandidate candidate,
+      DataSourceCompactionConfig config
+  )
+  {
+    if (candidate.getCurrentStatus() == null) {
+      return false;
+    }
+
+    if (candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON)) {
+      return false;
+    }
+
+    if (config.getTransformSpec() == null) {
+      return false;
+    }
+
+    DimFilter filter = config.getTransformSpec().getFilter();
+    return filter instanceof NotDimFilter;
   }
 
   @Override
@@ -222,7 +240,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     final DateTime currentTime = jobParams.getScheduleStartTime();
 
     List<Period> sortedPeriods = ruleProvider.getCondensedAndSortedPeriods(currentTime);
-    if (sortedPeriods == null || sortedPeriods.isEmpty()) {
+    if (sortedPeriods.isEmpty()) {
       return Collections.emptyList();
     }
 

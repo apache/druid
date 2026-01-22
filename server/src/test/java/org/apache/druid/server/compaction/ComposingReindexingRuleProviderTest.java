@@ -68,7 +68,7 @@ public class ComposingReindexingRuleProviderTest
         () -> new ComposingReindexingRuleProvider(providers)
     );
 
-    Assert.assertTrue(exception.getMessage().contains("index 1"));
+    Assert.assertTrue(exception.getMessage().contains("providers list contains null element"));
   }
 
   @Test
@@ -160,7 +160,7 @@ public class ComposingReindexingRuleProviderTest
   public void test_getCondensedAndSortedPeriods_mergesFromAllProviders()
   {
     ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(7));
-    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(30));
+    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.months(1));
     ReindexingFilterRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
 
     ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
@@ -174,10 +174,9 @@ public class ComposingReindexingRuleProviderTest
 
     List<Period> result = composing.getCondensedAndSortedPeriods(REFERENCE_TIME);
 
-    // Should be deduplicated and sorted: [P7D, P30D]
     Assert.assertEquals(2, result.size());
     Assert.assertEquals(Period.days(7), result.get(0));
-    Assert.assertEquals(Period.days(30), result.get(1));
+    Assert.assertEquals(Period.months(1), result.get(1));
   }
 
 

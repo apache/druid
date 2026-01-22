@@ -38,7 +38,7 @@ public interface ReindexingRule
    * <ul>
    * <li>PARTIAL: The rule applies to part of the interval.</li>
    * <li>FULL: The rule applies to the entire interval.</li>
-   * <li>NONE: The rule does not apply to the interval at all.</li
+   * <li>NONE: The rule does not apply to the interval at all.</li>
    * </ul>
    */
   enum AppliesToMode

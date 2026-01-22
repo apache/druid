@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 
 /**
@@ -75,6 +76,7 @@ public interface ReindexingRuleProvider
    * Ascending order means from shortest to longest period. For example, [P1D, P7D, P30D].
    * </p>
    */
+  @Nonnull
   List<Period> getCondensedAndSortedPeriods(DateTime referenceTime);
 
   /**

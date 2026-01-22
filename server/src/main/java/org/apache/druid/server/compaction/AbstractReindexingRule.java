@@ -74,19 +74,13 @@ public abstract class AbstractReindexingRule implements ReindexingRule
    */
   private static void validatePeriodIsPositive(Period period)
   {
-    try {
-      // Try converting to standard duration for precise validation
-      if (period.toStandardDuration().getMillis() <= 0) {
-        throw new IllegalArgumentException("period must be positive, got: " + period);
-      }
-    }
-    catch (UnsupportedOperationException e) {
-      // Period contains months or years which have variable length
-      // Validate that at least one component is positive
+    if (hasMonthsOrYears(period)) {
       if (!isPeriodPositive(period)) {
-        throw new IllegalArgumentException(
-            "period must be positive (contains months/years but all components are non-positive), got: " + period
-        );
+        throw new IllegalArgumentException("period must be positive. Supplied period: " + period);
+      }
+    } else {
+      if (period.toStandardDuration().getMillis() <= 0) {
+        throw new IllegalArgumentException("period must be positive. Supplied period: " + period);
       }
     }
   }
@@ -133,14 +127,10 @@ public abstract class AbstractReindexingRule implements ReindexingRule
   @Override
   public AppliesToMode appliesTo(Interval interval, @Nullable DateTime referenceTime)
   {
-    DateTime now = DateTimes.nowUtc();
+    DateTime now = (referenceTime != null) ? referenceTime : DateTimes.nowUtc();
     DateTime intervalEnd = interval.getEnd();
     DateTime intervalStart = interval.getStart();
 
-    if (referenceTime != null) {
-      // Use the provided reference time instead of actual "now" for checking rule applicability
-      now = referenceTime;
-    }
     DateTime threshold = now.minus(period);
 
     if (intervalEnd.isBefore(threshold) || intervalEnd.isEqual(threshold)) {
@@ -154,4 +144,10 @@ public abstract class AbstractReindexingRule implements ReindexingRule
       return AppliesToMode.PARTIAL;
     }
   }
+
+  private static boolean hasMonthsOrYears(Period period)
+  {
+    return period.getYears() != 0 || period.getMonths() != 0;
+  }
+
 }

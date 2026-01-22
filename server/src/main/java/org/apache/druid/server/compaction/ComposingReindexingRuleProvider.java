@@ -21,7 +21,9 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -98,11 +100,8 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   {
     this.providers = Objects.requireNonNull(providers, "providers cannot be null");
 
-    // Validate that no provider in the list is null
-    for (int i = 0; i < providers.size(); i++) {
-      if (providers.get(i) == null) {
-        throw new NullPointerException("provider at index " + i + " is null");
-      }
+    for (ReindexingRuleProvider provider : providers) {
+      Objects.requireNonNull(provider, "providers list contains null element");
     }
   }
 
@@ -126,13 +125,16 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
+  public @NotNull List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     // Collect all unique periods from all providers, sorted ascending
     return providers.stream()
                     .flatMap(p -> p.getCondensedAndSortedPeriods(referenceTime).stream())
                     .distinct()
-                    .sorted(Comparator.comparing(Period::toStandardDuration))
+                    .sorted(Comparator.comparingLong(period -> {
+                      DateTime endTime = referenceTime.plus(period);
+                      return new Duration(referenceTime, endTime).getMillis();
+                    }))
                     .collect(Collectors.toList());
   }
 
