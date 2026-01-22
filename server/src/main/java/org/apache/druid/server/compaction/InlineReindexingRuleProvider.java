@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  * Rule provider that returns a static list of rules defined inline in the configuration.
  * <p>
  * This is the simplest provider implementation, suitable for testing and use cases where the number of rules is
- * relatively small and can be defined directly in the compaction config.
+ * relatively small and can be defined directly in the supervisor spec.
  * <p>
  * When filtering rules by interval, this provider only returns rules where {@link ReindexingRule#appliesTo(Interval, DateTime)}
  * returns {@link ReindexingRule.AppliesToMode#FULL}. Rules with partial or no overlap are excluded.
@@ -53,7 +53,7 @@ import java.util.stream.Stream;
  * <pre>{@code
  * {
  *   "type": "inline",
- *   "compactionFilterRules": [
+ *   "reindexingFilterRules": [
  *     {
  *       "id": "remove-bots-90d",
  *       "period": "P90D",
@@ -88,33 +88,33 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 {
   public static final String TYPE = "inline";
 
-  private final List<ReindexingFilterRule> compactionFilterRules;
-  private final List<ReindexingMetricsRule> compactionMetricsRules;
-  private final List<ReindexingDimensionsRule> compactionDimensionsRules;
-  private final List<ReindexingIOConfigRule> compactionIOConfigRules;
-  private final List<ReindexingProjectionRule> compactionProjectionRules;
-  private final List<ReindexingGranularityRule> compactionGranularityRules;
-  private final List<ReindexingTuningConfigRule> compactionTuningConfigRules;
+  private final List<ReindexingFilterRule> reindexingFilterRules;
+  private final List<ReindexingMetricsRule> reindexingMetricsRules;
+  private final List<ReindexingDimensionsRule> reindexingDimensionsRules;
+  private final List<ReindexingIOConfigRule> reindexingIOConfigRules;
+  private final List<ReindexingProjectionRule> reindexingProjectionRules;
+  private final List<ReindexingGranularityRule> reindexingGranularityRules;
+  private final List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
 
 
   @JsonCreator
   public InlineReindexingRuleProvider(
-      @JsonProperty("compactionFilterRules") @Nullable List<ReindexingFilterRule> compactionFilterRules,
-      @JsonProperty("compactionMetricsRules") @Nullable List<ReindexingMetricsRule> compactionMetricsRules,
-      @JsonProperty("compactionDimensionsRules") @Nullable List<ReindexingDimensionsRule> compactionDimensionsRules,
-      @JsonProperty("compactionIOConfigRules") @Nullable List<ReindexingIOConfigRule> compactionIOConfigRules,
-      @JsonProperty("compactionProjectionRules") @Nullable List<ReindexingProjectionRule> compactionProjectionRules,
-      @JsonProperty("compactionGranularityRules") @Nullable List<ReindexingGranularityRule> compactionGranularityRules,
-      @JsonProperty("compactionTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> compactionTuningConfigRules
+      @JsonProperty("reindexingFilterRules") @Nullable List<ReindexingFilterRule> reindexingFilterRules,
+      @JsonProperty("reindexingMetricsRules") @Nullable List<ReindexingMetricsRule> reindexingMetricsRules,
+      @JsonProperty("reindexingDimensionsRules") @Nullable List<ReindexingDimensionsRule> reindexingDimensionsRules,
+      @JsonProperty("reindexingIOConfigRules") @Nullable List<ReindexingIOConfigRule> reindexingIOConfigRules,
+      @JsonProperty("reindexingProjectionRules") @Nullable List<ReindexingProjectionRule> reindexingProjectionRules,
+      @JsonProperty("reindexingGranularityRules") @Nullable List<ReindexingGranularityRule> reindexingGranularityRules,
+      @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules
   )
   {
-    this.compactionFilterRules = Configs.valueOrDefault(compactionFilterRules, Collections.emptyList());
-    this.compactionMetricsRules = Configs.valueOrDefault(compactionMetricsRules, Collections.emptyList());
-    this.compactionDimensionsRules = Configs.valueOrDefault(compactionDimensionsRules, Collections.emptyList());
-    this.compactionIOConfigRules = Configs.valueOrDefault(compactionIOConfigRules, Collections.emptyList());
-    this.compactionProjectionRules = Configs.valueOrDefault(compactionProjectionRules, Collections.emptyList());
-    this.compactionGranularityRules = Configs.valueOrDefault(compactionGranularityRules, Collections.emptyList());
-    this.compactionTuningConfigRules = Configs.valueOrDefault(compactionTuningConfigRules, Collections.emptyList());
+    this.reindexingFilterRules = Configs.valueOrDefault(reindexingFilterRules, Collections.emptyList());
+    this.reindexingMetricsRules = Configs.valueOrDefault(reindexingMetricsRules, Collections.emptyList());
+    this.reindexingDimensionsRules = Configs.valueOrDefault(reindexingDimensionsRules, Collections.emptyList());
+    this.reindexingIOConfigRules = Configs.valueOrDefault(reindexingIOConfigRules, Collections.emptyList());
+    this.reindexingProjectionRules = Configs.valueOrDefault(reindexingProjectionRules, Collections.emptyList());
+    this.reindexingGranularityRules = Configs.valueOrDefault(reindexingGranularityRules, Collections.emptyList());
+    this.reindexingTuningConfigRules = Configs.valueOrDefault(reindexingTuningConfigRules, Collections.emptyList());
   }
 
   public static Builder builder()
@@ -130,65 +130,65 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("compactionFilterRules")
+  @JsonProperty("reindexingFilterRules")
   public List<ReindexingFilterRule> getFilterRules()
   {
-    return compactionFilterRules;
+    return reindexingFilterRules;
   }
 
   @Override
-  @JsonProperty("compactionMetricsRules")
+  @JsonProperty("reindexingMetricsRules")
   public List<ReindexingMetricsRule> getMetricsRules()
   {
-    return compactionMetricsRules;
+    return reindexingMetricsRules;
   }
 
   @Override
-  @JsonProperty("compactionDimensionsRules")
+  @JsonProperty("reindexingDimensionsRules")
   public List<ReindexingDimensionsRule> getDimensionsRules()
   {
-    return compactionDimensionsRules;
+    return reindexingDimensionsRules;
   }
 
   @Override
-  @JsonProperty("compactionIOConfigRules")
+  @JsonProperty("reindexingIOConfigRules")
   public List<ReindexingIOConfigRule> getIOConfigRules()
   {
-    return compactionIOConfigRules;
+    return reindexingIOConfigRules;
   }
 
   @Override
-  @JsonProperty("compactionProjectionRules")
+  @JsonProperty("reindexingProjectionRules")
   public List<ReindexingProjectionRule> getProjectionRules()
   {
-    return compactionProjectionRules;
+    return reindexingProjectionRules;
   }
 
   @Override
-  @JsonProperty("compactionGranularityRules")
+  @JsonProperty("reindexingGranularityRules")
   public List<ReindexingGranularityRule> getGranularityRules()
   {
-    return compactionGranularityRules;
+    return reindexingGranularityRules;
   }
 
   @Override
-  @JsonProperty("compactionTuningConfigRules")
+  @JsonProperty("reindexingTuningConfigRules")
   public List<ReindexingTuningConfigRule> getTuningConfigRules()
   {
-    return compactionTuningConfigRules;
+    return reindexingTuningConfigRules;
   }
 
   @Override
   public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     return Stream.of(
-                     compactionFilterRules,
-                     compactionMetricsRules,
-                     compactionDimensionsRules,
-                     compactionIOConfigRules,
-                     compactionProjectionRules,
-                     compactionGranularityRules,
-                     compactionTuningConfigRules
+                     reindexingFilterRules,
+                     reindexingMetricsRules,
+                     reindexingDimensionsRules,
+                     reindexingIOConfigRules,
+                     reindexingProjectionRules,
+                     reindexingGranularityRules,
+                     reindexingTuningConfigRules
                  )
                  .flatMap(List::stream)
                  .map(ReindexingRule::getPeriod)
@@ -204,43 +204,43 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   @Override
   public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionFilterRules, interval, referenceTime);
+    return getApplicableRules(reindexingFilterRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionMetricsRules, interval, referenceTime);
+    return getApplicableRules(reindexingMetricsRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionDimensionsRules, interval, referenceTime);
+    return getApplicableRules(reindexingDimensionsRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionIOConfigRules, interval, referenceTime);
+    return getApplicableRules(reindexingIOConfigRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionProjectionRules, interval, referenceTime);
+    return getApplicableRules(reindexingProjectionRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionGranularityRules, interval, referenceTime);
+    return getApplicableRules(reindexingGranularityRules, interval, referenceTime);
   }
 
   @Override
   public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(compactionTuningConfigRules, interval, referenceTime);
+    return getApplicableRules(reindexingTuningConfigRules, interval, referenceTime);
   }
 
   /**
@@ -285,26 +285,26 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       return false;
     }
     InlineReindexingRuleProvider that = (InlineReindexingRuleProvider) o;
-    return Objects.equals(compactionFilterRules, that.compactionFilterRules)
-           && Objects.equals(compactionMetricsRules, that.compactionMetricsRules)
-           && Objects.equals(compactionDimensionsRules, that.compactionDimensionsRules)
-           && Objects.equals(compactionIOConfigRules, that.compactionIOConfigRules)
-           && Objects.equals(compactionProjectionRules, that.compactionProjectionRules)
-           && Objects.equals(compactionGranularityRules, that.compactionGranularityRules)
-           && Objects.equals(compactionTuningConfigRules, that.compactionTuningConfigRules);
+    return Objects.equals(reindexingFilterRules, that.reindexingFilterRules)
+           && Objects.equals(reindexingMetricsRules, that.reindexingMetricsRules)
+           && Objects.equals(reindexingDimensionsRules, that.reindexingDimensionsRules)
+           && Objects.equals(reindexingIOConfigRules, that.reindexingIOConfigRules)
+           && Objects.equals(reindexingProjectionRules, that.reindexingProjectionRules)
+           && Objects.equals(reindexingGranularityRules, that.reindexingGranularityRules)
+           && Objects.equals(reindexingTuningConfigRules, that.reindexingTuningConfigRules);
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        compactionFilterRules,
-        compactionMetricsRules,
-        compactionDimensionsRules,
-        compactionIOConfigRules,
-        compactionProjectionRules,
-        compactionGranularityRules,
-        compactionTuningConfigRules
+        reindexingFilterRules,
+        reindexingMetricsRules,
+        reindexingDimensionsRules,
+        reindexingIOConfigRules,
+        reindexingProjectionRules,
+        reindexingGranularityRules,
+        reindexingTuningConfigRules
     );
   }
 
@@ -312,78 +312,78 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public String toString()
   {
     return "InlineReindexingRuleProvider{"
-           + "compactionFilterRules=" + compactionFilterRules
-           + ", compactionMetricsRules=" + compactionMetricsRules
-           + ", compactionDimensionsRules=" + compactionDimensionsRules
-           + ", compactionIOConfigRules=" + compactionIOConfigRules
-           + ", compactionProjectionRules=" + compactionProjectionRules
-           + ", compactionGranularityRules=" + compactionGranularityRules
-           + ", compactionTuningConfigRules=" + compactionTuningConfigRules
+           + "reindexingFilterRules=" + reindexingFilterRules
+           + ", reindexingMetricsRules=" + reindexingMetricsRules
+           + ", reindexingDimensionsRules=" + reindexingDimensionsRules
+           + ", reindexingIOConfigRules=" + reindexingIOConfigRules
+           + ", reindexingProjectionRules=" + reindexingProjectionRules
+           + ", reindexingGranularityRules=" + reindexingGranularityRules
+           + ", reindexingTuningConfigRules=" + reindexingTuningConfigRules
            + '}';
   }
 
   public static class Builder
   {
-    private List<ReindexingFilterRule> compactionFilterRules;
-    private List<ReindexingMetricsRule> compactionMetricsRules;
-    private List<ReindexingDimensionsRule> compactionDimensionsRules;
-    private List<ReindexingIOConfigRule> compactionIOConfigRules;
-    private List<ReindexingProjectionRule> compactionProjectionRules;
-    private List<ReindexingGranularityRule> compactionGranularityRules;
-    private List<ReindexingTuningConfigRule> compactionTuningConfigRules;
+    private List<ReindexingFilterRule> reindexingFilterRules;
+    private List<ReindexingMetricsRule> reindexingMetricsRules;
+    private List<ReindexingDimensionsRule> reindexingDimensionsRules;
+    private List<ReindexingIOConfigRule> reindexingIOConfigRules;
+    private List<ReindexingProjectionRule> reindexingProjectionRules;
+    private List<ReindexingGranularityRule> reindexingGranularityRules;
+    private List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
 
-    public Builder filterRules(List<ReindexingFilterRule> compactionFilterRules)
+    public Builder filterRules(List<ReindexingFilterRule> reindexingFilterRules)
     {
-      this.compactionFilterRules = compactionFilterRules;
+      this.reindexingFilterRules = reindexingFilterRules;
       return this;
     }
 
-    public Builder metricsRules(List<ReindexingMetricsRule> compactionMetricsRules)
+    public Builder metricsRules(List<ReindexingMetricsRule> reindexingMetricsRules)
     {
-      this.compactionMetricsRules = compactionMetricsRules;
+      this.reindexingMetricsRules = reindexingMetricsRules;
       return this;
     }
 
-    public Builder dimensionsRules(List<ReindexingDimensionsRule> compactionDimensionsRules)
+    public Builder dimensionsRules(List<ReindexingDimensionsRule> reindexingDimensionsRules)
     {
-      this.compactionDimensionsRules = compactionDimensionsRules;
+      this.reindexingDimensionsRules = reindexingDimensionsRules;
       return this;
     }
 
-    public Builder ioConfigRules(List<ReindexingIOConfigRule> compactionIOConfigRules)
+    public Builder ioConfigRules(List<ReindexingIOConfigRule> reindexingIOConfigRules)
     {
-      this.compactionIOConfigRules = compactionIOConfigRules;
+      this.reindexingIOConfigRules = reindexingIOConfigRules;
       return this;
     }
 
-    public Builder projectionRules(List<ReindexingProjectionRule> compactionProjectionRules)
+    public Builder projectionRules(List<ReindexingProjectionRule> reindexingProjectionRules)
     {
-      this.compactionProjectionRules = compactionProjectionRules;
+      this.reindexingProjectionRules = reindexingProjectionRules;
       return this;
     }
 
-    public Builder granularityRules(List<ReindexingGranularityRule> compactionGranularityRules)
+    public Builder granularityRules(List<ReindexingGranularityRule> reindexingGranularityRules)
     {
-      this.compactionGranularityRules = compactionGranularityRules;
+      this.reindexingGranularityRules = reindexingGranularityRules;
       return this;
     }
 
-    public Builder tuningConfigRules(List<ReindexingTuningConfigRule> compactionTuningConfigRules)
+    public Builder tuningConfigRules(List<ReindexingTuningConfigRule> reindexingTuningConfigRules)
     {
-      this.compactionTuningConfigRules = compactionTuningConfigRules;
+      this.reindexingTuningConfigRules = reindexingTuningConfigRules;
       return this;
     }
 
     public InlineReindexingRuleProvider build()
     {
       return new InlineReindexingRuleProvider(
-          compactionFilterRules,
-          compactionMetricsRules,
-          compactionDimensionsRules,
-          compactionIOConfigRules,
-          compactionProjectionRules,
-          compactionGranularityRules,
-          compactionTuningConfigRules
+          reindexingFilterRules,
+          reindexingMetricsRules,
+          reindexingDimensionsRules,
+          reindexingIOConfigRules,
+          reindexingProjectionRules,
+          reindexingGranularityRules,
+          reindexingTuningConfigRules
       );
     }
   }
