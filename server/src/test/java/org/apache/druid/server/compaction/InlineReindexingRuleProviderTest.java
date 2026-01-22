@@ -19,25 +19,30 @@
 
 package org.apache.druid.server.compaction;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 
 public class InlineReindexingRuleProviderTest
 {
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
 
-  // Test intervals
   private static final Interval INTERVAL_100_DAYS_OLD = Intervals.of(
       "2025-09-01T00:00:00Z/2025-09-02T00:00:00Z"
   ); // Ends 109 days before reference time
@@ -50,162 +55,45 @@ public class InlineReindexingRuleProviderTest
       "2025-11-20T00:00:00Z/2025-11-21T00:00:00Z"
   ); // Ends 28 days before reference time
 
-  private static final Interval INTERVAL_5_DAYS_OLD = Intervals.of(
-      "2025-12-13T00:00:00Z/2025-12-14T00:00:00Z"
-  ); // Ends 5 days before reference time
-
   @Test
-  public void test_getFilterRules_noRulesMatch_returnsEmpty()
+  public void test_constructor_nullListsDefaultToEmpty()
   {
-    ReindexingFilterRule rule30d = new ReindexingFilterRule(
-        "filter-30d",
-        null,
-        Period.days(30),
-        new SelectorDimFilter("dim", "val", null)
-    );
+    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(null, null, null, null,
+                                                                             null, null, null);
 
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d)).build();
-
-    // Interval is only 5 days old, rule requires 30 days
-    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_5_DAYS_OLD, REFERENCE_TIME);
-
-    Assert.assertTrue("Should return empty when no rules match", result.isEmpty());
-  }
-
-  @Test
-  public void test_getFilterRules_oneRuleMatchesFull_returnsThatRule()
-  {
-    ReindexingFilterRule rule30d = new ReindexingFilterRule(
-        "filter-30d",
-        null,
-        Period.days(30),
-        new SelectorDimFilter("dim", "val", null)
-    );
-
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d)).build();
-
-    // Interval is 50 days old, rule requires 30 days - FULL match
-    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
-
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("filter-30d", result.get(0).getId());
-  }
-
-  @Test
-  public void test_getFilterRules_multipleAdditiveRulesMatchFull_returnsAll()
-  {
-    // Filter rules are additive - should return all matching rules
-    ReindexingFilterRule rule30d = new ReindexingFilterRule(
-        "filter-30d",
-        null,
-        Period.days(30),
-        new SelectorDimFilter("dim1", "val1", null)
-    );
-
-    ReindexingFilterRule rule60d = new ReindexingFilterRule(
-        "filter-60d",
-        null,
-        Period.days(60),
-        new SelectorDimFilter("dim2", "val2", null)
-    );
-
-    ReindexingFilterRule rule90d = new ReindexingFilterRule(
-        "filter-90d",
-        null,
-        Period.days(90),
-        new SelectorDimFilter("dim3", "val3", null)
-    );
-
-
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(rule30d, rule60d, rule90d)).build();
-
-    // Interval is 100 days old - all three rules match
-    List<ReindexingFilterRule> result = provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
-
-    Assert.assertEquals("Should return all matching additive rules", 3, result.size());
-    Assert.assertTrue(result.stream().anyMatch(r -> r.getId().equals("filter-30d")));
-    Assert.assertTrue(result.stream().anyMatch(r -> r.getId().equals("filter-60d")));
-    Assert.assertTrue(result.stream().anyMatch(r -> r.getId().equals("filter-90d")));
-  }
-
-  @Test
-  public void test_getGranularityRules_multipleNonAdditiveRulesMatchFull_returnsOldestThreshold()
-  {
-    // Granularity rules are NOT additive - should return only the one with oldest threshold
-    ReindexingGranularityRule rule30d = new ReindexingGranularityRule(
-        "gran-30d",
-        null,
-        Period.days(30),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-    );
-
-    ReindexingGranularityRule rule60d = new ReindexingGranularityRule(
-        "gran-60d",
-        null,
-        Period.days(60),
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
-    );
-
-    ReindexingGranularityRule rule90d = new ReindexingGranularityRule(
-        "gran-90d",
-        null,
-        Period.days(90),
-        new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
-    );
-
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule30d, rule60d, rule90d)).build();
-
-    // Interval is 100 days old - all three rules match FULL
-    // Should return rule90d because it has the oldest threshold (now - 90d)
-    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
-
-    Assert.assertEquals("Should return only one non-additive rule", 1, result.size());
-    Assert.assertEquals("gran-90d", result.get(0).getId());
-    Assert.assertEquals(Granularities.MONTH, result.get(0).getGranularityConfig().getSegmentGranularity());
-  }
-
-  @Test
-  public void test_getGranularityRules_partialMatchNotReturned()
-  {
-    ReindexingGranularityRule rule30d = new ReindexingGranularityRule(
-        "gran-30d",
-        null,
-        Period.days(30),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-    );
-
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule30d)).build();
-
-    // Interval is 20 days old, but rule requires 30 days
-    // The interval likely has PARTIAL or NONE match, not FULL
-    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
-
-    Assert.assertTrue("Should not return rules with PARTIAL match", result.isEmpty());
+    Assert.assertNotNull(provider.getFilterRules());
+    Assert.assertTrue(provider.getFilterRules().isEmpty());
+    Assert.assertNotNull(provider.getMetricsRules());
+    Assert.assertTrue(provider.getMetricsRules().isEmpty());
+    Assert.assertNotNull(provider.getDimensionsRules());
+    Assert.assertTrue(provider.getDimensionsRules().isEmpty());
+    Assert.assertNotNull(provider.getIOConfigRules());
+    Assert.assertTrue(provider.getIOConfigRules().isEmpty());
+    Assert.assertNotNull(provider.getProjectionRules());
+    Assert.assertTrue(provider.getProjectionRules().isEmpty());
+    Assert.assertNotNull(provider.getGranularityRules());
+    Assert.assertTrue(provider.getGranularityRules().isEmpty());
+    Assert.assertNotNull(provider.getTuningConfigRules());
+    Assert.assertTrue(provider.getTuningConfigRules().isEmpty());
   }
 
   @Test
   public void test_getCondensedAndSortedPeriods_returnsDistinctSortedPeriods()
   {
-    ReindexingFilterRule filter30d = new ReindexingFilterRule(
-        "f1", null, Period.days(30), new SelectorDimFilter("d", "v", null)
-    );
-    ReindexingFilterRule filter60d = new ReindexingFilterRule(
-        "f2", null, Period.days(60), new SelectorDimFilter("d", "v", null)
-    );
-    ReindexingGranularityRule gran30d = new ReindexingGranularityRule(
-        "g1", null, Period.days(30), new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-    );
-    ReindexingGranularityRule gran90d = new ReindexingGranularityRule(
-        "g2", null, Period.days(90), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
-    );
+    ReindexingFilterRule filter30d = createFilterRule("f1", Period.days(30));
+    ReindexingFilterRule filter60d = createFilterRule("f2", Period.days(60));
+    ReindexingGranularityRule gran30d = createGranularityRule("g1", Period.days(30)); // Duplicate P30D
+    ReindexingGranularityRule gran90d = createGranularityRule("g2", Period.days(90));
 
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(List.of(filter30d, filter60d)).granularityRules(List.of(gran30d, gran90d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(filter30d, filter60d))
+        .granularityRules(ImmutableList.of(gran30d, gran90d))
+        .build();
 
     List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
 
-    // Should have 3 distinct periods: P30D (appears twice), P60D, P90D
     Assert.assertEquals(3, periods.size());
-    // Should be sorted by duration (ascending)
+
     Assert.assertEquals(Period.days(30), periods.get(0));
     Assert.assertEquals(Period.days(60), periods.get(1));
     Assert.assertEquals(Period.days(90), periods.get(2));
@@ -214,7 +102,7 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_withEmptyRules_returnsEmpty()
   {
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().filterRules(Collections.emptyList()).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
 
     List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
 
@@ -222,89 +110,159 @@ public class InlineReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getProjectionRules_multipleAdditiveRulesMatchFull_returnsAll()
+  public void test_additiveRules_allScenarios()
   {
-    // Projection rules are additive
-    ReindexingProjectionRule proj30d = new ReindexingProjectionRule(
-        "proj-30d", null, Period.days(30), Collections.emptyList()
-    );
-    ReindexingProjectionRule proj60d = new ReindexingProjectionRule(
-        "proj-60d", null, Period.days(60), Collections.emptyList()
-    );
+    ReindexingFilterRule rule30d = createFilterRule("filter-30d", Period.days(30));
+    ReindexingFilterRule rule60d = createFilterRule("filter-60d", Period.days(60));
+    ReindexingFilterRule rule90d = createFilterRule("filter-90d", Period.days(90));
 
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().projectionRules(List.of(proj30d, proj60d)).build();
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(rule30d, rule60d, rule90d))
+        .build();
 
-    // Interval is 100 days old - both rules match
-    List<ReindexingProjectionRule> result = provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingFilterRule> noMatch = provider.getFilterRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertTrue("No rules should match interval that's too recent", noMatch.isEmpty());
 
-    Assert.assertEquals("Should return all matching additive projection rules", 2, result.size());
+    List<ReindexingFilterRule> oneMatch = provider.getFilterRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("Only rule30d should match", 1, oneMatch.size());
+    Assert.assertEquals("filter-30d", oneMatch.get(0).getId());
+
+    List<ReindexingFilterRule> multiMatch = provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("All 3 additive rules should be returned", 3, multiMatch.size());
+    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-30d")));
+    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-60d")));
+    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-90d")));
   }
 
   @Test
-  public void test_getApplicableRules_mixOfFullPartialNone_onlyReturnsFull()
+  public void test_nonAdditiveRules_allScenarios()
   {
-    // Create rules that will have different AppliesToMode results
-    ReindexingGranularityRule rule10d = new ReindexingGranularityRule(
-        "gran-10d",
-        null,
-        Period.days(10),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
-    ); // Will match FULL for 20-day-old interval
+    ReindexingGranularityRule rule30d = createGranularityRule("gran-30d", Period.days(30));
+    ReindexingGranularityRule rule60d = createGranularityRule("gran-60d", Period.days(60));
+    ReindexingGranularityRule rule90d = createGranularityRule("gran-90d", Period.days(90));
 
-    ReindexingGranularityRule rule25d = new ReindexingGranularityRule(
-        "gran-25d",
-        null,
-        Period.days(25),
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
-    ); // Will match FULL for 20-day-old interval
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .granularityRules(ImmutableList.of(rule30d, rule60d, rule90d))
+        .build();
 
-    ReindexingGranularityRule rule50d = new ReindexingGranularityRule(
-        "gran-50d",
-        null,
-        Period.days(50),
-        new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
-    ); // Will be NONE for 20-day-old interval
+    List<ReindexingGranularityRule> noMatch = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertTrue("No rules should match interval that's too recent", noMatch.isEmpty());
 
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().granularityRules(List.of(rule10d, rule25d, rule50d)).build();
+    List<ReindexingGranularityRule> oneMatch = provider.getGranularityRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("Only rule30d should match", 1, oneMatch.size());
+    Assert.assertEquals("gran-30d", oneMatch.get(0).getId());
 
-    // Interval is 20 days old (ends at 2025-11-21, reference is 2025-12-19)
-    // rule10d: threshold = now - 10d = 2025-12-09, interval ends 2025-11-21 < 2025-12-09 -> FULL
-    // rule25d: threshold = now - 25d = 2025-11-24, interval ends 2025-11-21 < 2025-11-24 -> FULL
-    // rule50d: threshold = now - 50d = 2025-10-30, interval ends 2025-11-21 > 2025-10-30 -> NONE
-    // When multiple rules match, select the one with oldest threshold (smallest millis) = rule25d
-    List<ReindexingGranularityRule> result = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
-
-    // Should return rule25d (has oldest threshold among FULL matches)
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("gran-25d", result.get(0).getId());
+    List<ReindexingGranularityRule> multiMatch = provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("Only one non-additive rule should be returned", 1, multiMatch.size());
+    Assert.assertEquals("Should return rule with oldest threshold (P90D)", "gran-90d", multiMatch.get(0).getId());
   }
 
   @Test
-  public void test_constructor_nullListsDefaultToEmpty()
+  public void test_allRuleTypesWireCorrectly_withInterval()
   {
-    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    ReindexingFilterRule filterRule = createFilterRule("filter", Period.days(30));
+    ReindexingMetricsRule metricsRule = createMetricsRule("metrics", Period.days(30));
+    ReindexingDimensionsRule dimensionsRule = createDimensionsRule("dimensions", Period.days(30));
+    ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
+    ReindexingProjectionRule projectionRule = createProjectionRule("projection", Period.days(30));
+    ReindexingGranularityRule granularityRule = createGranularityRule("granularity", Period.days(30));
+    ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
 
-    Assert.assertNotNull(provider.getFilterRules());
-    Assert.assertTrue(provider.getFilterRules().isEmpty());
-    Assert.assertNotNull(provider.getMetricsRules());
-    Assert.assertTrue(provider.getMetricsRules().isEmpty());
-    Assert.assertNotNull(provider.getGranularityRules());
-    Assert.assertTrue(provider.getGranularityRules().isEmpty());
+    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(filterRule))
+        .metricsRules(ImmutableList.of(metricsRule))
+        .dimensionsRules(ImmutableList.of(dimensionsRule))
+        .ioConfigRules(ImmutableList.of(ioConfigRule))
+        .projectionRules(ImmutableList.of(projectionRule))
+        .granularityRules(ImmutableList.of(granularityRule))
+        .tuningConfigRules(ImmutableList.of(tuningConfigRule))
+        .build();
+
+    Assert.assertEquals(1, provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("filter", provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getMetricsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("metrics", provider.getMetricsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getDimensionsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("dimensions", provider.getDimensionsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getIOConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("ioconfig", provider.getIOConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("projection", provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("granularity", provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+
+    Assert.assertEquals(1, provider.getTuningConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("tuning", provider.getTuningConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
   }
 
   @Test
   public void test_getType_returnsInline()
   {
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
-
     Assert.assertEquals("inline", provider.getType());
+  }
+
+  private ReindexingFilterRule createFilterRule(String id, Period period)
+  {
+    return new ReindexingFilterRule(id, null, period, new SelectorDimFilter("dim", "val", null));
+  }
+
+  private ReindexingMetricsRule createMetricsRule(String id, Period period)
+  {
+    return new ReindexingMetricsRule(
+        id,
+        null,
+        period,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+    );
+  }
+
+  private ReindexingDimensionsRule createDimensionsRule(String id, Period period)
+  {
+    return new ReindexingDimensionsRule(id, null, period, new UserCompactionTaskDimensionsConfig(null));
+  }
+
+  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
+  {
+    return new ReindexingIOConfigRule(id, null, period, new UserCompactionTaskIOConfig(null));
+  }
+
+  private ReindexingProjectionRule createProjectionRule(String id, Period period)
+  {
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "test_projection",
+        null,
+        null,
+        null,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+    );
+    return new ReindexingProjectionRule(id, null, period, ImmutableList.of(projectionSpec));
+  }
+
+  private ReindexingGranularityRule createGranularityRule(String id, Period period)
+  {
+    return new ReindexingGranularityRule(
+        id,
+        null,
+        period,
+        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
+    );
+  }
+
+  private ReindexingTuningConfigRule createTuningConfigRule(String id, Period period)
+  {
+    return new ReindexingTuningConfigRule(
+        id,
+        null,
+        period,
+        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null, null
+        )
+    );
   }
 }

@@ -544,8 +544,7 @@ public class ComposingReindexingRuleProviderTest
         id,
         "Test tuning config rule",
         period,
-        new UserCompactionTaskQueryTuningConfig(
-            null, null, null, null, null, null, null, null,
+        new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
             null, null, null, null, null, null, null, null, null, null, null
         )
     );
