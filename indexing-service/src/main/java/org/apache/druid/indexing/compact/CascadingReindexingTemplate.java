@@ -180,7 +180,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           config.getTransformSpec().getFilter() instanceof NotDimFilter) {
 
         // Compute the minimal set of filter rules needed for this candidate
-        NotDimFilter reducedTransformSpecFilter = CompactionStatus.computeRequiredSetOfFilterRulesForCandidate(
+        NotDimFilter reducedTransformSpecFilter = ReindexingFilterRule.computeRequiredSetOfFilterRulesForCandidate(
             candidate,
             (NotDimFilter) config.getTransformSpec().getFilter(),
             params.getFingerprintMapper()
