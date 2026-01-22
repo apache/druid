@@ -20,11 +20,17 @@
 package org.apache.druid.server.compaction;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -34,6 +40,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class ComposingReindexingRuleProviderTest
 {
@@ -52,7 +60,7 @@ public class ComposingReindexingRuleProviderTest
   public void test_constructor_nullProviderInList_throwsNullPointerException()
   {
     List<ReindexingRuleProvider> providers = new ArrayList<>();
-    providers.add(createEmptyInlineProvider());
+    providers.add(InlineReindexingRuleProvider.builder().build());
     providers.add(null); // Null provider
 
     NullPointerException exception = Assert.assertThrows(
@@ -75,21 +83,12 @@ public class ComposingReindexingRuleProviderTest
     Assert.assertTrue(composing.getFilterRules().isEmpty());
   }
 
-  @Test
-  public void test_getType_returnsComposing()
-  {
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(createEmptyInlineProvider())
-    );
-
-    Assert.assertEquals("composing", composing.getType());
-  }
 
   @Test
   public void test_isReady_allProvidersReady_returnsTrue()
   {
-    ReindexingRuleProvider provider1 = createEmptyInlineProvider(); // Always ready
-    ReindexingRuleProvider provider2 = createEmptyInlineProvider(); // Always ready
+    ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder().build();
+    ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder().build();
 
     ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
@@ -101,7 +100,7 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_isReady_someProvidersNotReady_returnsFalse()
   {
-    ReindexingRuleProvider readyProvider = createEmptyInlineProvider();
+    ReindexingRuleProvider readyProvider = InlineReindexingRuleProvider.builder().build();
     ReindexingRuleProvider notReadyProvider = createNotReadyProvider();
 
     ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
@@ -122,93 +121,39 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getFilterRules_firstWins_returnsFirstNonEmpty()
+  public void test_getFilterRules_compositingBehavior()
   {
-    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(30));
-    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(60));
-
-    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider1, provider2)
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().filterRules(rules).build(),
+        ComposingReindexingRuleProvider::getFilterRules,
+        createFilterRule("rule1", Period.days(7)),
+        createFilterRule("rule2", Period.days(30)),
+        ReindexingFilterRule::getId
     );
-
-    List<ReindexingFilterRule> result = composing.getFilterRules();
-
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", result.get(0).getId());
   }
 
   @Test
-  public void test_getFilterRules_firstProviderEmpty_returnsSecond()
+  public void test_getFilterRulesWithInterval_compositingBehavior()
   {
-    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(60));
-
-    ReindexingRuleProvider emptyProvider = createEmptyInlineProvider();
-    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2));
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(emptyProvider, provider2)
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().filterRules(rules).build(),
+        (provider, it) -> provider.getFilterRules(it.interval, it.time),
+        createFilterRule("rule1", Period.days(7)),
+        createFilterRule("rule2", Period.days(30)),
+        ReindexingFilterRule::getId
     );
-
-    List<ReindexingFilterRule> result = composing.getFilterRules();
-
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule2", result.get(0).getId());
   }
 
   @Test
-  public void test_getFilterRules_allProvidersEmpty_returnsEmpty()
+  public void test_getGranularityRules_compositingBehavior()
   {
-    ReindexingRuleProvider provider1 = createEmptyInlineProvider();
-    ReindexingRuleProvider provider2 = createEmptyInlineProvider();
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider1, provider2)
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().granularityRules(rules).build(),
+        ComposingReindexingRuleProvider::getGranularityRules,
+        createGranularityRule("rule1", Period.days(7)),
+        createGranularityRule("rule2", Period.days(30)),
+        ReindexingGranularityRule::getId
     );
-
-    List<ReindexingFilterRule> result = composing.getFilterRules();
-
-    Assert.assertTrue(result.isEmpty());
-  }
-
-  @Test
-  public void test_getGranularityRules_firstWins_returnsFirstNonEmpty()
-  {
-    ReindexingGranularityRule rule1 = createGranularityRule("rule1", Period.days(7));
-    ReindexingGranularityRule rule2 = createGranularityRule("rule2", Period.days(30));
-
-    ReindexingRuleProvider provider1 = createInlineProviderWithGranularityRules(ImmutableList.of(rule1));
-    ReindexingRuleProvider provider2 = createInlineProviderWithGranularityRules(ImmutableList.of(rule2));
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider1, provider2)
-    );
-
-    List<ReindexingGranularityRule> result = composing.getGranularityRules();
-
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", result.get(0).getId());
-  }
-
-  @Test
-  public void test_getFilterRulesWithInterval_firstWins_delegatesToFirstProvider()
-  {
-    Interval interval = Intervals.of("2025-11-01T00:00:00Z/2025-11-15T00:00:00Z");
-    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(30));
-
-    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    ReindexingRuleProvider provider2 = createEmptyInlineProvider();
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider1, provider2)
-    );
-
-    List<ReindexingFilterRule> result = composing.getFilterRules(interval, REFERENCE_TIME);
-
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", result.get(0).getId());
   }
 
   @Test
@@ -218,8 +163,10 @@ public class ComposingReindexingRuleProviderTest
     ReindexingFilterRule rule2 = createFilterRule("rule2", Period.days(30));
     ReindexingFilterRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
 
-    ReindexingRuleProvider provider1 = createInlineProviderWithFilterRules(ImmutableList.of(rule1));
-    ReindexingRuleProvider provider2 = createInlineProviderWithFilterRules(ImmutableList.of(rule2, rule3));
+    ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(rule1)).build();
+    ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(rule2, rule3)).build();
 
     ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
@@ -233,167 +180,293 @@ public class ComposingReindexingRuleProviderTest
     Assert.assertEquals(Period.days(30), result.get(1));
   }
 
+
   @Test
-  public void test_singleProvider_delegatesDirectly()
+  public void test_getMetricsRules_compositingBehavior()
   {
-    ReindexingFilterRule rule = createFilterRule("rule1", Period.days(30));
-    ReindexingRuleProvider provider = createInlineProviderWithFilterRules(ImmutableList.of(rule));
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().metricsRules(rules).build(),
+        ComposingReindexingRuleProvider::getMetricsRules,
+        createMetricsRule("rule1", Period.days(7)),
+        createMetricsRule("rule2", Period.days(30)),
+        ReindexingMetricsRule::getId
+    );
+  }
+
+  @Test
+  public void test_getMetricsRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().metricsRules(rules).build(),
+        (provider, it) -> provider.getMetricsRules(it.interval, it.time),
+        createMetricsRule("rule1", Period.days(7)),
+        createMetricsRule("rule2", Period.days(30)),
+        ReindexingMetricsRule::getId
+    );
+  }
+
+  @Test
+  public void test_getDimensionsRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().dimensionsRules(rules).build(),
+        ComposingReindexingRuleProvider::getDimensionsRules,
+        createDimensionsRule("rule1", Period.days(7)),
+        createDimensionsRule("rule2", Period.days(30)),
+        ReindexingDimensionsRule::getId
+    );
+  }
+
+  @Test
+  public void test_getDimensionsRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().dimensionsRules(rules).build(),
+        (provider, it) -> provider.getDimensionsRules(it.interval, it.time),
+        createDimensionsRule("rule1", Period.days(7)),
+        createDimensionsRule("rule2", Period.days(30)),
+        ReindexingDimensionsRule::getId
+    );
+  }
+
+  @Test
+  public void test_getIOConfigRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
+        ComposingReindexingRuleProvider::getIOConfigRules,
+        createIOConfigRule("rule1", Period.days(7)),
+        createIOConfigRule("rule2", Period.days(30)),
+        ReindexingIOConfigRule::getId
+    );
+  }
+
+  @Test
+  public void test_getIOConfigRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
+        (provider, it) -> provider.getIOConfigRules(it.interval, it.time),
+        createIOConfigRule("rule1", Period.days(7)),
+        createIOConfigRule("rule2", Period.days(30)),
+        ReindexingIOConfigRule::getId
+    );
+  }
+
+  @Test
+  public void test_getProjectionRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
+        ComposingReindexingRuleProvider::getProjectionRules,
+        createProjectionRule("rule1", Period.days(7)),
+        createProjectionRule("rule2", Period.days(30)),
+        ReindexingProjectionRule::getId
+    );
+  }
+
+  @Test
+  public void test_getProjectionRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
+        (provider, it) -> provider.getProjectionRules(it.interval, it.time),
+        createProjectionRule("rule1", Period.days(7)),
+        createProjectionRule("rule2", Period.days(30)),
+        ReindexingProjectionRule::getId
+    );
+  }
+
+  @Test
+  public void test_getTuningConfigRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().tuningConfigRules(rules).build(),
+        ComposingReindexingRuleProvider::getTuningConfigRules,
+        createTuningConfigRule("rule1", Period.days(7)),
+        createTuningConfigRule("rule2", Period.days(30)),
+        ReindexingTuningConfigRule::getId
+    );
+  }
+
+  @Test
+  public void test_getTuningConfigRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().tuningConfigRules(rules).build(),
+        (provider, it) -> provider.getTuningConfigRules(it.interval, it.time),
+        createTuningConfigRule("rule1", Period.days(7)),
+        createTuningConfigRule("rule2", Period.days(30)),
+        ReindexingTuningConfigRule::getId
+    );
+  }
+
+  @Test
+  public void test_getGranularityRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().granularityRules(rules).build(),
+        (provider, it) -> provider.getGranularityRules(it.interval, it.time),
+        createGranularityRule("rule1", Period.days(7)),
+        createGranularityRule("rule2", Period.days(30)),
+        ReindexingGranularityRule::getId
+    );
+  }
+
+
+  @Test
+  public void test_equals_sameProviders_returnsTrue()
+  {
+    ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder().build();
+    ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
+        .build();
+
+    ComposingReindexingRuleProvider composing1 = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1, provider2)
+    );
+    ComposingReindexingRuleProvider composing2 = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1, provider2)
+    );
+
+    Assert.assertEquals(composing1, composing2);
+    Assert.assertEquals(composing1.hashCode(), composing2.hashCode());
+  }
+
+  @Test
+  public void test_equals_differentProviders_returnsFalse()
+  {
+    ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder().build();
+    ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
+        .filterRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
+        .build();
+
+    ComposingReindexingRuleProvider composing1 = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1)
+    );
+    ComposingReindexingRuleProvider composing2 = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1, provider2)
+    );
+
+    Assert.assertNotEquals(composing1, composing2);
+  }
+
+
+
+  /**
+   * Helper class to pass interval + time together
+   */
+  private static class IntervalAndTime
+  {
+    final Interval interval;
+    final DateTime time;
+
+    IntervalAndTime(Interval interval, DateTime time)
+    {
+      this.interval = interval;
+      this.time = time;
+    }
+  }
+
+  /**
+   * Tests composing behavior for getXxxRules() - all three scenarios:
+   * 1. First provider has rules → returns first provider's rules
+   * 2. First provider empty → falls through to second provider
+   * 3. Both providers empty → returns empty list
+   */
+  private <T> void testComposingBehaviorForRuleType(
+      Function<List<T>, ReindexingRuleProvider> providerFactory,
+      Function<ComposingReindexingRuleProvider, List<T>> ruleGetter,
+      T rule1,
+      T rule2,
+      Function<T, String> idExtractor
+  )
+  {
+    ReindexingRuleProvider provider1 = providerFactory.apply(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = providerFactory.apply(ImmutableList.of(rule2));
 
     ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider)
+        ImmutableList.of(provider1, provider2)
     );
 
-    List<ReindexingFilterRule> result = composing.getFilterRules();
-
+    List<T> result = ruleGetter.apply(composing);
     Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", result.get(0).getId());
-  }
+    Assert.assertEquals("rule1", idExtractor.apply(result.get(0)));
 
-  // ========== Helper Methods ==========
-
-  private ReindexingRuleProvider createEmptyInlineProvider()
-  {
-    return new InlineReindexingRuleProvider(
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList()
+    ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, provider2)
     );
-  }
 
-  private ReindexingRuleProvider createInlineProviderWithFilterRules(List<ReindexingFilterRule> rules)
-  {
-    return new InlineReindexingRuleProvider(
-        rules,
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList()
+    result = ruleGetter.apply(composing);
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals("rule2", idExtractor.apply(result.get(0)));
+
+    ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, emptyProvider2)
     );
+
+    result = ruleGetter.apply(composing);
+    Assert.assertTrue(result.isEmpty());
   }
 
-  private ReindexingRuleProvider createInlineProviderWithGranularityRules(List<ReindexingGranularityRule> rules)
+  /**
+   * Tests composing behavior for getXxxRules(interval, time) - all three scenarios:
+   * 1. First provider has rules → returns first provider's rules
+   * 2. First provider empty → falls through to second provider
+   * 3. Both providers empty → returns empty list
+   */
+  private <T> void testComposingBehaviorForRuleTypeWithInterval(
+      Function<List<T>, ReindexingRuleProvider> providerFactory,
+      BiFunction<ComposingReindexingRuleProvider, IntervalAndTime, List<T>> ruleGetter,
+      T rule1,
+      T rule2,
+      Function<T, String> idExtractor
+  )
   {
-    return new InlineReindexingRuleProvider(
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        rules,
-        Collections.emptyList()
+    Interval interval = Intervals.of("2025-11-01/2025-11-15");
+
+    ReindexingRuleProvider provider1 = providerFactory.apply(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = providerFactory.apply(ImmutableList.of(rule2));
+
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1, provider2)
     );
+
+    List<T> result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals("rule1", idExtractor.apply(result.get(0)));
+
+    ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, provider2)
+    );
+
+    result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertEquals(1, result.size());
+    Assert.assertEquals("rule2", idExtractor.apply(result.get(0)));
+
+    ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, emptyProvider2)
+    );
+
+    result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertTrue(result.isEmpty());
   }
 
+  /**
+   * Creates a test provider that is not ready
+   */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new ReindexingRuleProvider()
+    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null)
     {
-      @Override
-      public String getType()
-      {
-        return "not-ready-test-provider";
-      }
-
       @Override
       public boolean isReady()
       {
         return false;
-      }
-
-      @Override
-      public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingFilterRule> getFilterRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingMetricsRule> getMetricsRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingDimensionsRule> getDimensionsRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingIOConfigRule> getIOConfigRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingProjectionRule> getProjectionRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingGranularityRule> getGranularityRules()
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
-      {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public List<ReindexingTuningConfigRule> getTuningConfigRules()
-      {
-        return Collections.emptyList();
       }
     };
   }
@@ -417,4 +490,65 @@ public class ComposingReindexingRuleProviderTest
         new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
     );
   }
+
+  private ReindexingMetricsRule createMetricsRule(String id, Period period)
+  {
+    return new ReindexingMetricsRule(
+        id,
+        "Test metrics rule",
+        period,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+    );
+  }
+
+  private ReindexingDimensionsRule createDimensionsRule(String id, Period period)
+  {
+    return new ReindexingDimensionsRule(
+        id,
+        "Test dimensions rule",
+        period,
+        new UserCompactionTaskDimensionsConfig(null)
+    );
+  }
+
+  private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
+  {
+    return new ReindexingIOConfigRule(
+        id,
+        "Test IO config rule",
+        period,
+        new UserCompactionTaskIOConfig(null)
+    );
+  }
+
+  private ReindexingProjectionRule createProjectionRule(String id, Period period)
+  {
+    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
+        "test_projection",
+        null,
+        null,
+        null,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+    );
+    return new ReindexingProjectionRule(
+        id,
+        "Test projection rule",
+        period,
+        ImmutableList.of(projectionSpec)
+    );
+  }
+
+  private ReindexingTuningConfigRule createTuningConfigRule(String id, Period period)
+  {
+    return new ReindexingTuningConfigRule(
+        id,
+        "Test tuning config rule",
+        period,
+        new UserCompactionTaskQueryTuningConfig(
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null, null
+        )
+    );
+  }
+
 }
