@@ -61,19 +61,25 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Template to perform period-based cascading reindexing. Contains a list of
- * {@link ReindexingRule} which divide the segment timeline into reindexable
- * intervals. Each rule specifies a period relative to the current time which is
- * used to determine its applicable interval:
+ * Template to perform period-based cascading reindexing. {@link ReindexingRule} are provided by a {@link ReindexingRuleProvider}
+ * Each rule specifies a period relative to the current time which is used to determine its applicable interval.
+ * A timeline is constructed from a condensed set of these periods and tasks are created for each search interval in
+ * the timeline with the applicable rules for said interval.
+ * <p>
+ * For example if you had the following rules:
  * <ul>
- * <li>Rule 1: range = [now - p1, +inf)</li>
- * <li>Rule 2: range = [now - p2, now - p1)</li>
- * <li>...</li>
- * <li>Rule n: range = (-inf, now - p(n - 1))</li>
+ *   <li>Rule A: period = 1 day</li>
+ *   <li>Rule B: period = 7 days</li>
+ *   <li>Rule C: period = 30 days</li>
+ *   <li>Rule D: period = 7 days</li>
  * </ul>
  *
- * If two adjacent rules explicitly specify a segment granularity, the boundary
- * between them may be adjusted to ensure that there are no unprocessed gaps in the timeline.
+ * You would end up with the following search intervals (assuming current time is T):
+ * <ul>
+ *   <li>Interval 2: [T-7days, T-1day)</li>
+ *   <li>Interval 3: [T-30days, T-7days)</li>
+ *   <li>Interval 3: [-inf, T-30days)</li>
+ * </ul>
  * <p>
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate}
  */
