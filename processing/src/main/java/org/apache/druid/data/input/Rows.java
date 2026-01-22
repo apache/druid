@@ -20,11 +20,11 @@
 package org.apache.druid.data.input;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
 
@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -53,8 +54,9 @@ public final class Rows
   {
     final Map<String, Set<String>> dims = new TreeMap<>();
     for (final String dim : inputRow.getDimensions()) {
-      final Set<String> dimValues = ImmutableSortedSet.copyOf(inputRow.getDimension(dim));
-      if (dimValues.size() > 0) {
+      final Set<String> dimValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      dimValues.addAll(inputRow.getDimension(dim));
+      if (!dimValues.isEmpty()) {
         dims.put(dim, dimValues);
       }
     }
@@ -74,7 +76,7 @@ public final class Rows
       return Collections.emptyList();
     } else if (inputValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
-      return ((List<?>) inputValue).stream().map(String::valueOf).collect(Collectors.toList());
+      return ((List<?>) inputValue).stream().map(v -> v == null ? null : String.valueOf(v)).collect(Collectors.toList());
     } else if (inputValue instanceof byte[]) {
       byte[] array = (byte[]) inputValue;
       return objectToStringsByteA(array);

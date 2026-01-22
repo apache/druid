@@ -372,9 +372,9 @@ public class InputRowSerde
     }
   }
 
-  private static void writeString(String value, ByteArrayDataOutput out) throws IOException
+  private static void writeString(@Nullable String value, ByteArrayDataOutput out) throws IOException
   {
-    writeBytes(StringUtils.toUtf8(value), out);
+    writeBytes(value == null ? null : StringUtils.toUtf8(value), out);
   }
 
   private static void writeStringArray(List<String> values, ByteArrayDataOutput out) throws IOException
@@ -389,15 +389,20 @@ public class InputRowSerde
     }
   }
 
+  @Nullable
   private static String readString(DataInput in) throws IOException
   {
     byte[] result = readBytes(in);
-    return StringUtils.fromUtf8(result);
+    return result == null ? null : StringUtils.fromUtf8(result);
   }
 
+  @Nullable
   private static byte[] readBytes(DataInput in) throws IOException
   {
     int size = WritableUtils.readVInt(in);
+    if (size < 0) {
+      return null;
+    }
     byte[] result = new byte[size];
     in.readFully(result, 0, size);
     return result;
