@@ -49,6 +49,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.timeline.CompactionState;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -385,6 +386,11 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         inputSource.withInterval(searchInterval),
         jobParams
     );
+  }
+
+  @Override
+  public CompactionState toCompactionState() {
+    throw new UnsupportedOperationException("CascadingReindexingTemplate cannot be transformed to a CompactionState object");
   }
 
   // Legacy fields from DataSourceCompactionConfig that are not used by this template
