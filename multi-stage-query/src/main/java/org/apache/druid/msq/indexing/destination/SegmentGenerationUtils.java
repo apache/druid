@@ -34,7 +34,6 @@ import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -53,6 +52,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
@@ -100,7 +100,12 @@ public final class SegmentGenerationUtils
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
-                     .withGranularity(makeGranularitySpecForIngestion(query, querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withGranularity(makeGranularitySpecForIngestion(
+                         query,
+                         querySpec.getColumnMappings(),
+                         isRollupQuery,
+                         jsonMapper
+                     ))
                      .withProjections(destination.getProjections())
                      .build();
   }
@@ -112,26 +117,23 @@ public final class SegmentGenerationUtils
       final ObjectMapper jsonMapper
   )
   {
+    final Granularity insertQueryGranularity =
+        query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
     if (isRollupQuery) {
       final String queryGranularityString =
           query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
-        final Granularity queryGranularity;
-
         try {
-          queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
+          final Granularity queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
+          return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
         }
-
-        return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
       }
-      return new ArbitraryGranularitySpec(Granularities.NONE, true, Intervals.ONLY_ETERNITY);
-    } else {
-      return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
     }
+    return new ArbitraryGranularitySpec(insertQueryGranularity, isRollupQuery, Intervals.ONLY_ETERNITY);
   }
 
   /**

@@ -75,6 +75,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class IndexerControllerContext implements ControllerContext
 {
+  public interface Builder
+  {
+    ControllerContext buildWithTask(MSQControllerTask task, TaskToolbox toolbox);
+  }
+
   public static final int DEFAULT_MAX_CONCURRENT_STAGES = 1;
   public static final SegmentSource DEFAULT_SEGMENT_SOURCE = SegmentSource.NONE;
 
@@ -108,7 +113,10 @@ public class IndexerControllerContext implements ControllerContext
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
-    final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
+    final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(
+        StorageConnectorProvider.class,
+        MultiStageQuery.class
+    ));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
