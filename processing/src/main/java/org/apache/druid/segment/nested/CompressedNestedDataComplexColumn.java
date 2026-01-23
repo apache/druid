@@ -1053,7 +1053,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       if (elementType != null) {
         return elementType.isNumeric();
       }
+      // if element type is null, the field was not an array, so don't consider it as numeric
+      return false;
     }
+    // a non-existent field can be considered numeric via a nil selector
     return field == null;
   }
 
