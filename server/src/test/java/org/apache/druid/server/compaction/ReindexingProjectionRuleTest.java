@@ -42,13 +42,6 @@ public class ReindexingProjectionRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsTrue()
-  {
-    // Projection rules are additive - multiple projections can be combined
-    Assert.assertTrue(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-11-04T12:00:00Z (45 days before reference time)

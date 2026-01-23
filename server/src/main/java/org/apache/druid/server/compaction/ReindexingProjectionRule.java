@@ -75,12 +75,6 @@ public class ReindexingProjectionRule extends AbstractReindexingRule
     this.projections = Objects.requireNonNull(projections, "projections cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return true;
-  }
-
   @JsonProperty
   public List<AggregateProjectionSpec> getProjections()
   {

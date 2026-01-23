@@ -70,12 +70,6 @@ public class ReindexingGranularityRule extends AbstractReindexingRule
     this.granularityConfig = Objects.requireNonNull(granularityConfig, "granularityConfig cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return false;
-  }
-
   @JsonProperty
   public UserCompactionTaskGranularityConfig getGranularityConfig()
   {

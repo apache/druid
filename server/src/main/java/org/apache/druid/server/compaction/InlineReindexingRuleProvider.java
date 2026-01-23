@@ -209,21 +209,24 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingMetricsRule getMetricsRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingMetricsRules, interval, referenceTime);
+    return getApplicableRule(reindexingMetricsRules, interval, referenceTime);
   }
 
   @Override
-  public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingDimensionsRule getDimensionsRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingDimensionsRules, interval, referenceTime);
+    return getApplicableRule(reindexingDimensionsRules, interval, referenceTime);
   }
 
   @Override
-  public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingIOConfigRules, interval, referenceTime);
+    return getApplicableRule(reindexingIOConfigRules, interval, referenceTime);
   }
 
   @Override
@@ -233,15 +236,17 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingGranularityRules, interval, referenceTime);
+    return getApplicableRule(reindexingGranularityRules, interval, referenceTime);
   }
 
   @Override
-  public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingTuningConfigRules, interval, referenceTime);
+    return getApplicableRule(reindexingTuningConfigRules, interval, referenceTime);
   }
 
   /**
@@ -249,8 +254,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
    * <p>
    * This provider implementation only returns rules that fully apply to the given interval.
    * <p>
-   * Any non-additive rule types will only return a single rule, even if multiple rules fully apply to the interval. The
-   * interval returned is the one with the oldest threshold (i.e., the largest period into the past from "now").
    */
   private <T extends ReindexingRule> List<T> getApplicableRules(List<T> rules, Interval interval, DateTime referenceTime)
   {
@@ -260,19 +263,36 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
         applicableRules.add(rule);
       }
     }
-    boolean areRulesAdditive = !rules.isEmpty() && rules.get(0).isAdditive();
-    if (!areRulesAdditive && applicableRules.size() > 1) {
-      // if rules are not additive, I want the period where (referenceTime - period) is the oldest date of all the rules
-      T selectedRule = Collections.min(
-          applicableRules,
-          Comparator.comparingLong(r -> {
-            DateTime threshold = referenceTime.minus(r.getPeriod());
-            return threshold.getMillis();
-          })
-      );
-      applicableRules = List.of(selectedRule);
-    }
     return applicableRules;
+  }
+
+  /**
+   * Returns the single most applicable rule for the given interval.
+   * <p>
+   * "most applicable" means if multiple rules match, the one returned is the one with the oldest
+   * threshold (i.e., the largest period into the past from "now").
+   */
+  @Nullable
+  private <T extends ReindexingRule> T getApplicableRule(List<T> rules, Interval interval, DateTime referenceTime)
+  {
+    List<T> applicableRules = new ArrayList<>();
+    for (T rule : rules) {
+      if (rule.appliesTo(interval, referenceTime) == ReindexingRule.AppliesToMode.FULL) {
+        applicableRules.add(rule);
+      }
+    }
+
+    if (applicableRules.isEmpty()) {
+      return null;
+    }
+
+    return Collections.min(
+        applicableRules,
+        Comparator.comparingLong(r -> {
+          DateTime threshold = referenceTime.minus(r.getPeriod());
+          return threshold.getMillis();
+        })
+    );
   }
 
   @Override

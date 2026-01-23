@@ -48,13 +48,6 @@ public class ReindexingMetricsRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsFalse()
-  {
-    // Metrics rules are not additive - only one metrics spec can apply
-    Assert.assertFalse(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-09-20T12:00:00Z (90 days before reference time)

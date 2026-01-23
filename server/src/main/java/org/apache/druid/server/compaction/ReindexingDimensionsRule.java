@@ -72,12 +72,6 @@ public class ReindexingDimensionsRule extends AbstractReindexingRule
     this.dimensionsSpec = Objects.requireNonNull(dimensionsSpec, "dimensionsSpec cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return false;
-  }
-
   @JsonProperty
   public UserCompactionTaskDimensionsConfig getDimensionsSpec()
   {

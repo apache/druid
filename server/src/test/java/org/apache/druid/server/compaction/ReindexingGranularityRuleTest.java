@@ -42,13 +42,6 @@ public class ReindexingGranularityRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsFalse()
-  {
-    // Granularity rules are not additive - only one granularity can apply
-    Assert.assertFalse(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-12-12T12:00:00Z (7 days before reference time)

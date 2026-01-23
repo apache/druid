@@ -43,13 +43,6 @@ public class ReindexingTuningConfigRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsFalse()
-  {
-    // Tuning config rules are not additive - only one tuning config can apply
-    Assert.assertFalse(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-11-28T12:00:00Z (21 days before reference time)

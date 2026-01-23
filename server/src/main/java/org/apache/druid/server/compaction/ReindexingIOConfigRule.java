@@ -64,12 +64,6 @@ public class ReindexingIOConfigRule extends AbstractReindexingRule
     this.ioConfig = Objects.requireNonNull(ioConfig, "ioConfig cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return false;
-  }
-
   @JsonProperty
   public UserCompactionTaskIOConfig getIoConfig()
   {

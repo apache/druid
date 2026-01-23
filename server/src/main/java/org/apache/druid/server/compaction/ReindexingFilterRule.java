@@ -72,12 +72,6 @@ public class ReindexingFilterRule extends AbstractReindexingRule
     this.filter = Objects.requireNonNull(filter, "filter cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return true;
-  }
-
   @JsonProperty
   public DimFilter getFilter()
   {

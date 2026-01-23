@@ -135,7 +135,7 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_getFilterRulesWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().filterRules(rules).build(),
         (provider, it) -> provider.getFilterRules(it.interval, it.time),
         createFilterRule("rule1", Period.days(7)),
@@ -193,11 +193,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getMetricsRulesWithInterval_compositingBehavior()
+  public void test_getMetricsRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().metricsRules(rules).build(),
-        (provider, it) -> provider.getMetricsRules(it.interval, it.time),
+        (provider, it) -> provider.getMetricsRule(it.interval, it.time),
         createMetricsRule("rule1", Period.days(7)),
         createMetricsRule("rule2", Period.days(30)),
         ReindexingMetricsRule::getId
@@ -217,11 +217,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getDimensionsRulesWithInterval_compositingBehavior()
+  public void test_getDimensionsRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().dimensionsRules(rules).build(),
-        (provider, it) -> provider.getDimensionsRules(it.interval, it.time),
+        (provider, it) -> provider.getDimensionsRule(it.interval, it.time),
         createDimensionsRule("rule1", Period.days(7)),
         createDimensionsRule("rule2", Period.days(30)),
         ReindexingDimensionsRule::getId
@@ -241,11 +241,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getIOConfigRulesWithInterval_compositingBehavior()
+  public void test_getIOConfigRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().ioConfigRules(rules).build(),
-        (provider, it) -> provider.getIOConfigRules(it.interval, it.time),
+        (provider, it) -> provider.getIOConfigRule(it.interval, it.time),
         createIOConfigRule("rule1", Period.days(7)),
         createIOConfigRule("rule2", Period.days(30)),
         ReindexingIOConfigRule::getId
@@ -267,7 +267,7 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_getProjectionRulesWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
         (provider, it) -> provider.getProjectionRules(it.interval, it.time),
         createProjectionRule("rule1", Period.days(7)),
@@ -289,11 +289,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getTuningConfigRulesWithInterval_compositingBehavior()
+  public void test_getTuningConfigRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().tuningConfigRules(rules).build(),
-        (provider, it) -> provider.getTuningConfigRules(it.interval, it.time),
+        (provider, it) -> provider.getTuningConfigRule(it.interval, it.time),
         createTuningConfigRule("rule1", Period.days(7)),
         createTuningConfigRule("rule2", Period.days(30)),
         ReindexingTuningConfigRule::getId
@@ -301,11 +301,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getGranularityRulesWithInterval_compositingBehavior()
+  public void test_getGranularityRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().granularityRules(rules).build(),
-        (provider, it) -> provider.getGranularityRules(it.interval, it.time),
+        (provider, it) -> provider.getGranularityRule(it.interval, it.time),
         createGranularityRule("rule1", Period.days(7)),
         createGranularityRule("rule2", Period.days(30)),
         ReindexingGranularityRule::getId
@@ -410,13 +410,52 @@ public class ComposingReindexingRuleProviderTest
     Assert.assertTrue(result.isEmpty());
   }
 
+  private <T> void testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
+      Function<List<T>, ReindexingRuleProvider> providerFactory,
+      BiFunction<ComposingReindexingRuleProvider, IntervalAndTime, T> ruleGetter,
+      T rule1,
+      T rule2,
+      Function<T, String> idExtractor
+  )
+  {
+    Interval interval = Intervals.of("2025-11-01/2025-11-15");
+
+    ReindexingRuleProvider provider1 = providerFactory.apply(ImmutableList.of(rule1));
+    ReindexingRuleProvider provider2 = providerFactory.apply(ImmutableList.of(rule2));
+
+    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(provider1, provider2)
+    );
+
+    T result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertNotNull(result);
+    Assert.assertEquals("rule1", idExtractor.apply(result));
+
+    ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, provider2)
+    );
+
+    result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertNotNull(result);
+    Assert.assertEquals("rule2", idExtractor.apply(result));
+
+    ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
+    composing = new ComposingReindexingRuleProvider(
+        ImmutableList.of(emptyProvider, emptyProvider2)
+    );
+
+    result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
+    Assert.assertNull(result);
+  }
+
   /**
    * Tests composing behavior for getXxxRules(interval, time) - all three scenarios:
    * 1. First provider has rules → returns first provider's rules
    * 2. First provider empty → falls through to second provider
    * 3. Both providers empty → returns empty list
    */
-  private <T> void testComposingBehaviorForRuleTypeWithInterval(
+  private <T> void testComposingBehaviorForAdditiveRuleTypeWithInterval(
       Function<List<T>, ReindexingRuleProvider> providerFactory,
       BiFunction<ComposingReindexingRuleProvider, IntervalAndTime, List<T>> ruleGetter,
       T rule1,

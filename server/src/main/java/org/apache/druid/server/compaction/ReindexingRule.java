@@ -68,17 +68,4 @@ public interface ReindexingRule
    */
   AppliesToMode appliesTo(Interval interval, @Nullable DateTime referenceTime);
 
-  /**
-   * Indicates whether the rule is additive, meaning it can be combined with other rules.
-   * <p>
-   * An additive rule can be merged with other rules of its type within the same interval. An example would be dimension
-   * filter rules that can be combined using OR logic. Such as, rule 1: filter out segments where country = 'US' OR
-   * rule 2: device = 'mobile'.
-   * </p>
-   * <p>
-   * A non-addditive rule cannot be combined with other rules of its type within the same interval. An example would be
-   * segment granularity rules, where only one granularity can be applied to a given interval.
-   * </p>
-   */
-  boolean isAdditive();
 }

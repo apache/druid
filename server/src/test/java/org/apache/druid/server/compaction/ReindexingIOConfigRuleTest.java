@@ -41,13 +41,6 @@ public class ReindexingIOConfigRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsFalse()
-  {
-    // IO config rules are not additive - only one IO config can apply
-    Assert.assertFalse(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-10-20T12:00:00Z (60 days before reference time)

@@ -73,12 +73,6 @@ public class ReindexingTuningConfigRule extends AbstractReindexingRule
     this.tuningConfig = Objects.requireNonNull(tuningConfig, "tuningConfig cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return false;
-  }
-
   @JsonProperty
   public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {

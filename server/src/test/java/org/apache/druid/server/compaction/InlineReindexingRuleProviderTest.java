@@ -145,16 +145,13 @@ public class InlineReindexingRuleProviderTest
         .granularityRules(ImmutableList.of(rule30d, rule60d, rule90d))
         .build();
 
-    List<ReindexingGranularityRule> noMatch = provider.getGranularityRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertTrue("No rules should match interval that's too recent", noMatch.isEmpty());
+    Assert.assertNull(provider.getGranularityRule(INTERVAL_20_DAYS_OLD, REFERENCE_TIME));
 
-    List<ReindexingGranularityRule> oneMatch = provider.getGranularityRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals("Only rule30d should match", 1, oneMatch.size());
-    Assert.assertEquals("gran-30d", oneMatch.get(0).getId());
+    ReindexingGranularityRule oneMatch = provider.getGranularityRule(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("gran-30d", oneMatch.getId());
 
-    List<ReindexingGranularityRule> multiMatch = provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals("Only one non-additive rule should be returned", 1, multiMatch.size());
-    Assert.assertEquals("Should return rule with oldest threshold (P90D)", "gran-90d", multiMatch.get(0).getId());
+    ReindexingGranularityRule multiMatch = provider.getGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    Assert.assertEquals("Should return rule with oldest threshold (P90D)", "gran-90d", multiMatch.getId());
   }
 
   @Test
@@ -181,23 +178,18 @@ public class InlineReindexingRuleProviderTest
     Assert.assertEquals(1, provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
     Assert.assertEquals("filter", provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
-    Assert.assertEquals(1, provider.getMetricsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("metrics", provider.getMetricsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("metrics", provider.getMetricsRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals(1, provider.getDimensionsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("dimensions", provider.getDimensionsRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("dimensions", provider.getDimensionsRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals(1, provider.getIOConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("ioconfig", provider.getIOConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assert.assertEquals(1, provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
     Assert.assertEquals("projection", provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
-    Assert.assertEquals(1, provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("granularity", provider.getGranularityRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("granularity", provider.getGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals(1, provider.getTuningConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("tuning", provider.getTuningConfigRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
   }
 
   @Test

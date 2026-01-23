@@ -41,13 +41,6 @@ public class ReindexingDimensionsRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsFalse()
-  {
-    // Dimensions rules are not additive - only one dimensions spec can apply
-    Assert.assertFalse(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-12-05T12:00:00Z (14 days before reference time)

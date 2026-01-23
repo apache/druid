@@ -43,13 +43,6 @@ public class ReindexingFilterRuleTest
   );
 
   @Test
-  public void test_isAdditive_returnsTrue()
-  {
-    // Filter rules are additive - multiple filters can be combined
-    Assert.assertTrue(rule.isAdditive());
-  }
-
-  @Test
   public void test_appliesTo_intervalFullyBeforeThreshold_returnsFull()
   {
     // Threshold is 2025-11-19T12:00:00Z (30 days before reference time)

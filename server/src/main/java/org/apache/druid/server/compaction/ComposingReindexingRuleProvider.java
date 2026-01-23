@@ -21,12 +21,13 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -169,13 +170,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingMetricsRule getMetricsRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getMetricsRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getMetricsRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override
@@ -189,13 +191,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingDimensionsRule getDimensionsRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getDimensionsRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getDimensionsRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override
@@ -209,13 +212,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getIOConfigRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getIOConfigRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override
@@ -249,13 +253,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getGranularityRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getGranularityRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override
@@ -269,13 +274,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getTuningConfigRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getTuningConfigRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override

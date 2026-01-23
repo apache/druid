@@ -26,6 +26,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -97,36 +98,39 @@ public interface ReindexingRuleProvider
   List<ReindexingFilterRule> getFilterRules();
 
   /**
-   * Returns all reindexing metrics rules that apply to the given interval.
+   * Returns the matched reindexing metrics rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingMetricsRule} rules that apply to the given interval.
+   * @return {@link ReindexingMetricsRule} rule that applies to the given interval.
    */
-  List<ReindexingMetricsRule> getMetricsRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingMetricsRule getMetricsRule(Interval interval, DateTime referenceTime);
 
   /**
    * Returns ALL reindexing metrics rules.
-   * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
-   * </p>
    */
   List<ReindexingMetricsRule> getMetricsRules();
 
   /**
-   * Returns all reindexing dimensions rules that apply to the given interval.
+   * Returns the matched reindexing dimensions rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingDimensionsRule} rules that apply to the given interval.
+   * @return {@link ReindexingDimensionsRule} rule that applies to the given interval.
    */
-  List<ReindexingDimensionsRule> getDimensionsRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingDimensionsRule getDimensionsRule(Interval interval, DateTime referenceTime);
 
   /**
    * Returns ALL reindexing dimensions rules.
@@ -134,16 +138,19 @@ public interface ReindexingRuleProvider
   List<ReindexingDimensionsRule> getDimensionsRules();
 
   /**
-   * Returns all reindexing IO config rules that apply to the given interval.
+   * Returns the matched reindexing IO config rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingIOConfigRule} rules that apply to the given interval.
+   * @return {@link ReindexingIOConfigRule} that applies to the given interval.
    */
-  List<ReindexingIOConfigRule> getIOConfigRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime);
 
   /**
     * Returns ALL reindexing IO config rules.
@@ -168,16 +175,19 @@ public interface ReindexingRuleProvider
   List<ReindexingProjectionRule> getProjectionRules();
 
   /**
-   * Returns all reindexing granularity rules that apply to the given interval.
+   * Returns the matched reindexing granularity rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingGranularityRule} rules that apply to the given interval.
+   * @return {@link ReindexingGranularityRule} rule that applies to the given interval.
    */
-  List<ReindexingGranularityRule> getGranularityRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime);
 
   /**
    * Returns ALL reindexing granularity rules.
@@ -185,15 +195,18 @@ public interface ReindexingRuleProvider
   List<ReindexingGranularityRule> getGranularityRules();
 
   /**
-   * Returns all reindexing tuning config rules that apply to the given interval.
+   * Returns the matched reindexing tuning config rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
    */
-  List<ReindexingTuningConfigRule> getTuningConfigRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime);
 
   /**
    * Returns ALL reindexing tuning config rules.

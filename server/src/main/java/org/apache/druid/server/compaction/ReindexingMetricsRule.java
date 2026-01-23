@@ -70,12 +70,6 @@ public class ReindexingMetricsRule extends AbstractReindexingRule
     this.metricsSpec = Objects.requireNonNull(metricsSpec, "metricsSpec cannot be null");
   }
 
-  @Override
-  public boolean isAdditive()
-  {
-    return false;
-  }
-
   @JsonProperty
   @Nonnull
   public AggregatorFactory[] getMetricsSpec()

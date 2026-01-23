@@ -30,19 +30,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
-import org.apache.druid.server.compaction.ReindexingDimensionsRule;
-import org.apache.druid.server.compaction.ReindexingFilterRule;
-import org.apache.druid.server.compaction.ReindexingGranularityRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
-import org.apache.druid.server.compaction.ReindexingMetricsRule;
-import org.apache.druid.server.compaction.ReindexingProjectionRule;
+import org.apache.druid.server.compaction.ReindexingConfigBuilder;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -60,7 +53,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Template to perform period-based cascading reindexing. {@link ReindexingRule} are provided by a {@link ReindexingRuleProvider}
@@ -247,16 +239,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     List<Interval> intervals = generateSearchIntervals(sortedPeriods, currentTime);
     for (Interval reindexingInterval : intervals) {
-      InlineSchemaDataSourceCompactionConfig.Builder builder = InlineSchemaDataSourceCompactionConfig.builder()
-          .forDataSource(dataSource)
-          .withTaskPriority(taskPriority)
-          .withInputSegmentSizeBytes(inputSegmentSizeBytes)
-          .withEngine(engine)
-          .withTaskContext(taskContext)
-          .withSkipOffsetFromLatest(Period.ZERO);
+      InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
 
-      // Apply all applicable reindexing rules to the builder
-      int ruleCount = applyRulesToBuilder(builder, reindexingInterval, currentTime);
+      ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(ruleProvider, reindexingInterval, currentTime);
+      int ruleCount = configBuilder.applyTo(builder);
 
       if (ruleCount > 0) {
         LOG.info("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
@@ -275,6 +261,17 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return allJobs;
   }
 
+  private InlineSchemaDataSourceCompactionConfig.Builder createBaseBuilder()
+  {
+    return InlineSchemaDataSourceCompactionConfig.builder()
+        .forDataSource(dataSource)
+        .withTaskPriority(taskPriority)
+        .withInputSegmentSizeBytes(inputSegmentSizeBytes)
+        .withEngine(engine)
+        .withTaskContext(taskContext)
+        .withSkipOffsetFromLatest(Period.ZERO);
+  }
+
   private List<Interval> generateSearchIntervals(List<Period> sortedPeriods, DateTime referenceTime)
   {
     List<Interval> intervals = new ArrayList<>(sortedPeriods.size());
@@ -289,90 +286,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       intervals.add(new Interval(start, end));
     }
     return intervals;
-  }
-
-  /**
-   * Applies all applicable reindexing rules to the builder for the given interval.
-   *
-   * @return number of rules applied
-   */
-  private int applyRulesToBuilder(
-      InlineSchemaDataSourceCompactionConfig.Builder builder,
-      Interval reindexingInterval,
-      DateTime referenceTime
-  )
-  {
-    int ruleCount = 0;
-
-    // Granularity rules (non-additive, take first)
-    List<ReindexingGranularityRule> granularityRules = ruleProvider.getGranularityRules(reindexingInterval, referenceTime);
-    if (!granularityRules.isEmpty()) {
-      LOG.info("Applying granularity rule %s for interval %s", granularityRules.get(0).getId(), reindexingInterval);
-      builder.withGranularitySpec(granularityRules.get(0).getGranularityConfig());
-      ruleCount += 1;
-    }
-
-    // Tuning config rules (non-additive, take first)
-    List<ReindexingTuningConfigRule> tuningConfigRules = ruleProvider.getTuningConfigRules(reindexingInterval, referenceTime);
-    if (!tuningConfigRules.isEmpty()) {
-      LOG.info("Applying tuning config rule %s for interval %s", tuningConfigRules.get(0).getId(), reindexingInterval);
-      builder.withTuningConfig(tuningConfigRules.get(0).getTuningConfig());
-      ruleCount += 1;
-    }
-
-    // Metrics rules (non-additive, take first)
-    List<ReindexingMetricsRule> metricsRules = ruleProvider.getMetricsRules(reindexingInterval, referenceTime);
-    if (!metricsRules.isEmpty()) {
-      LOG.info("Applying metrics rule %s for interval %s", metricsRules.get(0).getId(), reindexingInterval);
-      builder.withMetricsSpec(metricsRules.get(0).getMetricsSpec());
-      ruleCount += 1;
-    }
-
-    // Dimensions rules (non-additive, take first)
-    List<ReindexingDimensionsRule> dimensionsRules = ruleProvider.getDimensionsRules(reindexingInterval, referenceTime);
-    if (!dimensionsRules.isEmpty()) {
-      LOG.info("Applying dimensions rule %s for interval %s", dimensionsRules.get(0).getId(), reindexingInterval);
-      builder.withDimensionsSpec(dimensionsRules.get(0).getDimensionsSpec());
-      ruleCount += 1;
-    }
-
-    // IO config rules (non-additive, take first)
-    List<ReindexingIOConfigRule> ioConfigRules = ruleProvider.getIOConfigRules(reindexingInterval, referenceTime);
-    if (!ioConfigRules.isEmpty()) {
-      LOG.info("Applying IO config rule %s for interval %s", ioConfigRules.get(0).getId(), reindexingInterval);
-      builder.withIoConfig(ioConfigRules.get(0).getIoConfig());
-      ruleCount += 1;
-    }
-
-    // Projection rules (additive, combine all)
-    List<ReindexingProjectionRule> projectionRules = ruleProvider.getProjectionRules(reindexingInterval, referenceTime);
-    if (!projectionRules.isEmpty()) {
-      LOG.info("Applying [%d] projection rules for interval %s", projectionRules.size(), reindexingInterval);
-      builder.withProjections(
-          projectionRules.stream()
-                         .flatMap(rule -> rule.getProjections().stream())
-                         .collect(Collectors.toList())
-      );
-      ruleCount += projectionRules.size();
-    }
-
-    // Filter rules (additive, combine with OR and wrap in NOT)
-    List<ReindexingFilterRule> filterRules = ruleProvider.getFilterRules(reindexingInterval, referenceTime);
-    if (!filterRules.isEmpty()) {
-      LOG.info("Applying up to [%d] filter rules for interval %s", filterRules.size(), reindexingInterval);
-      List<DimFilter> removeConditions = filterRules.stream()
-                                                    .map(ReindexingFilterRule::getFilter)
-                                                    .collect(Collectors.toList());
-
-      DimFilter removeFilter = removeConditions.size() == 1
-                               ? removeConditions.get(0)
-                               : new OrDimFilter(removeConditions);
-      DimFilter finalFilter = new NotDimFilter(removeFilter);
-      builder.withTransformSpec(new CompactionTransformSpec(finalFilter));
-      ruleCount += filterRules.size();
-    }
-
-    return ruleCount;
   }
 
   private List<CompactionJob> createJobsForSearchInterval(
