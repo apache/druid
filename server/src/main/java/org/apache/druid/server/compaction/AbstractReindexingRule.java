@@ -89,18 +89,29 @@ public abstract class AbstractReindexingRule implements ReindexingRule
    * Checks if a period with variable-length components (months/years) is positive.
    *
    * @param period the period to check
-   * @return true if any component is positive
+   * @return true if any component is positive and no components are negative
    */
   private static boolean isPeriodPositive(Period period)
   {
-    return period.getYears() > 0
-           || period.getMonths() > 0
-           || period.getWeeks() > 0
-           || period.getDays() > 0
-           || period.getHours() > 0
-           || period.getMinutes() > 0
-           || period.getSeconds() > 0
-           || period.getMillis() > 0;
+    boolean hasPositiveComponent = period.getYears() > 0
+                                   || period.getMonths() > 0
+                                   || period.getWeeks() > 0
+                                   || period.getDays() > 0
+                                   || period.getHours() > 0
+                                   || period.getMinutes() > 0
+                                   || period.getSeconds() > 0
+                                   || period.getMillis() > 0;
+
+    boolean hasNegativeComponent = period.getYears() < 0
+                                   || period.getMonths() < 0
+                                   || period.getWeeks() < 0
+                                   || period.getDays() < 0
+                                   || period.getHours() < 0
+                                   || period.getMinutes() < 0
+                                   || period.getSeconds() < 0
+                                   || period.getMillis() < 0;
+
+    return hasPositiveComponent && !hasNegativeComponent;
   }
 
   @JsonProperty
