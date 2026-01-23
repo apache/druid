@@ -353,12 +353,11 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     Assert.assertEquals(116, grouper.getSize());
     Assert.assertEquals(168, grouper.getMaxSize());
 
-    // Peak usage is the sum of hash table peak and heap peak, which peak at different sizes...
-    // Hash table peak: maxSize (168) * bucketSizeWithHash
-    // Heap peak: (LIMIT + 1) * Integer.BYTES (4) = 404 (heap can temporarily have LIMIT + 1 before removing one)
     final long bucketSizeWithHash = usagePerEntry - Integer.BYTES;
     final long hashTablePeak = grouper.getMaxSize() * bucketSizeWithHash;
+    // Heap can temporarily have LIMIT + 1 before removing one
     final long heapPeak = ((long) LIMIT + 1) * Integer.BYTES;
+    // Peak usage is the sum of hash table peak and heap peak, which peak at different sizes...
     final long expectedPeakUsage = hashTablePeak + heapPeak;
 
     Assert.assertEquals(expectedPeakUsage, grouper.getMergeBufferUsedBytes());
