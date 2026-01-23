@@ -38,25 +38,26 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Optimization utilities for filter rule application during compaction.
+ * Optimization utilities for filter rule application during reindexing
  *
- * <p>When filter rules are applied incrementally (e.g., cascading reindexing,
- * conditional compaction), segments may already have some filters applied from
- * previous compaction runs. This class analyzes segment fingerprints to compute
- * the minimal set of filters still needed, avoiding redundant bitmap operations.
+ * <p>
+ * When reindexing with {@link org.apache.druid.server.compaction.ReindexingFilterRule}s, it is possible that candidate
+ * segments have already applied some or all of the filters in previous reindexing runs. Reapplying such filters would
+ * be wasteful and redundant. This class provides funcionality to optimize the set of filters to be applied by
+ * any given reindexing task.
  */
 public class ReindexingFilterRuleOptimizer
 {
   private static final Logger LOG = new Logger(ReindexingFilterRuleOptimizer.class);
 
   /**
-   * Computes the required set of filter rules to be applied for the given compaction candidate.
+   * Computes the required set of filter rules to be applied for the given {@link CompactionCandidate}.
    * <p>
    * We only want to apply the rules that have not yet been applied to all segments in the candidate. This reduces
-   * the amount of work the compaction task needs to do and avoids re-applying filters that have already been applied.
+   * the amount of work the task needs to do while processing rows during reindexing.
    * </p>
    *
-   * @param candidateSegments the compaction candidate
+   * @param candidateSegments the {@link CompactionCandidate}
    * @param expectedFilter the expected filter (as a NotDimFilter wrapping an OrDimFilter)
    * @param fingerprintMapper the fingerprint mapper to retrieve applied filters from segment fingerprints
    * @return the set of unapplied filter rules wrapped in a NotDimFilter, or null if all rules have been applied
@@ -75,7 +76,6 @@ public class ReindexingFilterRuleOptimizer
       expectedFilters = ((OrDimFilter) expectedFilter.getField()).getFields();
     }
 
-    // Collect unique fingerprints
     Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
                                                       .map(DataSegment::getIndexingStateFingerprint)
                                                       .filter(Objects::nonNull)
@@ -86,7 +86,6 @@ public class ReindexingFilterRuleOptimizer
       return expectedFilter;
     }
 
-    // Accumulate filters that haven't been applied across all fingerprints
     Set<DimFilter> unappliedRules = new HashSet<>();
 
     for (String fingerprint : uniqueFingerprints) {
@@ -97,15 +96,12 @@ public class ReindexingFilterRuleOptimizer
         return expectedFilter;
       }
 
-      // Extract applied filters from the CompactionState into a Set
       Set<DimFilter> appliedFilters = extractAppliedFilters(state);
 
-      // If transform spec or filter for the CompactionState is null, return all expected filters eagerly
       if (appliedFilters == null) {
         return expectedFilter;
       }
 
-      // Check which expected filters are NOT in the applied set and add them to unappliedRules
       for (DimFilter expected : expectedFilters) {
         if (!appliedFilters.contains(expected)) {
           unappliedRules.add(expected);
@@ -119,12 +115,10 @@ public class ReindexingFilterRuleOptimizer
         expectedFilters.size()
     );
 
-    // If all filters were applied, return null
     if (unappliedRules.isEmpty()) {
       return null;
     }
 
-    // Return the delta as NOT(OR(unapplied filters))
     return new NotDimFilter(new OrDimFilter(new ArrayList<>(unappliedRules)));
   }
 
