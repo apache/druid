@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -76,7 +77,7 @@ public final class Rows
       return Collections.emptyList();
     } else if (inputValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
-      return ((List<?>) inputValue).stream().map(v -> v == null ? null : String.valueOf(v)).collect(Collectors.toList());
+      return ((List<?>) inputValue).stream().map(Evals::asString).collect(Collectors.toList());
     } else if (inputValue instanceof byte[]) {
       byte[] array = (byte[]) inputValue;
       return objectToStringsByteA(array);
@@ -84,7 +85,7 @@ public final class Rows
       byte[] array = ((ByteBuffer) inputValue).array();
       return objectToStringsByteA(array);
     } else if (inputValue instanceof Object[]) {
-      return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
+      return Arrays.stream((Object[]) inputValue).map(Evals::asString).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

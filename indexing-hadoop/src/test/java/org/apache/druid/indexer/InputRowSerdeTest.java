@@ -282,7 +282,6 @@ public class InputRowSerdeTest
     Assert.assertEquals(result[56], TypeStrategies.IS_NULL_BYTE);
   }
 
-
   @Test
   public void testMultiValueDimensionWithNulls()
   {
@@ -311,44 +310,7 @@ public class InputRowSerdeTest
         new AggregatorFactory[0]
     );
 
-    // Null values in multi-value dimensions should be preserved (matching native batch behavior)
-    List<String> dimValues = out.getDimension("d1");
-    Assert.assertEquals(3, dimValues.size());
-    Assert.assertTrue(dimValues.contains("a"));
-    Assert.assertTrue(dimValues.contains("b"));
-    Assert.assertTrue(dimValues.contains(null)); // null is preserved
-    Assert.assertFalse(dimValues.contains("null"));
-  }
-
-  @Test
-  public void testMultiValueDimensionWithNulls_sqlCompatibleMode()
-  {
-    HashMap<String, Object> eventWithNullInMultiValue = new HashMap<>();
-    eventWithNullInMultiValue.put("d1", Arrays.asList("a", "b", null));
-
-    InputRow in = new MapBasedInputRow(
-        timestamp,
-        ImmutableList.of("d1"),
-        eventWithNullInMultiValue
-    );
-
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(
-        Collections.singletonList(new StringDimensionSchema("d1"))
-    );
-
-    byte[] data = InputRowSerde.toBytes(
-        InputRowSerde.getTypeHelperMap(dimensionsSpec),
-        in,
-        new AggregatorFactory[0]
-    ).getSerializedRow();
-
-    InputRow out = InputRowSerde.fromBytes(
-        InputRowSerde.getTypeHelperMap(dimensionsSpec),
-        data,
-        new AggregatorFactory[0]
-    );
-
-    // In SQL-compatible mode, null should be preserved
+    // null should be preserved
     List<String> dimValues = out.getDimension("d1");
     Assert.assertEquals(3, dimValues.size());
     Assert.assertTrue(dimValues.contains("a"));
@@ -363,7 +325,7 @@ public class InputRowSerdeTest
   }
 
   @Test
-  public void testMultiValueDimensionWithMultipleNulls_sqlCompatibleMode()
+  public void testMultiValueDimensionWithMultipleNulls()
   {
 
     HashMap<String, Object> eventWithNullInMultiValue = new HashMap<>();
@@ -391,7 +353,7 @@ public class InputRowSerdeTest
         new AggregatorFactory[0]
     );
 
-    // In SQL-compatible mode, all nulls should be preserved
+    // all nulls should be preserved
     Object rawValue = out.getRaw("d1");
     Assert.assertTrue(rawValue instanceof List);
     @SuppressWarnings("unchecked")
@@ -405,7 +367,88 @@ public class InputRowSerdeTest
   }
 
   @Test
-  public void testSerdeRoundTrip_sqlCompatibleMode()
+  public void testSingleNullMultiValueDimension()
+  {
+    // Test [null] - a single-element multi-value dimension containing only null
+    HashMap<String, Object> eventWithSingleNull = new HashMap<>();
+    eventWithSingleNull.put("d1", Collections.singletonList(null));
+
+    InputRow in = new MapBasedInputRow(
+        timestamp,
+        ImmutableList.of("d1"),
+        eventWithSingleNull
+    );
+
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Collections.singletonList(new StringDimensionSchema("d1"))
+    );
+
+    byte[] data = InputRowSerde.toBytes(
+        InputRowSerde.getTypeHelperMap(dimensionsSpec),
+        in,
+        new AggregatorFactory[0]
+    ).getSerializedRow();
+
+    InputRow out = InputRowSerde.fromBytes(
+        InputRowSerde.getTypeHelperMap(dimensionsSpec),
+        data,
+        new AggregatorFactory[0]
+    );
+
+    // [null] should be preserved as a single-element list containing null
+    Object rawValue = out.getRaw("d1");
+    Assert.assertNotNull(rawValue);
+    Assert.assertTrue(rawValue instanceof List);
+    @SuppressWarnings("unchecked")
+    List<String> rawList = (List<String>) rawValue;
+    Assert.assertEquals(1, rawList.size());
+    Assert.assertNull(rawList.get(0));
+  }
+
+  @Test
+  public void testNullStringColumn()
+  {
+    // Test a dimension with null value (not a list, just null)
+    HashMap<String, Object> eventWithNullColumn = new HashMap<>();
+    eventWithNullColumn.put("d1", null);
+    eventWithNullColumn.put("d2", "valid_value");
+
+    InputRow in = new MapBasedInputRow(
+        timestamp,
+        ImmutableList.of("d1", "d2"),
+        eventWithNullColumn
+    );
+
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2")
+        )
+    );
+
+    byte[] data = InputRowSerde.toBytes(
+        InputRowSerde.getTypeHelperMap(dimensionsSpec),
+        in,
+        new AggregatorFactory[0]
+    ).getSerializedRow();
+
+    InputRow out = InputRowSerde.fromBytes(
+        InputRowSerde.getTypeHelperMap(dimensionsSpec),
+        data,
+        new AggregatorFactory[0]
+    );
+
+    // Null column should result in empty list from getDimension()
+    Assert.assertEquals(Collections.emptyList(), out.getDimension("d1"));
+    // getRaw should return null for the null column
+    Assert.assertNull(out.getRaw("d1"));
+    // d2 should be preserved normally
+    Assert.assertEquals(ImmutableList.of("valid_value"), out.getDimension("d2"));
+    Assert.assertEquals("valid_value", out.getRaw("d2"));
+  }
+
+  @Test
+  public void testSerdeRoundTrip()
   {
     HashMap<String, Object> event = new HashMap<>();
     event.put("d1", "single_value");
