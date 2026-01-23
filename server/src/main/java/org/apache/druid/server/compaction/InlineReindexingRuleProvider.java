@@ -22,12 +22,12 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.jetbrains.annotations.NotNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -180,7 +180,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public @NotNull List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
+  @Nonnull
+  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     return Stream.of(
                      reindexingFilterRules,

@@ -145,6 +145,9 @@ public abstract class AbstractReindexingRule implements ReindexingRule
     }
   }
 
+  /**
+   * Checks if a period contains months or years components which have variable lenghts and require special handling
+   */
   private static boolean hasMonthsOrYears(Period period)
   {
     return period.getYears() != 0 || period.getMonths() != 0;

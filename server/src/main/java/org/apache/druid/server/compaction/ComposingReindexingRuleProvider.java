@@ -26,8 +26,8 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -126,7 +126,8 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public @NotNull List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
+  @Nonnull
+  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     // Collect all unique periods from all providers, sorted ascending
     return providers.stream()
