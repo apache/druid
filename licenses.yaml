@@ -5110,7 +5110,7 @@ name: Testcontainers
 license_category: binary
 module: extensions-core/druid-testcontainers
 license_name: MIT License
-version: 1.21.3
+version: 2.0.3
 libraries:
   - org.testcontainers: testcontainers
 
