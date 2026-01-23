@@ -244,7 +244,7 @@ public abstract class ResponseContext
    */
   public static class LongKey extends AbstractKey
   {
-    LongKey(String name, boolean inHeader)
+    public LongKey(String name, boolean inHeader)
     {
       super(name, inHeader, false, Long.class);
     }

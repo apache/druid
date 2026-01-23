@@ -88,8 +88,7 @@ import java.util.function.BinaryOperator;
 public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupByQuery>
 {
   private static final byte GROUPBY_QUERY = 0x14;
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<>() {};
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>() {};
   private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GroupingEngine groupingEngine;
@@ -110,22 +109,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool,
         new GroupByStatsProvider()
-    );
-  }
-
-  @VisibleForTesting
-  public GroupByQueryQueryToolChest(
-      GroupingEngine groupingEngine,
-      GroupByResourcesReservationPool groupByResourcesReservationPool,
-      GroupByStatsProvider groupByStatsProvider
-  )
-  {
-    this(
-        groupingEngine,
-        GroupByQueryConfig::new,
-        DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool,
-        groupByStatsProvider
     );
   }
 
@@ -151,7 +134,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     return mergeResults(runner, true);
   }
 
-
   @Override
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean willMergeRunner)
   {
@@ -160,8 +142,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         return runner.run(queryPlus, responseContext);
       }
 
-      final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, willMergeRunner);
+      return initAndMergeGroupByResults(queryPlus, runner, responseContext, willMergeRunner);
     };
   }
 
@@ -178,23 +159,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   private Sequence<ResultRow> initAndMergeGroupByResults(
-      final GroupByQuery query,
+      QueryPlus<ResultRow> queryPlus,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
       boolean willMergeRunner
   )
   {
+    final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
+    boolean reportMetricsForEmission = queryPlus.getQueryMetrics() != null;
+
     // Reserve the group by resources (merge buffers) required for executing the query
     final QueryResourceId queryResourceId = query.context().getQueryResourceId();
-    final GroupByStatsProvider.PerQueryStats perQueryStats =
-        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
 
-    groupByResourcesReservationPool.reserve(
-        queryResourceId,
-        query,
-        willMergeRunner,
-        perQueryStats
-    );
+    long startNs = System.nanoTime();
+    groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
+    context.add(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY, System.nanoTime() - startNs);
 
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
@@ -206,18 +185,19 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     try {
       Closer closer = Closer.create();
 
-      final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
-          query,
-          resource,
-          runner,
-          context,
-          closer,
-          perQueryStats
-      );
+      final Sequence<ResultRow> mergedSequence = mergeGroupByResults(query, resource, runner, context, closer);
 
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
-      closer.register(() -> groupByStatsProvider.closeQuery(query.context().getQueryResourceId()));
+
+      if (reportMetricsForEmission) {
+        closer.register(() -> {
+          GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+          populateQueryMetrics(queryMetrics, context);
+          groupByStatsProvider.aggregateStats(queryMetrics);
+        });
+      }
+
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
@@ -227,19 +207,39 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     }
   }
 
+  private void populateQueryMetrics(GroupByQueryMetrics queryMetrics, ResponseContext context)
+  {
+    Object bytesSpilledToStorage = context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY);
+
+    if (bytesSpilledToStorage != null) {
+      queryMetrics.bytesSpilledToStorage((Long) bytesSpilledToStorage);
+    }
+
+    Object mergeDictionarySize = context.get(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY);
+
+    if (mergeDictionarySize != null) {
+      queryMetrics.mergeDictionarySize((Long) mergeDictionarySize);
+    }
+
+    Object mergeBufferAcquisitionTime = context.get(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY);
+
+    if (mergeBufferAcquisitionTime != null) {
+      queryMetrics.mergeBufferAcquisitionTime((Long) mergeBufferAcquisitionTime);
+    }
+  }
+
   private Sequence<ResultRow> mergeGroupByResults(
       final GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
-      Closer closer,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      Closer closer
   )
   {
     if (isNestedQueryPushDown(query)) {
-      return mergeResultsWithNestedQueryPushDown(query, resource, runner, context, perQueryStats);
+      return mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
     }
-    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context, closer, perQueryStats);
+    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context, closer);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
@@ -247,88 +247,68 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
-      Closer closer,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      Closer closer
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
+    final DataSource maybeQueryDataSource = query.getDataSource();
 
-    final DataSource dataSource = query.getDataSource();
-
-    if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery subquery;
-      try {
-        // Inject outer query context keys into subquery if they don't already exist in the subquery context.
-        // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
-        final Map<String, Object> subqueryContext = new TreeMap<>();
-        if (query.getContext() != null) {
-          for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
-            if (entry.getValue() != null) {
-              subqueryContext.put(entry.getKey(), entry.getValue());
-            }
-          }
-        }
-        if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
-          subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
-        }
-        subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
-        subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
-
-        closer.register(() -> groupByStatsProvider.closeQuery(subquery.context().getQueryResourceId()));
-      }
-      catch (ClassCastException e) {
-        throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
-      }
-
-      final Sequence<ResultRow> subqueryResult = mergeGroupByResults(
-          subquery,
-          resource,
-          runner,
-          context,
-          closer,
-          perQueryStats
-      );
-
-      final Sequence<ResultRow> finalizingResults = finalizeSubqueryResults(subqueryResult, subquery);
-
-      if (query.getSubtotalsSpec() != null) {
-        return groupingEngine.processSubtotalsSpec(
-            query,
-            resource,
-            groupingEngine.processSubqueryResult(
-                subquery,
-                query, resource,
-                finalizingResults,
-                false,
-                perQueryStats
-            ),
-            perQueryStats
-        );
+    if (!(maybeQueryDataSource instanceof QueryDataSource)) {
+      if (query.getSubtotalsSpec() == null) {
+        Sequence<ResultRow> mergedResults = groupingEngine.mergeResults(runner, query, context);
+        return groupingEngine.applyPostProcessing(mergedResults, query);
       } else {
-        return groupingEngine.applyPostProcessing(
-            groupingEngine.processSubqueryResult(
-                subquery,
-                query,
-                resource,
-                finalizingResults,
-                false,
-                perQueryStats
-            ),
-            query
-        );
+        Sequence<ResultRow> mergedResults = groupingEngine.mergeResults(runner, query.withSubtotalsSpec(null), context);
+        return groupingEngine.processSubtotalsSpec(query, resource, mergedResults, context);
       }
+    }
 
+    final QueryDataSource dataSource = (QueryDataSource) maybeQueryDataSource;
+    // Inject outer query context keys into subquery if they don't already exist in the subquery context.
+    // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
+    final Map<String, Object> subqueryContext = new TreeMap<>();
+    if (query.getContext() != null) {
+      for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
+        if (entry.getValue() != null) {
+          subqueryContext.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+    if (dataSource.getQuery().getContext() != null) {
+      subqueryContext.putAll(dataSource.getQuery().getContext());
+    }
+    subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+
+    final GroupByQuery subquery;
+    try {
+      subquery = (GroupByQuery) dataSource.getQuery().withOverriddenContext(subqueryContext);
+    }
+    catch (ClassCastException e) {
+      throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
+    }
+
+    final Sequence<ResultRow> subqueryResult = mergeGroupByResults(
+        subquery,
+        resource,
+        runner,
+        context,
+        closer
+    );
+
+    final Sequence<ResultRow> finalizingResults = finalizeSubqueryResults(subqueryResult, subquery);
+    final Sequence<ResultRow> processedSubqueryResults = groupingEngine.processSubqueryResult(
+        subquery,
+        query,
+        resource,
+        context,
+        finalizingResults,
+        false
+    );
+
+    if (query.getSubtotalsSpec() == null) {
+      return groupingEngine.applyPostProcessing(processedSubqueryResults, query);
     } else {
-      if (query.getSubtotalsSpec() != null) {
-        return groupingEngine.processSubtotalsSpec(
-            query,
-            resource,
-            groupingEngine.mergeResults(runner, query.withSubtotalsSpec(null), context),
-            perQueryStats
-        );
-      } else {
-        return groupingEngine.applyPostProcessing(groupingEngine.mergeResults(runner, query, context), query);
-      }
+      return groupingEngine.processSubtotalsSpec(query, resource, processedSubqueryResults, context);
     }
   }
 
@@ -336,24 +316,23 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
-      ResponseContext context,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      ResponseContext context
   )
   {
     Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(runner, query, context);
+
     final Sequence<ResultRow> finalizedResults = finalizeSubqueryResults(pushDownQueryResults, query);
-    GroupByQuery rewrittenQuery = rewriteNestedQueryForPushDown(query);
-    return groupingEngine.applyPostProcessing(
-        groupingEngine.processSubqueryResult(
-            query,
-            rewrittenQuery,
-            resource,
-            finalizedResults,
-            true,
-            perQueryStats
-        ),
-        query
+
+    Sequence<ResultRow> processedSubqueryResult = groupingEngine.processSubqueryResult(
+        query,
+        rewriteNestedQueryForPushDown(query),
+        resource,
+        context,
+        finalizedResults,
+        true
     );
+
+    return groupingEngine.applyPostProcessing(processedSubqueryResult, query);
   }
 
   /**
@@ -363,7 +342,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @VisibleForTesting
   GroupByQuery rewriteNestedQueryForPushDown(GroupByQuery query)
   {
-    return query.withAggregatorSpecs(Lists.transform(query.getAggregatorSpecs(), (agg) -> agg.getCombiningFactory()))
+    return query.withAggregatorSpecs(Lists.transform(query.getAggregatorSpecs(), AggregatorFactory::getCombiningFactory))
                 .withDimensionSpecs(Lists.transform(
                     query.getDimensions(),
                     (dim) -> new DefaultDimensionSpec(
@@ -376,19 +355,14 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
   private Sequence<ResultRow> finalizeSubqueryResults(Sequence<ResultRow> subqueryResult, GroupByQuery subquery)
   {
-    final Sequence<ResultRow> finalizingResults;
     if (subquery.context().isFinalize(false)) {
-      finalizingResults = new MappedSequence<>(
+      return new MappedSequence<>(
           subqueryResult,
-          makePreComputeManipulatorFn(
-              subquery,
-              MetricManipulatorFns.finalizing()
-          )::apply
+          makePreComputeManipulatorFn(subquery, MetricManipulatorFns.finalizing())::apply
       );
     } else {
-      finalizingResults = subqueryResult;
+      return subqueryResult;
     }
-    return finalizingResults;
   }
 
   public static boolean isNestedQueryPushDown(GroupByQuery q)
@@ -516,7 +490,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 dimensionSpecs.add(dimensionSpec);
               }
             }
-
+             // TODO: Do I need to aggregate the responseContext for the subquery?
             return runner.run(
                 queryPlus.withQuery(groupByQuery.withDimensionSpecs(dimensionSpecs)),
                 responseContext

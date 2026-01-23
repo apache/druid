@@ -120,7 +120,6 @@ public class GroupingEngine
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
-  private final GroupByStatsProvider groupByStatsProvider;
 
   @Inject
   public GroupingEngine(
@@ -129,8 +128,7 @@ public class GroupingEngine
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
-      QueryWatcher queryWatcher,
-      GroupByStatsProvider groupByStatsProvider
+      QueryWatcher queryWatcher
   )
   {
     this.processingConfig = processingConfig;
@@ -139,7 +137,6 @@ public class GroupingEngine
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
-    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   /**
@@ -454,8 +451,7 @@ public class GroupingEngine
         processingConfig.getNumThreads(),
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
-        processingConfig.getTmpDir(),
-        groupByStatsProvider
+        processingConfig.getTmpDir()
     );
   }
 
@@ -587,9 +583,9 @@ public class GroupingEngine
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResources resource,
+      ResponseContext context,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      boolean wasQueryPushedDown
   )
   {
     // Keep a reference to resultSupplier outside the "try" so we can close it if something goes wrong
@@ -621,10 +617,10 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
+          context,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes(),
-          perQueryStats
+          processingConfig.intermediateComputeSizeBytes()
       );
 
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
@@ -648,6 +644,7 @@ public class GroupingEngine
    * @param query       query that has a "subtotalsSpec"
    * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param queryResult result rows from the main query
+   * @param context     response context for collating query metrics
    *
    * @return results for each list of subtotals in the query, concatenated together
    */
@@ -655,7 +652,7 @@ public class GroupingEngine
       GroupByQuery query,
       GroupByQueryResources resource,
       Sequence<ResultRow> queryResult,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      ResponseContext context
   )
   {
     // How it works?
@@ -704,10 +701,10 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
+          context,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes(),
-          perQueryStats
+          processingConfig.intermediateComputeSizeBytes()
       );
 
       List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
@@ -743,8 +740,7 @@ public class GroupingEngine
           subtotalQueryLimitSpec = baseSubtotalQuery.getLimitSpec().filterColumns(columns);
         }
 
-        GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec);
+        GroupByQuery subtotalQuery = baseSubtotalQuery.withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
@@ -767,10 +763,10 @@ public class GroupingEngine
               configSupplier.get(),
               processingConfig,
               resource,
+              context,
               spillMapper,
               processingConfig.getTmpDir(),
-              processingConfig.intermediateComputeSizeBytes(),
-              perQueryStats
+              processingConfig.intermediateComputeSizeBytes()
           );
 
           subtotalsResults.add(
@@ -849,7 +845,7 @@ public class GroupingEngine
 
   private Set<String> getAggregatorAndPostAggregatorNames(GroupByQuery query)
   {
-    Set<String> aggsAndPostAggs = new HashSet();
+    Set<String> aggsAndPostAggs = new HashSet<>();
     if (query.getAggregatorSpecs() != null) {
       for (AggregatorFactory af : query.getAggregatorSpecs()) {
         aggsAndPostAggs.add(af.getName());
@@ -1005,10 +1001,7 @@ public class GroupingEngine
     if (!query.getDimensions().isEmpty() || query.hasDroppedDimensions()) {
       return false;
     }
-    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
-      return false;
-    }
-    return true;
+    return !query.getGranularity().isFinerThan(Granularities.ALL);
   }
 
   private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)

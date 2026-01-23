@@ -38,7 +38,6 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -49,6 +48,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -95,7 +95,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
-  private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private volatile boolean initialized = false;
 
@@ -115,8 +114,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService executor,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final long queryTimeoutAt
   )
   {
     this(
@@ -140,8 +138,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         queryTimeoutAt,
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
-        groupByQueryConfig.isMergeThreadLocal(),
-        perQueryStats
+        groupByQueryConfig.isMergeThreadLocal()
     );
   }
 
@@ -166,8 +163,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final long queryTimeoutAt,
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
-      final boolean mergeThreadLocal,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final boolean mergeThreadLocal
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -217,7 +213,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
-    this.perQueryStats = perQueryStats;
   }
 
   @Override
@@ -231,23 +226,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
           for (int i = 0; i < concurrencyHint; i++) {
             final ByteBuffer slice = Groupers.getSlice(buffer, sliceSize, i);
-            final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
-                Suppliers.ofInstance(slice),
-                keySerdeFactory,
-                columnSelectorFactory,
-                aggregatorFactories,
-                bufferGrouperMaxSize,
-                bufferGrouperMaxLoadFactor,
-                bufferGrouperInitialBuckets,
-                temporaryStorage,
-                spillMapper,
-                false,
-                limitSpec,
-                sortHasNonGroupingFields,
-                sliceSize,
-                perQueryStats
-            );
-            grouper.init();
+            final SpillingGrouper<KeyType> grouper = generateSpillingGrouperWithBufferSlice(slice, sliceSize);
             groupers.add(grouper);
 
             if (mergeThreadLocal) {
@@ -259,6 +238,27 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         }
       }
     }
+  }
+
+  private SpillingGrouper<KeyType> generateSpillingGrouperWithBufferSlice(ByteBuffer slice, int sliceSize)
+  {
+    final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
+        Suppliers.ofInstance(slice),
+        keySerdeFactory,
+        columnSelectorFactory,
+        aggregatorFactories,
+        bufferGrouperMaxSize,
+        bufferGrouperMaxLoadFactor,
+        bufferGrouperInitialBuckets,
+        temporaryStorage,
+        spillMapper,
+        false,
+        limitSpec,
+        sortHasNonGroupingFields,
+        sliceSize
+    );
+    grouper.init();
+    return grouper;
   }
 
   @Override
@@ -492,11 +492,19 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
+  public Map<String, Long> getQueryMetricsMap()
+  {
+    return groupers.stream()
+                   .flatMap(grouper -> grouper.getQueryMetricsMap().entrySet().stream())
+                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Long::sum));
+  }
+
+  @Override
   public void close()
   {
     if (!closed) {
       closed = true;
-      groupers.forEach(Grouper::close);
+      groupers.forEach(SpillingGrouper::close);
     }
   }
 

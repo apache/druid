@@ -58,4 +58,49 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   {
     //Don't emit by default
   }
+
+  @Override
+  public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
+  {
+    reportMetric("mergeBufferAcquisitionTime", mergeBufferAcquisitionTime);
+    this.mergeBufferAcquisitonTime = mergeBufferAcquisitionTime;
+  }
+
+  @Override
+  public void bytesSpilledToStorage(long bytesSpilledToStorage)
+  {
+    reportMetric("bytesSpilledToStorage", bytesSpilledToStorage);
+    this.bytesSpilledToStorage = bytesSpilledToStorage;
+  }
+
+  @Override
+  public void mergeDictionarySize(long mergeDictionarySize)
+  {
+    reportMetric("mergeDictionarySize", mergeDictionarySize);
+    this.mergeDictionarySize = mergeDictionarySize;
+  }
+
+  // The following are used for channeling the metrics to GroupByStatsMonitor.
+  // We can remove these methods should we decide to sunset the GroupByStatsMonitor.
+  private long mergeBufferAcquisitonTime = 0L;
+  private long bytesSpilledToStorage = 0L;
+  private long mergeDictionarySize = 0L;
+
+  @Override
+  public long getSpilledBytes()
+  {
+    return bytesSpilledToStorage;
+  }
+
+  @Override
+  public long getMergeDictionarySize()
+  {
+    return mergeDictionarySize;
+  }
+
+  @Override
+  public long getMergeBufferAcquisitionTime()
+  {
+    return mergeBufferAcquisitonTime;
+  }
 }

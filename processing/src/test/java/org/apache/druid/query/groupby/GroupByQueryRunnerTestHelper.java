@@ -66,18 +66,28 @@ public class GroupByQueryRunnerTestHelper
       ServiceEmitter serviceEmitter
   )
   {
+    QueryToolChest toolChest = factory.getToolchest();
     MetricsEmittingQueryRunner<ResultRow> metricsEmittingQueryRunner =
         new MetricsEmittingQueryRunner<ResultRow>(
             serviceEmitter,
-            factory.getToolchest(),
+            toolChest,
             runner,
-            (obj, lng) -> {},
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
             (metrics) -> {}
         ).withWaitMeasuredFromNow();
-    QueryToolChest toolChest = factory.getToolchest();
-    QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
+
+    QueryRunner<T> finalizeResultsQueryRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(metricsEmittingQueryRunner)),
         toolChest
+    );
+
+    QueryRunner<T> theRunner = new MetricsEmittingQueryRunner<>(
+        serviceEmitter,
+        toolChest,
+        finalizeResultsQueryRunner,
+        MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+        (queryMetrics -> {
+        })
     );
 
     return theRunner.run(QueryPlus.wrap(populateResourceId(query))).toList();

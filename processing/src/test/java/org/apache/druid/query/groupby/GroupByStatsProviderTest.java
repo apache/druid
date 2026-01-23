@@ -19,52 +19,53 @@
 
 package org.apache.druid.query.groupby;
 
-import org.apache.druid.query.QueryResourceId;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class GroupByStatsProviderTest
 {
   @Test
-  public void testMetricCollection()
+  public void testAggregateStatsFromQueryMetrics()
   {
     GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
-    QueryResourceId id1 = new QueryResourceId("q1");
-    GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(id1);
+    DefaultGroupByQueryMetrics metricsWithAllStats = new DefaultGroupByQueryMetrics();
+    metricsWithAllStats.mergeBufferAcquisitionTime(100L);
+    metricsWithAllStats.bytesSpilledToStorage(2_048L);
+    metricsWithAllStats.mergeDictionarySize(10L);
 
-    stats1.mergeBufferAcquisitionTime(300);
-    stats1.mergeBufferAcquisitionTime(400);
-    stats1.spilledBytes(200);
-    stats1.spilledBytes(400);
-    stats1.dictionarySize(100);
-    stats1.dictionarySize(200);
+    DefaultGroupByQueryMetrics metricsWithPartialStats = new DefaultGroupByQueryMetrics();
+    metricsWithPartialStats.bytesSpilledToStorage(1_024L);
+    metricsWithPartialStats.mergeDictionarySize(5L);
 
-    QueryResourceId id2 = new QueryResourceId("q2");
-    GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(id2);
+    statsProvider.aggregateStats(metricsWithAllStats);
+    statsProvider.aggregateStats(metricsWithPartialStats);
 
-    stats2.mergeBufferAcquisitionTime(500);
-    stats2.mergeBufferAcquisitionTime(600);
-    stats2.spilledBytes(400);
-    stats2.spilledBytes(600);
-    stats2.dictionarySize(300);
-    stats2.dictionarySize(400);
+    GroupByStatsProvider.AggregateStats stats = statsProvider.getStatsSince();
 
-    GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
-    Assert.assertEquals(0L, aggregateStats.getMergeBufferQueries());
-    Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
-    Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
-    Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
-    Assert.assertEquals(0L, aggregateStats.getMergeDictionarySize());
+    Assert.assertEquals(1, stats.getMergeBufferQueries());
+    Assert.assertEquals(100L, stats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(2, stats.getSpilledQueries());
+    Assert.assertEquals(3_072L, stats.getSpilledBytes());
+    Assert.assertEquals(15L, stats.getMergeDictionarySize());
+  }
 
-    statsProvider.closeQuery(id1);
-    statsProvider.closeQuery(id2);
+  @Test
+  public void testGetStatsSinceResetsCounters()
+  {
+    GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
-    aggregateStats = statsProvider.getStatsSince();
-    Assert.assertEquals(2, aggregateStats.getMergeBufferQueries());
-    Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
-    Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
-    Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());
-    Assert.assertEquals(1000L, aggregateStats.getMergeDictionarySize());
+    DefaultGroupByQueryMetrics metrics = new DefaultGroupByQueryMetrics();
+    metrics.bytesSpilledToStorage(512L);
+    metrics.mergeDictionarySize(7L);
+    statsProvider.aggregateStats(metrics);
+
+    Assert.assertEquals(512L, statsProvider.getStatsSince().getSpilledBytes());
+
+    GroupByStatsProvider.AggregateStats reset = statsProvider.getStatsSince();
+    Assert.assertEquals(0L, reset.getMergeBufferQueries());
+    Assert.assertEquals(0L, reset.getSpilledQueries());
+    Assert.assertEquals(0L, reset.getSpilledBytes());
+    Assert.assertEquals(0L, reset.getMergeDictionarySize());
   }
 }
