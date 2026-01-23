@@ -27,6 +27,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
@@ -88,7 +89,14 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final int maxNumEntries = ((Number) RexLiteral.value(maxNumEntriesOperand)).intValue();
+    final Object maxNumEntriesValue = RexLiteral.value(maxNumEntriesOperand);
+    if (!(maxNumEntriesValue instanceof Number)) {
+      throw InvalidSqlInput.exception(
+          "BLOOM_FILTER maxNumEntries parameter must be a numeric literal, got %s",
+          maxNumEntriesValue == null ? "NULL" : maxNumEntriesValue.getClass().getSimpleName()
+      );
+    }
+    final int maxNumEntries = ((Number) maxNumEntriesValue).intValue();
 
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {

@@ -30,6 +30,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogram;
@@ -91,7 +92,14 @@ public class QuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
+    final Object probabilityValue = RexLiteral.value(probabilityArg);
+    if (!(probabilityValue instanceof Number)) {
+      throw InvalidSqlInput.exception(
+          "APPROX_QUANTILE probability parameter must be a numeric literal, got %s",
+          probabilityValue == null ? "NULL" : probabilityValue.getClass().getSimpleName()
+      );
+    }
+    final float probability = ((Number) probabilityValue).floatValue();
     final int resolution;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -102,7 +110,14 @@ public class QuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      resolution = ((Number) RexLiteral.value(resolutionArg)).intValue();
+      final Object resolutionValue = RexLiteral.value(resolutionArg);
+      if (!(resolutionValue instanceof Number)) {
+        throw InvalidSqlInput.exception(
+            "APPROX_QUANTILE resolution parameter must be a numeric literal, got %s",
+            resolutionValue == null ? "NULL" : resolutionValue.getClass().getSimpleName()
+        );
+      }
+      resolution = ((Number) resolutionValue).intValue();
     } else {
       resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
     }

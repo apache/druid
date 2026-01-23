@@ -29,7 +29,9 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -550,5 +552,34 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[]{null, null, null})
     );
+  }
+
+  @Test
+  public void testSpectatorPercentileWithStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT SPECTATOR_PERCENTILE(histogram_metric, '99.99') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      throw new AssertionError("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      if (e.getTargetPersona() != DruidException.Persona.USER) {
+        throw new AssertionError(
+            StringUtils.format("Expected USER persona but got %s", e.getTargetPersona())
+        );
+      }
+      if (e.getCategory() != DruidException.Category.INVALID_INPUT) {
+        throw new AssertionError(
+            StringUtils.format("Expected INVALID_INPUT category but got %s", e.getCategory())
+        );
+      }
+      if (!e.getMessage().contains("must be a numeric literal")) {
+        throw new AssertionError(
+            StringUtils.format("Expected message about numeric literal but got: %s", e.getMessage())
+        );
+      }
+    }
   }
 }

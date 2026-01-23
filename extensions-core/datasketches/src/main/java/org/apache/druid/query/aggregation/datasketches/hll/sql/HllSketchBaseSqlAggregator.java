@@ -24,6 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -92,7 +93,14 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      logK = ((Number) RexLiteral.value(logKarg)).intValue();
+      final Object logKValue = RexLiteral.value(logKarg);
+      if (!(logKValue instanceof Number)) {
+        throw InvalidSqlInput.exception(
+            "DS_HLL logK parameter must be a numeric literal, got %s",
+            logKValue == null ? "NULL" : logKValue.getClass().getSimpleName()
+        );
+      }
+      logK = ((Number) logKValue).intValue();
     } else {
       logK = HllSketchAggregatorFactory.DEFAULT_LG_K;
     }
