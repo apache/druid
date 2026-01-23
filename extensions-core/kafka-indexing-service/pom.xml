@@ -223,7 +223,7 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>kafka</artifactId>
+      <artifactId>testcontainers-kafka</artifactId>
       <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
