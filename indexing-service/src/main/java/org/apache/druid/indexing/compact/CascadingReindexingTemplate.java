@@ -180,7 +180,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       if (shouldOptimizeFilterRules(candidate, config)) {
 
         // Compute the minimal set of filter rules needed for this candidate
-        NotDimFilter reducedTransformSpecFilter = ReindexingFilterRule.computeRequiredSetOfFilterRulesForCandidate(
+        NotDimFilter reducedTransformSpecFilter = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
             candidate,
             (NotDimFilter) config.getTransformSpec().getFilter(),
             params.getFingerprintMapper()
@@ -389,7 +389,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   @Override
-  public CompactionState toCompactionState() {
+  public CompactionState toCompactionState()
+  {
     throw new UnsupportedOperationException("CascadingReindexingTemplate cannot be transformed to a CompactionState object");
   }
 
