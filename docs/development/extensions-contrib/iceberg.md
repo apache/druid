@@ -139,6 +139,37 @@ java \
 
 See [Loading community extensions](../../configuration/extensions.md#loading-community-extensions) for more information.
 
+## Residual filter handling
+
+When an Iceberg filter is applied on a non-partition column, the filtering happens at the file metadata level only (using column statistics). Files that might contain matching rows are returned, but these files may include "residual" rows that don't actually match the filter. These residual rows would be ingested unless filtered by a `transformSpec` filter on the Druid side.
+
+To control this behavior, you can set the `residualFilterMode` property on the Iceberg input source:
+
+| Mode | Description |
+|------|-------------|
+| `ignore` | Default. Residual rows are ingested unless filtered by `transformSpec`. |
+| `warn` | Log a warning when residual filters are detected, but continue with ingestion. |
+| `fail` | Fail the ingestion job when residual filters are detected. Use this to ensure that filters only target partition columns. |
+
+Example:
+```json
+{
+  "type": "iceberg",
+  "tableName": "events",
+  "namespace": "analytics",
+  "icebergCatalog": { ... },
+  "icebergFilter": {
+    "type": "timeWindow",
+    "filterColumn": "event_time",
+    "lookbackDuration": "P1D"
+  },
+  "residualFilterMode": "fail",
+  "warehouseSource": { ... }
+}
+```
+
+When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
+
 ## Known limitations
 
 This section lists the known limitations that apply to the Iceberg extension.

@@ -1063,6 +1063,7 @@ The following is a sample spec for a S3 warehouse source:
 |icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table.|yes|
 |warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
 |snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
+|residualFilterMode|Controls how residual filters are handled when filtering on non-partition columns. When an Iceberg filter targets a non-partition column, files may contain rows that don't match the filter (residual rows). Valid values are: `ignore` (default, ingest all rows), `warn` (log a warning but continue), `fail` (fail the ingestion job). Use `fail` to ensure filters only target partition columns.|no|
 
 ### Catalog Object
 
