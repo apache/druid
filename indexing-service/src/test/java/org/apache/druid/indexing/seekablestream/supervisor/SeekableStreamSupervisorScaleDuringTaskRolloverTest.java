@@ -88,7 +88,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     Assert.assertEquals(
         "Task count should not change when rolloverTaskCount <= 0",
         beforeTaskCount,
-        (int) supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart()
+        (int) supervisor.getIoConfig().getTaskCount()
     );
   }
 
@@ -116,7 +116,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     Assert.assertEquals(
         "Task count should be updated to " + targetTaskCount + " when rolloverTaskCount > 0",
         targetTaskCount,
-        (int) supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart()
+        (int) supervisor.getIoConfig().getTaskCount()
     );
   }
 
@@ -144,7 +144,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     Assert.assertEquals(
         "Task count should not change when rolloverTaskCount is 0",
         beforeTaskCount,
-        (int) supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart()
+        (int) supervisor.getIoConfig().getTaskCount()
     );
   }
 

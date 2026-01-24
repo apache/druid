@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import it.unimi.dsi.fastutil.ints.IntArraySet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -33,9 +35,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -57,10 +57,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   private static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
   private static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+  /**
+   * Defines the step size used for evaluating lag when computing scaling actions.
+   * This constant helps control the granularity of lag considerations in scaling decisions,
+   * ensuring smoother transitions between scaled states and avoiding abrupt changes in task counts.
+   */
   private static final int LAG_STEP = 100_000;
+  /**
+   * This parameter fine-tunes autoscaling behavior by adding extra flexibility
+   * when calculating maximum allowable partitions per task in response to lag,
+   * which must be processed as fast, as possible.
+   * It acts as a foundational factor that balances the responsiveness and stability of autoscaling.
+   */
   private static final int BASE_RAW_EXTRA = 5;
-  static final int LAG_ACTIVATION_THRESHOLD = 50_000;
-  static final int LAG_AGGRESSIVE_THRESHOLD = 100_000;
+  // Base PPT lag threshold allowing to activate a burst scaleup to eliminate high lag.
+  static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
+  // Extra PPT lag threshold allowing activation of even more aggressive scaleup to eliminate high lag,
+  // also enabling lag-amplified idle calculation decay in the cost function (to reduce idle weight).
+  static final int AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD = 100_000;
 
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
@@ -165,9 +179,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Returns -1 (no scaling needed) in the following cases:
    * <ul>
    *   <li>Metrics are not available</li>
-   *   <li>Task count already optimal</li>
-   *   <li>The current idle ratio is in the ideal range and lag considered low</li>
-   *   <li>Optimal task count equals current task count</li>
+   *   <li>Current task count already optimal</li>
    * </ul>
    *
    * @return optimal task count for scale-up, or -1 if no scaling action needed
@@ -253,11 +265,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       int taskCountMax
   )
   {
-    if (partitionCount <= 0 || currentTaskCount <= 0 || taskCountMax <= 0) {
+    if (partitionCount <= 0 || currentTaskCount <= 0) {
       return new int[]{};
     }
 
-    Set<Integer> result = new HashSet<>();
+    IntSet result = new IntArraySet();
     final int currentPartitionsPerTask = partitionCount / currentTaskCount;
     final int extraIncrease = computeExtraMaxPartitionsPerTaskIncrease(
         aggregateLag,
@@ -280,12 +292,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         result.add(taskCount);
       }
     }
-    return result.stream().mapToInt(Integer::intValue).sorted().toArray();
+    return result.toIntArray();
   }
 
   /**
-   * Computes extra allowed increase in partitions-per-task in scenarios when the average
-   * per-partition lag is relatively high.
+   * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
+   * is above the configured threshold. By default, it is {@code EXTRA_SCALING_ACTIVATION_LAG_THRESHOLD}.
    * Generally, one of the autoscaler priorities is to keep the lag as close to zero as possible.
    */
   static int computeExtraMaxPartitionsPerTaskIncrease(
@@ -300,13 +312,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
 
     final double lagPerPartition = aggregateLag / partitionCount;
-    if (lagPerPartition < LAG_ACTIVATION_THRESHOLD) {
+    if (lagPerPartition < EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD) {
       return 0;
     }
 
     int rawExtra = BASE_RAW_EXTRA;
-    if (lagPerPartition > LAG_AGGRESSIVE_THRESHOLD) {
-      rawExtra += (int) ((lagPerPartition - LAG_AGGRESSIVE_THRESHOLD) / LAG_STEP);
+    if (lagPerPartition > AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD) {
+      rawExtra += (int) ((lagPerPartition - AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD) / LAG_STEP);
     }
 
     final double headroomRatio = Math.max(0.0, 1.0 - (double) currentTaskCount / taskCountMax);

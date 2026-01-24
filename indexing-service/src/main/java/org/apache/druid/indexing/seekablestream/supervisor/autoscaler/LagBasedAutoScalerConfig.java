@@ -184,12 +184,6 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @Override
-  public void setTaskCountStart(int taskCountStart)
-  {
-    this.taskCountStart = taskCountStart;
-  }
-
-  @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
     return new LagBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec, emitter);

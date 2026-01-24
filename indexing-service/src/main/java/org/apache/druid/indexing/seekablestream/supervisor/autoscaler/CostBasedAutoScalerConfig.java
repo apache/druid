@@ -158,12 +158,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @Override
-  public void setTaskCountStart(int taskCountStart)
-  {
-    this.taskCountStart = taskCountStart;
-  }
-
-  @Override
   @JsonProperty
   public long getMinTriggerScaleActionFrequencyMillis()
   {

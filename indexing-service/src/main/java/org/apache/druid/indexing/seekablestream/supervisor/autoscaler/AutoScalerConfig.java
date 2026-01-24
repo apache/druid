@@ -41,7 +41,6 @@ public interface AutoScalerConfig
   int getTaskCountMax();
   int getTaskCountMin();
   Integer getTaskCountStart();
-  void setTaskCountStart(int taskCountStart);
   Double getStopTaskCountRatio();
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter);
 }

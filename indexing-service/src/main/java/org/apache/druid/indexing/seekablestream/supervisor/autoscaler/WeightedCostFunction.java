@@ -29,28 +29,25 @@ import org.apache.druid.java.util.common.logger.Logger;
 public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
-  private static final double HIHG_LAG_SCALE_FACTOR = 100_000.0;
+  /**
+   * Represents the maximum multiplier factor applied to amplify lag-based costs in the cost computation process.
+   * This value is used to cap the lag amplification effect to prevent excessively high cost inflation
+   * caused by significant partition lag.
+   * It ensures that lag-related adjustments remain bounded within a reasonable range for stability of
+   * cost-based auto-scaling decisions.
+   */
   private static final double LAG_AMPLIFICATION_MAX_MULTIPLIER = 2.0;
   private static final long LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION = 500_000L;
+  /**
+   * It is used to calculate the denominator for the ramp formula in the cost
+   * computation logic. This value represents the difference between the maximum lag per
+   * partition (LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION) and the extra scaling activation
+   * lag threshold (CostBasedAutoScaler.EXTRA_SCALING_ACTIVATION_LAG_THRESHOLD).
+   * <p>
+   * It is impacting how the cost model evaluates scaling decisions during high-lag sceario.
+   */
   private static final double RAMP_DENOMINATOR =
-      LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION - (double) CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD;
-
-  /**
-   * Ideal idle ratio range boundaries.
-   * Idle ratio below MIN indicates tasks are overloaded (scale up needed).
-   * Idle ratio above MAX indicates tasks are underutilized (scale down needed).
-   */
-  static final double IDEAL_IDLE_MIN = 0.2;
-  static final double IDEAL_IDLE_MAX = 0.6;
-
-  /**
-   * Checks if the given idle ratio is within the ideal range [{@value #IDEAL_IDLE_MIN}, {@value #IDEAL_IDLE_MAX}].
-   * When idle is in this range, optimal utilization has been achieved and no scaling is needed.
-   */
-  public static boolean isIdleInIdealRange(double idleRatio)
-  {
-    return idleRatio >= IDEAL_IDLE_MIN && idleRatio <= IDEAL_IDLE_MAX;
-  }
+      LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION - (double) CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -108,7 +105,6 @@ public class WeightedCostFunction
     return new CostResult(cost, lagCost, weightedIdleCost);
   }
 
-
   /**
    * Estimates the idle ratio for a proposed task count.
    * Includes lag-based adjustment to eliminate high lag and
@@ -144,14 +140,17 @@ public class WeightedCostFunction
 
     // Lag-based adjustment: more work per task → less idle
     final double lagPerTask = metrics.getAggregateLag() / taskCount;
-    double lagBusyFactor = 1.0 - Math.exp(-lagPerTask / HIHG_LAG_SCALE_FACTOR);
+    double lagBusyFactor = 1.0 - Math.exp(-lagPerTask / CostBasedAutoScaler.AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD);
     final int partitionCount = metrics.getPartitionCount();
 
     if (partitionCount > 0) {
       final double lagPerPartition = metrics.getAggregateLag() / partitionCount;
       // Lag-amplified idle decay
-      if (lagPerPartition >= CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD) {
-        double ramp = Math.max(0.0, (lagPerPartition - CostBasedAutoScaler.LAG_ACTIVATION_THRESHOLD) / RAMP_DENOMINATOR);
+      if (lagPerPartition >= CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD) {
+        double ramp = Math.max(0.0,
+                               (lagPerPartition - CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD)
+                               / RAMP_DENOMINATOR
+        );
         ramp = Math.min(1.0, ramp);
 
         final double multiplier = 1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0);
