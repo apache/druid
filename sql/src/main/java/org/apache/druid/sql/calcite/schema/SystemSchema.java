@@ -1307,7 +1307,7 @@ public class SystemSchema extends AbstractSchema
       final Object[] row = new Object[QUERIES_SIGNATURE.size()];
       row[0] = queryInfo.executionId();
       row[1] = queryInfo.engine();
-      row[2] = queryInfo.state().toString();
+      row[2] = queryInfo.state();
 
       // Only serialize info if it's in the projection
       if (includeInfo) {

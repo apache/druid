@@ -341,8 +341,8 @@ SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 
 :::info
  The `sys.queries` table is an experimental feature. You must enable it by setting the runtime property
- `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. Currently, this table only shows
- queries from the Dart (MSQ) engine.
+ `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. The main reason this table is experimental
+  is that it only shows queries from the [Dart](dart.md) engine, which is also experimental.
 :::
 
 The queries table provides information about currently running and recently completed SQL queries.
