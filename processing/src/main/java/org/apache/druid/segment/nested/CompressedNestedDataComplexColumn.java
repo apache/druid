@@ -49,6 +49,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
@@ -1043,8 +1044,20 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     if (field instanceof NestedField) {
       final NestedField nestedField = (NestedField) field;
       return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getCapabilities().isNumeric();
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement element = (NestedArrayElement) field;
+      final TypeSignature<ValueType> elementType = getColumnHolder(
+          element.nestedField.fieldName,
+          element.nestedField.fieldIndex
+      ).getCapabilities().getElementType();
+      if (elementType != null) {
+        return elementType.isNumeric();
+      }
+      // if element type is null, the field was not an array, so don't consider it as numeric
+      return false;
     }
-    return true;
+    // a non-existent field can be considered numeric via a nil selector
+    return field == null;
   }
 
   @SuppressWarnings("unchecked")
