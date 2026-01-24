@@ -62,6 +62,7 @@ public class DataSegmentWithLocation extends DataSegment
       @JsonProperty("size") long size,
       @JsonProperty("totalRows") Integer totalRows,
       @JsonProperty("servers") Set<DruidServerMetadata> servers,
+      @JsonProperty("indexingStateFingerprint") String indexingStateFingerprint,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -78,6 +79,7 @@ public class DataSegmentWithLocation extends DataSegment
         binaryVersion,
         size,
         totalRows,
+        indexingStateFingerprint,
         pruneSpecsHolder
     );
     this.servers = Preconditions.checkNotNull(servers, "servers");
@@ -101,6 +103,7 @@ public class DataSegmentWithLocation extends DataSegment
         dataSegment.getBinaryVersion(),
         dataSegment.getSize(),
         dataSegment.getTotalRows(),
+        dataSegment.getIndexingStateFingerprint(),
         PruneSpecsHolder.DEFAULT
     );
     this.servers = servers;

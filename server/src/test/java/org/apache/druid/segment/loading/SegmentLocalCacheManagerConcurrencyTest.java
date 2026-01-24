@@ -255,7 +255,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(20, localStorageFolder, interval, segmentsToLoad);
@@ -281,7 +281,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentBulkFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(30, localStorageFolder, interval, segmentsToLoad);

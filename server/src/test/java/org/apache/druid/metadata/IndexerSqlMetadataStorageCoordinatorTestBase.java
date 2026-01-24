@@ -617,7 +617,8 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
               true,
               null,
               null,
-              upgradedFromSegmentIdMap.get(segment.getId().toString())
+              upgradedFromSegmentIdMap.get(segment.getId().toString()),
+              null
           )
       );
     }

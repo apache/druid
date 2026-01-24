@@ -1657,6 +1657,7 @@ public class CompactSegmentsTest
                 numCompactionTaskSlots,
                 policy,
                 null,
+                null,
                 null
             )
         )

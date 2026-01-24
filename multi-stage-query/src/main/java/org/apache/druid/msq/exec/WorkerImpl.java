@@ -49,6 +49,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -691,6 +692,16 @@ public class WorkerImpl implements Worker
     }
 
     return retVal;
+  }
+
+  @Override
+  public void stop()
+  {
+    kernelManipulationQueue.add(
+        kernel -> {
+          throw new MSQException(new CanceledFault(CancellationReason.UNKNOWN));
+        }
+    );
   }
 
   /**
