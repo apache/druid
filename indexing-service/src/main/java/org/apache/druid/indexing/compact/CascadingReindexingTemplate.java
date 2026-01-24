@@ -43,6 +43,9 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.TimelineObjectHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -238,7 +241,25 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     }
 
     List<Interval> intervals = generateSearchIntervals(sortedPeriods, currentTime);
+    SegmentTimeline timeline = jobParams.getTimeline(dataSource);
+
+    if (timeline == null || timeline.isEmpty()) {
+      LOG.warn("Segment timeline null or empty for [%s] skipping creating compaction jobs.", dataSource);
+      return Collections.emptyList();
+    }
+
+    // Full data range covered by the timeline
+    TimelineObjectHolder<String, DataSegment> first = timeline.first();
+    TimelineObjectHolder<String, DataSegment> last = timeline.last();
+    Interval dataRange = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
+
     for (Interval reindexingInterval : intervals) {
+
+      if (!reindexingInterval.overlaps(dataRange)) {
+        LOG.info("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, dataRange);
+        continue;
+      }
+
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
 
       ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(ruleProvider, reindexingInterval, currentTime);
