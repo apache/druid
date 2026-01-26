@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -86,6 +87,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 public class MSQTestControllerContext implements ControllerContext, DartControllerContextFactory
@@ -95,10 +98,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final TaskActionClient taskActionClient;
   private final ConcurrentHashMap<String, WorkerRunRef> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-      NUM_WORKERS,
-      "MultiStageQuery-test-controller-client"
-  ));
+  public static final ExecutorService POOL = Execs.multiThreaded(NUM_WORKERS, "MSQTestControllerContext-worker-%d");
+  public static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(POOL);
   private final File tempDir = FileUtils.createTempDir();
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
@@ -176,6 +177,36 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     this.workerMemoryParameters = workerMemoryParameters;
     this.taskLockType = taskLockType;
     this.queryContext = queryContext;
+  }
+
+  /**
+   * Waits for all tasks in {@link #POOL}, which workers run in, to exit. Throws an exception if they do
+   * not exit within 10 seconds.
+   */
+  public static void waitForWorkersToExit()
+  {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    int activeCount;
+
+    do {
+      activeCount = ((ThreadPoolExecutor) POOL).getActiveCount();
+      if (activeCount > 0) {
+        try {
+          Thread.sleep(100);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    } while (activeCount > 0 && stopwatch.millisElapsed() < 10_000);
+
+    if (activeCount > 0) {
+      throw new ISE(
+          "Worker executor still had [%,d] workers running after [%,d] ms",
+          activeCount,
+          stopwatch.millisElapsed()
+      );
+    }
   }
 
   OverlordClient overlordClient = new NoopOverlordClient()

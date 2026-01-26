@@ -66,6 +66,7 @@ import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.GetQueryReportResponse;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -275,21 +276,27 @@ public class DartSqlEngine implements SqlEngine
   @Override
   public GetQueriesResponse getRunningQueries(
       boolean selfOnly,
+      boolean includeComplete,
       AuthenticationResult authenticationResult,
       AuthorizationResult stateReadAuthorization
   )
   {
-    final List<DartQueryInfo> queries =
-        controllerRegistry.getAllControllers()
-                          .stream()
-                          .map(DartQueryInfo::fromControllerHolder)
-                          .collect(Collectors.toList());
+    final List<QueryInfoAndReport> queryDetails = controllerRegistry.getAllQueryDetails(includeComplete);
+    final List<DartQueryInfo> queries = new ArrayList<>(queryDetails.size());
+
+    for (final QueryInfoAndReport queryDetail : queryDetails) {
+      queries.add(queryDetail.getQueryInfo());
+    }
 
     // Add queries from all other servers, if "selfOnly" is false.
     if (!selfOnly) {
       final List<GetQueriesResponse> otherQueries = FutureUtils.getUnchecked(
           Futures.successfulAsList(
-              Iterables.transform(sqlClients.getAllClients(), client -> client.getRunningQueries(true))),
+              Iterables.transform(
+                  sqlClients.getAllClients(),
+                  client -> client.getRunningQueries(true, includeComplete)
+              )
+          ),
           true
       );
 
@@ -329,7 +336,7 @@ public class DartSqlEngine implements SqlEngine
       final AuthorizationResult stateReadAuthorization
   )
   {
-    QueryInfoAndReport infoAndReport = controllerRegistry.getQueryInfoAndReportBySqlQueryId(sqlQueryId);
+    QueryInfoAndReport infoAndReport = controllerRegistry.getQueryDetailsBySqlQueryId(sqlQueryId);
 
     if (infoAndReport == null && !selfOnly) {
       final List<GetQueryReportResponse> otherReports = FutureUtils.getUnchecked(

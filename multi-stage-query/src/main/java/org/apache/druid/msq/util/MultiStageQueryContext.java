@@ -26,7 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -145,6 +145,13 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
   public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
   public static final String CTX_MAX_PARTITIONS = "maxPartitions";
+
+  /**
+   * Used by {@link #getMaxClusteredByColumns(QueryContext)}. Can be used to adjust the limit of columns appearing
+   * in clusterBy, where the default is {@link Limits#MAX_CLUSTERED_BY_COLUMNS}. This parameter is undocumented
+   * because its main purpose is to speed up the test {@code MSQFaultsTest#testInsertWithHugeClusteringKeys}.
+   */
+  public static final String CTX_MAX_CLUSTERED_BY_COLUMNS = "maxClusteredByColumns";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -349,9 +356,7 @@ public class MultiStageQueryContext
       return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
     }
     if (value <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
     }
     return value;
   }
@@ -363,9 +368,19 @@ public class MultiStageQueryContext
       return Limits.DEFAULT_MAX_PARTITIONS;
     }
     if (value <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
+  }
+
+  public static int getMaxClusteredByColumns(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_CLUSTERED_BY_COLUMNS);
+    if (value == null) {
+      return Limits.MAX_CLUSTERED_BY_COLUMNS;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_CLUSTERED_BY_COLUMNS, value);
     }
     return value;
   }
@@ -676,26 +691,22 @@ public class MultiStageQueryContext
         + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
 
     if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.EXCLUSIVE,
-                              TaskLockType.REPLACE,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.EXCLUSIVE,
+          TaskLockType.REPLACE,
+          taskLockType
+      );
     }
     if (!isReplaceQuery && !(taskLockType.equals(TaskLockType.SHARED) || taskLockType.equals(TaskLockType.APPEND))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.SHARED,
-                              TaskLockType.APPEND,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.SHARED,
+          TaskLockType.APPEND,
+          taskLockType
+      );
     }
     return taskLockType;
   }

@@ -111,6 +111,11 @@ public class Metric
   public static final String RETRIEVE_SEGMENT_SCHEMAS_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchSchemas/time";
 
   /**
+   * Time taken in milliseconds to fetch all indexing states from the metadata store.
+   */
+  public static final String RETRIEVE_INDEXING_STATES_DURATION_MILLIS = METRIC_NAME_PREFIX + "fetchIndexingStates/time";
+
+  /**
    * Time taken to update the datasource snapshot in the cache.
    */
   public static final String UPDATE_SNAPSHOT_DURATION_MILLIS = METRIC_NAME_PREFIX + "updateSnapshot/time";
@@ -157,6 +162,16 @@ public class Metric
    * Number of unparseable segment schema records skipped while refreshing the cache.
    */
   public static final String SKIPPED_SEGMENT_SCHEMAS = METRIC_NAME_PREFIX + "schema/skipped";
+
+  /**
+   * Number of indexing states added to the cache in the latest sync.
+   */
+  public static final String ADDED_INDEXING_STATES = METRIC_NAME_PREFIX + "indexingState/added";
+
+  /**
+   * Number of indexing states deleted from the cache in the latest sync.
+   */
+  public static final String DELETED_INDEXING_STATES = METRIC_NAME_PREFIX + "indexingState/deleted";
 
   /**
    * Number of unparseable pending segment records skipped while refreshing the cache.

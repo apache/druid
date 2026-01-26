@@ -48,7 +48,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   public void test_maybeScaleDuringTaskRollover_noAutoScaler_doesNotScale()
   {
     // Given
-    setupSpecExpectations(createIOConfig(5, null));
+    setupSpecExpectations(createIOConfig(DEFAULT_TASK_COUNT, null));
     EasyMock.expect(spec.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(spec);
 
@@ -111,7 +111,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     supervisor.start();
     supervisor.createAutoscaler(spec);
 
-    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    Assert.assertEquals(DEFAULT_TASK_COUNT, (int) supervisor.getIoConfig().getTaskCount());
 
     // When
     supervisor.maybeScaleDuringTaskRollover();
@@ -203,6 +203,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     return CostBasedAutoScalerConfig.builder()
                                     .taskCountMax(100)
                                     .taskCountMin(1)
+                                    .taskCountStart(DEFAULT_TASK_COUNT)
                                     .enableTaskAutoScaler(true)
                                     .lagWeight(0.25)
                                     .idleWeight(0.75)

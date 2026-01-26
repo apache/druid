@@ -51,8 +51,10 @@ import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -137,6 +139,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final boolean useSchemaCache;
   private final SegmentSchemaCache segmentSchemaCache;
 
+  private final boolean useIndexingStateCache;
+  private final IndexingStateCache indexingStateCache;
+
   private final ListeningScheduledExecutorService pollExecutor;
   private final ServiceEmitter emitter;
 
@@ -168,6 +173,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
       SegmentSchemaCache segmentSchemaCache,
+      IndexingStateCache indexingStateCache,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter
@@ -179,6 +185,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
+    this.useIndexingStateCache = indexingStateCache.isEnabled();
+    this.indexingStateCache = indexingStateCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
                         ? MoreExecutors.listeningDecorator(executorFactory.create(1, "SegmentMetadataCache-%s"))
@@ -232,6 +240,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
+        if (useIndexingStateCache) {
+          indexingStateCache.clear();
+        }
         syncFinishTime.set(null);
 
         updateCacheState(CacheState.STOPPED, "Stopped sync with metadata store");
@@ -576,6 +587,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAndResetUsedSegmentSchemas(datasourceToSummary);
     }
 
+    if (useIndexingStateCache) {
+      retrieveAndResetUsedIndexingStates();
+    }
+
     markCacheSynced(syncStartTime);
 
     syncFinishTime.set(DateTimes.nowUtc());
@@ -785,13 +800,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final String sql;
     if (useSchemaCache) {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated, schema_fingerprint, num_rows"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint, schema_fingerprint, num_rows"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
     } else {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
@@ -1071,9 +1086,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           DateTimes.of(resultSet.getString(3)),
           SqlSegmentsMetadataQuery.nullAndEmptySafeDate(resultSet.getString(4)),
           true,
-          useSchemaCache ? resultSet.getString(5) : null,
-          useSchemaCache ? (Long) resultSet.getObject(6) : null,
-          null
+          useSchemaCache ? resultSet.getString(6) : null,
+          useSchemaCache ? (Long) resultSet.getObject(7) : null,
+          null,
+          resultSet.getString(5)
       );
     }
     catch (Throwable t) {
@@ -1104,6 +1120,89 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                           .setDimension(DruidMetrics.DATASOURCE, datasource)
                           .setMetric(metric, value)
     );
+  }
+
+  /**
+   * Retrieves required used indexing states from the metadata store and resets
+   * them in the {@link IndexingStateCache}. If this is the first sync, all used
+   * indexing states are retrieved from the metadata store. If this is a delta sync,
+   * first only the fingerprints of all used indexing states are retrieved. Payloads are
+   * then fetched for only the fingerprints which are not present in the cache.
+   */
+  private void retrieveAndResetUsedIndexingStates()
+  {
+    final Stopwatch indexingStateSyncDuration = Stopwatch.createStarted();
+
+    // Reset the IndexingStateCache with latest indexing states
+    final Map<String, CompactionState> fingerprintToStateMap;
+    if (syncFinishTime.get() == null) {
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForFullSync();
+    } else {
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForDeltaSync();
+    }
+
+    indexingStateCache.resetIndexingStatesForPublishedSegments(fingerprintToStateMap);
+
+    // Emit metrics for the current contents of the cache
+    indexingStateCache.getAndResetStats().forEach(this::emitMetric);
+    emitMetric(Metric.RETRIEVE_INDEXING_STATES_DURATION_MILLIS, indexingStateSyncDuration.millisElapsed());
+  }
+
+  /**
+   * Retrieves all used indexing states from the metadata store and builds a
+   * fresh map from indexing state fingerprint to state.
+   */
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForFullSync()
+  {
+    final List<IndexingStateRecord> records = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates
+    );
+
+    return records.stream().collect(
+        Collectors.toMap(
+            IndexingStateRecord::getFingerprint,
+            IndexingStateRecord::getState
+        )
+    );
+  }
+
+  /**
+   * Retrieves indexing states from the metadata store if they are not present
+   * in the cache or have been recently updated in the metadata store. These
+   * indexing states along with those already present in the cache are used to
+   * build a complete updated map from indexing state fingerprint to state.
+   *
+   * @return Complete updated map from indexing state fingerprint to state for all
+   * used indexing states currently persisted in the metadata store.
+   */
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForDeltaSync()
+  {
+    // Identify fingerprints in the cache and in the metadata store
+    final Map<String, CompactionState> fingerprintToStateMap = new HashMap<>(
+        indexingStateCache.getPublishedIndexingStateMap()
+    );
+    final Set<String> cachedFingerprints = Set.copyOf(fingerprintToStateMap.keySet());
+    final Set<String> persistedFingerprints = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints
+    );
+
+    // Remove entry for indexing states that have been deleted from the metadata store
+    final Set<String> deletedFingerprints = Sets.difference(cachedFingerprints, persistedFingerprints);
+    deletedFingerprints.forEach(fingerprintToStateMap::remove);
+    emitMetric(Metric.DELETED_INDEXING_STATES, deletedFingerprints.size());
+
+    // Retrieve and add entry for indexing states that have been added to the metadata store
+    final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
+    final List<IndexingStateRecord> addedIndexingStateRecords = query(
+        sql -> sql.retrieveIndexingStatesForFingerprints(addedFingerprints)
+    );
+
+    addedIndexingStateRecords.forEach(
+        record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
+    );
+    emitMetric(Metric.ADDED_INDEXING_STATES, addedIndexingStateRecords.size());
+
+    return fingerprintToStateMap;
   }
 
   /**

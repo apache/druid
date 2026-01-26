@@ -641,6 +641,25 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
+  /**
+   * Returns a function that adds the given indexing state fingerprint to all segments.
+   * If the fingerprint is null, returns an identity function that leaves segments unchanged.
+   */
+  public static Function<Set<DataSegment>, Set<DataSegment>> addIndexingStateFingerprintToSegments(
+      String indexingStateFingerprint
+  )
+  {
+    if (indexingStateFingerprint != null) {
+      return segments -> segments.stream()
+                                 .map(
+                                     segment -> segment.withIndexingStateFingerprint(indexingStateFingerprint)
+                                 )
+                                 .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
+  }
+
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       boolean storeCompactionState,
       TaskToolbox toolbox,

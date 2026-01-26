@@ -144,7 +144,7 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <version>4.5.14</version>
+      <version>4.5.24</version>
     </dependency>
     <dependency>
       <groupId>javax.ws.rs</groupId>

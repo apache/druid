@@ -140,14 +140,18 @@ public class SqlResource
   /**
    * API to list all running queries, for all engines that supports such listings.
    *
-   * @param selfOnly if true, return queries running on this server. If false, return queries running on all servers.
-   * @param request  http request.
+   * @param selfOnly        if present, return queries running on this server only. If absent, return queries
+   *                        running on all servers.
+   * @param includeComplete if present, include completed queries in the response. The number of completed queries
+   *                        returned is determined by engine-specific retention settings.
+   * @param request         http request.
    */
   @GET
   @Path("/queries")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetRunningQueries(
       @QueryParam("selfOnly") final String selfOnly,
+      @QueryParam("includeComplete") final String includeComplete,
       @Context final HttpServletRequest request
   )
   {
@@ -163,7 +167,14 @@ public class SqlResource
 
     // Get running queries from all engines that support it.
     for (SqlEngine sqlEngine : engines) {
-      queries.addAll(sqlEngine.getRunningQueries(selfOnly != null, authenticationResult, stateReadAccess).getQueries());
+      queries.addAll(
+          sqlEngine.getRunningQueries(
+              selfOnly != null,
+              includeComplete != null,
+              authenticationResult,
+              stateReadAccess
+          ).getQueries()
+      );
     }
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
