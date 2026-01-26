@@ -131,6 +131,5 @@ public class GroupByStatsProviderTest
     Assert.assertEquals(4L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(3450L, aggregateStats.getSpilledBytes());
     Assert.assertEquals(2250L, aggregateStats.getMergeDictionarySize());
-    Assert.assertEquals(1000L, aggregateStats.getMergeDictionarySize());
   }
 }
