@@ -33,7 +33,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.spectator.histogram.SpectatorHistogramAggregatorFactory;
@@ -43,6 +42,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -125,11 +125,7 @@ public class SpectatorHistogramPercentileSqlAggregator implements SqlAggregator
   )
   {
     final Object value = RexLiteral.value(percentileArg);
-    if (!(value instanceof Number)) {
-      throw InvalidSqlInput.exception("SPECTATOR_PERCENTILE percentile parameter must be a numeric literal, got %s",
-                                      value == null ? "NULL" : value.getClass().getSimpleName());
-    }
-    final double percentile = ((Number) value).doubleValue();
+    final double percentile = DruidSqlParserUtils.getNumericLiteral(value, "SPECTATOR_PERCENTILE", "percentile").doubleValue();
 
     final String histogramName = StringUtils.format("%s:agg", name);
 

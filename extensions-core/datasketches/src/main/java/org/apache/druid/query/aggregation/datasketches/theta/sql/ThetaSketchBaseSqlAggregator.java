@@ -24,7 +24,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
@@ -39,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -91,14 +91,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      final Object sketchSizeValue = RexLiteral.value(sketchSizeArg);
-      if (!(sketchSizeValue instanceof Number)) {
-        throw InvalidSqlInput.exception(
-            "DS_THETA size parameter must be a numeric literal, got %s",
-            sketchSizeValue == null ? "NULL" : sketchSizeValue.getClass().getSimpleName()
-        );
-      }
-      sketchSize = ((Number) sketchSizeValue).intValue();
+      sketchSize = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(sketchSizeArg), "APPROX_COUNT_DISTINCT_DS_THETA", "size").intValue();
     } else {
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }

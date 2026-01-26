@@ -30,7 +30,6 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogram;
@@ -44,6 +43,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -92,14 +92,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final Object probabilityValue = RexLiteral.value(probabilityArg);
-    if (!(probabilityValue instanceof Number)) {
-      throw InvalidSqlInput.exception(
-          "APPROX_QUANTILE probability parameter must be a numeric literal, got %s",
-          probabilityValue == null ? "NULL" : probabilityValue.getClass().getSimpleName()
-      );
-    }
-    final float probability = ((Number) probabilityValue).floatValue();
+    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), "APPROX_QUANTILE", "probability").floatValue();
     final int resolution;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -110,14 +103,7 @@ public class QuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      final Object resolutionValue = RexLiteral.value(resolutionArg);
-      if (!(resolutionValue instanceof Number)) {
-        throw InvalidSqlInput.exception(
-            "APPROX_QUANTILE resolution parameter must be a numeric literal, got %s",
-            resolutionValue == null ? "NULL" : resolutionValue.getClass().getSimpleName()
-        );
-      }
-      resolution = ((Number) resolutionValue).intValue();
+      resolution = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), "APPROX_QUANTILE", "resolution").intValue();
     } else {
       resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
     }

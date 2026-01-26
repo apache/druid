@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -59,6 +58,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -562,24 +562,12 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      throw new AssertionError("Expected DruidException but query succeeded");
+      Assert.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      if (e.getTargetPersona() != DruidException.Persona.USER) {
-        throw new AssertionError(
-            StringUtils.format("Expected USER persona but got %s", e.getTargetPersona())
-        );
-      }
-      if (e.getCategory() != DruidException.Category.INVALID_INPUT) {
-        throw new AssertionError(
-            StringUtils.format("Expected INVALID_INPUT category but got %s", e.getCategory())
-        );
-      }
-      if (!e.getMessage().contains("must be a numeric literal")) {
-        throw new AssertionError(
-            StringUtils.format("Expected message about numeric literal but got: %s", e.getMessage())
-        );
-      }
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("must be a numeric literal"));
     }
   }
 }

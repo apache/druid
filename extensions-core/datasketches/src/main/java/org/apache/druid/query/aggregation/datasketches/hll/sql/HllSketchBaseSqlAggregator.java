@@ -24,7 +24,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,6 +40,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -93,14 +93,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      final Object logKValue = RexLiteral.value(logKarg);
-      if (!(logKValue instanceof Number)) {
-        throw InvalidSqlInput.exception(
-            "DS_HLL logK parameter must be a numeric literal, got %s",
-            logKValue == null ? "NULL" : logKValue.getClass().getSimpleName()
-        );
-      }
-      logK = ((Number) logKValue).intValue();
+      logK = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(logKarg), "APPROX_COUNT_DISTINCT_DS_HLL", "logK").intValue();
     } else {
       logK = HllSketchAggregatorFactory.DEFAULT_LG_K;
     }

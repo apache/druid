@@ -27,7 +27,6 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
@@ -40,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -89,14 +89,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final Object maxNumEntriesValue = RexLiteral.value(maxNumEntriesOperand);
-    if (!(maxNumEntriesValue instanceof Number)) {
-      throw InvalidSqlInput.exception(
-          "BLOOM_FILTER maxNumEntries parameter must be a numeric literal, got %s",
-          maxNumEntriesValue == null ? "NULL" : maxNumEntriesValue.getClass().getSimpleName()
-      );
-    }
-    final int maxNumEntries = ((Number) maxNumEntriesValue).intValue();
+    final int maxNumEntries = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxNumEntriesOperand), "BLOOM_FILTER", "maxNumEntries").intValue();
 
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {

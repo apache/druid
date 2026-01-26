@@ -34,7 +34,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -46,6 +45,7 @@ import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -87,14 +87,7 @@ public class ArraySqlAggregator implements SqlAggregator
         // maxBytes must be a literal
         return null;
       }
-      final Object maxBytesValue = RexLiteral.value(maxBytes);
-      if (!(maxBytesValue instanceof Number)) {
-        throw InvalidSqlInput.exception(
-            "ARRAY_AGG maxBytes parameter must be a numeric literal, got %s",
-            maxBytesValue == null ? "NULL" : maxBytesValue.getClass().getSimpleName()
-        );
-      }
-      maxSizeBytes = ((Number) maxBytesValue).intValue();
+      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), "ARRAY_AGG", "maxBytes").intValue();
     }
     final DruidExpression arg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), arguments.get(0));
     if (arg == null) {
