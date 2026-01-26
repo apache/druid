@@ -75,8 +75,16 @@ public class CostBasedAutoScalerTest
     Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
 
     // Edge cases
-    Assert.assertEquals("Zero partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
-    Assert.assertEquals("Negative partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(-5, 10).length);
+    Assert.assertEquals(
+        "Zero partitions return empty array",
+        0,
+        CostBasedAutoScaler.computeValidTaskCounts(0, 10).length
+    );
+    Assert.assertEquals(
+        "Negative partitions return empty array",
+        0,
+        CostBasedAutoScaler.computeValidTaskCounts(-5, 10).length
+    );
 
     // Single partition
     int[] singlePartition = CostBasedAutoScaler.computeValidTaskCounts(1, 1);
@@ -194,27 +202,30 @@ public class CostBasedAutoScalerTest
   {
     // 15-minute average is preferred
     Map<String, Map<String, Object>> fifteenMin = new HashMap<>();
-    fifteenMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)));
+    fifteenMin.put("0", Collections.singletonMap("task-0", buildStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)));
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(fifteenMin), 0.0001);
 
     // 1-minute as final fallback
     Map<String, Map<String, Object>> oneMin = new HashMap<>();
-    oneMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0)));
+    oneMin.put(
+        "0",
+        Collections.singletonMap("task-0", buildStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0))
+    );
     Assert.assertEquals(500.0, CostBasedAutoScaler.extractMovingAverage(oneMin), 0.0001);
 
     // 15-minute preferred over 5-minute when both available
     Map<String, Map<String, Object>> allIntervals = new HashMap<>();
-    allIntervals.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0)));
+    allIntervals.put("0", Collections.singletonMap("task-0", buildStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0)));
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(allIntervals), 0.0001);
 
     // Falls back to 5-minute when 15-minute is null
     Map<String, Map<String, Object>> nullFifteen = new HashMap<>();
-    nullFifteen.put("0", Collections.singletonMap("task-0", buildTaskStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)));
+    nullFifteen.put("0", Collections.singletonMap("task-0", buildStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)));
     Assert.assertEquals(750.0, CostBasedAutoScaler.extractMovingAverage(nullFifteen), 0.0001);
 
     // Falls back to 1-minute when both 15 and 5 are null
     Map<String, Map<String, Object>> bothNull = new HashMap<>();
-    bothNull.put("0", Collections.singletonMap("task-0", buildTaskStatsWithTwoNullIntervals(250.0)));
+    bothNull.put("0", Collections.singletonMap("task-0", buildStatsWithTwoNullIntervals(250.0)));
     Assert.assertEquals(250.0, CostBasedAutoScaler.extractMovingAverage(bothNull), 0.0001);
   }
 
@@ -272,6 +283,50 @@ public class CostBasedAutoScalerTest
     taskStats5.put("movingAverages", movingAverages5);
     nonNumberRate.put("0", Collections.singletonMap("task-0", taskStats5));
     Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonNumberRate), 0.0001);
+  }
+
+  @Test
+  public void testComputeTaskCountForRolloverReturnsScaleDownValue()
+  {
+    // Tests the happy path: computeTaskCountForRollover returns optimal count for scale-down
+    // This is the key difference from computeTaskCountForScaleAction which blocks scale-down
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(ioConfig.getTaskCount()).thenReturn(10);
+
+    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
+                                                             .taskCountMax(100)
+                                                             .taskCountMin(1)
+                                                             .enableTaskAutoScaler(true)
+                                                             .lagWeight(0.6)
+                                                             .idleWeight(0.4)
+                                                             .build();
+
+    CostBasedAutoScaler scaler = Mockito.spy(new CostBasedAutoScaler(supervisor, cfg, spec, emitter));
+
+    // Mock computeOptimalTaskCount to return a scale-down value (5 < current 10)
+    Mockito.doReturn(5).when(scaler).computeOptimalTaskCount(Mockito.any());
+
+    // Set lastKnownMetrics by calling with non-null metrics
+    CostMetrics metrics = new CostMetrics(100.0, 10, 100, 0.8, 3600, 1000.0);
+    scaler.setLastKnownMetrics(metrics);
+
+    int result = scaler.computeTaskCountForRollover();
+
+    // Unlike computeTaskCountForScaleAction which returns -1 for scale-down,
+    // computeTaskCountForRollover should return the optimal count (5)
+    Assert.assertEquals(
+        "computeTaskCountForRollover should return optimal count for scale-down during rollover",
+        5,
+        result
+    );
   }
 
   @Test
@@ -389,10 +444,10 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithMovingAverage(double processedRate)
+  private Map<String, Object> buildTaskStatsWithMovingAverage(double processRate)
   {
     Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processedRate));
+    buildSegments.put(FIVE_MINUTE_NAME, Map.of(RowIngestionMeters.PROCESSED, processRate));
 
     Map<String, Object> movingAverages = new HashMap<>();
     movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
@@ -402,10 +457,10 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithMovingAverageForInterval(String intervalName, double processedRate)
+  private Map<String, Object> buildStatsWithMovingAverageForInterval(String intervalName, double processRate)
   {
     Map<String, Object> buildSegments = new HashMap<>();
-    buildSegments.put(intervalName, Map.of(RowIngestionMeters.PROCESSED, processedRate));
+    buildSegments.put(intervalName, Map.of(RowIngestionMeters.PROCESSED, processRate));
 
     Map<String, Object> movingAverages = new HashMap<>();
     movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
@@ -415,7 +470,7 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithMultipleMovingAverages(
+  private Map<String, Object> buildStatsWithMultipleMovingAverages(
       double fifteenMinRate,
       double fiveMinRate,
       double oneMinRate
@@ -434,11 +489,11 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithNullInterval(String nullInterval, String validInterval, double processedRate)
+  private Map<String, Object> buildStatsWithNullInterval(String nullInterval, String validInterval, double processRate)
   {
     Map<String, Object> buildSegments = new HashMap<>();
     buildSegments.put(nullInterval, null);
-    buildSegments.put(validInterval, Map.of(RowIngestionMeters.PROCESSED, processedRate));
+    buildSegments.put(validInterval, Map.of(RowIngestionMeters.PROCESSED, processRate));
 
     Map<String, Object> movingAverages = new HashMap<>();
     movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
@@ -448,7 +503,7 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithTwoNullIntervals(double oneMinRate)
+  private Map<String, Object> buildStatsWithTwoNullIntervals(double oneMinRate)
   {
     Map<String, Object> buildSegments = new HashMap<>();
     buildSegments.put(FIFTEEN_MINUTE_NAME, null);

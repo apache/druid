@@ -922,6 +922,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
+
+  /**
+   * When non-null, indicates a pending scale-during-rollover operation.
+   * The value is the target task count to scale to.
+   * Set in {@link #checkTaskDuration()} when autoscaler recommends scaling during task rollover.
+   * Applied in {@link #maybeApplyPendingScaleRollover()} when all actively reading tasks have stopped.
+   */
+  private volatile Integer pendingRolloverTaskCount = null;
+
   protected volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
@@ -1761,6 +1770,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       updateTaskStatus();
 
       checkTaskDuration();
+
+      maybeApplyPendingScaleRollover();
 
       checkPendingCompletionTasks();
 
@@ -3392,6 +3403,53 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         });
 
+    // Phase 1 of scale-during-rollover: detect and set up.
+    // The taskCount change and re-allocation happen in Phase 2 after all tasks have stopped.
+    // We respect maxAllowedStops to avoid worker capacity exhaustion - rollover may take multiple cycles.
+    if (!futures.isEmpty() && taskAutoScaler != null && pendingRolloverTaskCount == null) {
+      int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
+      if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
+        log.info(
+            "Autoscaler recommends scaling to [%d] tasks during rollover for supervisor[%s]. "
+            + "Setting up pending rollover - will apply after all tasks stop.",
+            rolloverTaskCount, supervisorId
+        );
+
+        // Stop remaining active groups while respecting maxAllowedStops to avoid
+        // worker capacity exhaustion. Publishing tasks continue consuming worker slots,
+        // so stopping all at once could leave no capacity for new tasks.
+        int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
+                                                                        .mapToInt(List::size).sum();
+        int availableStops = ioConfig.getMaxAllowedStops() - numPendingCompletionTaskGroups - numStoppedTasks.get();
+
+        int stoppedForRollover = 0;
+        for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
+          Integer groupId = entry.getKey();
+          if (!futureGroupIds.contains(groupId)) {
+            if (stoppedForRollover >= availableStops) {
+              log.info(
+                  "Deferring stop of taskGroup[%d] to next cycle - maxAllowedStops[%d] reached. "
+                  + "Publishing tasks: [%d], stopped this cycle: [%d].",
+                  groupId, ioConfig.getMaxAllowedStops(), numPendingCompletionTaskGroups, numStoppedTasks.get()
+              );
+              continue;
+            }
+            log.info(
+                "Stopping taskGroup[%d] for autoscaler rollover to [%d] tasks.",
+                groupId, rolloverTaskCount
+            );
+            futureGroupIds.add(groupId);
+            futures.add(checkpointTaskGroup(entry.getValue(), true));
+            stoppedForRollover++;
+          }
+        }
+
+        // Set the pending rollover flag - actual change applied in Phase 2
+        // when ALL actively reading task groups have stopped
+        pendingRolloverTaskCount = rolloverTaskCount;
+      }
+    }
+
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
@@ -3402,7 +3460,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
-
 
         boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
@@ -3443,29 +3500,58 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // remove this task group from the list of current task groups now that it has been handled
       activelyReadingTaskGroups.remove(groupId);
     }
-
-    maybeScaleDuringTaskRollover();
   }
 
+
   /**
-   * Scales up or down the number of tasks during a task rollover, if applicable.
+   * Phase 2 of scale-during-rollover: apply the pending scale change.
    * <p>
-   * This method is invoked to determine whether a task count adjustment is needed
-   * during a task rollover based on the recommendations from the task auto-scaler.
- */
-  @VisibleForTesting
-  void maybeScaleDuringTaskRollover()
+   * This method is called after {@link #checkPendingCompletionTasks()} to check if a pending
+   * scale rollover can be applied. The scale is only applied when:
+   * <ul>
+   *   <li>A pending rollover was set up in {@link #checkTaskDuration()} (Phase 1)</li>
+   *   <li>All actively reading task groups have stopped (moved to pendingCompletionTaskGroups)</li>
+   * </ul>
+   * <p>
+   * By deferring the taskCount change until all old tasks have stopped, we avoid
+   * partition allocation mismatches that would cause {@link #discoverTasks()} to kill
+   * publishing tasks on the next cycle.
+   */
+  void maybeApplyPendingScaleRollover()
   {
-    if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
-      int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
-      if (rolloverTaskCount > 0) {
-        log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
-        changeTaskCountInIOConfig(rolloverTaskCount);
-        // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
-        // This seems the best way to inject task amount recalculation during the rollover.
-        clearAllocationInfo();
-      }
+    if (pendingRolloverTaskCount == null) {
+      return;
     }
+
+    if (!activelyReadingTaskGroups.isEmpty()) {
+      log.debug(
+          "Pending rollover to [%d] tasks deferred - [%d] task groups still actively reading.",
+          pendingRolloverTaskCount, activelyReadingTaskGroups.size()
+      );
+      return;
+    }
+
+    int targetTaskCount = pendingRolloverTaskCount;
+    log.info(
+        "Applying pending scale rollover: changing taskCount from [%d] to [%d]. "
+        + "All actively reading tasks have stopped.",
+        getIoConfig().getTaskCount(), targetTaskCount
+    );
+    changeTaskCountInIOConfig(pendingRolloverTaskCount);
+    clearAllocationInfo();
+
+    pendingRolloverTaskCount = null;
+
+    ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
+          .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+          .setDimension(DruidMetrics.DATASOURCE, dataSource)
+          .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+
+    emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, targetTaskCount));
+
+    // Note: createNewTasks() will not create tasks this cycle because partitionGroups is now empty.
+    // On the next runInternal() cycle, updatePartitionDataFromStream() will rebuild partitionGroups
+    // with the new taskCount, and createNewTasks() will create the correctly-allocated tasks.
   }
 
   private DateTime computeEarliestTaskStartTime(TaskGroup group)

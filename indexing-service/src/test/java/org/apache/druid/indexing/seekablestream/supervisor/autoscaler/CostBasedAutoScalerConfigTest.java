@@ -42,7 +42,7 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
-                  + "  \"distancePenaltyExponent\": 3.0\n"
+                  + "  \"defaultProcessingRate\": 3\n"
                   + "}";
 
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -56,6 +56,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
+    Assert.assertEquals(3.0, config.getDefaultProcessingRate(), 0.01);
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);

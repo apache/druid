@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
@@ -380,4 +381,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     );
   }
 
+  /**
+   * Sets lastKnownMetrics for testing purposes.
+   */
+  @VisibleForTesting
+  void setLastKnownMetrics(CostMetrics metrics)
+  {
+    this.lastKnownMetrics = metrics;
+  }
 }
