@@ -393,7 +393,7 @@ public class InputRowSerde
   private static String readString(DataInput in) throws IOException
   {
     byte[] result = readBytes(in);
-    return result == null ? null : StringUtils.fromUtf8(result);
+    return StringUtils.fromUtf8Nullable(result);
   }
 
   @Nullable

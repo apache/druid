@@ -272,6 +272,7 @@ public class HadoopDruidIndexerConfig
     this.allowedHadoopPrefix.add("druid.javascript");
     this.allowedHadoopPrefix.addAll(DATA_SEGMENT_PUSHER.getAllowedPropertyPrefixesForHadoop());
     this.allowedHadoopPrefix.addAll(spec.getTuningConfig().getUserAllowedHadoopPrefix());
+    this.allowedHadoopPrefix.add("druid.indexer");
   }
 
   @JsonProperty(value = "spec")

@@ -34,7 +34,6 @@ import org.apache.druid.common.guava.ThreadRenamingRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.hadoop.SegmentInputRow;
 import org.apache.druid.indexer.path.DatasourcePathSpec;
 import org.apache.druid.java.util.common.FileUtils;
@@ -613,14 +612,13 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      DimensionsSpec dimensionsSpec = config.getSchema().getDataSchema().getDimensionsSpec();
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       return HadoopDruidIndexerConfig.INDEX_MERGER
           .mergeQueryableIndex(
               indexes,
               rollup,
               aggs,
-              dimensionsSpec,
+              null,
               file,
               config.getIndexSpec(),
               config.getIndexSpecForIntermediatePersists(),

@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -369,7 +370,7 @@ public class AvroStreamInputRowParserTest
       );
       // For string array, nulls are preserved so use ArrayList (ImmutableList doesn't support nulls)
       Assert.assertEquals(
-          SOME_STRING_ARRAY_VALUE.stream().map(v -> v == null ? null : String.valueOf(v)).collect(Collectors.toList()),
+          SOME_STRING_ARRAY_VALUE.stream().map(Evals::asString).collect(Collectors.toList()),
           inputRow.getDimension("someStringArray")
       );
 
