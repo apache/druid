@@ -20,6 +20,7 @@
 package org.apache.druid.security.basic.authorization;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
@@ -29,9 +30,11 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RoleProviderUtil
 {
+  private static final Logger LOG = new Logger(RoleProviderUtil.class);
   public static final String ROLE_CLAIM_CONTEXT_KEY = "druidRoles";
 
   public static Set<String> getUserRoles(
@@ -85,14 +88,16 @@ public class RoleProviderUtil
       return Set.of();
     }
 
-    Set<String> roles = new HashSet<>();
-
-    roleMap.keySet()
+    final Set<String> matched = roleMap.keySet()
            .stream()
            .filter(claimValue::contains)
-           .forEach(roles::add);
+           .collect(Collectors.toUnmodifiableSet());
 
-    return roles;
+    if (matched.isEmpty()) {
+      LOG.warn("Role claim present but no values mapped to Druid roles");
+    }
+
+    return matched;
   }
 
   @Nullable

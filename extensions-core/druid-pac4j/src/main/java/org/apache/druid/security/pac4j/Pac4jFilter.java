@@ -123,8 +123,7 @@ public class Pac4jFilter implements Filter
                   String uid = profile.getId();
                   if (uid != null) {
                     final Set<String> roles = profile.getRoles();
-                    String identity = profile.getId();
-                    LOGGER.debug("Collected identity: %s with roles: %s", identity, roles);
+                    LOGGER.debug("Collected identity: %s with roles: %s", uid, roles);
                     final ImmutableMap.Builder<String, Object> authResultContext = ImmutableMap.builder();
                     if (roles != null && !roles.isEmpty()) {
                       authResultContext.put(ROLE_CLAIM_CONTEXT_KEY, roles);
