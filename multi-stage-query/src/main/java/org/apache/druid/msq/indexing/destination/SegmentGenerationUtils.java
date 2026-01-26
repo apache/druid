@@ -47,12 +47,16 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.ExpressionTransform;
+import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -96,6 +100,18 @@ public final class SegmentGenerationUtils
             destination.getDimensionSchemas()
         );
 
+    final TransformSpec transformSpec;
+    if (query.getFilter() != null) {
+      List<Transform> transforms = new ArrayList<>();
+      for (VirtualColumn vc : query.getVirtualColumns().getVirtualColumns()) {
+        if (vc instanceof ExpressionVirtualColumn) {
+          transforms.add(new ExpressionTransform(vc.getOutputName(), ((ExpressionVirtualColumn) vc).getExpression(), null));
+        }
+      }
+      transformSpec = new TransformSpec(query.getFilter(), transforms);
+    } else {
+      transformSpec = null;
+    }
     return DataSchema.builder()
                      .withDataSource(destination.getDataSource())
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
@@ -107,7 +123,7 @@ public final class SegmentGenerationUtils
                          isRollupQuery,
                          jsonMapper
                      ))
-                     .withTransform(new TransformSpec(query.getFilter(), null))
+                     .withTransform(transformSpec)
                      .withProjections(destination.getProjections())
                      .build();
   }
