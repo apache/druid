@@ -61,11 +61,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     supervisor.maybeScaleDuringTaskRollover();
 
     // Then
-    Assert.assertEquals(
-        "Task count should not change when taskAutoScaler is null",
-        beforeTaskCount,
-        (int) supervisor.getIoConfig().getTaskCount()
-    );
+    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig());
   }
 
   @Test
@@ -88,6 +84,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     supervisor.maybeScaleDuringTaskRollover();
 
     // Then
+    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
     Assert.assertEquals(
         "Task count should not change when rolloverTaskCount <= 0",
         beforeTaskCount,
@@ -111,12 +108,11 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     supervisor.start();
     supervisor.createAutoscaler(spec);
 
-    Assert.assertEquals(DEFAULT_TASK_COUNT, (int) supervisor.getIoConfig().getTaskCount());
-
     // When
     supervisor.maybeScaleDuringTaskRollover();
 
     // Then
+    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
     Assert.assertEquals(
         "Task count should be updated to " + targetTaskCount + " when rolloverTaskCount > 0",
         targetTaskCount,
@@ -144,6 +140,7 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
     supervisor.maybeScaleDuringTaskRollover();
 
     // Then
+    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
     Assert.assertEquals(
         "Task count should not change when rolloverTaskCount is 0",
         beforeTaskCount,
@@ -201,13 +198,11 @@ public class SeekableStreamSupervisorScaleDuringTaskRolloverTest extends Seekabl
   private static CostBasedAutoScalerConfig getCostBasedAutoScalerConfig()
   {
     return CostBasedAutoScalerConfig.builder()
+                                    .enableTaskAutoScaler(true)
                                     .taskCountMax(100)
                                     .taskCountMin(1)
-                                    .taskCountStart(DEFAULT_TASK_COUNT)
-                                    .enableTaskAutoScaler(true)
-                                    .lagWeight(0.25)
-                                    .idleWeight(0.75)
-                                    .scaleActionPeriodMillis(100)
+                                    .taskCountStart(1)
+                                    .scaleActionPeriodMillis(60000)
                                     .build();
   }
 

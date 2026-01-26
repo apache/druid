@@ -1457,7 +1457,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           "stream",
           new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
-          taskCount,
+          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
           new Period("PT1H"),
           new Period("P1D"),
           new Period("PT30S"),
@@ -1478,7 +1478,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
           "stream",
           new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
           1,
-          taskCount,
+          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
           new Period("PT1H"),
           new Period("P1D"),
           new Period("PT30S"),
