@@ -89,7 +89,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final int maxNumEntries = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxNumEntriesOperand), "BLOOM_FILTER", "maxNumEntries").intValue();
+    final int maxNumEntries = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxNumEntriesOperand), NAME, "maxNumEntries").intValue();
 
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {

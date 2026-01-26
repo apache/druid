@@ -92,7 +92,7 @@ public class QuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), "APPROX_QUANTILE", "probability").floatValue();
+    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), NAME, "probability").floatValue();
     final int resolution;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -103,7 +103,7 @@ public class QuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      resolution = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), "APPROX_QUANTILE", "resolution").intValue();
+      resolution = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "resolution").intValue();
     } else {
       resolution = ApproximateHistogram.DEFAULT_HISTOGRAM_SIZE;
     }

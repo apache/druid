@@ -84,7 +84,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
         // maxBytes must be a literal
         return null;
       }
-      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), "ARRAY_CONCAT_AGG", "maxBytes").intValue();
+      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), NAME, "maxBytes").intValue();
     }
     final DruidExpression arg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), arguments.get(0));
     final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();

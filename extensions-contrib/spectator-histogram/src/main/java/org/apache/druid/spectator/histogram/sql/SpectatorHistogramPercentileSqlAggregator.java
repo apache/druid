@@ -125,7 +125,7 @@ public class SpectatorHistogramPercentileSqlAggregator implements SqlAggregator
   )
   {
     final Object value = RexLiteral.value(percentileArg);
-    final double percentile = DruidSqlParserUtils.getNumericLiteral(value, "SPECTATOR_PERCENTILE", "percentile").doubleValue();
+    final double percentile = DruidSqlParserUtils.getNumericLiteral(value, NAME, "percentile").doubleValue();
 
     final String histogramName = StringUtils.format("%s:agg", name);
 

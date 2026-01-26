@@ -99,7 +99,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), "APPROX_QUANTILE_DS", "probability").floatValue();
+    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), NAME, "probability").floatValue();
     final int k;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -110,7 +110,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      k = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), "APPROX_QUANTILE_DS", "resolution").intValue();
+      k = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "resolution").intValue();
     } else {
       k = DoublesSketchAggregatorFactory.DEFAULT_K;
     }

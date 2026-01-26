@@ -70,8 +70,9 @@ import java.util.stream.Collectors;
 public class StringSqlAggregator implements SqlAggregator
 {
   private final SqlAggFunction function;
+  private static final String NAME = "STRING_AGG";
 
-  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction("STRING_AGG"));
+  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction(NAME));
   public static final StringSqlAggregator LISTAGG = new StringSqlAggregator(new StringAggFunction("LISTAGG"));
 
   public StringSqlAggregator(SqlAggFunction function)
@@ -131,7 +132,7 @@ public class StringSqlAggregator implements SqlAggregator
         // maxBytes must be a literal
         return null;
       }
-      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), "STRING_AGG", "maxBytes").intValue();
+      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), NAME, "maxBytes").intValue();
     }
 
     final DruidExpression arg = arguments.get(0);
