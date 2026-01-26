@@ -187,14 +187,16 @@ public class ReindexingConfigBuilderTest
         "filter-30d",
         null,
         Period.days(30),
-        new SelectorDimFilter("country", "US", null)
+        new SelectorDimFilter("country", "US", null),
+        null
     );
 
     ReindexingFilterRule filterRule2 = new ReindexingFilterRule(
         "filter-60d",
         null,
         Period.days(60),
-        new SelectorDimFilter("device", "mobile", null)
+        new SelectorDimFilter("device", "mobile", null),
+        null
     );
 
     return InlineReindexingRuleProvider.builder()

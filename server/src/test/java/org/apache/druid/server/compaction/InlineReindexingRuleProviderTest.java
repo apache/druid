@@ -201,7 +201,7 @@ public class InlineReindexingRuleProviderTest
 
   private ReindexingFilterRule createFilterRule(String id, Period period)
   {
-    return new ReindexingFilterRule(id, null, period, new SelectorDimFilter("dim", "val", null));
+    return new ReindexingFilterRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
   }
 
   private ReindexingMetricsRule createMetricsRule(String id, Period period)

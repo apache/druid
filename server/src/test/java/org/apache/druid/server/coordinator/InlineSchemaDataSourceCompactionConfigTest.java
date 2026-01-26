@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,14 +30,19 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Duration;
@@ -48,7 +54,15 @@ import java.io.IOException;
 
 public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullHandlingTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER;
+
+  static {
+    OBJECT_MAPPER = new DefaultObjectMapper();
+    OBJECT_MAPPER.setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
+  }
+
 
   @Test
   public void testSerdeBasic() throws IOException
@@ -436,7 +450,21 @@ public class InlineSchemaDataSourceCompactionConfigTest extends InitializedNullH
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
-        .withTransformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .withTransformSpec(
+            new CompactionTransformSpec(
+                new SelectorDimFilter("dim1", "foo", null),
+                VirtualColumns.create(
+                    ImmutableList.of(
+                        new ExpressionVirtualColumn(
+                            "isRobotFiltered",
+                            "concat(isRobot, '_filtered')",
+                            ColumnType.STRING,
+                            ExprMacroTable.nil()
+                        )
+                    )
+                )
+            )
+        )
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);

@@ -23,6 +23,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.timeline.CompactionState;
@@ -120,6 +122,39 @@ public class ReindexingFilterRuleOptimizer
     }
 
     return new NotDimFilter(new OrDimFilter(new ArrayList<>(unappliedRules)));
+  }
+
+  /**
+   * Filters virtual columns to only include ones referenced by the given filter.
+   * This removes virtual columns that were used by filter rules that have been optimized away.
+   *
+   * @param filter         the reduced filter to check for column references
+   * @param virtualColumns the original set of virtual columns
+   * @return filtered VirtualColumns with only referenced columns, or null if none are referenced
+   */
+  @Nullable
+  public static VirtualColumns filterVirtualColumnsForFilter(
+      @Nullable DimFilter filter,
+      @Nullable VirtualColumns virtualColumns
+  )
+  {
+    if (virtualColumns == null || filter == null) {
+      return null;
+    }
+
+    // Get the set of columns required by the filter
+    Set<String> requiredColumns = filter.getRequiredColumns();
+
+    // Filter virtual columns to only include ones whose output name is required
+    List<VirtualColumn> referencedColumns = new ArrayList<>();
+    for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
+      if (requiredColumns.contains(vc.getOutputName())) {
+        referencedColumns.add(vc);
+      }
+    }
+
+    // Return null if no virtual columns are referenced, otherwise create new VirtualColumns
+    return referencedColumns.isEmpty() ? null : VirtualColumns.create(referencedColumns);
   }
 
   /**

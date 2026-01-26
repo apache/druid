@@ -34,7 +34,8 @@ public class AbstractReindexingRuleTest
         "test-rule",
         null,
         period,
-        new SelectorDimFilter("dim", "val", null)
+        new SelectorDimFilter("dim", "val", null),
+        null
     );
   }
 
@@ -47,7 +48,8 @@ public class AbstractReindexingRuleTest
         "test-rule",
         null,
         period,
-        new SelectorDimFilter("dim", "val", null)
+        new SelectorDimFilter("dim", "val", null),
+        null
     );
   }
 }

@@ -24,12 +24,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -147,17 +151,30 @@ public class ReindexingConfigBuilder
       return 0;
     }
 
-    // Combine: OR all filters together, wrap in NOT
-    List<DimFilter> removeConditions = rules.stream()
-                                            .map(ReindexingFilterRule::getFilter)
-                                            .collect(Collectors.toList());
+    // Collect filters and virtual columns in a single pass
+    List<DimFilter> removeConditions = new ArrayList<>();
+    List<VirtualColumn> allVirtualColumns = new ArrayList<>();
 
+    for (ReindexingFilterRule rule : rules) {
+      removeConditions.add(rule.getFilter());
+
+      if (rule.getVirtualColumns() != null) {
+        allVirtualColumns.addAll(Arrays.asList(rule.getVirtualColumns().getVirtualColumns()));
+      }
+    }
+
+    // Combine filters: OR all filters together, wrap in NOT
     DimFilter removeFilter = removeConditions.size() == 1
                              ? removeConditions.get(0)
                              : new OrDimFilter(removeConditions);
-
     DimFilter finalFilter = new NotDimFilter(removeFilter);
-    builder.withTransformSpec(new CompactionTransformSpec(finalFilter));
+
+    // Create VirtualColumns if any exist
+    VirtualColumns virtualColumns = allVirtualColumns.isEmpty()
+                                    ? null
+                                    : VirtualColumns.create(allVirtualColumns);
+
+    builder.withTransformSpec(new CompactionTransformSpec(finalFilter, virtualColumns));
 
     LOG.debug("Applied [%d] filter rules for interval %s", rules.size(), interval);
     return rules.size();

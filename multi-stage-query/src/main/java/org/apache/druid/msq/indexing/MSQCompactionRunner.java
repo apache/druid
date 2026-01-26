@@ -73,6 +73,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.security.Action;
@@ -265,7 +266,7 @@ public class MSQCompactionRunner implements CompactionRunner
       Query<?> query;
       Interval interval = intervalDataSchema.getKey();
       DataSchema dataSchema = intervalDataSchema.getValue();
-      Map<String, VirtualColumn> inputColToVirtualCol = getVirtualColumns(dataSchema, interval);
+      Map<String, VirtualColumn> inputColToVirtualCol = getVirtualColumns(dataSchema, interval, compactionTask.getTransformSpec());
 
       if (isGroupBy(dataSchema)) {
         query = buildGroupByQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
@@ -558,7 +559,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * grouping on them without unnesting.</li>
    * </ul>
    */
-  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
+  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval, CompactionTransformSpec compactionTransformSpec)
   {
     Map<String, VirtualColumn> inputColToVirtualCol = new HashMap<>();
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
@@ -619,6 +620,13 @@ public class MSQCompactionRunner implements CompactionRunner
         );
       }
     }
+
+    if (compactionTransformSpec != null && compactionTransformSpec.getVirtualColumns() != null) {
+      for (VirtualColumn vc : compactionTransformSpec.getVirtualColumns().getVirtualColumns()) {
+        inputColToVirtualCol.put(vc.getOutputName(), vc);
+      }
+    }
+
     return inputColToVirtualCol;
   }
 
@@ -638,7 +646,7 @@ public class MSQCompactionRunner implements CompactionRunner
     List<PostAggregator> postAggregators =
         inputColToVirtualCol.entrySet()
                             .stream()
-                            .filter(entry -> !entry.getKey().equals(ColumnHolder.TIME_COLUMN_NAME))
+                            .filter(entry -> entry.getKey().startsWith(ARRAY_VIRTUAL_COLUMN_PREFIX))
                             .map(
                                 entry ->
                                     new ExpressionPostAggregator(

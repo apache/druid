@@ -19,20 +19,25 @@
 
 package org.apache.druid.indexing.compact;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -347,7 +352,7 @@ public class ReindexingFilterRuleOptimizerTest
   {
     OrDimFilter orFilter = new OrDimFilter(Arrays.asList(filters));
     NotDimFilter notFilter = new NotDimFilter(orFilter);
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter, null);
 
     return new CompactionState(
         null,
@@ -363,7 +368,7 @@ public class ReindexingFilterRuleOptimizerTest
   private CompactionState createStateWithSingleFilter(DimFilter filter)
   {
     NotDimFilter notFilter = new NotDimFilter(filter);
-    CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter);
+    CompactionTransformSpec transformSpec = new CompactionTransformSpec(notFilter, null);
 
     return new CompactionState(
         null,
@@ -387,6 +392,92 @@ public class ReindexingFilterRuleOptimizerTest
         null,
         null
     );
+  }
+
+  @Test
+  public void testFilterVirtualColumnsForFilter_someColumnsReferenced()
+  {
+    // Create virtual columns
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "vc1",
+                "col1 + 1",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "vc2",
+                "col2 + 2",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "vc3",
+                "col3 + 3",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+    );
+
+    // Create a filter that only references vc1 and vc3
+    DimFilter filter = new OrDimFilter(
+        Arrays.asList(
+            new SelectorDimFilter("vc1", "value1", null),
+            new SelectorDimFilter("vc3", "value3", null)
+        )
+    );
+
+    VirtualColumns filtered = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+        filter,
+        virtualColumns
+    );
+
+    Assert.assertNotNull(filtered);
+    Assert.assertEquals(2, filtered.getVirtualColumns().length);
+
+    Set<String> outputNames = new HashSet<>();
+    for (org.apache.druid.segment.VirtualColumn vc : filtered.getVirtualColumns()) {
+      outputNames.add(vc.getOutputName());
+    }
+
+    Assert.assertTrue(outputNames.contains("vc1"));
+    Assert.assertFalse(outputNames.contains("vc2")); // vc2 should be filtered out
+    Assert.assertTrue(outputNames.contains("vc3"));
+  }
+
+  @Test
+  public void testFilterVirtualColumnsForFilter_noColumnsReferenced()
+  {
+    // Create virtual columns
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "vc1",
+                "col1 + 1",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            ),
+            new ExpressionVirtualColumn(
+                "vc2",
+                "col2 + 2",
+                ColumnType.LONG,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+    );
+
+    // Create a filter that references a physical column, not virtual columns
+    DimFilter filter = new SelectorDimFilter("regularColumn", "value", null);
+
+    VirtualColumns filtered = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+        filter,
+        virtualColumns
+    );
+
+    // Should return null when no virtual columns are referenced so all are filtered out
+    Assert.assertNull(filtered);
   }
 
   /**

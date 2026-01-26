@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
@@ -181,9 +182,16 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
             params.getFingerprintMapper()
         );
 
+        // Filter virtual columns to only include ones referenced by the reduced filter
+        VirtualColumns reducedVirtualColumns = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+            reducedTransformSpecFilter,
+            config.getTransformSpec().getVirtualColumns()
+        );
+
         // Safe cast: we know this is InlineSchemaDataSourceCompactionConfig because we just built it
-        return ((InlineSchemaDataSourceCompactionConfig) config).toBuilder()
-            .withTransformSpec(new CompactionTransformSpec(reducedTransformSpecFilter))
+        return ((InlineSchemaDataSourceCompactionConfig) config)
+            .toBuilder()
+            .withTransformSpec(new CompactionTransformSpec(reducedTransformSpecFilter, reducedVirtualColumns))
             .build();
       }
 

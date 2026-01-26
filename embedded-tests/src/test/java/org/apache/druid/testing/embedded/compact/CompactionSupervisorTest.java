@@ -20,12 +20,16 @@
 package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
@@ -37,12 +41,16 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingFilterRule;
 import org.apache.druid.server.compaction.ReindexingGranularityRule;
@@ -152,26 +160,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
                 )
             )
             .build();
@@ -193,26 +183,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false)
                 )
             )
             .build();
@@ -258,26 +230,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
             .withTuningConfig(
-                new UserCompactionTaskQueryTuningConfig(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                createTuningConfigWithPartitionsSpec(
+                    new DimensionRangePartitionsSpec(1000, null, List.of("item"), false)
                 )
             )
             .build();
@@ -342,34 +296,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         "tuningConfigRule",
         "Use dimension range partitioning with max 1000 rows per segment",
         Period.days(1),
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            new DimensionRangePartitionsSpec(1000, null, List.of("item"), false),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        createTuningConfigWithPartitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
     );
 
     ReindexingFilterRule filterRule = new ReindexingFilterRule(
         "filterRule",
         "Drop rows where item is 'hat'",
         Period.days(7),
-        new SelectorDimFilter("item", "hat", null)
+        new SelectorDimFilter("item", "hat", null),
+        null
     );
 
     InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
@@ -399,6 +334,120 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(7, getNumSegmentsWith(Granularities.DAY));
     verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
   }
+
+  @Test
+  public void test_cascadingReindexing_withVirtualColumnOnNestedData_filtersCorrectly()
+  {
+    // Virtual Collumns on nested data is only supported with MSQ compaction engine right now.
+    CompactionEngine compactionEngine = CompactionEngine.MSQ;
+    configureCompaction(compactionEngine);
+
+    String jsonDataWithNestedColumn =
+        "{\"timestamp\":\"2025-06-01T00:00:00.000Z\",\"item\":\"shirt\",\"value\":105,"
+        + "\"extraInfo\":{\"fieldA\":\"valueA\",\"fieldB\":\"valueB\"}}\n"
+        + "{\"timestamp\":\"2025-06-02T00:00:00.000Z\",\"item\":\"trousers\",\"value\":210,"
+        + "\"extraInfo\":{\"fieldA\":\"valueC\",\"fieldB\":\"valueD\"}}\n"
+        + "{\"timestamp\":\"2025-06-03T00:00:00.000Z\",\"item\":\"jeans\",\"value\":150,"
+        + "\"extraInfo\":{\"fieldA\":\"valueA\",\"fieldB\":\"valueE\"}}\n"
+        + "{\"timestamp\":\"2025-06-04T00:00:00.000Z\",\"item\":\"hat\",\"value\":50,"
+        + "\"extraInfo\":{\"fieldA\":\"valueF\",\"fieldB\":\"valueG\"}}";
+
+    final TaskBuilder.Index task = TaskBuilder
+        .ofTypeIndex()
+        .dataSource(dataSource)
+        .jsonInputFormat()
+        .inlineInputSourceWithData(jsonDataWithNestedColumn)
+        .isoTimestampColumn("timestamp")
+        .schemaDiscovery()
+        .segmentGranularity("DAY");
+
+    cluster.callApi().runTask(task.withId(IdUtils.getRandomId()), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(4, getTotalRowCount());
+
+    VirtualColumns virtualColumns = VirtualColumns.create(
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "extractedFieldA",
+                "json_value(extraInfo, '$.fieldA')",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+    );
+
+    ReindexingFilterRule filterRule = new ReindexingFilterRule(
+        "filterByNestedField",
+        "Remove rows where extraInfo.fieldA = 'valueA'",
+        Period.days(7),
+        new SelectorDimFilter("extractedFieldA", "valueA", null),
+        virtualColumns
+    );
+
+    ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
+        "tuningConfigRule",
+        null,
+        Period.days(7),
+        createTuningConfigWithPartitionsSpec(new DynamicPartitionsSpec(null, null))
+    );
+
+    CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder()
+                                    .filterRules(List.of(filterRule))
+                                    .tuningConfigRules(List.of(tuningConfigRule))
+                                    .build(),
+        compactionEngine,
+        null
+    );
+
+    runCompactionWithSpec(cascadingTemplate);
+    waitForAllCompactionTasksToFinish();
+
+    // Verify: Should have 2 rows left (valueA appeared in 2 rows, both filtered out)
+    Assertions.assertEquals(2, getTotalRowCount());
+
+    // Verify the correct rows were filtered
+    verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
+  }
+
+  private int getTotalRowCount()
+  {
+    String sql = String.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
+    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
+    List<Map<String, Object>> rows = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        result.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    return ((Number) rows.get(0).get("cnt")).intValue();
+  }
+
+  private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
+  {
+    String sql = String.format(
+        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
+        dataSource,
+        nestedColumn,
+        field,
+        value
+    );
+    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
+    List<Map<String, Object>> rows = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        result.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(
+        0,
+        ((Number) rows.get(0).get("cnt")).intValue(),
+        String.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
+    );
+  }
+
 
   private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
   {
@@ -566,4 +615,30 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
   }
+
+  private UserCompactionTaskQueryTuningConfig createTuningConfigWithPartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    return new UserCompactionTaskQueryTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        partitionsSpec,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+  }
+
 }

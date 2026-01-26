@@ -515,7 +515,8 @@ public class ComposingReindexingRuleProviderTest
         id,
         "Test rule",
         period,
-        new SelectorDimFilter("test", "value", null)
+        new SelectorDimFilter("test", "value", null),
+        null
     );
   }
 

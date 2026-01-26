@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
@@ -55,26 +56,62 @@ import java.util.Objects;
  *   "description": "Remove robot traffic from segments older than 90 days"
  * }
  * }</pre>
+ * <p>
+ * Virtual column support for filtering on nested fields (MSQ engine only):
+ * <p>
+ * It is important to note that when using virtual columns in the filter, the virtual columns must be defined
+ * with unique names. Users will have to take care to ensure a rule always has the same unique virtual column names
+ * to not impact the fingerprinting of segments reindexed with the rule.
+ * <pre>{@code
+ * {
+ *   "id": "remove-using-nested-field-filter",
+ *   "period": "P90D",
+ *   "filter": {
+ *     "type": "selector",
+ *     "dimension": "extractedField",
+ *     "value": "unwantedValue"
+ *   },
+ *   "virtualColumns": [
+ *     {
+ *       "type": "expression",
+ *       "name": "extractedField",
+ *       "expression": "json_value(metadata, '$.category')",
+ *       "outputType": "STRING"
+ *     }
+ *   ],
+ *   "description": "Remove rows where metadata.category = 'unwantedValue' from segments older than 90 days"
+ * }
+ * }</pre>
  */
 public class ReindexingFilterRule extends AbstractReindexingRule
 {
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
   @JsonCreator
   public ReindexingFilterRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("period") @Nonnull Period period,
-      @JsonProperty("filter") @Nonnull DimFilter filter
+      @JsonProperty("filter") @Nonnull DimFilter filter,
+      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
     super(id, description, period);
     this.filter = Objects.requireNonNull(filter, "filter cannot be null");
+    this.virtualColumns = virtualColumns;
   }
 
   @JsonProperty
   public DimFilter getFilter()
   {
     return filter;
+  }
+
+  @JsonProperty
+  @Nullable
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 }

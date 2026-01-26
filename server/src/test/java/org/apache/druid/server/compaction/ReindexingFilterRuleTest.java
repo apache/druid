@@ -19,10 +19,15 @@
 
 package org.apache.druid.server.compaction;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -35,11 +40,24 @@ public class ReindexingFilterRuleTest
   private static final Period PERIOD_30_DAYS = Period.days(30);
 
   private final DimFilter testFilter = new SelectorDimFilter("isRobot", "true", null);
+  private final VirtualColumns virtualColumns = VirtualColumns.create(
+      ImmutableList.of(
+          new ExpressionVirtualColumn(
+              "isRobotFiltered",
+              "concat(isRobot, '_filtered')",
+              ColumnType.STRING,
+              ExprMacroTable.nil()
+          )
+      )
+  );
+
+
   private final ReindexingFilterRule rule = new ReindexingFilterRule(
       "test-filter-rule",
       "Remove robot traffic",
       PERIOD_30_DAYS,
-      testFilter
+      testFilter,
+      virtualColumns
   );
 
   @Test
@@ -122,7 +140,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule(null, "description", PERIOD_30_DAYS, testFilter)
+        () -> new ReindexingFilterRule(null, "description", PERIOD_30_DAYS, testFilter, null)
     );
   }
 
@@ -131,7 +149,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule("test-id", "description", null, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", null, testFilter, null)
     );
   }
 
@@ -141,7 +159,7 @@ public class ReindexingFilterRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter, null)
     );
   }
 
@@ -151,7 +169,7 @@ public class ReindexingFilterRuleTest
     Period negativePeriod = Period.days(-30);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter, null)
     );
   }
 
@@ -160,7 +178,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule("test-id", "description", PERIOD_30_DAYS, null)
+        () -> new ReindexingFilterRule("test-id", "description", PERIOD_30_DAYS, null, null)
     );
   }
 
@@ -175,7 +193,8 @@ public class ReindexingFilterRuleTest
         "test-id",
         "6 month rule",
         period,
-        testFilter
+        testFilter,
+        null
     );
 
     Assert.assertEquals(period, rule.getPeriod());
@@ -190,7 +209,8 @@ public class ReindexingFilterRuleTest
         "test-id",
         "1 year rule",
         period,
-        testFilter
+        testFilter,
+        null
     );
 
     Assert.assertEquals(period, rule.getPeriod());
@@ -205,7 +225,8 @@ public class ReindexingFilterRuleTest
         "test-id",
         "6 months 15 days rule",
         period,
-        testFilter
+        testFilter,
+        null
     );
 
     Assert.assertEquals(period, rule.getPeriod());
@@ -220,7 +241,8 @@ public class ReindexingFilterRuleTest
         "test-id",
         "1 year 3 months 10 days rule",
         period,
-        testFilter
+        testFilter,
+        null
     );
 
     Assert.assertEquals(period, rule.getPeriod());
@@ -233,7 +255,7 @@ public class ReindexingFilterRuleTest
     Period zeroPeriod = Period.months(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter, null)
     );
   }
 
@@ -244,7 +266,7 @@ public class ReindexingFilterRuleTest
     Period negativePeriod = Period.months(-6);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter)
+        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter, null)
     );
   }
 
@@ -261,7 +283,8 @@ public class ReindexingFilterRuleTest
         "test-month-rule",
         "6 months rule",
         sixMonths,
-        testFilter
+        testFilter,
+        null
     );
 
     // Interval ending before 6-month threshold - should be FULL
@@ -299,7 +322,8 @@ public class ReindexingFilterRuleTest
         "test-year-rule",
         "1 year rule",
         oneYear,
-        testFilter
+        testFilter,
+        null
     );
 
     // Interval ending before 1-year threshold - should be FULL

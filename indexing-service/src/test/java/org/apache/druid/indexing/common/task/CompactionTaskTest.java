@@ -430,7 +430,7 @@ public class CompactionTaskTest
   public void testCreateCompactionTaskWithTransformSpec()
   {
     CompactionTransformSpec transformSpec =
-        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null);
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory
@@ -1773,7 +1773,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null))
         .build();
     Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }
