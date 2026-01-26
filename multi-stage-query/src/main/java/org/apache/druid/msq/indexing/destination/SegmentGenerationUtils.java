@@ -52,6 +52,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -106,6 +107,7 @@ public final class SegmentGenerationUtils
                          isRollupQuery,
                          jsonMapper
                      ))
+                     .withTransform(new TransformSpec(query.getFilter(), null))
                      .withProjections(destination.getProjections())
                      .build();
   }

@@ -319,8 +319,8 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of

@@ -480,6 +480,10 @@ public abstract class CompactionTaskRunBase
   @Test
   public void testWithSegmentGranularityMisalignedInterval() throws Exception
   {
+    Assume.assumeTrue(
+        "use Granularities.WEEK segment granularity in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity)
+    );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
     // Test when inputInterval is less than Granularities.WEEK is not allowed
     final CompactionTask compactionTask1 =
@@ -499,6 +503,10 @@ public abstract class CompactionTaskRunBase
   @Test
   public void testWithSegmentGranularityMisalignedIntervalAllowed() throws Exception
   {
+    Assume.assumeTrue(
+        "use Granularities.WEEK segment granularity in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity)
+    );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
     // Test when inputInterval is less than Granularities.WEEK is allowed
     final CompactionTask compactionTask1 =
@@ -634,8 +642,8 @@ public abstract class CompactionTaskRunBase
   public void testWithGranularitySpecNonNullQueryGranularityAndCoarseSegmentGranularity() throws Exception
   {
     Assume.assumeTrue(
-        "use Granularities.DAY segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -696,8 +704,8 @@ public abstract class CompactionTaskRunBase
     // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
@@ -823,8 +831,8 @@ public abstract class CompactionTaskRunBase
     // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
@@ -920,6 +928,10 @@ public abstract class CompactionTaskRunBase
   {
     // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
+    Assume.assumeTrue(
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+    );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
     final Set<DataSegment> expectedSegments = new HashSet<>(
@@ -979,9 +991,7 @@ public abstract class CompactionTaskRunBase
         () -> runIndexTask(compactionTaskReadyLatch, indexTaskStartLatch, false)
     );
 
-    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity)
-        .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
-        .build();
+    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
 
     final Future<Pair<TaskStatus, DataSegmentsWithSchemas>> compactionFuture = exec.submit(
         () -> {
@@ -1023,9 +1033,7 @@ public abstract class CompactionTaskRunBase
   {
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
-    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity)
-        .interval(Intervals.of("2014-01-01T00:00:00/2014-01-02T03:00:00"))
-        .build();
+    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
 
     // make sure that compactionTask becomes ready first, then the indexTask becomes ready, then compactionTask runs
     final CountDownLatch indexTaskReadyLatch = new CountDownLatch(1);
@@ -1081,8 +1089,8 @@ public abstract class CompactionTaskRunBase
   public void testRunWithSpatialDimensions() throws Exception
   {
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     final List<String> spatialrows = ImmutableList.of(
         "2014-01-01T00:00:10Z,a,10,100,1\n",
@@ -1189,8 +1197,8 @@ public abstract class CompactionTaskRunBase
   public void testRunWithAutoCastDimensions() throws Exception
   {
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     final List<String> rows = ImmutableList.of(
         "2014-01-01T00:00:10Z,a,10,100,1\n",
@@ -1304,8 +1312,8 @@ public abstract class CompactionTaskRunBase
   public void testRunWithAutoCastDimensionsSortByDimension() throws Exception
   {
     Assume.assumeTrue(
-        "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     // Compaction will produce one segment sorted by [x, __time], even though input rows are sorted by __time.
     final List<String> rows = ImmutableList.of(
