@@ -38,7 +38,11 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
     case 'ACCEPTED':
-      return [IconNames.CIRCLE, '#8d8d8d'];
+      return [IconNames.CIRCLE, '#d5631a'];
+    case 'SUCCESS':
+      return [IconNames.TICK_CIRCLE, '#57d500'];
+    case 'FAILED':
+      return [IconNames.DELETE, '#9f0d0a'];
     case 'CANCELED':
       return [IconNames.DISABLE, '#8d8d8d'];
     default:
@@ -61,8 +65,9 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, signal) => {
-      return (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
-        .queries as DartQueryEntry[];
+      return (
+        await Api.instance.get('/druid/v2/sql/queries?includeComplete', { signal })
+      ).data.queries.reverse() as DartQueryEntry[];
     },
   });
 
