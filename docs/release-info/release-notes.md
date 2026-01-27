@@ -107,7 +107,7 @@ Additionally, `CgroupV2CpuMonitor` now also emits  `cgroup/cpu/shares` and `cgro
 
 #### Query reports for Dart
 
-Dart now supports query reports for running and recently completed queries. that can be fetched from the `/druid/v2/sql/queries/<sqlQueryId>/reports` endpoint.
+Dart now supports query reports for running and recently completed queries. The reports can be fetched from the `/druid/v2/sql/queries/<sqlQueryId>/reports` endpoint.
 
 The format of the response is a JSON object with two keys, "query" and "report". The "query" key is the same info that is available from the existing `/druid/v2/sql/queries` endpoint. The "report" key is a report map including an MSQ report.
 
