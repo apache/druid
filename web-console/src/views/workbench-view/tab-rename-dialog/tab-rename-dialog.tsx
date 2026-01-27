@@ -48,7 +48,7 @@ export const TabRenameDialog = React.memo(function TabRenameDialog(props: TabRen
     >
       <div className={Classes.DIALOG_BODY}>
         <FormGroup label="New tab name">
-          <InputGroup value={newTabName} onChange={e => setNewTabName(e.target.value)} autoFocus />
+          <InputGroup value={newTabName} onChange={e => setNewTabName(e.target.value.trimStart())} autoFocus />
         </FormGroup>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
