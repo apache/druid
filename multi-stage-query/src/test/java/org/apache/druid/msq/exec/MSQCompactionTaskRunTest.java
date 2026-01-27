@@ -316,11 +316,12 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   public void testPartialIntervalCompactWithFinerSegmentGranularityThanFullIntervalCompactWithDropExistingTrue()
       throws Exception
   {
+    // This test is almost identical to base, except for fullCompactionTask, since MSQ doesn't allow disjoint intervals.
     // This test fails with segment lock because of the bug reported in https://github.com/apache/druid/issues/10911.
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
-        "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        "test with defined segment granularity in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
@@ -392,13 +393,10 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assert.assertEquals(64, segmentsAfterPartialCompaction.size());
 
     // Setup full compaction:
-    // Reindex with new HOUR segment granularity. MSQ engine doesn't support disjoint intervals.
+    // Reindex with new MINUTE segment granularity. MSQ engine doesn't support disjoint intervals.
     // each hour has 59 tombstones, and 1 real segment.
     final CompactionTask fullCompactionTask =
-        compactionTaskBuilder(Granularities.MINUTE)
-            // Set dropExisting to true
-            .inputSpec(new CompactionIntervalSpec(TEST_INTERVAL, null), true)
-            .build();
+        compactionTaskBuilder(Granularities.MINUTE).interval(TEST_INTERVAL).build();
 
     // **** FULL COMPACTION ****
     final Pair<TaskStatus, DataSegmentsWithSchemas> fullCompactionResult = runTask(fullCompactionTask);
@@ -434,7 +432,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Test
-  public void testMSQCompactionWithConcurrentAppendCompactionReadyFirst() throws Exception
+  public void testMSQCompactionWithConcurrentAppendCompactionLocksFirst() throws Exception
   {
     Assume.assumeTrue(useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
@@ -492,7 +490,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
 
 
   @Test
-  public void testMSQCompactionWithConcurrentAppendAppendReadyFirst() throws Exception
+  public void testMSQCompactionWithConcurrentAppendAppendLocksFirst() throws Exception
   {
     Assume.assumeTrue(useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
