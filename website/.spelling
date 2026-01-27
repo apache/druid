@@ -314,6 +314,7 @@ config
 configs
 consumerProperties
 cron
+CRDs
 csv
 customizable
 dataset

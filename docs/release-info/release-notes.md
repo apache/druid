@@ -114,7 +114,7 @@ The format of the response is a JSON object with two keys, "query" and "report".
 You can control the retention behavior for reports using the following configs:
 
 * `druid.msq.dart.controller.maxRetainedReportCount`: Max number of reports that are retained. The default is 0, meaning no reports are retained
-* `druid.msq.dart.controller.maxRetainedReportDuration`: How long reports are retained in ISO 8601 duration format. The default is PT0S, meaning time-based expiration is turned off
+* `druid.msq.dart.controller.maxRetainedReportDuration`: How long reports are retained in ISO 8601 duration format. The default is `PT0S`, meaning time-based expiration is turned off
 
 [#18886](https://github.com/apache/druid/pull/18886)
 
@@ -168,7 +168,6 @@ You can now use the following configs to control how your data gets ingested and
 ##### Other SQL-based ingestion improvements
 
 * Added `maxRowsInMemory` to replace `rowsInMemory`. `rowsInMemory` now functions as an alternate way to provide that config and is ignored if `maxRowsInMemory` is specified. Previously, only `rowsInMemory` existed [#18832](https://github.com/apache/druid/pull/18832)
-* Improved the parallelism for sort-merge joins [#18765](https://github.com/apache/druid/pull/18765)
 
 #### Streaming ingestion
 
@@ -217,6 +216,7 @@ The `server_properties` table exposes the runtime properties configured for each
 * Added the `mostFragmentedFirst` compaction policy that prioritizes intervals with the most small uncompacted segments [#18802](https://github.com/apache/druid/pull/18802)
 * Improved how segment files get deleted to prevent partial segment files from remaining in the event of a failure during a delete operation [#18696](https://github.com/apache/druid/pull/18696)
 * Improved compaction so that it identifies multi-value dimensions for dimension schemas that can  produce them [#18760](https://github.com/apache/druid/pull/18760)
+* Improved the reliability when pulling segments [#18821](https://github.com/apache/druid/pull/18821)
 
 ### Metrics and monitoring
 
@@ -245,6 +245,7 @@ The following metrics have been added to the default list for `statsd`:
 
 #### Other metrics and monitoring improvements
 
+* Added `reason` dimension to `ingest/events/thrownAway` metric. This allows for increased observability on why certain events are being logically excluded from ingest [#188855](https://github.com/apache/druid/pull/18855)
 * Added logging for all handlers for a stage before they start or stop, which can help you understand execution order [#18662](https://github.com/apache/druid/pull/18662)
 * Added new Jetty thread pool metrics to capture request-serving thread statistics: `jetty/threadPool/utilized`, `jetty/threadPool/ready` and `jetty/threadPool/utilizationRate` [#18883](https://github.com/apache/druid/pull/18883)
 * Added `tier` and `priority` dimensions to the `segments/max` metric [#18890](https://github.com/apache/druid/pull/18890)
@@ -257,6 +258,9 @@ The following metrics have been added to the default list for `statsd`:
   * `query/bytes` metric for even for failed requests [#18842](https://github.com/apache/druid/pull/18842)
 * Changed Prometheus emitter TTL tracking to consider all label value combinations instead of just the metric name. Labels aren't tracked when the TTL isn't set [#18718](https://github.com/apache/druid/pull/18718) [#18689](https://github.com/apache/druid/pull/18689)
 * Changed lifecycle `stop()` to be logged at the `info` level to match `start()` [#18640](https://github.com/apache/druid/pull/18640)
+* Changed the trigger for metrics emission so that metrics get emitted any time a task completes [#18766](https://github.com/apache/druid/pull/18766) 
+
+
 * Improved the metrics emitter so that it emits metrics for all task completions [#18766](https://github.com/apache/druid/pull/18766)
 
 ### Extensions
@@ -269,6 +273,12 @@ The following metrics have been added to the default list for `statsd`:
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
+
+### MSQ controller tasks
+
+When upgrading from Druid 30 or earlier, MSQ `query_controller` tasks can fail during a rolling update due to the addition of new counters that are not backwards compatible with these older versions. You can either retry any failed queries after the update completes; or you can set `includeAllCounters` to `false` in the query context for any MSQ jobs that need to run during the rolling update; or you can upgrade to Druid 31–35 first before upgrading to Druid 36.
+
+[#18761](https://github.com/apache/druid/pull/18761)
 
 #### Deprecated metrics
 
@@ -303,6 +313,7 @@ Extensions which do not provide custom column implementations should not be impa
 #### Other developer improvements
 
 * Added the ability to override the default Kafka image for testing [#18739](https://github.com/apache/druid/pull/18739)
+* Changed `fastDecompressor` to `safeDecompressor` [#18930](https://github.com/apache/druid/pull/18930)
 * Extensions can now provide query kit implementations [#18875](https://github.com/apache/druid/pull/18875)
 * Removed version overrides in individual `pom` files. For a full list, see the pull request [#18708](https://github.com/apache/druid/pull/18708)
 
@@ -320,3 +331,4 @@ The following dependencies have had their versions bumped:
 * `org.apache.commons:commons-lang3` from `3.18.0` to `3.19.0` [#18695](https://github.com/apache/druid/pull/18695)
 * `org.apache.maven.plugins:maven-shade-plugin` from `3.5.0` to `3.6.1`
 * `com.netflix.spectator` from `1.7.0` to `1.9.0` [#18887](https://github.com/apache/druid/pull/18887)
+* `org.bouncycastle:bcpkix-jdk18on` from `1.79` to `1.81` to resolve `SONATYPE-2025-001911`
