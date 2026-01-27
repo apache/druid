@@ -407,6 +407,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     runCompactionWithSpec(cascadingTemplate);
     waitForAllCompactionTasksToFinish();
 
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
     // Verify: Should have 2 rows left (valueA appeared in 2 rows, both filtered out)
     Assertions.assertEquals(2, getTotalRowCount());
 
