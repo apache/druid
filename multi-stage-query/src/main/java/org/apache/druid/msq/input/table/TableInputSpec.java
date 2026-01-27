@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -84,8 +84,7 @@ public class TableInputSpec implements InputSpec
     this.dataSource = dataSource;
     this.intervals = intervals == null ? Intervals.ONLY_ETERNITY : intervals;
     if (segments != null && segments.isEmpty()) {
-      throw DruidException.defensive(
-          "Can not supply empty segments as input, please use either null or non-empty segments.");
+      throw new IAE("Can not supply empty segments as input, please use either null or non-empty segments.");
     }
     this.segments = segments;
     this.filter = filter;

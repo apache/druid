@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -41,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
 {
@@ -213,6 +215,53 @@ public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
         DATASOURCE,
         Collections.singletonList(Intervals.of("2002/P1M")),
         null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
+  }
+
+  @Test
+  public void test_sliceStatic_segmentFilter()
+  {
+    final TableInputSpec spec = new TableInputSpec(
+        DATASOURCE,
+        null,
+        List.of(new SegmentDescriptor(
+            SEGMENT1.getInterval(),
+            SEGMENT1.getVersion(),
+            SEGMENT1.getShardSpec().getPartitionNum()
+        )),
+        null,
+        null
+    );
+
+    RichSegmentDescriptor expectedSegment = new RichSegmentDescriptor(
+        SEGMENT1.getInterval(),
+        SEGMENT1.getInterval(),
+        SEGMENT1.getVersion(),
+        SEGMENT1.getShardSpec().getPartitionNum()
+    );
+    Assert.assertEquals(
+        List.of(new SegmentsInputSlice(DATASOURCE, List.of(expectedSegment), List.of())),
+        slicer.sliceStatic(spec, 1));
+  }
+
+  @Test
+  public void test_sliceStatic_segmentAndIntervalFilter()
+  {
+    final TableInputSpec spec = new TableInputSpec(
+        DATASOURCE,
+        List.of(Intervals.of("2002/P1M")),
+        List.of(new SegmentDescriptor(
+            SEGMENT1.getInterval(),
+            SEGMENT1.getVersion(),
+            SEGMENT1.getShardSpec().getPartitionNum()
+        )),
         null,
         null
     );
