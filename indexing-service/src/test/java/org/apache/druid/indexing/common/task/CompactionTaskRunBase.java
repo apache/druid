@@ -389,7 +389,7 @@ public abstract class CompactionTaskRunBase
       for (int i = 0; i < 3; i++) {
         Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
         Assert.assertEquals(interval, segments.get(i).getInterval());
-        Interval inputInterval = segmentGranularity == null ? interval : TEST_INTERVAL;
+        Interval inputInterval = segmentGranularity == null ? interval : this.inputInterval;
         Assert.assertEquals(
             getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, DEFAULT_QUERY_GRAN, List.of(inputInterval)),
             segments.get(i).getLastCompactionState()
@@ -407,7 +407,7 @@ public abstract class CompactionTaskRunBase
       Assert.assertEquals(1, segments.size());
       Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
       Assert.assertEquals(
-          getDefaultCompactionState(segmentGranularity, DEFAULT_QUERY_GRAN, List.of(TEST_INTERVAL)),
+          getDefaultCompactionState(segmentGranularity, DEFAULT_QUERY_GRAN, List.of(inputInterval)),
           segments.get(0).getLastCompactionState()
       );
       // use overwrite shard for the second compaction
@@ -426,6 +426,7 @@ public abstract class CompactionTaskRunBase
   @Test
   public void testRunIndexAndCompactAtTheSameTimeForDifferentInterval() throws Exception
   {
+    Assume.assumeTrue("Use 3 hr interval to compact", TEST_INTERVAL.equals(inputInterval));
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
     final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
@@ -525,7 +526,7 @@ public abstract class CompactionTaskRunBase
         getDefaultCompactionState(
             Granularities.WEEK,
             DEFAULT_QUERY_GRAN,
-            List.of(TEST_INTERVAL)
+            List.of(inputInterval)
         ),
         segments.get(0).getLastCompactionState()
     );
@@ -557,7 +558,7 @@ public abstract class CompactionTaskRunBase
     CompactionState expectedCompactionState = getDefaultCompactionState(
         segmentGranularity,
         DEFAULT_QUERY_GRAN,
-        List.of(TEST_INTERVAL)
+        List.of(inputInterval)
     ).toBuilder().transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null))).build();
     Assert.assertEquals(expectedCompactionState, segments.get(0).getLastCompactionState());
   }
@@ -613,7 +614,7 @@ public abstract class CompactionTaskRunBase
     AggregatorFactory expectedCountMetric = new CountAggregatorFactory("cnt");
     AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
     CompactionState expectedCompactionState =
-        getDefaultCompactionState(segmentGranularity, Granularities.MINUTE, List.of(TEST_INTERVAL))
+        getDefaultCompactionState(segmentGranularity, Granularities.MINUTE, List.of(inputInterval))
             .toBuilder()
             .metricsSpec(List.of(expectedCountMetric, expectedLongSumMetric))
             .build();
@@ -659,11 +660,8 @@ public abstract class CompactionTaskRunBase
     List<DataSegment> segments = List.copyOf(resultPair.rhs.getSegments());
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(TEST_INTERVAL_DAY, segments.get(0).getInterval());
-    Interval inputInterval = compactionTask1.getCompactionRunner() instanceof NativeCompactionRunner
-                             ? TEST_INTERVAL
-                             : TEST_INTERVAL_DAY;
     Assert.assertEquals(
-        getDefaultCompactionState(Granularities.DAY, Granularities.DAY, List.of(inputInterval)),
+        getDefaultCompactionState(Granularities.DAY, Granularities.DAY, List.of(TEST_INTERVAL_DAY)),
         segments.get(0).getLastCompactionState()
     );
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
@@ -1130,13 +1128,11 @@ public abstract class CompactionTaskRunBase
     final List<DataSegment> segments = new ArrayList<>(resultPair.rhs.getSegments());
     Assert.assertEquals(1, segments.size());
 
-    final Interval interval = (compactionTask.getCompactionRunner() instanceof NativeCompactionRunner)
-                              ? Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z") : TEST_INTERVAL;
     Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
     CompactionState defaultCompactionState = getDefaultCompactionState(
         Granularities.THREE_HOUR,
         Granularities.MINUTE,
-        List.of(interval)
+        List.of(TEST_INTERVAL)
     );
     CompactionState newCompactionState =
         defaultCompactionState.toBuilder().dimensionsSpec(
@@ -1241,15 +1237,13 @@ public abstract class CompactionTaskRunBase
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
 
-    final Interval interval = (compactionTask.getCompactionRunner() instanceof NativeCompactionRunner)
-                              ? Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z") : TEST_INTERVAL;
     final List<String> dimensionExclusions =
         compactionTask.getCompactionRunner() instanceof NativeCompactionRunner ? List.of() : List.of("__time", "val");
     CompactionState expectedState =
         getDefaultCompactionState(
             Granularities.THREE_HOUR,
             Granularities.MINUTE,
-            List.of(interval)
+            List.of(TEST_INTERVAL)
         ).toBuilder()
          .dimensionsSpec(
              new DimensionsSpec(Arrays.asList(/* check explicitly specified types are preserved */
@@ -1696,7 +1690,7 @@ public abstract class CompactionTaskRunBase
       for (int i = 0; i < 3; i++) {
         Interval interval = Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1);
         Assert.assertEquals(interval, segments.get(i).getInterval());
-        Interval inputInterval = gran == null ? interval : TEST_INTERVAL;
+        Interval inputInterval = gran == null ? interval : this.inputInterval;
         Assert.assertEquals(
             getDefaultCompactionState(DEFAULT_SEGMENT_GRAN, queryGran, List.of(inputInterval)),
             segments.get(i).getLastCompactionState()
@@ -1714,7 +1708,7 @@ public abstract class CompactionTaskRunBase
       Assert.assertEquals(1, segments.size());
       Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
       Assert.assertEquals(
-          getDefaultCompactionState(gran, queryGran, List.of(TEST_INTERVAL)),
+          getDefaultCompactionState(gran, queryGran, List.of(inputInterval)),
           segments.get(0).getLastCompactionState()
       );
       Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());

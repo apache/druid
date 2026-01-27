@@ -62,7 +62,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -440,8 +439,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
-    return determineLockGranularityAndTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
+    return determineLockGranularityAndTryLock(taskActionClient, List.of(segmentProvider.interval));
   }
 
   @Override
@@ -635,12 +633,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          JodaUtils.umbrellaInterval(
-              Iterables.transform(
-                  timelineSegments,
-                  DataSegment::getInterval
-              )
-          ),
+          segmentProvider.interval,
           lazyFetchSegments(
               timelineSegments,
               toolbox.getSegmentCacheManager()
