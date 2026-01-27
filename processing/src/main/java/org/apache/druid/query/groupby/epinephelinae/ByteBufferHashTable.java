@@ -308,7 +308,7 @@ public class ByteBufferHashTable
       final int bucketOffset = bucket * bucketSizeWithHash;
       final int storedHashWithUsedFlag = targetTableBuffer.getInt(bucketOffset);
 
-      if ((storedHashWithUsedFlag & 0x80) == 0) {
+      if ((storedHashWithUsedFlag & 0x80000000) == 0) {
         // Found unused bucket before finding our key
         return allowNewBucket ? bucket : -1;
       }
