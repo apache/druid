@@ -142,7 +142,7 @@ public class ByteBufferHashTable
 
     // Clear used bits of new table
     for (int i = 0; i < maxBuckets; i++) {
-      tableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      tableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
   }
 
@@ -181,7 +181,7 @@ public class ByteBufferHashTable
 
     // Clear used bits of new table
     for (int i = 0; i < newBuckets; i++) {
-      newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      newTableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
 
     // Loop over old buckets and copy to new table
