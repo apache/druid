@@ -512,7 +512,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       growthCount = 0;
       // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
-        subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
+        subHashTableBuffers[0].putInt(i * bucketSizeWithHash, 0);
       }
       tableBuffer = subHashTableBuffers[0];
     }
@@ -525,7 +525,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
       // clear the used bits of the buffer we're swapping to
       for (int i = 0; i < maxBuckets; i++) {
-        newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+        newTableBuffer.putInt(i * bucketSizeWithHash, 0);
       }
 
       // Get the offsets of the top N buckets from the heap and copy the buckets to new table
