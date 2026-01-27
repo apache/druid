@@ -609,7 +609,7 @@ public class CostBasedAutoScalerTest
   {
     Map<String, Object> buildSegments = new HashMap<>();
     buildSegments.put(nullInterval, null);
-    buildSegments.put(validInterval, Map.of(RowIngestionMeters.PROCESSED, processRate));
+    buildSegments.put(validInterval, Map.of(RowIngestionMeters.PROCESSED, processedRate));
 
     Map<String, Object> movingAverages = new HashMap<>();
     movingAverages.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments);
