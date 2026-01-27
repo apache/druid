@@ -119,6 +119,17 @@
       <artifactId>kafka-clients</artifactId>
       <version>${apache.kafka.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.lz4</groupId>
+          <artifactId>lz4-java</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>at.yawk.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -164,6 +175,8 @@
             <!-- Transitive dependencies from opentelemetry but explicitly added to be shadowed -->
             <ignoredUnusedDeclaredDependency>io.grpc:grpc-netty-shaded</ignoredUnusedDeclaredDependency>
             <ignoredUnusedDeclaredDependency>com.google.guava:guava</ignoredUnusedDeclaredDependency>
+            <!-- Replacement for excluded org.lz4:lz4-java from kafka-clients -->
+            <ignoredUnusedDeclaredDependency>at.yawk.lz4:lz4-java</ignoredUnusedDeclaredDependency>
           </configuration>
         </plugin>
       </plugins>

@@ -504,6 +504,10 @@
                         <!-- These are needed for scope: runtime -->
                         <dependency>org.xerial.snappy:snappy-java</dependency>
                     </usedDependencies>
+                    <!-- Transitive dependency from guava, used in annotations -->
+                    <ignoredUsedUndeclaredDependencies>
+                        <ignoredUsedUndeclaredDependency>org.checkerframework:checker-qual:jar:2.5.7</ignoredUsedUndeclaredDependency>
+                    </ignoredUsedUndeclaredDependencies>
                 </configuration>
             </plugin>
         </plugins>
