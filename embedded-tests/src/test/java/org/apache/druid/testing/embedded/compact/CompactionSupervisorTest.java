@@ -416,7 +416,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private int getTotalRowCount()
   {
-    String sql = String.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
+    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
     String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
     List<Map<String, Object>> rows = JacksonUtils.readValue(
         new DefaultObjectMapper(),
@@ -428,7 +428,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
   {
-    String sql = String.format(
+    String sql = StringUtils.format(
         "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
         dataSource,
         nestedColumn,
@@ -444,7 +444,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         0,
         ((Number) rows.get(0).get("cnt")).intValue(),
-        String.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
+        StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
     );
   }
 
