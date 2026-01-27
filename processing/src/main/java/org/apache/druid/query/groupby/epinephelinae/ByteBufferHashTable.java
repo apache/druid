@@ -302,20 +302,18 @@ public class ByteBufferHashTable
 
     // Pre-compute hash with used flag for comparison.
     final int keyHashWithUsedFlag = Groupers.getUsedFlag(keyHash);
-    // Only use hash pre-check for keys > 8 bytes where the overhead pays off.
-    final boolean useHashCheck = keySize > Long.BYTES;
     final int keyBufferPosition = keyBuffer.position();
 
     while (true) {
       final int bucketOffset = bucket * bucketSizeWithHash;
       final int storedHashWithUsedFlag = targetTableBuffer.getInt(bucketOffset);
 
-      if ((storedHashWithUsedFlag & 0x80000000) == 0) {
+      if ((storedHashWithUsedFlag & 0x80) == 0) {
         // Found unused bucket before finding our key
         return allowNewBucket ? bucket : -1;
       }
 
-      if ((!useHashCheck || storedHashWithUsedFlag == keyHashWithUsedFlag) &&
+      if (storedHashWithUsedFlag == keyHashWithUsedFlag &&
           keysEqual(targetTableBuffer, bucketOffset + HASH_SIZE, keyBuffer, keyBufferPosition, keySize)) {
         // Found our key in a used bucket
         return bucket;
