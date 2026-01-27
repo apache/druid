@@ -20,12 +20,12 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -56,6 +56,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -158,7 +159,11 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
 
   private Set<DataSegmentWithInterval> getPrunedSegmentSet(final TableInputSpec tableInputSpec)
   {
-    final TimelineLookup<String, DataSegment> timeline = getTimeline(tableInputSpec);
+    final TimelineLookup<String, DataSegment> timeline =
+        getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
+    final Predicate<SegmentDescriptor> segmentFilter = tableInputSpec.getSegments() != null
+                                                       ? Set.copyOf(tableInputSpec.getSegments())::contains
+                                                       : Predicates.alwaysTrue();
 
     if (timeline == null) {
       return Collections.emptySet();
@@ -173,6 +178,7 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
                                 StreamSupport.stream(holder.getObject().spliterator(), false)
                                              .map(PartitionChunk::getObject)
                                              .filter(segment -> !segment.isTombstone())
+                                             .filter(segment -> segmentFilter.apply(segment.toDescriptor()))
                                              .map(segment -> new DataSegmentWithInterval(segment, holder.getInterval()))
                         ).iterator();
 
@@ -186,93 +192,66 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
     }
   }
 
-  /**
-   * Builds a timeline of segments for the given {@link TableInputSpec} by combining segments from both
-   * realtime servers and the metadata store.
-   * <p>
-   * Realtime segments are fetched first to avoid missing segments that may be handed off between the two calls.
-   * When a segment appears in both sources, the published version is used.
-   * <p>
-   * If the task is operating with a REPLACE lock, only segments that existed before the lock was acquired
-   * will be considered.
-   *
-   * @param inputSpec the table input specification containing datasource, intervals, and optional specific segments
-   * @return a timeline containing all matching segments, or null if no segments are found
-   * @throws MSQException if there's an IO error fetching segments from the metadata store
-   * @throws DruidException if specific segments were requested but some are missing or outdated
-   */
   @Nullable
-  private VersionedIntervalTimeline<String, DataSegment> getTimeline(TableInputSpec inputSpec)
+  private VersionedIntervalTimeline<String, DataSegment> getTimeline(
+      final String dataSource,
+      final List<Interval> intervals
+  )
   {
-    String dataSource = inputSpec.getDataSource();
-    List<Interval> intervals = inputSpec.getIntervals();
-    Set<SegmentDescriptor> segments = inputSpec.getSegments() == null ? null : Set.copyOf(inputSpec.getSegments());
-
     final boolean includeRealtime = SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
-    final Iterable<ImmutableSegmentLoadInfo> realtimeSegments;
-    // Fetch the realtime segments. Do this first so that we don't miss any segment if they get handed off between the two calls.
+    final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;
+
+    // Fetch the realtime segments and segments loaded on the historical. Do this first so that we don't miss any
+    // segment if they get handed off between the two calls. Segments loaded on historicals are deduplicated below,
+    // since we are only interested in realtime segments for now.
     if (includeRealtime) {
-      realtimeSegments = coordinatorClient.fetchServerViewSegments(dataSource, intervals);
+      realtimeAndHistoricalSegments = coordinatorClient.fetchServerViewSegments(dataSource, intervals);
     } else {
-      realtimeSegments = ImmutableList.of();
+      realtimeAndHistoricalSegments = ImmutableList.of();
     }
 
     // Fetch all published, used segments (all non-realtime segments) from the metadata store.
     // If the task is operating with a REPLACE lock,
     // any segment created after the lock was acquired for its interval will not be considered.
-    final Set<DataSegment> publishedUsedSegments;
+    final Collection<DataSegment> publishedUsedSegments;
     try {
       // Additional check as the task action does not accept empty intervals
       if (intervals.isEmpty()) {
         publishedUsedSegments = Collections.emptySet();
       } else {
-        publishedUsedSegments = taskActionClient.submit(new RetrieveUsedSegmentsAction(dataSource, intervals))
-                                                .stream()
-                                                .filter(s -> segments == null || segments.contains(s.toDescriptor()))
-                                                .collect(Collectors.toSet());
+        publishedUsedSegments =
+            taskActionClient.submit(new RetrieveUsedSegmentsAction(dataSource, intervals));
       }
     }
     catch (IOException e) {
       throw new MSQException(e, UnknownFault.forException(e));
     }
 
-    if (segments != null && segments.size() != publishedUsedSegments.size()) {
-      Set<SegmentDescriptor> missingSegments =
-          Sets.difference(
-              segments,
-              publishedUsedSegments.stream().map(DataSegment::toDescriptor).collect(Collectors.toSet())
-          );
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Missing [%d]segments, it could be outdated: %s",
-                              missingSegments.size(),
-                              missingSegments
-                          );
-    }
+    int realtimeCount = 0;
 
-    // Giving preference to published used segments first, Set.add doesn't replace segment if already exist.
-    // If any segments have been handed off in between the two metadata calls above, we directly fetch it from deep storage.
+    // Deduplicate segments, giving preference to published used segments.
+    // We do this so that if any segments have been handed off in between the two metadata calls above,
+    // we directly fetch it from deep storage.
     Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
 
-    int realtimeCount = 0;
-    // Iterate over the realtime segments to attach server metadata
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeSegments) {
+    // Iterate over the realtime segments and segments loaded on the historical
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeAndHistoricalSegments) {
       Set<DruidServerMetadata> servers = segmentLoadInfo.getServers();
       // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.
       // This check can be modified then.
-      Set<DruidServerMetadata> realtimeServerMetadata =
-          servers.stream()
-                 .filter(serverMetadata -> includeSegmentSource.getUsedServerTypes().contains(serverMetadata.getType()))
-                 .collect(Collectors.toSet());
+      Set<DruidServerMetadata> realtimeServerMetadata
+          = servers.stream()
+                   .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
+                                                                      .contains(druidServerMetadata.getType())
+                   )
+                   .collect(Collectors.toSet());
       if (!realtimeServerMetadata.isEmpty()) {
+        realtimeCount += 1;
         DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(
             segmentLoadInfo.getSegment(),
             realtimeServerMetadata
         );
-        if (unifiedSegmentView.add(dataSegmentWithLocation)) {
-          realtimeCount += 1;
-        }
+        unifiedSegmentView.add(dataSegmentWithLocation);
       } else {
         // We don't have any segments of the required segment source, ignore the segment
       }
