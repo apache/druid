@@ -62,7 +62,7 @@ public class ReindexingConfigBuilderTest
 
     int count = configBuilder.applyTo(builder);
 
-    Assert.assertEquals(9, count); // 5 non-additive + 2 projection rules + 2 filter rules
+    Assert.assertEquals(8, count); // 6 non-additive + 2 filter rules
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
@@ -78,7 +78,7 @@ public class ReindexingConfigBuilderTest
     Assert.assertNotNull(config.getIoConfig());
 
     Assert.assertNotNull(config.getProjections());
-    Assert.assertEquals(3, config.getProjections().size()); // 2 from rule1 + 1 from rule2
+    Assert.assertEquals(1, config.getProjections().size()); // 1 from rule2
 
     Assert.assertNotNull(config.getTransformSpec());
     DimFilter appliedFilter = config.getTransformSpec().getFilter();
