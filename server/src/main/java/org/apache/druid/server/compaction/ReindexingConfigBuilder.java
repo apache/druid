@@ -156,7 +156,7 @@ public class ReindexingConfigBuilder
     List<VirtualColumn> allVirtualColumns = new ArrayList<>();
 
     for (ReindexingFilterRule rule : rules) {
-      removeConditions.add(rule.getFilter());
+      removeConditions.add(rule.getDeleteWhere());
 
       if (rule.getVirtualColumns() != null) {
         allVirtualColumns.addAll(Arrays.asList(rule.getVirtualColumns().getVirtualColumns()));

@@ -32,9 +32,9 @@ import java.util.Objects;
 /**
  * A {@link ReindexingRule} that specifies patterns to match for removing rows during reindexing.
  * <p>
- * The filter defines rows to REMOVE from reindexed segments. For example, a filter
- * {@code selector(isRobot=true)} with {@link AbstractReindexingRule#olderThan} P90D "remove rows where isRobot=true
- * from data older than 90 days". The reindexing framework automatically wraps these filters in NOT logic during
+ * The {@link #deleteWhere} clause defines rows to REMOVE from reindexed segments. For example, a `deleteWhere` {@link DimFilter}
+ * {@code selector(isRobot=true)} with {@link AbstractReindexingRule#olderThan} P90D will "remove rows where isRobot=true
+ * from data older than 90 days". The reindexing framework automatically wraps these delete where clauses in NOT logic during
  * processing.
  * <p>
  * This is an additive rule. Multiple rules can apply to the same segment. When multiple rules apply, they are combined
@@ -45,7 +45,7 @@ import java.util.Objects;
  * {
  *   "id": "remove-robots-90d",
  *   "olderThan": "P90D",
- *   "filter": {
+ *   "deleteWhere": {
  *     "type": "selector",
  *     "dimension": "isRobot",
  *     "value": "true"
@@ -65,7 +65,7 @@ import java.util.Objects;
  * {
  *   "id": "remove-using-nested-field-filter",
  *   "olderThan": "P90D",
- *   "filter": {
+ *   "deleteWhere": {
  *     "type": "selector",
  *     "dimension": "extractedField",
  *     "value": "unwantedValue"
@@ -84,7 +84,7 @@ import java.util.Objects;
  */
 public class ReindexingFilterRule extends AbstractReindexingRule
 {
-  private final DimFilter filter;
+  private final DimFilter deleteWhere;
   private final VirtualColumns virtualColumns;
 
   @JsonCreator
@@ -92,19 +92,19 @@ public class ReindexingFilterRule extends AbstractReindexingRule
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("olderThan") @Nonnull Period olderThan,
-      @JsonProperty("filter") @Nonnull DimFilter filter,
+      @JsonProperty("deleteWhere") @Nonnull DimFilter deleteWhere,
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
     super(id, description, olderThan);
-    this.filter = Objects.requireNonNull(filter, "filter cannot be null");
+    this.deleteWhere = Objects.requireNonNull(deleteWhere, "deleteWhere cannot be null");
     this.virtualColumns = virtualColumns;
   }
 
   @JsonProperty
-  public DimFilter getFilter()
+  public DimFilter getDeleteWhere()
   {
-    return filter;
+    return deleteWhere;
   }
 
   @JsonProperty

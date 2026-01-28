@@ -109,9 +109,18 @@ public class ReindexingFilterRuleTest
   }
 
   @Test
-  public void test_getFilter_returnsConfiguredFilter()
+  public void test_getVirtualColumns_returnsConfiguredVirtualColumns()
   {
-    DimFilter filter = rule.getFilter();
+    VirtualColumns vCols = rule.getVirtualColumns();
+
+    Assert.assertNotNull(vCols);
+    Assert.assertEquals(virtualColumns, vCols);
+  }
+
+  @Test
+  public void test_getDeleteWhere_returnsConfiguredFilter()
+  {
+    DimFilter filter = rule.getDeleteWhere();
 
     Assert.assertNotNull(filter);
     Assert.assertEquals(testFilter, filter);
@@ -174,7 +183,7 @@ public class ReindexingFilterRuleTest
   }
 
   @Test
-  public void test_constructor_nullFilter_throwsNullPointerException()
+  public void test_constructor_nullDeleteWhere_throwsNullPointerException()
   {
     Assert.assertThrows(
         NullPointerException.class,
