@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -52,6 +53,7 @@ import java.util.List;
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 {
   private static final boolean ROUND = true;
+  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
 
   private final boolean finalizeSketch;
   private final StringEncoding stringEncoding;
@@ -92,7 +94,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      logK = ((Number) RexLiteral.value(logKarg)).intValue();
+      logK = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(logKarg), NAME, "logK").intValue();
     } else {
       logK = HllSketchAggregatorFactory.DEFAULT_LG_K;
     }

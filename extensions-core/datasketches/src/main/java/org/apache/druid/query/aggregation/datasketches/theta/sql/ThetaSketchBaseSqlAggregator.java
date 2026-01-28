@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -49,6 +50,8 @@ import java.util.List;
 
 public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
+  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
+
   private final boolean finalizeSketch;
 
   protected ThetaSketchBaseSqlAggregator(boolean finalizeSketch)
@@ -90,7 +93,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      sketchSize = ((Number) RexLiteral.value(sketchSizeArg)).intValue();
+      sketchSize = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(sketchSizeArg), NAME, "size").intValue();
     } else {
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
