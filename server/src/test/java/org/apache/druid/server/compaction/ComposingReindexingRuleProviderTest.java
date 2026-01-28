@@ -265,11 +265,11 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getProjectionRulesWithInterval_compositingBehavior()
+  public void test_getProjectionRuleWithInterval_compositingBehavior()
   {
-    testComposingBehaviorForAdditiveRuleTypeWithInterval(
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
         rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
-        (provider, it) -> provider.getProjectionRules(it.interval, it.time),
+        (provider, it) -> provider.getProjectionRule(it.interval, it.time),
         createProjectionRule("rule1", Period.days(7)),
         createProjectionRule("rule2", Period.days(30)),
         ReindexingProjectionRule::getId

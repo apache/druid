@@ -234,13 +234,14 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingProjectionRule getProjectionRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getProjectionRules(interval, referenceTime))
-                    .filter(rules -> !rules.isEmpty())
+                    .map(p -> p.getProjectionRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
                     .findFirst()
-                    .orElse(Collections.emptyList());
+                    .orElse(null);
   }
 
   @Override

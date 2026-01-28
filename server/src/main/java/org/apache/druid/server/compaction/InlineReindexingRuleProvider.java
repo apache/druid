@@ -231,9 +231,10 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime)
+  @Nullable
+  public ReindexingProjectionRule getProjectionRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingProjectionRules, interval, referenceTime);
+    return getApplicableRule(reindexingProjectionRules, interval, referenceTime);
   }
 
   @Override

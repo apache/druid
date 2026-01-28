@@ -158,16 +158,19 @@ public interface ReindexingRuleProvider
   List<ReindexingIOConfigRule> getIOConfigRules();
 
   /**
-   * Returns all reindexing projection rules that apply to the given interval.
+   * Returns the matched reindexing projection rule that applies to the given interval.
    * <p>
-   * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
    * </p>
+   *
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingProjectionRule} rules that apply to the given interval.
+   * @return {@link ReindexingProjectionRule} rule that applies to the given interval.
    */
-  List<ReindexingProjectionRule> getProjectionRules(Interval interval, DateTime referenceTime);
+  @Nullable
+  ReindexingProjectionRule getProjectionRule(Interval interval, DateTime referenceTime);
 
   /**
    * Returns ALL reindexing projection rules.

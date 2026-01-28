@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -37,7 +36,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Builds compaction configs by applying reindexing rules.
@@ -101,7 +99,11 @@ public class ReindexingConfigBuilder
         ReindexingIOConfigRule::getIoConfig
     );
 
-    count += applyProjectionRules(builder);
+    count += applyIfPresent(
+        builder::withProjections,
+        provider.getProjectionRule(interval, referenceTime),
+        ReindexingProjectionRule::getProjections
+    );
 
     count += applyFilterRules(builder);
 
@@ -125,23 +127,6 @@ public class ReindexingConfigBuilder
       return 1;
     }
     return 0;
-  }
-
-  private int applyProjectionRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
-  {
-    List<ReindexingProjectionRule> rules = provider.getProjectionRules(interval, referenceTime);
-    if (rules.isEmpty()) {
-      return 0;
-    }
-
-    // Combine: flatMap all projections from all rules
-    List<AggregateProjectionSpec> combined = rules.stream()
-                                                  .flatMap(rule -> rule.getProjections().stream())
-                                                  .collect(Collectors.toList());
-
-    builder.withProjections(combined);
-    LOG.debug("Applied [%d] projection rules for interval %s", rules.size(), interval);
-    return rules.size();
   }
 
   private int applyFilterRules(InlineSchemaDataSourceCompactionConfig.Builder builder)

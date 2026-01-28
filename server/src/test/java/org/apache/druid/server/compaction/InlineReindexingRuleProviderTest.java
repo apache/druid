@@ -184,8 +184,7 @@ public class InlineReindexingRuleProviderTest
 
     Assert.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals(1, provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("projection", provider.getProjectionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals("projection", provider.getProjectionRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assert.assertEquals("granularity", provider.getGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
