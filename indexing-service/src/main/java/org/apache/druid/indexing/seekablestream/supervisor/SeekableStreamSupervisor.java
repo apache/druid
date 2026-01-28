@@ -3507,18 +3507,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
 
   /**
-   * Phase 2 of scale-during-rollover: apply the pending scale change.
-   * <p>
-   * This method is called after {@link #checkPendingCompletionTasks()} to check if a pending
-   * scale rollover can be applied. The scale is only applied when:
+   * This method is called after {@link #checkTaskDuration()} and before
+   * {@link #checkPendingCompletionTasks()} to check if a pending scale rollover can be applied.
+   * The scale is only applied when:
    * <ul>
-   *   <li>A pending rollover was set up in {@link #checkTaskDuration()} (Phase 1)</li>
+   *   <li>A pending rollover was set up in {@link #checkTaskDuration()} (Phase 1), AND</li>
    *   <li>All actively reading task groups have stopped (moved to pendingCompletionTaskGroups)</li>
    * </ul>
    * <p>
-   * By deferring the taskCount change until all old tasks have stopped, we avoid
-   * partition allocation mismatches that would cause {@link #discoverTasks()} to kill
-   * publishing tasks on the next cycle.
+   * This method is gated only on activelyReadingTaskGroups being empty, and it’s safe even
+   * if there are still publishing tasks. Applying the {@code taskCount} change before
+   * {@link #checkPendingCompletionTasks()} ensures the new allocation is staged as soon as it’s safe
+   * and avoids extra cycles where the old {@code taskCount} persists despite no active readers.
    */
   void maybeApplyPendingScaleRollover()
   {
@@ -3583,8 +3583,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           if (task.status.isSuccess()) {
             // If any task in this group has already completed, stop the rest of the tasks in the group and return.
             // This will cause us to create a new set of tasks next cycle that will start from the sequences in
-            // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
-            // publishing failed and we need to re-ingest)
+            // the metadata store (which will have advanced if we succeeded in publishing and will remain the same if
+            // publishing failed, and we need to re-ingest)
             stateManager.recordCompletedTaskState(TaskState.SUCCESS);
             return Futures.transform(
                 stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),

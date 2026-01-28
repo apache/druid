@@ -157,9 +157,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * This method computes current consumer lag. Gets the total lag of all partitions and fill in the lagMetricsQueue
+   * This method computes current consumer lag. Gets the total lag of all partitions and fills the lagMetricsQueue.
    *
-   * @return a Runnbale object to compute and collect lag.
+   * @return a Runnable object to compute and collect lag.
    */
   private Runnable computeAndCollectLag()
   {
@@ -196,13 +196,13 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
    * This method determines whether to do scale actions based on collected lag points.
    * The current algorithm of scale is straightforward:
    * <ul>
-   * <li>First, compute the proportion of lag points higher/lower than {@code scaleOutThreshold/scaleInThreshold},
-   * getting {@code scaleInThreshold/scaleOutThreshold},.
-   * <li>Secondly, compare {@code scaleInThreshold/scaleOutThreshold} with
-   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}.
+   * <li>First, compute the proportion of lag points higher than {@code scaleOutThreshold} and
+   * lower than {@code scaleInThreshold}.
+   * <li>Secondly, compare those proportions with
+   * {@code triggerScaleOutFractionThreshold} and {@code triggerScaleInFractionThreshold}.
    * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
-   * <li>Finally, if {@code scaleOutThreshold/scaleInThreshold}, is higher than
-   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}, scale out/in action would be triggered.
+   * <li>Finally, if the scale-out/scale-in proportions are higher than their respective trigger thresholds,
+   * scale out/in actions are triggered.
    * </ul>
    *
    * @param lags the lag metrics of Stream (Kafka/Kinesis)

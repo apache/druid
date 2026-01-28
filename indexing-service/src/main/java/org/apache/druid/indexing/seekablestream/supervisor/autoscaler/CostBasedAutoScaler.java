@@ -49,8 +49,8 @@ import java.util.concurrent.TimeUnit;
  * around the current PPT, then converting those to task counts. This allows non-divisor task counts
  * while keeping changes gradual (no large jumps).
  * <p>
- * Scale-up and scale-down are both evaluated proactively.
- * Future versions may perform scale-down on task rollover only.
+ * Scale-up is applied proactively, while scale-down is only enacted on task rollover
+ * when the rollover task count differs from the current count.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
@@ -180,10 +180,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Returns -1 (no scaling needed) in the following cases:
    * <ul>
    *   <li>Metrics are not available</li>
+   *   <li>Partition or task counts are invalid</li>
+   *   <li>No valid task counts remain after applying constraints</li>
    *   <li>Current task count already optimal</li>
    * </ul>
    *
-   * @return optimal task count for scale-up, or -1 if no scaling action needed
+   * @return optimal task count (scale up or down), or -1 if no scaling action needed
    */
   int computeOptimalTaskCount(CostMetrics metrics)
   {
@@ -298,7 +300,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   /**
    * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
-   * is above the configured threshold. By default, it is {@code EXTRA_SCALING_ACTIVATION_LAG_THRESHOLD}.
+   * is above the configured threshold. By default, it is
+   * {@code EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD}.
    * Generally, one of the autoscaler priorities is to keep the lag as close to zero as possible.
    */
   static int computeExtraMaxPartitionsPerTaskIncrease(
@@ -360,12 +363,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Extracts the average 15-minute moving average processing rate from task stats.
+   * Extracts the average processing rate from task stats, preferring the 15-minute moving average
+   * and falling back to 5-minute or 1-minute if needed.
    * This rate represents the historical throughput (records per second) for each task,
    * averaged across all tasks.
    *
    * @param taskStats the stats map from supervisor.getStats()
-   * @return the average 15-minute processing rate across all tasks in records/second,
+   * @return the average processing rate across all tasks in records/second,
    * or -1 if no valid metrics are available
    */
   static double extractMovingAverage(Map<String, Map<String, Object>> taskStats)
