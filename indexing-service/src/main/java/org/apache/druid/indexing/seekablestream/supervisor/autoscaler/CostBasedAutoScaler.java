@@ -159,6 +159,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     }
   }
 
+  @Override
+  public boolean shouldScaleDuringTaskRollover()
+  {
+    return config.isScaleDownOnTaskRolloverOnly();
+  }
+
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();

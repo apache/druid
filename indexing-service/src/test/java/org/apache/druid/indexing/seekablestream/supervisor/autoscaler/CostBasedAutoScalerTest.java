@@ -129,12 +129,12 @@ public class CostBasedAutoScalerTest
     when(mockIoConfig.getStream()).thenReturn("test-stream");
 
     CostBasedAutoScalerConfig localConfig = CostBasedAutoScalerConfig.builder()
-                                                                      .taskCountMax(taskCountMax)
-                                                                      .taskCountMin(1)
-                                                                      .enableTaskAutoScaler(true)
-                                                                      .lagWeight(0.6)
-                                                                      .idleWeight(0.4)
-                                                                      .build();
+                                                                     .taskCountMax(taskCountMax)
+                                                                     .taskCountMin(1)
+                                                                     .enableTaskAutoScaler(true)
+                                                                     .lagWeight(0.6)
+                                                                     .idleWeight(0.4)
+                                                                     .build();
 
     CostBasedAutoScaler localAutoScaler = new CostBasedAutoScaler(
         mockSupervisor,
@@ -202,7 +202,15 @@ public class CostBasedAutoScalerTest
   {
     // No extra increase below the threshold
     Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * 49_000L, 30, 3, 30));
-    Assert.assertEquals(4, computeExtraMaxPartitionsPerTaskIncrease(30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, 30, 3, 30));
+    Assert.assertEquals(
+        4,
+        computeExtraMaxPartitionsPerTaskIncrease(
+            30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD,
+            30,
+            3,
+            30
+        )
+    );
 
     // More aggressive increase when the lag is high
     Assert.assertEquals(6, computeExtraMaxPartitionsPerTaskIncrease(30L * 300_000L, 30, 3, 30));
@@ -303,7 +311,13 @@ public class CostBasedAutoScalerTest
 
     // Interval fallback: 15-minute preferred, then 5-minute, then 1-minute
     Map<String, Map<String, Object>> fifteenMin = new HashMap<>();
-    fifteenMin.put("0", Collections.singletonMap("task-0", buildStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)));
+    fifteenMin.put(
+        "0",
+        Collections.singletonMap(
+            "task-0",
+            buildStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)
+        )
+    );
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(fifteenMin), 0.0001);
 
     // 1-minute as a final fallback
@@ -316,12 +330,21 @@ public class CostBasedAutoScalerTest
 
     // 15-minute preferred over 5-minute when both available
     Map<String, Map<String, Object>> allIntervals = new HashMap<>();
-    allIntervals.put("0", Collections.singletonMap("task-0", buildStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0)));
+    allIntervals.put(
+        "0",
+        Collections.singletonMap("task-0", buildStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0))
+    );
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(allIntervals), 0.0001);
 
     // Falls back to 5-minute when 15-minute is null
     Map<String, Map<String, Object>> nullFifteen = new HashMap<>();
-    nullFifteen.put("0", Collections.singletonMap("task-0", buildStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)));
+    nullFifteen.put(
+        "0",
+        Collections.singletonMap(
+            "task-0",
+            buildStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)
+        )
+    );
     Assert.assertEquals(750.0, CostBasedAutoScaler.extractMovingAverage(nullFifteen), 0.0001);
 
     // Falls back to 1-minute when both 15 and 5 are null
@@ -373,6 +396,8 @@ public class CostBasedAutoScalerTest
                                                              .enableTaskAutoScaler(true)
                                                              .lagWeight(0.6)
                                                              .idleWeight(0.4)
+                                                             .scaleDownBarrier(0)
+                                                             .scaleDownDuringTaskRolloverOnly(true)
                                                              .build();
 
     CostBasedAutoScaler scaler = Mockito.spy(new CostBasedAutoScaler(supervisor, cfg, spec, emitter));
@@ -409,23 +434,23 @@ public class CostBasedAutoScalerTest
 
     // Test config defaults for scaleDownBarrier, defaultProcessingRate, scaleDownDuringTaskRolloverOnly
     CostBasedAutoScalerConfig cfgWithDefaults = CostBasedAutoScalerConfig.builder()
-                                                                          .taskCountMax(10)
-                                                                          .taskCountMin(1)
-                                                                          .enableTaskAutoScaler(true)
-                                                                          .build();
+                                                                         .taskCountMax(10)
+                                                                         .taskCountMin(1)
+                                                                         .enableTaskAutoScaler(true)
+                                                                         .build();
     Assert.assertEquals(5, cfgWithDefaults.getScaleDownBarrier());
     Assert.assertEquals(1000.0, cfgWithDefaults.getDefaultProcessingRate(), 0.001);
     Assert.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
 
     // Test custom config values
     CostBasedAutoScalerConfig cfgWithCustom = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(10)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(10)
-                                                                        .defaultProcessingRate(5000.0)
-                                                                        .scaleDownDuringTaskRolloverOnly(true)
-                                                                        .build();
+                                                                       .taskCountMax(10)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .scaleDownBarrier(10)
+                                                                       .defaultProcessingRate(5000.0)
+                                                                       .scaleDownDuringTaskRolloverOnly(true)
+                                                                       .build();
     Assert.assertEquals(10, cfgWithCustom.getScaleDownBarrier());
     Assert.assertEquals(5000.0, cfgWithCustom.getDefaultProcessingRate(), 0.001);
     Assert.assertTrue(cfgWithCustom.isScaleDownOnTaskRolloverOnly());

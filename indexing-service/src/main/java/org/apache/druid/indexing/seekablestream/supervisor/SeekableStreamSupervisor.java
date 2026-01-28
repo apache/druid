@@ -3407,7 +3407,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // The taskCount change and re-allocation happen in Phase 2 after all tasks have stopped.
     // We respect maxAllowedStops to avoid worker capacity exhaustion - rollover may take multiple cycles.
     Integer targetRolloverTaskCount = pendingRolloverTaskCount;
-    if (targetRolloverTaskCount == null && !futures.isEmpty() && taskAutoScaler != null) {
+    if (taskAutoScaler != null && taskAutoScaler.shouldScaleDuringTaskRollover() && targetRolloverTaskCount == null && !futures.isEmpty()) {
       // Detect new rollover opportunity
       int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
       if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
@@ -3424,6 +3424,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // Stop remaining active groups for rollover while respecting maxAllowedStops to avoid
     // worker capacity exhaustion. Publishing tasks continue consuming worker slots,
     // so stopping all at once could leave no capacity for new tasks.
+    // By invariant, having targetRolloverTaskCount != null means autoscaler is able to scale during rollover.
     if (targetRolloverTaskCount != null) {
       int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
                                                                       .mapToInt(List::size).sum();
@@ -3522,6 +3523,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   void maybeApplyPendingScaleRollover()
   {
+    // By invariant, having targetRolloverTaskCount != null means autoscaler is able to scale during rollover.
     if (pendingRolloverTaskCount == null) {
       return;
     }
