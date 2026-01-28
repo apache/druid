@@ -72,6 +72,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -123,6 +124,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
   private final ExecutorService callBackExecutor;
+  private final ReadWriteLock callbackSync;
   private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
@@ -135,7 +137,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       HttpLoadQueuePeonConfig config,
       Supplier<SegmentLoadingMode> loadingModeSupplier,
       ScheduledExecutorService processingExecutor,
-      ExecutorService callBackExecutor
+      ExecutorService callBackExecutor,
+      ReadWriteLock callbackSync
   )
   {
     this.jsonMapper = jsonMapper;
@@ -144,6 +147,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.config = config;
     this.processingExecutor = processingExecutor;
     this.callBackExecutor = callBackExecutor;
+    this.callbackSync = callbackSync;
 
     this.serverId = baseUrl;
     this.loadingModeSupplier = loadingModeSupplier;
@@ -637,7 +641,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   {
     callBackExecutor.execute(() -> {
       for (LoadPeonCallback callback : holder.getCallbacks()) {
-        callback.execute(success);
+        // Load queue peons acquire read lock to increase tput (they operate safely on underlying state).
+        callbackSync.readLock().lock();
+        try {
+          callback.execute(success);
+        }
+        finally {
+          callbackSync.readLock().unlock();
+        }
       }
     });
   }
