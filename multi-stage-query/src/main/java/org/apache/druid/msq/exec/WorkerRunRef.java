@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,7 +30,6 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Reference to a single run of a particular worker.
@@ -38,25 +38,33 @@ public class WorkerRunRef
 {
   private static final Logger log = new Logger(WorkerRunRef.class);
 
-  private final AtomicReference<Worker> workerRef = new AtomicReference<>();
-  private final AtomicReference<ListenableFuture<?>> futureRef = new AtomicReference<>();
+  @GuardedBy("this")
+  private Worker worker;
+
+  @GuardedBy("this")
+  private ListenableFuture<?> workerRunFuture;
+
+  @GuardedBy("this")
+  private boolean canceled;
 
   /**
    * Run the provided worker in the provided executor. Returns a future that resolves when work is complete, or
    * when the worker is canceled.
    */
-  public ListenableFuture<?> run(final Worker worker, final ListeningExecutorService exec)
+  public synchronized ListenableFuture<?> run(final Worker worker, final ListeningExecutorService exec)
   {
-    if (!workerRef.compareAndSet(null, worker)) {
+    if (this.worker != null) {
       throw DruidException.defensive("Already run");
     }
 
-    ListenableFuture<?> priorFuture = futureRef.get();
-    if (priorFuture != null) {
-      return priorFuture;
+    if (canceled) {
+      // cancel() called before run()
+      return Futures.immediateFailedFuture(new CancellationException());
     }
 
-    final ListenableFuture<?> future = exec.submit(() -> {
+    this.worker = worker;
+
+    return workerRunFuture = exec.submit(() -> {
       final String originalThreadName = Thread.currentThread().getName();
       try {
         Thread.currentThread().setName(StringUtils.format("%s[%s]", originalThreadName, worker.id()));
@@ -73,19 +81,10 @@ public class WorkerRunRef
         Thread.currentThread().setName(originalThreadName);
       }
     });
-
-    if (!futureRef.compareAndSet(null, future)) {
-      // Future was set while submitting to the executor. Must have been a concurrent cancel().
-      // Interrupt the worker.
-      future.cancel(true);
-    }
-
-    return futureRef.get();
   }
 
-  public Worker worker()
+  public synchronized Worker worker()
   {
-    final Worker worker = workerRef.get();
     if (worker == null) {
       throw DruidException.defensive("No worker, not run yet?");
     }
@@ -95,35 +94,44 @@ public class WorkerRunRef
   /**
    * Returns true if the worker reference has been set (i.e., {@link #run} has been called).
    */
-  public boolean hasWorker()
+  public synchronized boolean hasWorker()
   {
-    return workerRef.get() != null;
+    return worker != null;
   }
 
   /**
    * Cancel the worker. Interrupts the worker if currently running.
    */
-  public void cancel()
+  public synchronized void cancel()
   {
-    final ListenableFuture<?> existingFuture = futureRef.getAndSet(Futures.immediateFuture(null));
-    if (existingFuture != null && !existingFuture.isDone()) {
-      existingFuture.cancel(true);
+    if (worker == null) {
+      canceled = true;
+      return;
     }
+
+    // Interrupt the worker's run future, so the run() thread stops executing.
+    if (workerRunFuture != null) {
+      workerRunFuture.cancel(true);
+    }
+
+    // Also directly signal the run() thread to stop. Ideally this shouldn't be necessary, since the
+    // interrupt should be enough. But, in case there are any code paths that erroneously swallow
+    // InterruptedException, this provides a failsafe cancellation mechanism.
+    worker.stop();
   }
 
   /**
    * Wait for the worker run to finish. Does not throw exceptions from the future, even if the worker
    * ended exceptionally.
    */
-  public void awaitStop()
+  public synchronized void awaitStop()
   {
-    final ListenableFuture<?> future = futureRef.get();
-    if (future == null) {
+    if (workerRunFuture == null) {
       throw DruidException.defensive("Not running");
     }
 
     try {
-      future.get();
+      workerRunFuture.get();
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();

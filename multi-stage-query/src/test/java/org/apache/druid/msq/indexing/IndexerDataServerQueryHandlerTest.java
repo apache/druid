@@ -145,7 +145,8 @@ public class IndexerDataServerQueryHandlerTest
             coordinatorClient,
             DruidServiceTestUtils.newJsonMapper(),
             queryToolChestWarehouse,
-            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2))
+            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2)),
+            IndexerDataServerRetryPolicy.noRetries()
         )
     );
     doAnswer(invocationOnMock -> {
@@ -319,7 +320,7 @@ public class IndexerDataServerQueryHandlerTest
         )
     );
 
-    verify(dataServerClient1, times(5)).run(any(), any(), any(), any());
+    verify(dataServerClient1, times(1)).run(any(), any(), any(), any());
   }
 
   @Test

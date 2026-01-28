@@ -64,6 +64,8 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
@@ -173,7 +175,7 @@ public class OverlordCompactionSchedulerTest
     segmentStorage = new TestIndexerMetadataStorageCoordinator();
     segmentsMetadataManager = segmentStorage.getManager();
 
-    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null));
+    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null, null));
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
     taskActionClientFactory = task -> new TaskActionClient()
@@ -231,7 +233,9 @@ public class OverlordCompactionSchedulerTest
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         brokerClient,
         serviceEmitter,
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        new HeapMemoryIndexingStateStorage(),
+        new IndexingStateCache()
     );
   }
 
@@ -444,7 +448,7 @@ public class OverlordCompactionSchedulerTest
     scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
 
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null, null, null)
     );
     Assert.assertEquals(1, simulateResult.getCompactionStates().size());
     final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionStatus.State.PENDING);
@@ -469,7 +473,7 @@ public class OverlordCompactionSchedulerTest
     scheduler.stopCompaction(dataSource);
 
     final CompactionSimulateResult simulateResultWhenDisabled = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null, null, null)
     );
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
@@ -536,12 +540,12 @@ public class OverlordCompactionSchedulerTest
 
   private void disableScheduler()
   {
-    compactionConfig.set(new ClusterCompactionConfig(null, null, null, false, null));
+    compactionConfig.set(new ClusterCompactionConfig(null, null, null, false, null, null));
   }
 
   private void enableScheduler()
   {
-    compactionConfig.set(new ClusterCompactionConfig(null, null, null, true, null));
+    compactionConfig.set(new ClusterCompactionConfig(null, null, null, true, null, null));
   }
 
   private void runScheduledJob()

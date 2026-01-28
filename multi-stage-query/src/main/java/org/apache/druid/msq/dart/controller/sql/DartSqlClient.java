@@ -34,12 +34,13 @@ public interface DartSqlClient
   /**
    * Get information about all currently-running queries on this server.
    *
-   * @param selfOnly true if only queries from this server should be returned; false if queries from all servers
-   *                 should be returned
+   * @param selfOnly        true if only queries from this server should be returned; false if queries from all servers
+   *                        should be returned
+   * @param includeComplete true if completed queries should be included in the response
    *
-   * @see SqlResource#doGetRunningQueries(String, HttpServletRequest) the server side
+   * @see SqlResource#doGetRunningQueries(String, String, HttpServletRequest) the server side
    */
-  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly);
+  ListenableFuture<GetQueriesResponse> getRunningQueries(boolean selfOnly, boolean includeComplete);
 
   /**
    * Get query report for a particular SQL query ID on this server.
