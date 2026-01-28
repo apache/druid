@@ -31,12 +31,14 @@ import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,9 +46,16 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -225,7 +234,7 @@ public class OverlordClientImplTest
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
@@ -246,7 +255,7 @@ public class OverlordClientImplTest
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
@@ -260,6 +269,26 @@ public class OverlordClientImplTest
     Assert.assertEquals(
         Collections.emptyMap(),
         overlordClient.findLockedIntervals(requests).get()
+    );
+  }
+
+  @Test
+  public void test_postSupervisor() throws Exception
+  {
+    final String supervisorId = "wiki_supervisor";
+    final SupervisorSpec supervisorSpec = new TestSupervisorSpec(supervisorId, "data");
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true")
+            .jsonContent(jsonMapper, supervisorSpec),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Map.of("id", supervisorId))
+    );
+
+    Assert.assertEquals(
+        Map.of("id", supervisorId),
+        overlordClient.postSupervisor(supervisorSpec).get()
     );
   }
 
@@ -449,6 +478,275 @@ public class OverlordClientImplTest
     Assert.assertEquals(
         clientTaskQuery,
         overlordClient.taskPayload(taskID).get().getPayload()
+    );
+  }
+
+  @Test
+  public void test_isCompactionSupervisorEnabled()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/isSupervisorEnabled"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(false)
+    );
+
+    Assert.assertFalse(overlordClient.isCompactionSupervisorEnabled().get());
+  }
+
+  @Test
+  public void test_getClusterCompactionConfig()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(
+        0.2,
+        101,
+        new NewestSegmentFirstPolicy(null),
+        true,
+        CompactionEngine.MSQ,
+        true
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        overlordClient.getClusterCompactionConfig().get()
+    );
+  }
+
+  @Test
+  public void test_updateClusterCompactionConfig()
+      throws ExecutionException, InterruptedException, JsonProcessingException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null, null);
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new UpdateResponse(true))
+    );
+
+    Assert.assertTrue(
+        overlordClient.updateClusterCompactionConfig(config).get().isSuccess()
+    );
+  }
+
+  @Test
+  public void test_markSegmentAsUsed() throws Exception
+  {
+    final DataSegment wikiSegment = DataSegment.builder()
+                                               .dataSource(TestDataSource.WIKI)
+                                               .interval(Intervals.of("2024-12-01/P1D"))
+                                               .version("v1")
+                                               .size(100)
+                                               .build();
+
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        TestDataSource.WIKI, StringUtils.urlEncode(wikiSegment.getId().toString())
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(1))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(1),
+        overlordClient.markSegmentAsUsed(wikiSegment.getId()).get()
+    );
+  }
+
+  @Test
+  public void test_markSegmentAsUnused() throws Exception
+  {
+    final DataSegment wikiSegment = DataSegment.builder()
+                                               .dataSource(TestDataSource.WIKI)
+                                               .interval(Intervals.of("2024-12-01/P1D"))
+                                               .version("v1")
+                                               .size(100)
+                                               .build();
+
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        TestDataSource.WIKI, StringUtils.urlEncode(wikiSegment.getId().toString())
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.DELETE, url),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(1))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(1),
+        overlordClient.markSegmentAsUnused(wikiSegment.getId()).get()
+    );
+  }
+
+  @Test
+  public void test_markNonOvershadowedSegmentsAsUsed_bySegmentIds() throws Exception
+  {
+    final DataSegment wikiSegment = DataSegment.builder()
+                                               .dataSource(TestDataSource.WIKI)
+                                               .interval(Intervals.of("2024-12-01/P1D"))
+                                               .version("v1")
+                                               .size(100)
+                                               .build();
+
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUsed",
+        TestDataSource.WIKI
+    );
+
+    final SegmentsToUpdateFilter segmentFilter = new SegmentsToUpdateFilter(
+        null,
+        Collections.singleton(wikiSegment.getId().toString()),
+        null
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url)
+            .jsonContent(jsonMapper, segmentFilter),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(1))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(1),
+        overlordClient.markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI, segmentFilter).get()
+    );
+  }
+
+  @Test
+  public void test_markSegmentsAsUnused_bySegmentIds() throws Exception
+  {
+    final DataSegment wikiSegment = DataSegment.builder()
+                                               .dataSource(TestDataSource.WIKI)
+                                               .interval(Intervals.of("2024-12-01/P1D"))
+                                               .version("v1")
+                                               .size(100)
+                                               .build();
+
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUnused",
+        TestDataSource.WIKI
+    );
+
+    final SegmentsToUpdateFilter segmentFilter = new SegmentsToUpdateFilter(
+        null,
+        Collections.singleton(wikiSegment.getId().toString()),
+        null
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url)
+            .jsonContent(jsonMapper, segmentFilter),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(1))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(1),
+        overlordClient.markSegmentsAsUnused(TestDataSource.WIKI, segmentFilter).get()
+    );
+  }
+
+  @Test
+  public void test_markNonOvershadowedSegmentsAsUsed_byInterval() throws Exception
+  {
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUsed",
+        TestDataSource.WIKI
+    );
+
+    final SegmentsToUpdateFilter segmentFilter
+        = new SegmentsToUpdateFilter(Intervals.of("2024/P1Y"), null, null);
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url)
+            .jsonContent(jsonMapper, segmentFilter),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(3))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(3),
+        overlordClient.markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI, segmentFilter).get()
+    );
+  }
+
+  @Test
+  public void test_markSegmentsAsUnused_byInterval() throws Exception
+  {
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUnused",
+        TestDataSource.WIKI
+    );
+
+    final SegmentsToUpdateFilter segmentFilter
+        = new SegmentsToUpdateFilter(Intervals.of("2024/P1Y"), null, null);
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url)
+            .jsonContent(jsonMapper, segmentFilter),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(5))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(5),
+        overlordClient.markSegmentsAsUnused(TestDataSource.WIKI, segmentFilter).get()
+    );
+  }
+
+  @Test
+  public void test_markNonOvershadowedSegmentsAsUsed_byDatasource() throws Exception
+  {
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        TestDataSource.WIKI
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, url),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(10))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(10),
+        overlordClient.markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI).get()
+    );
+  }
+
+  @Test
+  public void test_markSegmentsAsUnused_byDatasource() throws Exception
+  {
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        TestDataSource.WIKI
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.DELETE, url),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new SegmentUpdateResponse(11))
+    );
+
+    Assert.assertEquals(
+        new SegmentUpdateResponse(11),
+        overlordClient.markSegmentsAsUnused(TestDataSource.WIKI).get()
     );
   }
 }

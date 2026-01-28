@@ -31,14 +31,9 @@ public class ZkPathsConfig
   @JsonProperty
   private String announcementsPath;
   @JsonProperty
-  @Deprecated
-  private String servedSegmentsPath;
-  @JsonProperty
   private String liveSegmentsPath;
   @JsonProperty
   private String coordinatorPath;
-  @JsonProperty
-  private String loadQueuePath;
   @JsonProperty
   private String connectorPath;
 
@@ -57,12 +52,12 @@ public class ZkPathsConfig
     return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
   }
 
+  /**
+   * Path to announce served segments on.
+   *
+   * @deprecated Use HTTP-based segment discovery instead.
+   */
   @Deprecated
-  public String getServedSegmentsPath()
-  {
-    return (null == servedSegmentsPath) ? defaultPath("servedSegments") : servedSegmentsPath;
-  }
-
   public String getLiveSegmentsPath()
   {
     return (null == liveSegmentsPath) ? defaultPath("segments") : liveSegmentsPath;
@@ -76,11 +71,6 @@ public class ZkPathsConfig
   public String getOverlordPath()
   {
     return defaultPath("overlord");
-  }
-
-  public String getLoadQueuePath()
-  {
-    return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
   }
 
   public String getConnectorPath()
@@ -116,9 +106,7 @@ public class ZkPathsConfig
         this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
         this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
-        this.getLoadQueuePath().equals(otherConfig.getLoadQueuePath()) &&
-        this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
-        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())) {
+        this.getPropertiesPath().equals(otherConfig.getPropertiesPath())) {
       return true;
     }
     return false;
@@ -130,10 +118,8 @@ public class ZkPathsConfig
     int result = base != null ? base.hashCode() : 0;
     result = 31 * result + (propertiesPath != null ? propertiesPath.hashCode() : 0);
     result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
-    result = 31 * result + (servedSegmentsPath != null ? servedSegmentsPath.hashCode() : 0);
     result = 31 * result + (liveSegmentsPath != null ? liveSegmentsPath.hashCode() : 0);
     result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
-    result = 31 * result + (loadQueuePath != null ? loadQueuePath.hashCode() : 0);
     result = 31 * result + (connectorPath != null ? connectorPath.hashCode() : 0);
     return result;
   }

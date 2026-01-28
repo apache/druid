@@ -19,6 +19,10 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -26,10 +30,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -56,8 +60,11 @@ public class QueryContext
 {
   private static final QueryContext EMPTY = new QueryContext(null);
 
+  @JsonInclude(value = Include.NON_NULL)
+  @JsonValue
   private final Map<String, Object> context;
 
+  @JsonCreator
   public QueryContext(Map<String, Object> context)
   {
     // There is no semantic difference between an empty and a null context.
@@ -341,7 +348,7 @@ public class QueryContext
 
   public int getVectorSize()
   {
-    return getVectorSize(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    return getVectorSize(QueryContexts.DEFAULT_VECTOR_SIZE);
   }
 
   public int getVectorSize(int defaultSize)
@@ -367,6 +374,11 @@ public class QueryContext
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
   {
     return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
+  }
+
+  public boolean isUseNestedForUnknownTypeInSubquery()
+  {
+    return isUseNestedForUnknownTypeInSubquery(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
   }
 
   public int getUncoveredIntervalsLimit()
@@ -459,6 +471,15 @@ public class QueryContext
     return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
+  public String getEngine()
+  {
+    return QueryContexts.parseString(
+        context,
+        QueryContexts.ENGINE,
+        QueryContexts.DEFAULT_ENGINE
+    );
+  }
+
   public boolean hasTimeout()
   {
     return getTimeout() != QueryContexts.NO_TIMEOUT;
@@ -482,6 +503,15 @@ public class QueryContext
             timeout
         )
     );
+  }
+
+  @Nullable
+  public Duration getTimeoutDuration()
+  {
+    if (hasTimeout()) {
+      return Duration.ofMillis(getTimeout());
+    }
+    return null;
   }
 
   public long getDefaultTimeout()
@@ -514,6 +544,32 @@ public class QueryContext
     }
   }
 
+  public long getPerSegmentTimeout()
+  {
+    return getPerSegmentTimeout(QueryContexts.NO_TIMEOUT);
+  }
+
+  public long getPerSegmentTimeout(long defaultPerSegmentTimeout)
+  {
+    final long timeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultPerSegmentTimeout);
+    if (timeout >= 0) {
+      return timeout;
+    }
+
+    throw new BadQueryContextException(
+        StringUtils.format(
+            "Per-segment timeout [%s] must be a non negative value, but was [%d]",
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            timeout
+        )
+    );
+  }
+
+  public boolean usePerSegmentTimeout()
+  {
+    return getPerSegmentTimeout() != QueryContexts.NO_TIMEOUT;
+  }
+
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
   {
     long curr = getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0);
@@ -544,6 +600,15 @@ public class QueryContext
     return getBoolean(
         QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
+  }
+
+  public CloneQueryMode getCloneQueryMode()
+  {
+    return getEnum(
+        QueryContexts.CLONE_QUERY_MODE,
+        CloneQueryMode.class,
+        QueryContexts.DEFAULT_CLONE_QUERY_MODE
     );
   }
 
@@ -613,14 +678,6 @@ public class QueryContext
     );
   }
 
-  public boolean isWindowingStrictValidation()
-  {
-    return getBoolean(
-        QueryContexts.WINDOWING_STRICT_VALIDATION,
-        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
-    );
-  }
-
   public boolean isCatalogValidationEnabled()
   {
     return getBoolean(
@@ -628,6 +685,26 @@ public class QueryContext
         QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED
     );
   }
+
+  public boolean isExtendedFilteredSumRewrite()
+  {
+    return getBoolean(
+        QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED,
+        QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED
+    );
+  }
+
+  /**
+   * Returns true if {@link QueryContexts#CTX_FULL_REPORT} is set to true, false if it is set to false or not set.
+   */
+  public boolean getFullReport()
+  {
+    return getBoolean(
+        QueryContexts.CTX_FULL_REPORT,
+        QueryContexts.DEFAULT_CTX_FULL_REPORT
+    );
+  }
+
 
   public QueryResourceId getQueryResourceId()
   {
@@ -664,5 +741,40 @@ public class QueryContext
     return "QueryContext{" +
            "context=" + context +
            '}';
+  }
+
+  public boolean isDecoupledMode()
+  {
+    String value = getString(
+        QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+        QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
+    );
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
+  }
+
+  public QueryContext override(Map<String, Object> contextOverride)
+  {
+    if (contextOverride == null || contextOverride.isEmpty()) {
+      return this;
+    }
+    return QueryContext.of(QueryContexts.override(asMap(), contextOverride));
+  }
+
+  public QueryContext override(QueryContext queryContext)
+  {
+    if (queryContext == null || queryContext.isEmpty()) {
+      return this;
+    }
+    return override(queryContext.asMap());
+  }
+
+  public boolean isPrePlanned()
+  {
+    return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
+  }
+
+  public boolean isRealtimeSegmentsOnly()
+  {
+    return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
   }
 }

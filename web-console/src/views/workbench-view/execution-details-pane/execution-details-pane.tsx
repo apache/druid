@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 
+import { Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { T } from '@druid-toolkit/query';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
 import type { Execution } from '../../../druid-models';
-import { formatDuration, formatDurationWithMs, pluralIfNeeded } from '../../../utils';
+import {
+  formatDuration,
+  formatDurationWithMs,
+  formatDurationWithMsIfNeeded,
+  pluralIfNeeded,
+  prettyFormatIsoDate,
+} from '../../../utils';
 import { DestinationPagesPane } from '../destination-pages-pane/destination-pages-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
@@ -61,10 +68,23 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
       case 'general': {
         const ingestDatasource = execution.getIngestDatasource();
         return (
-          <div>
-            <p>{`General info for ${execution.id}${
-              ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
-            }`}</p>
+          <div className="execution-details-pane-general">
+            <p>
+              General info for <Tag minimal>{execution.id}</Tag>
+              {ingestDatasource && (
+                <>
+                  {' '}
+                  ingesting into <Tag minimal>{T(ingestDatasource).toString()}</Tag>
+                </>
+              )}
+            </p>
+            {execution.startTime && !!execution.duration && (
+              <p>
+                {execution.status === 'RUNNING' ? 'Query is running for ' : 'Query took '}
+                <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag> (starting at{' '}
+                <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)
+              </p>
+            )}
             {execution.destination && (
               <p>
                 {`Results written to ${execution.destination.type}`}

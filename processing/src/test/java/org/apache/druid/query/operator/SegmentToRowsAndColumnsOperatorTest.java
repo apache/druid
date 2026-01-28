@@ -53,7 +53,6 @@ public class SegmentToRowsAndColumnsOperatorTest
     );
 
     ArrayListSegment<Object[]> segment = new ArrayListSegment<>(
-        SegmentId.dummy("test"),
         rows,
         columnName -> objects -> objects[Integer.parseInt(columnName)],
         RowSignature.builder()

@@ -33,13 +33,14 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,8 +51,10 @@ import java.util.Collections;
 
 public class KinesisIndexTaskSerdeTest
 {
-  private static final DataSchema DATA_SCHEMA = new DataSchema("dataSource", null, null, null, null, null, null, null);
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder().withDataSource("dataSource").build();
   private static final KinesisIndexTaskTuningConfig TUNING_CONFIG = new KinesisIndexTaskTuningConfig(
+      null,
       null,
       null,
       null,
@@ -92,7 +95,8 @@ public class KinesisIndexTaskSerdeTest
       "endpoint",
       null,
       null,
-      null
+      null,
+      Duration.standardHours(2).getStandardMinutes()
   );
   private static final String ACCESS_KEY = "test-access-key";
   private static final String SECRET_KEY = "test-secret-key";
@@ -115,6 +119,7 @@ public class KinesisIndexTaskSerdeTest
   {
     KinesisIndexTask target = new KinesisIndexTask(
         "id",
+        null,
         null,
         DATA_SCHEMA,
         TUNING_CONFIG,

@@ -22,12 +22,12 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Set;
 
@@ -87,10 +87,9 @@ public interface SupervisorSpec
   @Nonnull
   default Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
   {
-    throw new UOE(StringUtils.format(
-        "SuperviserSpec type [%s], does not support input source based security",
-        getType()
-    ));
+    throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Supervisor type[%s] does not support input source based security", getType());
   }
 
   /**
@@ -100,4 +99,30 @@ public interface SupervisorSpec
    * @return source like stream or topic name
    */
   String getSource();
+
+  /**
+   * Checks if a spec can be replaced with a proposed spec (proposesSpec).
+   * <p>
+   * By default, this method does no validation checks. Implementations of this method can choose to define rules
+   * for spec updates and throw an exception if the update is not allowed.
+   * </p>
+   *
+   * @param proposedSpec the proposed supervisor spec
+   * @throws DruidException if the spec update is not allowed
+   */
+  default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
+  {
+    // The default implementation does not do any validation checks.
+  }
+
+  /**
+   * Updates this supervisor spec by merging values from the given {@code existingSpec}.
+   * This method may be used to carry forward existing spec values when a supervisor is being resubmitted.
+   *
+   * @param existingSpec used spec to merge values from
+   */
+  default void merge(@NotNull SupervisorSpec existingSpec)
+  {
+    // No-op by default
+  }
 }

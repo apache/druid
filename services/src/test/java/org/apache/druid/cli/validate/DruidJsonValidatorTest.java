@@ -25,15 +25,14 @@ import com.google.inject.Injector;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -133,16 +132,12 @@ public class DruidJsonValidatorTest
         null,
         new TaskResource("rofl", 2),
         new IndexTask.IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                null,
-                new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
-                null,
-                jsonMapper
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                      .withObjectMapper(jsonMapper)
+                      .build(),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),
                 false,
@@ -161,7 +156,7 @@ public class DruidJsonValidatorTest
                 null,
                 null,
                 new DynamicPartitionsSpec(10000, null),
-                IndexSpec.DEFAULT,
+                IndexSpec.getDefault(),
                 null,
                 3,
                 false,

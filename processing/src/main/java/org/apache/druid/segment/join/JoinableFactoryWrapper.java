@@ -44,15 +44,17 @@ import java.util.stream.Collectors;
  */
 public class JoinableFactoryWrapper
 {
-
-  public static final byte JOIN_OPERATION = 0x1;
-
   private final JoinableFactory joinableFactory;
 
   @Inject
   public JoinableFactoryWrapper(final JoinableFactory joinableFactory)
   {
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
+  }
+
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
   }
 
   /**
@@ -190,11 +192,6 @@ public class JoinableFactoryWrapper
       return new JoinClauseToFilterConversion(onlyFilter, joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
-  }
-
-  public JoinableFactory getJoinableFactory()
-  {
-    return joinableFactory;
   }
 
   /**

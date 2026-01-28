@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sane } from '@druid-toolkit/query';
+import { sane } from 'druid-query-toolkit';
 
 import { DruidError, getDruidErrorMessage } from './druid-query';
 
@@ -214,15 +214,13 @@ describe('DruidQuery', () => {
       );
     });
 
-    it('removes trailing semicolon (;)', () => {
-      const sql = `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`;
+    it('adds missing semicolon (;)', () => {
+      const sql = `SET x = 1 SELECT * FROM wikipedia`;
       const suggestion = DruidError.getSuggestion(
-        `Received an unexpected token [;] (line [1], column [59]), acceptable options:`,
+        `Received an unexpected token [SELECT] (line [1], column [11]), acceptable options: [<EOF>, ";"]`,
       );
-      expect(suggestion!.label).toEqual(`Remove trailing semicolon (;)`);
-      expect(suggestion!.fn(sql)).toEqual(
-        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
-      );
+      expect(suggestion!.label).toEqual(`Add semicolon (;) after SET statement`);
+      expect(suggestion!.fn(sql)).toEqual(`SET x = 1; SELECT * FROM wikipedia`);
     });
 
     it('does nothing there there is nothing to do', () => {

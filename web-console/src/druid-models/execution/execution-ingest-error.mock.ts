@@ -92,6 +92,7 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
               workerId: 'query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0',
               state: 'FAILED',
               durationMs: -1,
+              pendingMs: -1,
             },
           ],
         },
@@ -173,7 +174,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
                 ],
                 resultFormat: 'compactedList',
                 columns: ['agent_type', 'v0'],
-                legacy: false,
                 context: {
                   __resultFormat: 'array',
                   __timeColumn: 'v0',
@@ -390,7 +390,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
         ],
         resultFormat: 'compactedList',
         columns: ['agent_type', 'v0'],
-        legacy: false,
         context: {
           __resultFormat: 'array',
           __user: 'allowAll',
@@ -451,7 +450,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
     },
     sqlResultsContext: {
       timeZone: 'UTC',
-      serializeComplexValues: true,
       stringifyArrays: true,
     },
     sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],

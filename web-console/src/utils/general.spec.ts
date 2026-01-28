@@ -24,14 +24,17 @@ import {
   formatInteger,
   formatMegabytes,
   formatMillions,
+  formatNumber,
+  formatNumberAbbreviated,
   formatPercent,
   hashJoaat,
   moveElement,
   moveToIndex,
-  objectHash,
   offsetToRowColumn,
+  OVERLAY_OPEN_SELECTOR,
   parseCsvLine,
   swapElements,
+  wait,
 } from './general';
 
 describe('general', () => {
@@ -93,6 +96,28 @@ describe('general', () => {
         'b',
         'd',
       ]);
+    });
+  });
+
+  describe('formatNumber', () => {
+    it('works', () => {
+      expect(formatNumber(null as any)).toEqual('0');
+      expect(formatNumber(0)).toEqual('0');
+      expect(formatNumber(5)).toEqual('5');
+      expect(formatNumber(5.1)).toEqual('5.1');
+      expect(formatNumber(1 / 3)).toEqual('0.333');
+    });
+  });
+
+  describe('formatNumberAbbreviated', () => {
+    it('works', () => {
+      expect(formatNumberAbbreviated(null as any)).toEqual('0');
+      expect(formatNumberAbbreviated(0)).toEqual('0');
+      expect(formatNumberAbbreviated(5)).toEqual('5');
+      expect(formatNumberAbbreviated(5.1)).toEqual('5.1');
+      expect(formatNumberAbbreviated(10000)).toEqual('10K');
+      expect(formatNumberAbbreviated(4000000000)).toEqual('4B');
+      expect(formatNumberAbbreviated(1234567890)).toEqual('1.23B');
     });
   });
 
@@ -168,12 +193,6 @@ describe('general', () => {
     });
   });
 
-  describe('objectHash', () => {
-    it('works', () => {
-      expect(objectHash({ hello: 'world1' })).toEqual('cc14ad13');
-    });
-  });
-
   describe('offsetToRowColumn', () => {
     it('works', () => {
       const str = 'Hello\nThis is a test\nstring.';
@@ -205,6 +224,126 @@ describe('general', () => {
       expect(caseInsensitiveEquals('x', undefined)).toEqual(false);
       expect(caseInsensitiveEquals('x', 'X')).toEqual(true);
       expect(caseInsensitiveEquals(undefined, '')).toEqual(false);
+    });
+  });
+
+  describe('OVERLAY_OPEN_SELECTOR', () => {
+    it('is what it is', () => {
+      expect(OVERLAY_OPEN_SELECTOR).toEqual('.bp5-portal .bp5-overlay-open');
+    });
+  });
+
+  describe('wait', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('resolves after the specified time', async () => {
+      const promise = wait(100);
+      expect(promise).toBeInstanceOf(Promise);
+
+      jest.advanceTimersByTime(99);
+      await Promise.resolve(); // Let microtasks run
+      expect(promise).not.toBe(await Promise.race([promise, Promise.resolve('pending')]));
+
+      jest.advanceTimersByTime(1);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('works without a signal (backward compatibility)', async () => {
+      const promise = wait(50);
+      jest.advanceTimersByTime(50);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('resolves normally when signal does not abort', async () => {
+      const controller = new AbortController();
+      const promise = wait(100, controller.signal);
+
+      jest.advanceTimersByTime(100);
+      await expect(promise).resolves.toBeUndefined();
+    });
+
+    it('rejects when signal aborts before timeout', async () => {
+      const controller = new AbortController();
+      const promise = wait(100, controller.signal);
+
+      jest.advanceTimersByTime(50);
+      controller.abort();
+
+      await expect(promise).rejects.toThrow('Aborted');
+    });
+
+    it('rejects immediately if signal is already aborted', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      const promise = wait(100, controller.signal);
+      await expect(promise).rejects.toThrow('Aborted');
+
+      // Timer should not have been created
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('cleans up timeout when aborted', async () => {
+      const controller = new AbortController();
+      const promise = wait(100, controller.signal);
+
+      expect(jest.getTimerCount()).toBe(1);
+
+      controller.abort();
+
+      try {
+        await promise;
+      } catch {
+        // Expected
+      }
+
+      // Timer should be cleaned up
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('cleans up event listener when timeout completes', async () => {
+      const controller = new AbortController();
+      const removeEventListenerSpy = jest.spyOn(controller.signal, 'removeEventListener');
+
+      const promise = wait(100, controller.signal);
+      jest.advanceTimersByTime(100);
+      await promise;
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+    });
+
+    it('cleans up event listener when aborted', async () => {
+      const controller = new AbortController();
+      const removeEventListenerSpy = jest.spyOn(controller.signal, 'removeEventListener');
+
+      const promise = wait(100, controller.signal);
+      controller.abort();
+
+      try {
+        await promise;
+      } catch {
+        // Expected
+      }
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function));
+    });
+
+    it('handles multiple waits with same signal', async () => {
+      const controller = new AbortController();
+      const promise1 = wait(100, controller.signal);
+      const promise2 = wait(200, controller.signal);
+
+      jest.advanceTimersByTime(50);
+      controller.abort();
+
+      await expect(promise1).rejects.toThrow('Aborted');
+      await expect(promise2).rejects.toThrow('Aborted');
     });
   });
 });

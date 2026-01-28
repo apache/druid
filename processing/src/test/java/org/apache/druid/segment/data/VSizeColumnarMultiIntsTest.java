@@ -46,7 +46,7 @@ public class VSizeColumnarMultiIntsTest
     VSizeColumnarMultiInts indexed = VSizeColumnarMultiInts.fromIterable(
         Iterables.transform(
             someInts,
-            new Function<int[], VSizeColumnarInts>()
+            new Function<>()
             {
               @Override
               public VSizeColumnarInts apply(int[] input)

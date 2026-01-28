@@ -1,88 +1,94 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`SegmentsView matches snapshot 1`] = `
-<React.Fragment>
-  <div
-    className="segments-view app-view"
+<div
+  className="segments-view app-view"
+>
+  <Memo(ViewControlBar)
+    label="Segments"
   >
-    <Memo(ViewControlBar)
-      label="Segments"
-    >
-      <Memo(RefreshButton)
-        localStorageKey="segments-refresh-rate"
-        onRefresh={[Function]}
+    <Memo(RefreshButton)
+      localStorageKey="segments-refresh-rate"
+      onRefresh={[Function]}
+    />
+    <ForwardRef>
+      Group by
+    </ForwardRef>
+    <Blueprint5.ButtonGroup>
+      <Blueprint5.Button
+        active={true}
+        onClick={[Function]}
+      >
+        None
+      </Blueprint5.Button>
+      <Blueprint5.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Interval
+      </Blueprint5.Button>
+    </Blueprint5.ButtonGroup>
+    <Memo(MoreButton)>
+      <Blueprint5.MenuItem
+        active={false}
+        disabled={true}
+        icon="application"
+        multiline={false}
+        onClick={[Function]}
+        popoverProps={{}}
+        shouldDismissPopover={true}
+        text="View SQL query for table"
       />
-      <Unknown>
-        Group by
-      </Unknown>
-      <Blueprint4.ButtonGroup>
-        <Blueprint4.Button
-          active={true}
-          onClick={[Function]}
-        >
-          None
-        </Blueprint4.Button>
-        <Blueprint4.Button
-          active={false}
-          onClick={[Function]}
-        >
-          Interval
-        </Blueprint4.Button>
-      </Blueprint4.ButtonGroup>
-      <Memo(MoreButton)>
-        <Blueprint4.MenuItem
-          active={false}
-          disabled={true}
-          icon="application"
-          multiline={false}
-          onClick={[Function]}
-          popoverProps={{}}
-          selected={false}
-          shouldDismissPopover={true}
-          text="View SQL query for table"
-        />
-      </Memo(MoreButton)>
-      <Blueprint4.Switch
-        checked={false}
-        disabled={false}
-        label="Show segment timeline"
-        onChange={[Function]}
-      />
-      <Memo(TableColumnSelector)
-        columns={
-          [
-            "Segment ID",
-            "Datasource",
-            "Start",
-            "End",
-            "Version",
-            "Time span",
-            "Shard type",
-            "Shard spec",
-            "Partition",
-            "Size",
-            "Num rows",
-            "Avg. row size",
-            "Replicas",
-            "Replication factor",
-            "Is available",
-            "Is active",
-            "Is realtime",
-            "Is published",
-            "Is overshadowed",
-          ]
-        }
-        onChange={[Function]}
-        onClose={[Function]}
-        tableColumnsHidden={
-          [
-            "Time span",
-            "Is published",
-            "Is overshadowed",
-          ]
-        }
-      />
-    </Memo(ViewControlBar)>
+    </Memo(MoreButton)>
+    <Blueprint5.Switch
+      checked={false}
+      disabled={false}
+      label="Show segment timeline"
+      onChange={[Function]}
+    />
+    <Memo(TableColumnSelector)
+      columns={
+        [
+          "Segment ID",
+          "Datasource",
+          "Start",
+          "End",
+          "Version",
+          "Time span",
+          "Shard type",
+          "Shard spec",
+          "Partition",
+          "Size",
+          "Num rows",
+          "Avg. row size",
+          "Replicas",
+          "Replication factor",
+          "Is available",
+          "Is active",
+          "Is realtime",
+          "Is published",
+          "Is overshadowed",
+        ]
+      }
+      onChange={[Function]}
+      onClose={[Function]}
+      tableColumnsHidden={
+        [
+          "Is published",
+          "Is overshadowed",
+        ]
+      }
+    />
+  </Memo(ViewControlBar)>
+  <SplitterLayout
+    className="timeline-segments-splitter"
+    percentage={true}
+    primaryIndex={1}
+    primaryMinSize={20}
+    secondaryInitialSize={35}
+    secondaryMinSize={10}
+    vertical={true}
+  >
     <ReactTable
       AggregatedComponent={[Function]}
       ExpanderComponent={[Function]}
@@ -146,7 +152,6 @@ exports[`SegmentsView matches snapshot 1`] = `
             "accessor": "segment_id",
             "filterable": true,
             "show": true,
-            "sortable": true,
             "width": 280,
           },
           {
@@ -163,7 +168,6 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": true,
             "show": false,
-            "sortable": true,
             "width": 120,
           },
           {
@@ -174,8 +178,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "sortable": true,
-            "width": 160,
+            "width": 220,
           },
           {
             "Cell": [Function],
@@ -185,8 +188,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "sortable": true,
-            "width": 160,
+            "width": 220,
           },
           {
             "Cell": [Function],
@@ -195,16 +197,16 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": true,
             "show": true,
-            "sortable": true,
-            "width": 160,
+            "width": 180,
           },
           {
-            "Cell": [Function],
             "Header": "Time span",
-            "accessor": "time_span",
-            "filterable": true,
-            "show": false,
-            "sortable": true,
+            "accessor": [Function],
+            "className": "padded",
+            "filterable": false,
+            "id": "time_span",
+            "show": true,
+            "sortable": false,
             "width": 100,
           },
           {
@@ -233,7 +235,6 @@ exports[`SegmentsView matches snapshot 1`] = `
             "className": "padded",
             "filterable": false,
             "show": true,
-            "sortable": true,
             "width": 60,
           },
           {
@@ -244,7 +245,6 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
-            "sortable": true,
             "width": 120,
           },
           {
@@ -365,18 +365,11 @@ exports[`SegmentsView matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={[]}
       defaultPage={0}
-      defaultPageSize={50}
+      defaultPageSize={20}
       defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={
-        [
-          {
-            "desc": true,
-            "id": "start",
-          },
-        ]
-      }
+      defaultSorted={[]}
       expanderDefaults={
         {
           "filterable": false,
@@ -412,7 +405,7 @@ exports[`SegmentsView matches snapshot 1`] = `
       getTrProps={[Function]}
       groupedByPivotKey="_groupedByPivot"
       indexKey="_index"
-      loading={false}
+      loading={true}
       loadingText="Loading..."
       manual={true}
       multiSort={true}
@@ -422,8 +415,13 @@ exports[`SegmentsView matches snapshot 1`] = `
       ofText=""
       onFetchData={[Function]}
       onFilteredChange={[Function]}
+      onPageChange={[Function]}
+      onPageSizeChange={[Function]}
+      onSortedChange={[Function]}
       originalKey="_original"
+      page={0}
       pageJumpText="jump to page"
+      pageSize={50}
       pageSizeOptions={
         [
           50,
@@ -448,9 +446,17 @@ exports[`SegmentsView matches snapshot 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
+      sorted={
+        [
+          {
+            "desc": true,
+            "id": "start",
+          },
+        ]
+      }
       style={{}}
       subRowsKey="_subRows"
     />
-  </div>
-</React.Fragment>
+  </SplitterLayout>
+</div>
 `;

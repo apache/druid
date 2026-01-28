@@ -42,7 +42,7 @@ public class JacksonConfigProvider<T> implements Provider<Supplier<T>>
 
   public static <T> JacksonConfigProvider<T> of(String key, Class<T> clazz, T defaultVal)
   {
-    return new JacksonConfigProvider<T>(key, clazz, null, defaultVal);
+    return new JacksonConfigProvider<>(key, clazz, null, defaultVal);
   }
 
   private final String key;

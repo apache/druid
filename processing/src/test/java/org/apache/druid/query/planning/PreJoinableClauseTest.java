@@ -21,20 +21,40 @@ package org.apache.druid.query.planning;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.join.JoinType;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class PreJoinableClauseTest
 {
-  private final PreJoinableClause clause = new PreJoinableClause(
-      "j.",
-      new TableDataSource("foo"),
-      JoinType.LEFT,
-      JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil())
-  );
+  private final PreJoinableClause clause = makePreJoinableClause();
+
+  private PreJoinableClause makePreJoinableClause()
+  {
+    JoinDataSource join = JoinDataSource.create(
+        new TableDataSource("bar"),
+        new TableDataSource("foo"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+
+    );
+    return new PreJoinableClause(join);
+  }
+
 
   @Test
   public void test_getPrefix()
@@ -58,6 +78,59 @@ public class PreJoinableClauseTest
   public void test_getDataSource()
   {
     Assert.assertEquals(new TableDataSource("foo"), clause.getDataSource());
+  }
+
+  @Test
+  public void test_maybeUnwrapRestrictedDataSource()
+  {
+    Assert.assertEquals(new TableDataSource("foo"), clause.maybeUnwrapRestrictedDataSource());
+
+    RestrictedDataSource left = RestrictedDataSource.create(
+        new TableDataSource("bar"),
+        RowFilterPolicy.from(new NullFilter("col", null))
+    );
+    RestrictedDataSource restrictedDataSource1 = RestrictedDataSource.create(
+        new TableDataSource("foo"),
+        NoRestrictionPolicy.instance()
+    );
+    RestrictedDataSource restrictedDataSource2 = RestrictedDataSource.create(
+        new TableDataSource("foo"),
+        RowFilterPolicy.from(new NullFilter("col", null))
+    );
+    JoinDataSource join1CanbeUnwrapped = JoinDataSource.create(
+        left,
+        restrictedDataSource1,
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    JoinDataSource join2NotSupported = JoinDataSource.create(
+        left,
+        restrictedDataSource2,
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        TrueDimFilter.instance(),
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    Assert.assertEquals(
+        new TableDataSource("foo"),
+        new PreJoinableClause(join1CanbeUnwrapped).maybeUnwrapRestrictedDataSource()
+    );
+    QueryUnsupportedException e = Assert.assertThrows(
+        QueryUnsupportedException.class,
+        () -> new PreJoinableClause(join2NotSupported).maybeUnwrapRestrictedDataSource()
+    );
+    Assert.assertEquals(
+        "Restricted data source [foo] with policy [RowFilterPolicy{rowFilter=col IS NULL}] is not supported",
+        e.getMessage()
+    );
   }
 
   @Test

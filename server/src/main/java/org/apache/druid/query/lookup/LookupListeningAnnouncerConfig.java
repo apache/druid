@@ -24,13 +24,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 
 class LookupListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
-  private final DataSourceTaskIdHolder dataSourceTaskIdHolder;
+  private final TaskHolder taskHolder;
+  private final LoadSpecHolder loadSpecHolder;
+
   @JsonProperty("lookupTier")
   private String lookupTier = null;
   @JsonProperty("lookupTierIsDatasource")
@@ -38,10 +41,12 @@ class LookupListeningAnnouncerConfig
 
   @JsonCreator
   public LookupListeningAnnouncerConfig(
-      @JacksonInject DataSourceTaskIdHolder dataSourceTaskIdHolder
+      @JacksonInject TaskHolder taskHolder,
+      @JacksonInject LoadSpecHolder loadSpecHolder
   )
   {
-    this.dataSourceTaskIdHolder = dataSourceTaskIdHolder;
+    this.taskHolder = taskHolder;
+    this.loadSpecHolder = loadSpecHolder;
   }
 
   public String getLookupTier()
@@ -50,7 +55,8 @@ class LookupListeningAnnouncerConfig
         !(lookupTierIsDatasource && null != lookupTier),
         "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
     );
-    final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
+
+    final String lookupTier = lookupTierIsDatasource ? taskHolder.getDataSource() : this.lookupTier;
 
     return Preconditions.checkNotNull(
         lookupTier == null ? DEFAULT_TIER : StringUtils.emptyToNullNonDruidDataString(lookupTier),
@@ -61,6 +67,6 @@ class LookupListeningAnnouncerConfig
 
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return dataSourceTaskIdHolder.getLookupLoadingSpec();
+    return loadSpecHolder.getLookupLoadingSpec();
   }
 }

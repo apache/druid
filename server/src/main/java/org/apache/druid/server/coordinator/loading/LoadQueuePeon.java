@@ -27,7 +27,6 @@ import java.util.Set;
 /**
  * Supports load queue management.
  */
-@Deprecated
 public interface LoadQueuePeon
 {
   void start();
@@ -53,6 +52,8 @@ public interface LoadQueuePeon
   void dropSegment(DataSegment segment, LoadPeonCallback callback);
 
   long getSizeOfSegmentsToLoad();
+
+  long getLoadRateKbps();
 
   CoordinatorRunStats getAndResetStats();
 

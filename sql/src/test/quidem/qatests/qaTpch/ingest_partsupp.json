@@ -1,0 +1,49 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "sql/src/test/quidem/qatests/qaTpch/data",
+        "filter" : "partsupp.tbl.gz"
+      },
+      "inputFormat": { "type": "tsv", "columns": ["ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"], "findColumnsFromHeader": false, "delimiter": "|" },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2,
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 4,
+          "formatVersion": 1
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "partsupp",
+      "granularitySpec": {
+        "segmentGranularity": "year",
+        "queryGranularity": null,
+        "rollup": false
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto",
+	"missingValue": "2025-01-01T00:00:00.000"
+      },
+      "dimensionsSpec": {
+        "dimensions": [{"name": "ps_partkey", "type": "long"}, {"name": "ps_suppkey", "type": "long"}, {"name": "ps_availqty", "type": "long"}, {"name": "ps_supplycost", "type": "double"}, {"name": "ps_comment", "type": "string"}]
+      }
+    }
+  }
+}
+
+

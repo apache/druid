@@ -36,7 +36,7 @@ public class GutmanSearchStrategy<TCoordinateArray, TPoint extends ImmutableNode
     if (bound.getLimit() > 0) {
       return Iterables.transform(
           breadthFirstSearch(node, bound),
-          new Function<ImmutableNode, ImmutableBitmap>()
+          new Function<>()
           {
             @Override
             public ImmutableBitmap apply(ImmutableNode immutableNode)
@@ -49,7 +49,7 @@ public class GutmanSearchStrategy<TCoordinateArray, TPoint extends ImmutableNode
 
     return Iterables.transform(
         depthFirstSearch(node, bound),
-        new Function<ImmutableFloatPoint, ImmutableBitmap>()
+        new Function<>()
         {
           @Override
           public ImmutableBitmap apply(ImmutableFloatPoint immutablePoint)
@@ -134,7 +134,7 @@ public class GutmanSearchStrategy<TCoordinateArray, TPoint extends ImmutableNode
         Iterables.transform(
             Iterables.filter(
                 nodes,
-                new Predicate<ImmutableNode>()
+                new Predicate<>()
                 {
                   @Override
                   public boolean apply(ImmutableNode immutableNode)
@@ -166,7 +166,7 @@ public class GutmanSearchStrategy<TCoordinateArray, TPoint extends ImmutableNode
 
     Iterable<ImmutableNode> overlappingNodes = Iterables.filter(
         nodes,
-        new Predicate<ImmutableNode>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableNode immutableNode)

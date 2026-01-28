@@ -20,9 +20,8 @@
 package org.apache.druid.query.sql;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.SleepModule;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -33,6 +32,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
 
@@ -47,10 +47,9 @@ public class SleepSqlTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new SleepModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new SleepModule());
     }
   }
 
@@ -72,14 +71,14 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
+                  .columnTypes(ColumnType.STRING)
                   .filters(range("m1", ColumnType.DOUBLE, null, 2.0, false, true))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.replaceWithDefault() ? "" : null}
+            new Object[]{null}
         )
     );
   }

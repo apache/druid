@@ -31,6 +31,7 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -43,12 +44,14 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
@@ -244,8 +247,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
     final ColumnCapabilities capabilities = factory.getColumnCapabilities(column);
-
-    if (matchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
+    final boolean primitiveMatch = matchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive());
+    if (primitiveMatch && useSimpleEquality(capabilities, matchValueType)) {
+      // if possible, use simplified value matcher instead of predicate
       return ColumnProcessors.makeVectorProcessor(
           column,
           VectorValueMatcherColumnProcessorFactory.instance(),
@@ -298,6 +302,20 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     );
   }
 
+  /**
+   * Can the match value type be cast directly to column type for equality comparison? For non-numeric match types, we
+   * just use exact string equality regardless of the column type. For numeric match value types against string columns,
+   * we instead cast the string to the match value type number for matching equality.
+   */
+  public static boolean useSimpleEquality(TypeSignature<ValueType> columnType, ColumnType matchValueType)
+  {
+    if (Types.is(columnType, ValueType.STRING)) {
+      return !matchValueType.isNumeric();
+    }
+    return true;
+  }
+
+  @Nullable
   public static BitmapColumnIndex getEqualityIndex(
       String column,
       ExprEval<?> matchValueEval,
@@ -311,20 +329,22 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return new AllUnknownBitmapColumnIndex(selector);
     }
 
-    final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
-    if (valueIndexes != null) {
-      // matchValueEval.value() cannot be null here due to check in the constructor
-      //noinspection DataFlowIssue
-      return valueIndexes.forValue(matchValueEval.value(), matchValueType);
-    }
+    if (useSimpleEquality(selector.getColumnCapabilities(column), matchValueType)) {
+      final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
+      if (valueIndexes != null) {
+        // matchValueEval.value() cannot be null here due to check in the constructor
+        //noinspection DataFlowIssue
+        return valueIndexes.forValue(matchValueEval.value(), matchValueType);
+      }
+      if (matchValueType.isPrimitive()) {
+        final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+        if (stringValueSetIndexes != null) {
 
-    if (matchValueType.isPrimitive()) {
-      final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
-      if (stringValueSetIndexes != null) {
-
-        return stringValueSetIndexes.forValue(matchValueEval.asString());
+          return stringValueSetIndexes.forValue(matchValueEval.asString());
+        }
       }
     }
+
     // fall back to predicate based index if it is available
     final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
     if (predicateIndexes != null) {
@@ -408,11 +428,38 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     private Supplier<DruidObjectPredicate<String>> makeStringPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
-        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
-        if (castForComparison == null) {
-          return DruidObjectPredicate.alwaysFalseWithNullUnknown();
+        // when matching strings to numeric match values, use numeric comparator to implicitly cast the string to number
+        if (matchValue.type().isNumeric()) {
+          if (matchValue.type().is(ExprType.LONG)) {
+            return value -> {
+              if (value == null) {
+                return DruidPredicateMatch.UNKNOWN;
+              }
+              final Long l = DimensionHandlerUtils.convertObjectToLong(value);
+              if (l == null) {
+                return DruidPredicateMatch.FALSE;
+              }
+              return DruidPredicateMatch.of(matchValue.asLong() == l);
+            };
+          } else {
+            return value -> {
+              if (value == null) {
+                return DruidPredicateMatch.UNKNOWN;
+              }
+              final Double d = DimensionHandlerUtils.convertObjectToDouble(value);
+              if (d == null) {
+                return DruidPredicateMatch.FALSE;
+              }
+              return DruidPredicateMatch.of(matchValue.asDouble() == d);
+            };
+          }
+        } else {
+          final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
+          if (castForComparison == null) {
+            return DruidObjectPredicate.alwaysFalseWithNullUnknown();
+          }
+          return DruidObjectPredicate.equalTo(castForComparison.asString());
         }
-        return DruidObjectPredicate.equalTo(castForComparison.asString());
       });
     }
 
@@ -464,7 +511,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         if (matchValue.type().equals(ExpressionType.NESTED_DATA)) {
           return input -> input == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.of(Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value())));
         }
-        return DruidObjectPredicate.equalTo(matchValue.valueOrDefault());
+        return DruidObjectPredicate.equalTo(matchValue.value());
       });
     }
 
@@ -548,6 +595,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
+      // use the predicate matcher when matching numeric values since it casts the strings to numeric types
+      if (matchValue.type().isNumeric()) {
+        return predicateMatcherFactory.makeDimensionProcessor(selector, multiValue);
+      }
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
       if (castForComparison == null) {
         return ValueMatchers.makeAlwaysFalseWithNullUnknownDimensionMatcher(selector, multiValue);

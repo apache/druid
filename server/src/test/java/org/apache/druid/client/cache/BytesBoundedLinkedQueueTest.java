@@ -45,7 +45,7 @@ public class BytesBoundedLinkedQueueTest
 
   private static BlockingQueue<TestObject> getQueue(final int capacity)
   {
-    return new BytesBoundedLinkedQueue<TestObject>(capacity)
+    return new BytesBoundedLinkedQueue<>(capacity)
     {
       @Override
       public long getBytesSize(TestObject o)
@@ -91,7 +91,7 @@ public class BytesBoundedLinkedQueueTest
     final CountDownLatch latch = new CountDownLatch(1);
     final TestObject object = new TestObject(4);
     Future<TestObject> future = exec.submit(
-        new Callable<TestObject>()
+        new Callable<>()
         {
           @Override
           public TestObject call() throws Exception
@@ -139,7 +139,7 @@ public class BytesBoundedLinkedQueueTest
     final CyclicBarrier barrier = new CyclicBarrier(2);
 
     Future<Boolean> future = exec.submit(
-        new Callable<Boolean>()
+        new Callable<>()
         {
           @Override
           public Boolean call() throws Exception

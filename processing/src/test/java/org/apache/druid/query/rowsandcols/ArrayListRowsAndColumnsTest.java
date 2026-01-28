@@ -19,12 +19,18 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.column.RowSignature;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
@@ -35,7 +41,10 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
   }
 
   @Nonnull
-  public static Function<MapOfColumnsRowsAndColumns, ArrayListRowsAndColumns<Object[]>> MAKER = input -> {
+  public static Function<MapOfColumnsRowsAndColumns, ArrayListRowsAndColumns<Object[]>> MAKER = input -> buildRAC(input);
+
+  public static ArrayListRowsAndColumns<Object[]> buildRAC(MapOfColumnsRowsAndColumns input)
+  {
     ArrayList<Object[]> rows = new ArrayList<>(input.numRows());
 
     ArrayList<String> cols = new ArrayList<>(input.getColumnNames());
@@ -47,7 +56,7 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     for (int colIndex = 0; colIndex < cols.size(); ++colIndex) {
       String col = cols.get(colIndex);
-      final ColumnAccessor column = input.findColumn(col).toAccessor();
+      final ColumnAccessor column = Objects.requireNonNull(input.findColumn(col)).toAccessor();
       sigBob.add(col, column.getType());
 
       for (int i = 0; i < column.numRows(); ++i) {
@@ -66,5 +75,29 @@ public class ArrayListRowsAndColumnsTest extends RowsAndColumnsTestBase
         },
         sigBob.build()
     );
-  };
+  }
+
+  @Test
+  public void testChildRAC()
+  {
+    MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "colA", new IntArrayColumn(new int[]{1, 1, 1, 1, 2, 2, 2, 2, 2, 2}),
+            "colB", new IntArrayColumn(new int[]{3, 3, 4, 4, 5, 5, 5, 6, 6, 7})
+        )
+    );
+
+    ArrayListRowsAndColumns rac = ArrayListRowsAndColumnsTest.buildRAC(input);
+    ArrayList<RowsAndColumns> childRACs = rac.toClusteredGroupPartitioner()
+                                             .partitionOnBoundaries(Collections.singletonList("colA"));
+
+    Assert.assertEquals(2, childRACs.size());
+    ArrayListRowsAndColumns childRAC = (ArrayListRowsAndColumns) childRACs.get(1);
+    ArrayListRowsAndColumns curChildRAC = (ArrayListRowsAndColumns) childRAC.toClusteredGroupPartitioner()
+                                                                            .partitionOnBoundaries(Collections.singletonList(
+                                                                                "colB"))
+                                                                            .get(0);
+
+    Assert.assertEquals(5, curChildRAC.findColumn("colB").toAccessor().getInt(0));
+  }
 }

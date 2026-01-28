@@ -23,34 +23,40 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 
+import java.util.Objects;
+
+/**
+ * Notifies the Overlord that the location of a task is now updated.
+ * Used when running K8s-based tasks in encapsulated mode.
+ */
 public class UpdateLocationAction implements TaskAction<Void>
 {
-  private final TaskLocation taskLocation;
+  private final TaskLocation location;
 
   @JsonCreator
   public UpdateLocationAction(
       @JsonProperty("location") TaskLocation location
   )
   {
-    this.taskLocation = location;
+    InvalidInput.conditionalException(location != null, "No task location specified");
+    this.location = location;
   }
 
   @JsonProperty
-  public TaskLocation getTaskLocation()
+  public TaskLocation getLocation()
   {
-    return taskLocation;
+    return location;
   }
 
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Void>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -58,22 +64,35 @@ public class UpdateLocationAction implements TaskAction<Void>
   {
     Optional<TaskRunner> taskRunner = toolbox.getTaskRunner();
     if (taskRunner.isPresent()) {
-      taskRunner.get().updateLocation(task, taskLocation);
+      taskRunner.get().updateLocation(task, location);
     }
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override
   public String toString()
   {
     return "UpdateLocationAction{" +
-           "taskLocation=" + taskLocation +
+           "taskLocation=" + location +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object object)
+  {
+    if (this == object) {
+      return true;
+    }
+    if (object == null || getClass() != object.getClass()) {
+      return false;
+    }
+    UpdateLocationAction that = (UpdateLocationAction) object;
+    return Objects.equals(location, that.location);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(location);
   }
 }

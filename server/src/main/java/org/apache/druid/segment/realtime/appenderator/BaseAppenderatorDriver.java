@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -253,7 +254,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   private static final Logger log = new Logger(BaseAppenderatorDriver.class);
 
   private final SegmentAllocator segmentAllocator;
-  private final UsedSegmentChecker usedSegmentChecker;
+  private final PublishedSegmentRetriever publishedSegmentRetriever;
   private final DataSegmentKiller dataSegmentKiller;
 
   protected final Appenderator appenderator;
@@ -268,13 +269,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
   BaseAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller
   )
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
-    this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "usedSegmentChecker");
+    this.publishedSegmentRetriever = Preconditions.checkNotNull(segmentRetriever, "segmentRetriever");
     this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
     this.executor = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("[" + StringUtils.encodeForFormat(appenderator.getId()) + "]-publish")
@@ -622,7 +623,6 @@ public abstract class BaseAppenderatorDriver implements Closeable
           return RetryUtils.retry(
               () -> {
               try {
-                final Set<DataSegment> upgradedSegments = new HashSet<>();
                 final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
                 final SegmentPublishResult publishResult = publisher.publishSegments(
                     segmentsToBeOverwritten,
@@ -633,22 +633,25 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 );
                 if (publishResult.isSuccess()) {
                   log.info(
-                      "Published [%s] segments with commit metadata [%s]",
+                      "Published [%d] segments with commit metadata[%s].",
                       segmentsAndCommitMetadata.getSegments().size(),
                       callerMetadata
                   );
                   log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
-                  // This set must contain only those segments that were upgraded as a result of a concurrent replace.
-                  upgradedSegments.addAll(publishResult.getSegments());
+
+                  // Log segments upgraded as a result of a concurrent replace
+                  final Set<DataSegment> upgradedSegments = new HashSet<>(publishResult.getSegments());
                   segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
                   }
-                  log.info("Published segment schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
+
+                  log.info("Published segment schemas[%s].", segmentsAndCommitMetadata.getSegmentSchemaMapping());
+                  return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
                 } else {
-                  // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
-                  // now after all, for two possible reasons:
+                  // Publishing didn't affirmatively succeed. However, segments
+                  // with these IDs may have already been published:
                   //
                   // 1) A replica may have beat us to publishing these segments. In this case we want to delete the
                   //    segments we pushed (if they had unique paths) to avoid wasting space on deep storage.
@@ -656,29 +659,28 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   //    from the overlord. In this case we do not want to delete the segments we pushed, since they are
                   //    now live!
 
-                  final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
+                  final Set<SegmentId> segmentIds = segmentsAndCommitMetadata
                       .getSegments()
                       .stream()
-                      .map(SegmentIdWithShardSpec::fromDataSegment)
+                      .map(DataSegment::getId)
                       .collect(Collectors.toSet());
 
-                  final Set<DataSegment> activeSegments = usedSegmentChecker.findUsedSegments(segmentsIdentifiers);
-
-                  if (activeSegments.equals(ourSegments)) {
+                  final Set<DataSegment> publishedSegments = publishedSegmentRetriever.findPublishedSegments(segmentIds);
+                  if (publishedSegments.equals(ourSegments)) {
                     log.info(
-                        "Could not publish [%s] segments, but checked and found them already published; continuing.",
+                        "Could not publish [%d] segments, but they have already been published by another task.",
                         ourSegments.size()
                     );
                     log.infoSegments(
                         segmentsAndCommitMetadata.getSegments(),
                         "Could not publish segments"
                     );
-                    log.info("Could not publish segment and schemas: [%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
+                    log.info("Could not publish segment schemas[%s]", segmentsAndCommitMetadata.getSegmentSchemaMapping());
 
                     // Clean up pushed segments if they are physically disjoint from the published ones (this means
                     // they were probably pushed by a replica, and with the unique paths option).
                     final boolean physicallyDisjoint = Sets.intersection(
-                        activeSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
+                        publishedSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
                         ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet())
                     ).isEmpty();
 
@@ -698,8 +700,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     }
                     throw new ISE("Failed to publish segments");
                   }
+
+                  return segmentsAndCommitMetadata;
                 }
-                return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
               }
               catch (Exception e) {
                 // Must not remove segments here, we aren't sure if our transaction succeeded or not.
@@ -716,7 +719,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
               e -> (e != null && e.getMessage() != null
                     && e.getMessage().contains("Failed to update the metadata Store."
                                                + " The new start metadata is ahead of last commited end state.")),
-              RetryUtils.DEFAULT_MAX_TRIES
+              // Do not retry here since the TransactionalSegmentPublisher itself performs required retries
+              1
           );
         }
         catch (Exception e) {

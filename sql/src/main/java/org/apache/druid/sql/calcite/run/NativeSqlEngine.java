@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
@@ -27,46 +28,66 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @LazySingleton
 public class NativeSqlEngine implements SqlEngine
 {
+  private static final Logger LOG = new Logger(NativeSqlEngine.class);
+
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS = ImmutableSet.of(
       TimeBoundaryQuery.MAX_TIME_ARRAY_OUTPUT_NAME,
       TimeBoundaryQuery.MIN_TIME_ARRAY_OUTPUT_NAME,
       GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD,
       GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
       GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX,
-      DruidQuery.CTX_SCAN_SIGNATURE,
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
       DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS
   );
 
-  private static final String NAME = "native";
+  public static final String NAME = "native";
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final ObjectMapper jsonMapper;
+  private final SqlStatementFactory sqlStatementFactory;
 
   @Inject
   public NativeSqlEngine(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final SqlToolbox toolbox
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.jsonMapper = jsonMapper;
+    this.sqlStatementFactory = new SqlStatementFactory(toolbox.withEngine(this));
+  }
+
+  @VisibleForTesting
+  public NativeSqlEngine(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      final ObjectMapper jsonMapper,
+      final SqlStatementFactory sqlStatementFactory
+  )
+  {
+    this.queryLifecycleFactory = queryLifecycleFactory;
+    this.jsonMapper = jsonMapper;
+    this.sqlStatementFactory = sqlStatementFactory;
   }
 
   @Override
@@ -83,13 +104,21 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return validatedRowType;
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     throw new UnsupportedOperationException();
   }
@@ -115,7 +144,6 @@ public class NativeSqlEngine implements SqlEngine
       case READ_EXTERNAL_DATA:
       case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
-      case SCAN_NEEDS_SIGNATURE:
       case WINDOW_LEAF_OPERATOR:
         return false;
       default:
@@ -154,6 +182,23 @@ public class NativeSqlEngine implements SqlEngine
 
     if (joinAlgorithm != JoinAlgorithm.BROADCAST) {
       throw InvalidSqlInput.exception("Join algorithm [%s] is not supported by engine [%s]", joinAlgorithm, NAME);
+    }
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    return sqlStatementFactory;
+  }
+
+  @Override
+  public void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  {
+    final CopyOnWriteArrayList<String> nativeQueryIds = plannerContext.getNativeQueryIds();
+
+    for (String nativeQueryId : nativeQueryIds) {
+      LOG.debug("Canceling native query [%s]", nativeQueryId);
+      queryScheduler.cancelQuery(nativeQueryId);
     }
   }
 }

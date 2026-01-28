@@ -56,7 +56,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -91,7 +90,6 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   );
 
   private static final ScanQueryQueryToolChest SCAN_QUERY_QUERY_TOOL_CHEST = new ScanQueryQueryToolChest(
-      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
@@ -107,8 +105,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
-                 .limit(Integer.MAX_VALUE)
-                 .legacy(false);
+                 .limit(Integer.MAX_VALUE);
   }
 
 
@@ -199,6 +196,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -247,6 +245,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         ),
         330,
         MAX_ROWS,
+        null,
         null,
         null,
         null,
@@ -343,12 +342,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
 
 
     getStreamOfEvents().forEach(o -> {
-      try {
-        index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
-      }
-      catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
-      }
+      index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
     });
 
     if (oldValue == null) {
@@ -359,7 +353,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();
     FileUtils.mkdirp(someTmpFile);
-    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.DEFAULT, null);
+    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.getDefault(), null);
     someTmpFile.delete();
     return INDEX_IO.loadIndex(someTmpFile);
   }

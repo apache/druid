@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -52,6 +55,10 @@ public class ExprMacroTable
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 
+  private static final ExprMacroTable TIME_FLOOR_MACRO_TABLE = new ExprMacroTable(
+      Collections.singletonList(new TimestampFloorExprMacro())
+  );
+
   private final Map<String, ExprMacro> macroMap;
 
   public ExprMacroTable(final List<ExprMacro> macros)
@@ -64,6 +71,16 @@ public class ExprMacroTable
   public static ExprMacroTable nil()
   {
     return NIL;
+  }
+
+  /**
+   * Specialized {@link ExprMacroTable} that only knows about {@link TimestampFloorExprMacro}, intended for use
+   * parsing generated expressions which translate {@link org.apache.druid.java.util.common.granularity.Granularity}
+   * into {@link Expr}
+   */
+  public static ExprMacroTable granularity()
+  {
+    return TIME_FLOOR_MACRO_TABLE;
   }
 
   public List<ExprMacro> getMacros()
@@ -156,6 +173,22 @@ public class ExprMacroTable
     public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return FallbackVectorProcessor.canFallbackVectorize(args, getOutputType(inspector), inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      if (ExpressionProcessing.allowVectorizeFallback()) {
+        return FallbackVectorProcessor.create(macro, args, inspector);
+      } else {
+        throw Exprs.cannotVectorize(this);
+      }
     }
 
     /**

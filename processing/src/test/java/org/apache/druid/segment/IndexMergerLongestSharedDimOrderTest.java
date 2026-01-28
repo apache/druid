@@ -26,6 +26,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
@@ -45,10 +46,10 @@ import static org.mockito.Mockito.when;
 public class IndexMergerLongestSharedDimOrderTest
 {
   @Mock
-  Supplier<ColumnHolder> mockSupplier;
+  Supplier<BaseColumnHolder> mockSupplier;
 
   @Mock
-  ColumnHolder mockColumnHolder;
+  BaseColumnHolder mockColumnHolder;
 
   @Mock
   SmooshedFileMapper mockSmooshedFileMapper;
@@ -78,14 +79,14 @@ public class IndexMergerLongestSharedDimOrderTest
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("b", "c"));
     List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), null);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
 
     //  Valid ordering as although second index has gap, it is still same ordering
     index1 = makeIndexWithDimensionList(ImmutableList.of("a", "b", "c"));
     index2 = makeIndexWithDimensionList(ImmutableList.of("a", "c"));
     actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), null);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
   }
 
   @Test
@@ -131,7 +132,7 @@ public class IndexMergerLongestSharedDimOrderTest
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("b", "c"));
     List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
   }
 
   @Test
@@ -166,12 +167,15 @@ public class IndexMergerLongestSharedDimOrderTest
             new ListIndexed<>(dimensions),
             mockBitmapFactory,
             ImmutableMap.of(ColumnHolder.TIME_COLUMN_NAME, mockSupplier),
-            mockSmooshedFileMapper,
-            null,
-            true
+            mockSmooshedFileMapper
         )
+        {
+          @Override
+          public Metadata getMetadata()
+          {
+            return null;
+          }
+        }
     );
   }
 }
-
-

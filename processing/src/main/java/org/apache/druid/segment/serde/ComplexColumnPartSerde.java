@@ -77,7 +77,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (buffer, builder, columnConfig) -> {
+    return (buffer, builder, columnConfig, parent) -> {
       // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change
       // since it isn't supported anywhere in the query engines)
       // longer term this needs to be captured by making the serde provide this information, and then this should

@@ -42,6 +42,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -186,7 +187,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle) throws Exception
@@ -284,6 +285,45 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       // retry on connection errors and insufficient resources
       // see http://www.postgresql.org/docs/current/static/errcodes-appendix.html for details
       return sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("53"));
+    }
+    return false;
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  protected boolean tableHasColumn(String tableName, String columnName)
+  {
+    return super.tableHasColumn(StringUtils.toLowerCase(tableName), columnName);
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  public Set<String> getIndexOnTable(String tableName)
+  {
+    return super.getIndexOnTable(StringUtils.toLowerCase(tableName));
+  }
+
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23505 for PostgreSQL
+        if ("23505".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
     }
     return false;
   }

@@ -19,6 +19,10 @@
 
 package org.apache.druid.delta.input;
 
+import io.delta.kernel.data.ArrayValue;
+import io.delta.kernel.data.MapValue;
+import io.delta.kernel.internal.util.VectorUtils;
+import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.BinaryType;
 import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.ByteType;
@@ -29,6 +33,7 @@ import io.delta.kernel.types.DoubleType;
 import io.delta.kernel.types.FloatType;
 import io.delta.kernel.types.IntegerType;
 import io.delta.kernel.types.LongType;
+import io.delta.kernel.types.MapType;
 import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
@@ -196,7 +201,16 @@ public class DeltaInputRow implements InputRow
       }
       return String.valueOf(charArray);
     } else if (dataType instanceof DecimalType) {
-      return dataRow.getDecimal(columnOrdinal).longValue();
+      return dataRow.getDecimal(columnOrdinal);
+    } else if (dataType instanceof StructType) {
+      final io.delta.kernel.data.Row structRow = dataRow.getStruct(columnOrdinal);
+      return RowSerde.convertRowToJsonObject(structRow);
+    } else if (dataType instanceof ArrayType) {
+      final ArrayValue arrayRow = dataRow.getArray(columnOrdinal);
+      return VectorUtils.toJavaList(arrayRow);
+    } else if (dataType instanceof MapType) {
+      final MapValue map = dataRow.getMap(columnOrdinal);
+      return VectorUtils.toJavaMap(map);
     } else {
       throw InvalidInput.exception(
           "Unsupported data type[%s] for fieldName[%s].",

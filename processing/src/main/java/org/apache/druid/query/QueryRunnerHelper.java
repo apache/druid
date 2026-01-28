@@ -19,54 +19,20 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
-import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.util.List;
-import java.util.Objects;
 
 /**
  */
 public class QueryRunnerHelper
 {
-  public static <T> Sequence<Result<T>> makeCursorBasedQuery(
-      final StorageAdapter adapter,
-      final List<Interval> queryIntervals,
-      final Filter filter,
-      final VirtualColumns virtualColumns,
-      final boolean descending,
-      final Granularity granularity,
-      final Function<Cursor, Result<T>> mapFn,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    Preconditions.checkArgument(
-        queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
-    );
-
-    return Sequences.filter(
-        Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), virtualColumns, granularity, descending, queryMetrics),
-            mapFn
-        ),
-        Objects::nonNull
-    );
-  }
 
   public static <T> QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)

@@ -139,7 +139,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     return new DatasourceRecordReader();
   }
 
-  private Supplier<org.apache.hadoop.mapred.InputFormat> supplier = new Supplier<org.apache.hadoop.mapred.InputFormat>()
+  private Supplier<org.apache.hadoop.mapred.InputFormat> supplier = new Supplier<>()
   {
     @Override
     public org.apache.hadoop.mapred.InputFormat get()
@@ -253,7 +253,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         currentDatasources,
-        new TypeReference<List<String>>() {}
+        new TypeReference<>() {}
     );
   }
 
@@ -286,7 +286,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   {
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         conf.get(StringUtils.format("%s.%s", CONF_SEGMENTS, dataSource)),
-        new TypeReference<List<WindowedDataSegment>>() {}
+        new TypeReference<>() {}
     );
   }
 

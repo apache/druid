@@ -28,6 +28,7 @@ import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ViewTable;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -61,6 +62,8 @@ public class DruidViewMacro implements TableMacro
              plannerFactory.createPlanner(
                  ViewSqlEngine.INSTANCE,
                  viewSql,
+                 DruidSqlParser.parse(viewSql, false).getMainStatement(), // views cannot embed SET
+                 Collections.emptySet(),
                  Collections.emptyMap(),
                  null
              )

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import it.unimi.dsi.fastutil.Hash;
-import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
@@ -28,9 +27,9 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 /**
- * Wrapper of {@link TypeStrategy} for nullable types, which stores {@link NullHandling#IS_NULL_BYTE} or
- * {@link NullHandling#IS_NOT_NULL_BYTE} in the leading byte of any value, as appropriate. If the value is null, only
- * {@link NullHandling#IS_NULL_BYTE} will be set, otherwise, the value bytes will be written after the null byte.
+ * Wrapper of {@link TypeStrategy} for nullable types, which stores {@link TypeStrategies#IS_NULL_BYTE} or
+ * {@link TypeStrategies#IS_NOT_NULL_BYTE} in the leading byte of any value, as appropriate. If the value is null, only
+ * {@link TypeStrategies#IS_NULL_BYTE} will be set, otherwise, the value bytes will be written after the null byte.
  *
  * layout: | null (byte) | value (byte[]) |
  *
@@ -62,7 +61,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
   @Nullable
   public T read(ByteBuffer buffer)
   {
-    if ((buffer.get() & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE) {
+    if ((buffer.get() & TypeStrategies.IS_NULL_BYTE) == TypeStrategies.IS_NULL_BYTE) {
       return null;
     }
     return delegate.read(buffer);
@@ -76,10 +75,10 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
     if (remaining >= 0) {
       // if we have room left, write the null byte and the value
       if (value == null) {
-        buffer.put(NullHandling.IS_NULL_BYTE);
+        buffer.put(TypeStrategies.IS_NULL_BYTE);
         return Byte.BYTES;
       }
-      buffer.put(NullHandling.IS_NOT_NULL_BYTE);
+      buffer.put(TypeStrategies.IS_NOT_NULL_BYTE);
       int written = delegate.write(buffer, value, maxSizeBytes - Byte.BYTES);
       return written < 0 ? written : Byte.BYTES + written;
     } else {
@@ -106,9 +105,13 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
   }
 
   /**
-   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
-   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
-   * is *never* retained.
+   * Whether the {@link #read} methods return an object that may retain a reference to the underlying memory of the
+   * provided {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if,
+   * and only if, a reference is *never* retained.
+   * <p>
+   * If this method returns true, and the caller does not control the lifecycle of the underlying memory or cannot
+   * ensure that it will not change over the lifetime of the returned object, callers should copy the memory to a new
+   * location that they do control the lifecycle of and will be available for the duration of the returned object.
    */
   public boolean readRetainsBufferReference()
   {
@@ -129,7 +132,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
   }
 
   @Override
-  public int compare(T o1, T o2)
+  public int compare(@Nullable T o1, @Nullable T o2)
   {
     return delegateComparator.compare(o1, o2);
   }
@@ -152,5 +155,10 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
       return b == null;
     }
     return b != null && delegate.equals(a, b);
+  }
+
+  public Class<?> getClazz()
+  {
+    return delegate.getClazz();
   }
 }

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { C } from '@druid-toolkit/query';
-import type { AxiosResponse, CancelToken } from 'axios';
+import type { AxiosResponse } from 'axios';
 import axios from 'axios';
+import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
 import type { RowColumn } from './general';
-import { assemble } from './general';
+import { assemble, lookupBy } from './general';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -236,20 +236,23 @@ export class DruidError extends Error {
       };
     }
 
-    // Semicolon (;) at the end. https://bit.ly/1n1yfkJ
-    // ex: SELECT 1;
-    // ex: Received an unexpected token [;] (line [1], column [9]), acceptable options:
+    // Missing (;) after SET statement
+    // ex: SET sqlTimeZone = 'America/Los_Angeles' SELECT * FROM "kttm_simple"
+    // ex: Received an unexpected token [SELECT] (line [1], column [41]), acceptable options: [<EOF>, <QUOTED_STRING>, ";", "UESCAPE"]
     const matchSemicolon =
-      /Received an unexpected token \[;] \(line \[(\d+)], column \[(\d+)]\),/i.exec(errorMessage);
+      /Received an unexpected token \[(?:SET|SELECT)] \(line \[(\d+)], column \[(\d+)]\), acceptable options: \[[^;]*";"/i.exec(
+        errorMessage,
+      );
     if (matchSemicolon) {
       const line = Number(matchSemicolon[1]);
       const column = Number(matchSemicolon[2]);
       return {
-        label: `Remove trailing semicolon (;)`,
+        label: `Add semicolon (;) after SET statement`,
         fn: str => {
           const index = DruidError.positionToIndex(str, line, column);
-          if (str[index] !== ';') return;
-          return str.slice(0, index) + str.slice(index + 1);
+          const prefix = str.slice(0, index).trimEnd();
+          if (prefix.endsWith(';')) return;
+          return prefix + ';' + str.slice(prefix.length);
         },
       };
     }
@@ -319,10 +322,13 @@ export class DruidError extends Error {
   }
 }
 
-export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
+export async function queryDruidRune(
+  runeQuery: Record<string, any>,
+  signal?: AbortSignal,
+): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -331,24 +337,54 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
 
 export async function queryDruidSql<T = any>(
   sqlQueryPayload: Record<string, any>,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
 }
 
+export async function getApiArray<T = any>(url: string, signal?: AbortSignal): Promise<T[]> {
+  const result = (await Api.instance.get(url, { signal })).data;
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
+}
+
+export async function getApiArrayFromKey<T = any>(
+  url: string,
+  key: string,
+  signal?: AbortSignal,
+): Promise<T[]> {
+  const result = (await Api.instance.get(url, { signal })).data?.[key];
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
+}
+
 export interface QueryExplanation {
   query: any;
   signature: { name: string; type: string }[];
+  columnMappings: {
+    queryColumn: string;
+    outputColumn: string;
+  }[];
 }
 
-export function formatSignature(queryExplanation: QueryExplanation): string {
-  return queryExplanation.signature
-    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
+export function formatColumnMappingsAndSignature(queryExplanation: QueryExplanation): string {
+  const columnNameToType = lookupBy(
+    queryExplanation.signature,
+    c => c.name,
+    c => c.type,
+  );
+  return queryExplanation.columnMappings
+    .map(({ queryColumn, outputColumn }) => {
+      const type = columnNameToType[queryColumn];
+      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}→${C.optionalQuotes(
+        outputColumn,
+      )}`;
+    })
     .join(', ');
 }

@@ -120,6 +120,24 @@ public class WorkerTaskCountStatsMonitorTest
             "metrics", 9L
         );
       }
+
+      @Override
+      public Map<String, Long> getWorkerFailedTasks()
+      {
+        return ImmutableMap.of(
+                "movies", 4L,
+                "games", 6L
+        );
+      }
+
+      @Override
+      public Map<String, Long> getWorkerSuccessfulTasks()
+      {
+        return ImmutableMap.of(
+                "games", 23L,
+                "inventory", 89L
+        );
+      }
     };
 
     nullStatsProvider = new WorkerTaskCountStatsProvider()
@@ -204,7 +222,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManager, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getEvents().size());
+    Assert.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/failed/count",
         ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
@@ -239,7 +257,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForIndexer, ImmutableSet.of(NodeRole.INDEXER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(6, emitter.getEvents().size());
+    Assert.assertEquals(10, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/running/count",
         ImmutableMap.of("dataSource", "wikipedia"),
@@ -270,7 +288,28 @@ public class WorkerTaskCountStatsMonitorTest
         ImmutableMap.of("dataSource", "metrics"),
         9L
     );
+    emitter.verifyValue(
+            "worker/task/failed/count",
+            ImmutableMap.of("dataSource", "movies"),
+            4L
+    );
+    emitter.verifyValue(
+            "worker/task/failed/count",
+            ImmutableMap.of("dataSource", "games"),
+            6L
+    );
+    emitter.verifyValue(
+            "worker/task/success/count",
+            ImmutableMap.of("dataSource", "games"),
+            23L
+    );
+    emitter.verifyValue(
+            "worker/task/success/count",
+            ImmutableMap.of("dataSource", "inventory"),
+            89L
+    );
   }
+
   @Test
   public void testMonitorWithNulls()
   {
@@ -278,6 +317,16 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManagerNullStats, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+  }
+
+  @Test
+  public void testMonitorWithPeon()
+  {
+    final WorkerTaskCountStatsMonitor monitor =
+            new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    monitor.doMonitor(emitter);
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
   }
 }

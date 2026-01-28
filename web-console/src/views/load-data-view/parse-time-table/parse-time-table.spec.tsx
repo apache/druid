@@ -17,7 +17,6 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import type { IngestionSpec } from '../../../druid-models';
 import { PLACEHOLDER_TIMESTAMP_SPEC } from '../../../druid-models';

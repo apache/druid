@@ -43,6 +43,7 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -84,7 +85,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
         KEY_COLUMNS
     );
     Interval testInterval = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
 
     List<String> columnNames = data.getColumnNames();
     File segment = new File(temporaryFolder.newFolder(), "segment");
@@ -103,18 +104,25 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
     Assert.assertEquals(expectedFactory, factory);
 
     // load a segment
-    final DataSegment dataSegment = new DataSegment(
-        TABLE_NAME,
-        testInterval,
-        DateTimes.nowUtc().toString(),
-        ImmutableMap.of(),
-        columnNames,
-        ImmutableList.of(),
-        null,
-        null,
-        persistedSegmentRoot.getTotalSpace()
+    final DataSegment dataSegment = DataSegment.builder(SegmentId.of(
+                                                   TABLE_NAME,
+                                                   testInterval,
+                                                   DateTimes.nowUtc().toString(),
+                                                   null
+                                               ))
+                                               .loadSpec(ImmutableMap.of())
+                                               .dimensions(columnNames)
+                                               .metrics(ImmutableList.of())
+                                               .binaryVersion(null)
+                                               .size(persistedSegmentRoot.getTotalSpace())
+                                               .totalRows(1)
+                                               .build();
+    final Segment loaded = factory.factorize(
+        dataSegment,
+        persistedSegmentRoot,
+        false,
+        SegmentLazyLoadFailCallback.NOOP
     );
-    final Segment loaded = factory.factorize(dataSegment, persistedSegmentRoot, false, SegmentLazyLoadFailCallback.NOOP);
 
     final BroadcastSegmentIndexedTable table = (BroadcastSegmentIndexedTable) loaded.as(IndexedTable.class);
     Assert.assertNotNull(table);

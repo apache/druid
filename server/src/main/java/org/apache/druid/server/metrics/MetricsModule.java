@@ -22,7 +22,6 @@ package org.apache.druid.server.metrics;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -34,6 +33,7 @@ import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -50,31 +50,27 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
+import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Sets up the {@link MonitorScheduler} to monitor things on a regular schedule.  {@link Monitor}s must be explicitly
  * bound in order to be loaded.
+ * <p>
+ * For any service, a monitor is loaded only if the {@link NodeRole} of the service
+ * is included in the {@link LoadScope} of the monitor.
  */
 public class MetricsModule implements Module
 {
-  static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
+  public static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
   private static final Logger log = new Logger(MetricsModule.class);
-  private Set<NodeRole> nodeRoles;
-
-  @Inject
-  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
-  {
-    this.nodeRoles = nodeRoles;
-  }
 
   public static void register(Binder binder, Class<? extends Monitor> monitorClazz)
   {
@@ -86,12 +82,10 @@ public class MetricsModule implements Module
   {
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, DruidMonitorSchedulerConfig.class);
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, MonitorsConfig.class);
+    JsonConfigProvider.bind(binder, OshiSysMonitorConfig.PREFIX, OshiSysMonitorConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
-    binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
-
-    binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
@@ -106,22 +100,21 @@ public class MetricsModule implements Module
       Supplier<DruidMonitorSchedulerConfig> config,
       MonitorsConfig monitorsConfig,
       Set<Class<? extends Monitor>> monitorSet,
+      @Self Set<NodeRole> nodeRoles,
       ServiceEmitter emitter,
       Injector injector
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
-    // CliPeon.runTask and CliPeon.getDataSourceFromTask/CliPeon.getTaskIDFromTask. The reason for this is unclear
-    // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
-    injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
-      monitors.add(injector.getInstance(monitorClass));
+      if (shouldLoadMonitor(monitorClass, nodeRoles)) {
+        monitors.add(injector.getInstance(monitorClass));
+      }
     }
 
     if (!monitors.isEmpty()) {
       log.info(
-          "Loaded %d monitors: %s",
+          "Loaded [%d] monitors: %s",
           monitors.size(),
           monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
       );
@@ -149,68 +142,66 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public JvmMonitor getJvmMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JvmMonitor getJvmMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmMonitor(dimensions);
+    return new JvmMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmCpuMonitor getJvmCpuMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JvmCpuMonitor getJvmCpuMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmCpuMonitor(dimensions);
+    return new JvmCpuMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public JvmThreadsMonitor getJvmThreadsMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public JvmThreadsMonitor getJvmThreadsMonitor()
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        dataSourceTaskIdHolder.getDataSource(),
-        dataSourceTaskIdHolder.getTaskId()
-    );
-    return new JvmThreadsMonitor(dimensions);
+    return new JvmThreadsMonitor();
   }
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
+  public SysMonitor getSysMonitor(@Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          dataSourceTaskIdHolder.getDataSource(),
-          dataSourceTaskIdHolder.getTaskId()
-      );
-      return new SysMonitor(dimensions);
+      return new SysMonitor();
     }
   }
 
   @Provides
   @ManageLifecycle
-  public OshiSysMonitor getOshiSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
+  public OshiSysMonitor getOshiSysMonitor(
+      @Self Set<NodeRole> nodeRoles,
+      OshiSysMonitorConfig oshiSysConfig
+  )
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          dataSourceTaskIdHolder.getDataSource(),
-          dataSourceTaskIdHolder.getTaskId()
-      );
-      return new OshiSysMonitor(dimensions);
+      return new OshiSysMonitor(oshiSysConfig);
     }
+  }
+
+  /**
+   * Checks if a monitor needs to be loaded on this service based on its node role.
+   */
+  private boolean shouldLoadMonitor(Class<?> monitorClass, Set<NodeRole> nodeRoles)
+  {
+    final LoadScope loadScope = monitorClass.getAnnotation(LoadScope.class);
+    if (loadScope == null) {
+      // If annotation is not specified, check superclass (if one exists), otherwise load the monitor
+      Class<?> superClass = monitorClass.getSuperclass();
+      return superClass == null || shouldLoadMonitor(superClass, nodeRoles);
+    }
+    for (String role : loadScope.roles()) {
+      if (nodeRoles.contains(NodeRole.fromJsonName(role))) {
+        return true;
+      }
+    }
+    return false;
   }
 }

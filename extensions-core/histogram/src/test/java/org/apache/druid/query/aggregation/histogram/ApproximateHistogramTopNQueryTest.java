@@ -61,7 +61,8 @@ public class ApproximateHistogramTopNQueryTest extends InitializedNullHandlingTe
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
+    // Don't test with non-time-ordered segments, because results vary too much due to order-dependence.
+    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(false));
   }
 
   private final QueryRunner runner;
@@ -113,7 +114,7 @@ public class ApproximateHistogramTopNQueryTest extends InitializedNullHandlingTe
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(

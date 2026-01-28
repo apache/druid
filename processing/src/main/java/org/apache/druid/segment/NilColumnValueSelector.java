@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
@@ -31,9 +30,7 @@ import javax.annotation.Nullable;
 @PublicApi
 public class NilColumnValueSelector implements ColumnValueSelector
 {
-  private static final NilColumnValueSelector INSTANCE = NullHandling.sqlCompatible()
-                                                         ? new SqlCompatibleNilColumnValueSelector()
-                                                         : new NilColumnValueSelector();
+  private static final NilColumnValueSelector INSTANCE = new NilColumnValueSelector();
 
   public static NilColumnValueSelector instance()
   {
@@ -45,36 +42,30 @@ public class NilColumnValueSelector implements ColumnValueSelector
   }
 
   /**
-   * always returns 0, if {@link NullHandling#replaceWithDefault} is set to true,
-   * or always throws an exception, if {@link NullHandling#replaceWithDefault} is
-   * set to false.
+   * always throws an exception, all values in this column are null
    */
   @Override
   public double getDouble()
   {
-    return 0.0;
+    throw new IllegalStateException("Cannot return null value as double");
   }
 
   /**
-   * always returns 0.0f, if {@link NullHandling#replaceWithDefault} is set to true,
-   * or always throws an exception, if {@link NullHandling#replaceWithDefault} is
-   * set to false.
+   * always throws an exception, all values in this column are null
    */
   @Override
   public float getFloat()
   {
-    return 0.0f;
+    throw new IllegalStateException("Cannot return null value as float");
   }
 
   /**
-   * always returns 0L, if {@link NullHandling#replaceWithDefault} is set to true,
-   * or always throws an exception, if {@link NullHandling#replaceWithDefault} is
-   * set to false.
+   * always throws an exception, all values in this column are null
    */
   @Override
   public long getLong()
   {
-    return 0L;
+    throw new IllegalStateException("Cannot return null value as long");
   }
 
   /**
@@ -106,27 +97,5 @@ public class NilColumnValueSelector implements ColumnValueSelector
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect
-  }
-
-  private static class SqlCompatibleNilColumnValueSelector extends NilColumnValueSelector
-  {
-    @Override
-    public double getDouble()
-    {
-      throw new IllegalStateException("Cannot return null value as double");
-    }
-
-    @Override
-    public float getFloat()
-    {
-      throw new IllegalStateException("Cannot return null value as float");
-    }
-    
-    @Override
-    public long getLong()
-    {
-      throw new IllegalStateException("Cannot return null value as long");
-    }
-
   }
 }

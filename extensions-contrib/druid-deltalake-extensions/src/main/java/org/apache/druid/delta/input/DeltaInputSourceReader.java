@@ -68,7 +68,7 @@ public class DeltaInputSourceReader implements InputSourceReader
   {
 
     CloseableIterator<InputRow> inner = read();
-    return new CloseableIterator<InputRowListPlusRawValues>()
+    return new CloseableIterator<>()
     {
       @Override
       public void close() throws IOException

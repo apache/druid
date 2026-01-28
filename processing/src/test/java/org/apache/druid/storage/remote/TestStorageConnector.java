@@ -68,7 +68,7 @@ public class TestStorageConnector extends ChunkingStorageConnector<TestStorageCo
     builder.retryCondition(Predicates.alwaysFalse());
     builder.maxRetry(2);
     builder.objectSupplier((start, end) -> new InputRange((int) start, (int) end));
-    builder.objectOpenFunction(new ObjectOpenFunction<InputRange>()
+    builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
       public InputStream open(InputRange ir)

@@ -25,18 +25,23 @@ import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -46,6 +51,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,35 +102,52 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           // - Datasource Read User requests Read access
           // - or, Datasource Write User requests Write access
           if (resource.getType().equals(ResourceType.DATASOURCE)) {
-            return new Access(
-                (action == Action.READ && username.equals(Users.DATASOURCE_READ))
-                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))
-            );
+            if ((action == Action.READ && username.equals(Users.DATASOURCE_READ))
+                || (action == Action.WRITE && username.equals(Users.DATASOURCE_WRITE))) {
+              return Access.allow();
+            } else {
+              return Access.DENIED;
+            }
           }
 
           // Do not allow access to any other resource
-          return new Access(false);
+          return Access.DENIED;
         };
       }
     };
 
-    DataSchema dataSchema = new DataSchema(
-        "datasource",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(Collections.emptyList()),
-        new AggregatorFactory[]{},
-        new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()),
-        TransformSpec.NONE,
-        null,
-        null
-    );
+    DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("datasource")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(new DimensionsSpec(Collections.emptyList()))
+                  .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
+                  .build();
     SeekableStreamIndexTaskTuningConfig tuningConfig = mock(SeekableStreamIndexTaskTuningConfig.class);
+    EasyMock.expect(tuningConfig.getIntermediateHandoffPeriod()).andReturn(Period.minutes(10)).anyTimes();
+    EasyMock.expect(tuningConfig.isLogParseExceptions()).andReturn(false).anyTimes();
+    EasyMock.expect(tuningConfig.getMaxParseExceptions()).andReturn(10).anyTimes();
+    EasyMock.expect(tuningConfig.getMaxSavedParseExceptions()).andReturn(10).anyTimes();
+    replay(tuningConfig);
+
     SeekableStreamIndexTaskIOConfig<String, String> ioConfig = new TestSeekableStreamIndexTaskIOConfig();
 
     // Initiliaze task and task runner
     SeekableStreamIndexTask<String, String, ByteEntity> indexTask
         = new TestSeekableStreamIndexTask("id", dataSchema, tuningConfig, ioConfig);
-    taskRunner = new TestSeekableStreamIndexTaskRunner(indexTask, authorizerMapper);
+    taskRunner = new TestSeekableStreamIndexTaskRunner(indexTask);
+
+    final ObjectMapper mapper = TestHelper.JSON_MAPPER;
+    final IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
+
+    TaskToolbox toolbox = new TaskToolbox.Builder()
+        .indexIO(indexIO)
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(authorizerMapper)
+        .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
+        .indexMerger(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+        .build();
+    taskRunner.run(toolbox);
   }
 
   @Test
@@ -201,12 +225,12 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   )
   {
     // Verify that datasource write user can access
-    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE);
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_WRITE, "POST");
     replay(allowedRequest);
     method.accept(allowedRequest);
 
     // Verify that no other user can access
-    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ);
+    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ, "POST");
     replay(blockedRequest);
     expectedException.expect(ForbiddenException.class);
     method.accept(blockedRequest);
@@ -217,20 +241,21 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   )
   {
     // Verify that datasource read user can access
-    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_READ);
+    HttpServletRequest allowedRequest = createRequest(Users.DATASOURCE_READ, "GET");
     replay(allowedRequest);
     method.accept(allowedRequest);
 
     // Verify that no other user can access
-    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE);
+    HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE, "GET");
     replay(blockedRequest);
     expectedException.expect(ForbiddenException.class);
     method.accept(blockedRequest);
   }
 
-  private HttpServletRequest createRequest(String username)
+  private HttpServletRequest createRequest(String username, String method)
   {
     HttpServletRequest request = mock(HttpServletRequest.class);
+    EasyMock.expect(request.getMethod()).andReturn(method);
 
     AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
@@ -256,11 +281,10 @@ public class SeekableStreamIndexTaskRunnerAuthTest
   {
 
     private TestSeekableStreamIndexTaskRunner(
-        SeekableStreamIndexTask<String, String, ByteEntity> task,
-        AuthorizerMapper authorizerMapper
+        SeekableStreamIndexTask<String, String, ByteEntity> task
     )
     {
-      super(task, null, authorizerMapper, LockGranularity.SEGMENT);
+      super(task, null, LockGranularity.SEGMENT);
     }
 
     @Override
@@ -351,13 +375,13 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig
     )
     {
-      super(id, null, dataSchema, tuningConfig, ioConfig, null, null);
+      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null);
     }
 
     @Override
     public String getType()
     {
-      return null;
+      return "test";
     }
 
     @Override
@@ -385,7 +409,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           false,
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0)
+          new CsvInputFormat(null, null, true, null, 0, null),
+          Duration.standardHours(2).getStandardMinutes()
       );
     }
   }

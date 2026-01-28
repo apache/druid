@@ -21,11 +21,11 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -41,38 +41,23 @@ public class FrameSegment implements Segment
 {
   private final Frame frame;
   private final FrameReader frameReader;
-  private final SegmentId segmentId;
 
-  public FrameSegment(Frame frame, FrameReader frameReader, SegmentId segmentId)
+  public FrameSegment(Frame frame, FrameReader frameReader)
   {
     this.frame = frame;
     this.frameReader = frameReader;
-    this.segmentId = segmentId;
   }
 
   @Override
   public SegmentId getId()
   {
-    return segmentId;
+    return null;
   }
 
   @Override
   public Interval getDataInterval()
   {
-    return segmentId.getInterval();
-  }
-
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return null;
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return new FrameStorageAdapter(frame, frameReader, segmentId.getInterval());
+    return Intervals.ETERNITY;
   }
 
   @Override
@@ -88,7 +73,9 @@ public class FrameSegment implements Segment
   {
     if (CloseableShapeshifter.class.equals(clazz)) {
       return (T) new ColumnBasedFrameRowsAndColumns(frame, frameReader.signature());
+    } else if (CursorFactory.class.equals(clazz)) {
+      return (T) frameReader.makeCursorFactory(frame);
     }
-    return Segment.super.as(clazz);
+    return null;
   }
 }

@@ -18,8 +18,8 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, N, SqlJoinPart, SqlPlaceholder, T } from '@druid-toolkit/query';
+import type { SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, N, SqlJoinPart, SqlPlaceholder, T } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -136,7 +136,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(F.countDistinct(column), `dist_${columnName}`)}
         {aggregateMenuItem(
-          F.count().addWhereExpression(column.equal(SqlPlaceholder.PLACEHOLDER)),
+          F.count().addWhere(column.equal(SqlPlaceholder.PLACEHOLDER)),
           `filtered_dist_${columnName}`,
           false,
         )}

@@ -37,21 +37,37 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.util.Collections;
 
 /**
- * Tests {@link FrameWriters#makeFrameWriterFactory} ability to create factories. Largely doesn't test actual
- * frame generation via the factories, since that is exercised well enough in other test suites.
+ * Tests {@link FrameWriters#makeFrameWriterFactory} and {@link FrameWriters#makeColumnBasedFrameWriterFactory} ability to create factories.
+ * Largely doesn't test actual frame generation via the factories, since that is exercised well enough in other test suites.
  */
 public class FrameWritersTest extends InitializedNullHandlingTest
 {
   private static final int ALLOCATOR_CAPACITY = 1000;
 
   @Test
-  public void test_rowBased()
+  public void test_rowBasedV1()
   {
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+        FrameType.ROW_BASED_V1,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.LONG).build(),
-        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
+        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING)),
+        false
+    );
+
+    MatcherAssert.assertThat(factory, CoreMatchers.instanceOf(RowBasedFrameWriterFactory.class));
+    Assert.assertEquals(ALLOCATOR_CAPACITY, factory.allocatorCapacity());
+  }
+
+  @Test
+  public void test_rowBasedV2()
+  {
+    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED_V2,
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
+        RowSignature.builder().add("x", ColumnType.LONG).build(),
+        Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING)),
+        false
     );
 
     MatcherAssert.assertThat(factory, CoreMatchers.instanceOf(RowBasedFrameWriterFactory.class));
@@ -61,8 +77,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriterFactory factory = FrameWriters.makeColumnBasedFrameWriterFactory(
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder()
                     .add("a", ColumnType.LONG)
@@ -84,8 +99,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   @Test
   public void test_columnar_unsupportedColumnType()
   {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriterFactory factory = FrameWriters.makeColumnBasedFrameWriterFactory(
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
         RowSignature.builder().add("x", ColumnType.ofArray(ColumnType.LONG_ARRAY)).build(),
         Collections.emptyList()
@@ -107,10 +121,11 @@ public class FrameWritersTest extends InitializedNullHandlingTest
         IllegalArgumentException.class,
         () ->
             FrameWriters.makeFrameWriterFactory(
-                FrameType.ROW_BASED,
+                FrameType.latestRowBased(),
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).add("y", ColumnType.LONG).build(),
-                Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING))
+                Collections.singletonList(new KeyColumn("y", KeyOrder.ASCENDING)),
+                false
             )
     );
 
@@ -128,8 +143,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final IllegalArgumentException e = Assert.assertThrows(
         IllegalArgumentException.class,
         () ->
-            FrameWriters.makeFrameWriterFactory(
-                FrameType.COLUMNAR,
+            FrameWriters.makeColumnBasedFrameWriterFactory(
                 new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
                 RowSignature.builder().add("x", ColumnType.LONG).build(),
                 Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))

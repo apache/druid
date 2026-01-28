@@ -28,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -35,7 +36,9 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlOverOperator;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
@@ -44,6 +47,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.SqlBasicVisitor;
+import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
 import org.apache.calcite.sql.validate.SelectNamespace;
 import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
@@ -61,10 +66,10 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -81,6 +86,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -111,6 +117,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
   {
+    if (isSqlCallDistinct(call)) {
+      throw buildCalciteContextException("DISTINCT is not supported for window functions", windowOrId);
+    }
+
     final SqlWindow targetWindow;
     switch (windowOrId.getKind()) {
       case IDENTIFIER:
@@ -123,6 +133,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw Util.unexpected(windowOrId.getKind());
     }
 
+    updateBoundsIfNeeded(targetWindow);
 
     @Nullable
     SqlNode lowerBound = targetWindow.getLowerBound();
@@ -131,16 +142,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     if (!isValidEndpoint(lowerBound) || !isValidEndpoint(upperBound)) {
       throw buildCalciteContextException(
           "Window frames with expression based lower/upper bounds are not supported.",
-          windowOrId
-      );
-    }
-
-    if (isPrecedingOrFollowing(lowerBound) &&
-        isPrecedingOrFollowing(upperBound) &&
-        lowerBound.getKind() == upperBound.getKind()) {
-      // this limitation can be lifted when https://github.com/apache/druid/issues/15739 is addressed
-      throw buildCalciteContextException(
-          "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
           windowOrId
       );
     }
@@ -162,19 +163,13 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
 
-
-    if (plannerContext.queryContext().isWindowingStrictValidation()) {
-      if (!targetWindow.isRows() &&
-          (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
-        // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
-        throw buildCalciteContextException(
-            StringUtils.format(
-                "The query contains a window frame which may return incorrect results. To disregard this warning, set [%s] to false in the query context.",
-                QueryContexts.WINDOWING_STRICT_VALIDATION
-            ),
-            windowOrId
-        );
-      }
+    if (!targetWindow.isRows() &&
+        (!isUnboundedOrCurrent(lowerBound) || !isUnboundedOrCurrent(upperBound))) {
+      // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
+      throw buildCalciteContextException(
+          "Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead.",
+          windowOrId
+      );
     }
 
     super.validateWindow(windowOrId, scope, call);
@@ -754,6 +749,28 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         || SqlWindow.isUnboundedPreceding(bound);
   }
 
+  /**
+   * Checks if any bound is null and updates with CURRENT ROW
+   */
+  private void updateBoundsIfNeeded(SqlWindow window)
+  {
+    @Nullable
+    SqlNode lowerBound = window.getLowerBound();
+    @Nullable
+    SqlNode upperBound = window.getUpperBound();
+
+    if (lowerBound != null && upperBound == null) {
+      if (lowerBound.getKind() == SqlKind.FOLLOWING || SqlWindow.isUnboundedFollowing(lowerBound)) {
+        upperBound = lowerBound;
+        lowerBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      } else {
+        upperBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      }
+      window.setLowerBound(lowerBound);
+      window.setUpperBound(upperBound);
+    }
+  }
+
   @Override
   public void validateCall(SqlCall call, SqlValidatorScope scope)
   {
@@ -761,9 +778,11 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
         throw buildCalciteContextException(
             StringUtils.format(
-                "The query contains window functions; To run these window functions, specify [%s] in query context.",
-                PlannerContext.CTX_ENABLE_WINDOW_FNS),
-            call);
+                "The query contains window functions; They are not supported on engine[%s].",
+                plannerContext.getEngine().name()
+            ),
+            call
+        );
       }
     }
     if (call.getKind() == SqlKind.NULLS_FIRST) {
@@ -778,7 +797,40 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
+    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && isSqlCallDistinct(call)) {
+      if (call.getOperator().getKind() != SqlKind.COUNT && call.getOperator() instanceof SqlAggFunction) {
+        if (!call.getOperator().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
+          throw buildCalciteContextException(
+              StringUtils.format(
+                  "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+                  call.getOperator().getName()
+              ),
+              call
+          );
+        }
+      }
+    }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  protected void validateWindowClause(SqlSelect select)
+  {
+    SqlNodeList windows = select.getWindowList();
+    for (SqlNode sqlNode : windows) {
+      if (SqlUtil.containsAgg(sqlNode)) {
+        throw buildCalciteContextException(
+            "Aggregation inside window is currently not supported with syntax WINDOW W AS <DEF>. "
+            + "Try providing window definition directly without alias",
+            sqlNode
+        );
+      }
+      if (sqlNode instanceof SqlWindow) {
+        SqlWindow window = (SqlWindow) sqlNode;
+        updateBoundsIfNeeded(window);
+      }
+    }
+    super.validateWindowClause(select);
   }
 
   @Override
@@ -864,4 +916,59 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
     return src;
   }
+
+  private boolean isSqlCallDistinct(@Nullable SqlCall call)
+  {
+    return call != null
+           && call.getFunctionQuantifier() != null
+           && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
+  }
+
+  @Override
+  protected void validateHavingClause(SqlSelect select)
+  {
+    super.validateHavingClause(select);
+    SqlNode having = select.getHaving();
+    if (containsOver(having)) {
+      throw buildCalciteContextException("Window functions are not allowed in HAVING", having);
+    }
+  }
+
+  private boolean containsOver(SqlNode having)
+  {
+    if (having == null) {
+      return false;
+    }
+    final Predicate<SqlCall> callPredicate = call -> call.getOperator() instanceof SqlOverOperator;
+    return containsCall(having, callPredicate);
+  }
+
+  // copy of SqlUtil#containsCall
+  /** Returns whether an AST tree contains a call that matches a given
+   * predicate. */
+  private static boolean containsCall(SqlNode node,
+      Predicate<SqlCall> callPredicate)
+  {
+    try {
+      SqlVisitor<Void> visitor =
+          new SqlBasicVisitor<>()
+          {
+            @Override
+            public Void visit(SqlCall call)
+            {
+              if (callPredicate.test(call)) {
+                throw new Util.FoundOne(call);
+              }
+              return super.visit(call);
+            }
+          };
+      node.accept(visitor);
+      return false;
+    }
+    catch (Util.FoundOne e) {
+      Util.swallow(e, null);
+      return true;
+    }
+  }
+
 }

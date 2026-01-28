@@ -78,10 +78,10 @@ import java.util.stream.Collectors;
  */
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
+  static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
   {
     @Override
-    public boolean isConcrete()
+    public boolean isProcessable()
     {
       return false;
     }
@@ -317,7 +317,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        null
+        true
     );
   }
 
@@ -338,6 +338,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
+        false,
         false
     );
   }
@@ -463,7 +464,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   )
   {
     // Compute signature of the correlation operation. It's like a join: the left and right sides are concatenated.
-    // On the native query side, this is what is ultimately emitted by the UnnestStorageAdapter.
+    // On the native query side, this is what is ultimately emitted by the UnnestSegment.
     //
     // Ignore prefix (lhs) from computeJoinRowSignature; we don't need this since we will declare the name of the
     // single output column directly. (And we know it's the last column in the signature.)
@@ -577,7 +578,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   /**
    * Shuttle that replaces correlating variables with regular field accesses to the left-hand side.
    */
-  private static class CorrelatedFieldAccessToInputRef extends RexShuttle
+  public static class CorrelatedFieldAccessToInputRef extends RexShuttle
   {
     private final CorrelationId correlationId;
 
@@ -595,7 +596,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
           return new RexInputRef(fieldAccess.getField().getIndex(), fieldAccess.getType());
         }
       }
-
       return super.visitFieldAccess(fieldAccess);
     }
   }

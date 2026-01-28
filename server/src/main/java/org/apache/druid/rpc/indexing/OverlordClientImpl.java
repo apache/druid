@@ -33,6 +33,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -45,6 +46,10 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -171,7 +176,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Map<String, TaskStatus>>() {})
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -206,7 +211,7 @@ public class OverlordClientImpl implements OverlordClient
           final Map<String, List<Interval>> response = JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<Map<String, List<Interval>>>() {}
+              new TypeReference<>() {}
           );
 
           return response == null ? Collections.emptyMap() : response;
@@ -225,6 +230,38 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskReport.ReportMap.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> postSupervisor(SupervisorSpec supervisor)
+  {
+    final String path = "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true";
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, supervisor),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> terminateSupervisor(String supervisorId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/terminate",
+        StringUtils.urlEncode(supervisorId)
+    );
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -253,7 +290,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<IndexingWorkerInfo>>() {})
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -313,6 +350,149 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUsed",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUsed(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUnused",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUnused(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/isSupervisorEnabled"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), Boolean.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<ClusterCompactionConfig> getClusterCompactionConfig()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), ClusterCompactionConfig.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<UpdateResponse> updateClusterCompactionConfig(ClusterCompactionConfig config)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+                .jsonContent(jsonMapper, config),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), UpdateResponse.class)
+    );
+  }
+
+  @Override
   public OverlordClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new OverlordClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
@@ -323,9 +503,6 @@ public class OverlordClientImpl implements OverlordClient
     return new JsonParserIterator<>(
         jsonMapper.getTypeFactory().constructType(clazz),
         Futures.immediateFuture(in),
-        "", // We don't know URL at this point, but it's OK to use empty; it's used for logs/errors
-        null,
-        "", // We don't know host at this point, but it's OK to use empty; it's used for logs/errors
         jsonMapper
     );
   }

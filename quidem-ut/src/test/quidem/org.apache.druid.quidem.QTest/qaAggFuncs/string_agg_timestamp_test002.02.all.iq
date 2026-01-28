@@ -1,0 +1,197 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A50
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT __time, '|'), 5) AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------+
+| col   |
++-------+
+| 15778 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A51
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT __time, '|'), 5, 'A') AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------+
+| col   |
++-------+
+| 15778 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A52
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT __time, '|'), 23) AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------------------------+
+| col                     |
++-------------------------+
+|           1577840461000 |
++-------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A53
+#-------------------------------------------------------------------------
+SELECT lpad(string_agg(DISTINCT __time, '|'), 23, 'A') AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------------------------+
+| col                     |
++-------------------------+
+| AAAAAAAAAA1577840461000 |
++-------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A54
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT __time, '|'), 5) AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------+
+| col   |
++-------+
+| 15778 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A55
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT __time, '|'), 5, 'A') AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------+
+| col   |
++-------+
+| 15778 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A56
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT __time, '|'), 23) AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------------------------+
+| col                     |
++-------------------------+
+| 1577840461000           |
++-------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A57
+#-------------------------------------------------------------------------
+SELECT rpad(string_agg(DISTINCT __time, '|'), 23, 'A') AS col
+FROM test_agg_funcs
+WHERE __time=timestamp '2020-01-01 01:01:01.000';
++-------------------------+
+| col                     |
++-------------------------+
+| 1577840461000AAAAAAAAAA |
++-------------------------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A58
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.__time, '|') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   WHERE t0.__time IS NOT NULL);
++-----+
+| LEN |
++-----+
+|  27 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A59
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.__time, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+WHERE t0.__time IS NOT NULL;
++-----+
+| col |
++-----+
+|  27 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A60
+#-------------------------------------------------------------------------
+SELECT strlen(col) LEN
+FROM
+  (SELECT string_agg(DISTINCT t0.__time, '|') AS col
+   FROM test_agg_funcs t0,
+        test_agg_funcs t1,
+        test_agg_funcs t2
+   GROUP BY t0.__time);
++-----+
+| LEN |
++-----+
+|  13 |
+|  13 |
++-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A61
+#-------------------------------------------------------------------------
+SELECT length(string_agg(DISTINCT t0.__time, '|')) AS col
+FROM test_agg_funcs t0,
+     test_agg_funcs t1,
+     test_agg_funcs t2
+GROUP BY t0.__time;
++-----+
+| col |
++-----+
+|  13 |
+|  13 |
++-----+
+(2 rows)
+
+!ok
+

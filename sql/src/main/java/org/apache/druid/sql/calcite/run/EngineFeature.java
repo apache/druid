@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 
 /**
@@ -68,15 +69,6 @@ public enum EngineFeature
   SCAN_ORDER_BY_NON_TIME,
 
   /**
-   * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
-   * query contexts.
-   *
-   * {@link Deprecated} Instead of the context value {@link org.apache.druid.query.scan.ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  SCAN_NEEDS_SIGNATURE,
-
-  /**
    * Planner is permitted to use a {@link org.apache.calcite.runtime.Bindable} plan on local resources, instead
    * of {@link QueryMaker}, for SELECT query implementation. Used for system tables and the like.
    */
@@ -103,7 +95,7 @@ public enum EngineFeature
   UNNEST,
 
   /**
-   * Planner is permitted to use {@link org.apache.druid.sql.calcite.planner.JoinAlgorithm#BROADCAST} with RIGHT
+   * Planner is permitted to use {@link JoinAlgorithm#BROADCAST} with RIGHT
    * and FULL join. Not guaranteed to produce correct results in either the native or MSQ engines, but we allow
    * it in native for two reasons: legacy (the docs caution against it, but it's always been allowed), and the fact
    * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much

@@ -36,7 +36,7 @@ import redis.clients.jedis.JedisCluster;
 import java.io.IOException;
 import java.util.Map;
 
-public class RedisClusterCacheTest
+public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
@@ -57,7 +57,6 @@ public class RedisClusterCacheTest
   };
 
   private RedisServer server;
-  private RedisClusterCache cache;
 
   @Before
   public void setUp() throws IOException

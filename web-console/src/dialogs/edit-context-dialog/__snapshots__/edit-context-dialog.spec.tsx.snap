@@ -2,90 +2,181 @@
 
 exports[`EditContextDialog matches snapshot 1`] = `
 <div
-  class="bp4-portal"
+  class="bp5-portal"
 >
   <div
     aria-live="polite"
-    class="bp4-overlay bp4-overlay-open bp4-overlay-scroll-container"
+    class="bp5-overlay bp5-overlay-open bp5-overlay-scroll-container"
   >
     <div
-      class="bp4-overlay-start-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      class="bp5-overlay-start-focus-trap bp5-overlay-appear bp5-overlay-appear-active"
       tabindex="0"
     />
     <div
-      class="bp4-overlay-backdrop bp4-overlay-appear bp4-overlay-appear-active"
+      class="bp5-overlay-backdrop bp5-overlay-appear bp5-overlay-appear-active"
     />
     <div
-      class="bp4-dialog-container bp4-overlay-content bp4-overlay-appear bp4-overlay-appear-active"
+      class="bp5-dialog-container bp5-overlay-content bp5-overlay-appear bp5-overlay-appear-active"
+      tabindex="0"
     >
       <div
         aria-labelledby="title-bp-dialog-0"
-        class="bp4-dialog edit-context-dialog"
+        aria-modal="true"
+        class="bp5-dialog edit-context-dialog"
         role="dialog"
       >
         <div
-          class="bp4-dialog-header"
+          class="bp5-dialog-header"
         >
           <h6
-            class="bp4-heading"
+            class="bp5-heading"
             id="title-bp-dialog-0"
           >
             Edit query context
           </h6>
           <button
             aria-label="Close"
-            class="bp4-button bp4-minimal bp4-dialog-close-button"
+            class="bp5-button bp5-minimal bp5-dialog-close-button"
             type="button"
           >
             <span
               aria-hidden="true"
-              class="bp4-icon bp4-icon-cross"
-              icon="cross"
+              class="bp5-icon bp5-icon-small-cross"
             >
               <svg
-                data-icon="cross"
+                data-icon="small-cross"
                 height="16"
                 role="img"
                 viewBox="0 0 16 16"
                 width="16"
               >
                 <path
-                  d="M9.41 8l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L9.41 8z"
+                  d="M188.2 160L234 205.8C237.8 209.4 240 214.4 240 220C240 231 231 240 220 240C214.4 240 209.4 237.8 205.8 234.2L160 188.2L114.2 234.2C110.6 237.8 105.6 240 100 240C89 240 80 231 80 220C80 214.4 82.2 209.4 85.8 205.8L131.8 160L86 114.2C82.2 110.6 80 105.6 80 100C80 89 89 80 100 80C105.6 80 110.6 82.2 114.2 85.8L160 131.8L205.8 86C209.4 82.2 214.4 80 220 80C231 80 240 89 240 100C240 105.6 237.8 110.6 234.2 114.2L188.2 160z"
                   fill-rule="evenodd"
+                  style="transform-origin: center;"
+                  transform="scale(0.05, -0.05) translate(-160, -160)"
                 />
               </svg>
             </span>
           </button>
         </div>
-        <textarea
-          class="bp4-input"
-        >
-          {
-
-}
-        </textarea>
         <div
-          class="bp4-dialog-footer-actions"
+          class="json-input"
         >
           <div
-            class="edit-context-dialog-buttons"
+            class=" ace_editor ace_hidpi ace-solarized-dark ace_dark"
+            id="ace-editor"
+            style="width: 100%; height: 100%; font-size: 12px;"
+          >
+            <textarea
+              autocapitalize="off"
+              autocorrect="off"
+              class="ace_text-input"
+              spellcheck="false"
+              style="opacity: 0; font-size: 1px;"
+              wrap="off"
+            />
+            <div
+              aria-hidden="true"
+              class="ace_gutter"
+            >
+              <div
+                class="ace_layer ace_gutter-layer ace_folding-enabled"
+                style="height: 1000000px;"
+              />
+            </div>
+            <div
+              class="ace_scroller"
+              style="line-height: 0px;"
+            >
+              <div
+                class="ace_content"
+              >
+                <div
+                  class="ace_layer ace_print-margin-layer"
+                >
+                  <div
+                    class="ace_print-margin"
+                    style="left: 4px; visibility: hidden;"
+                  />
+                </div>
+                <div
+                  class="ace_layer ace_marker-layer"
+                />
+                <div
+                  class="ace_layer ace_text-layer"
+                  style="height: 1000000px; margin: 0px 4px;"
+                />
+                <div
+                  class="ace_layer ace_marker-layer"
+                />
+                <div
+                  class="ace_layer ace_cursor-layer ace_hidden-cursors"
+                >
+                  <div
+                    class="ace_cursor"
+                  />
+                </div>
+              </div>
+            </div>
+            <div
+              class="ace_scrollbar ace_scrollbar-v"
+              style="display: none; width: 20px;"
+            >
+              <div
+                class="ace_scrollbar-inner"
+                style="width: 20px;"
+              >
+                 
+              </div>
+            </div>
+            <div
+              class="ace_scrollbar ace_scrollbar-h"
+              style="display: none; height: 20px;"
+            >
+              <div
+                class="ace_scrollbar-inner"
+                style="height: 20px;"
+              >
+                 
+              </div>
+            </div>
+            <div
+              style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
+            >
+              <div
+                style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+              />
+              <div
+                style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+              >
+                XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bp5-dialog-footer"
+        >
+          <div
+            class="bp5-dialog-footer-actions"
           >
             <button
-              class="bp4-button"
+              class="bp5-button"
               type="button"
             >
               <span
-                class="bp4-button-text"
+                class="bp5-button-text"
               >
                 Close
               </span>
             </button>
             <button
-              class="bp4-button bp4-intent-primary"
+              class="bp5-button bp5-intent-primary"
               type="button"
             >
               <span
-                class="bp4-button-text"
+                class="bp5-button-text"
               >
                 Save
               </span>
@@ -95,7 +186,7 @@ exports[`EditContextDialog matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="bp4-overlay-end-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      class="bp5-overlay-end-focus-trap bp5-overlay-appear bp5-overlay-appear-active"
       tabindex="0"
     />
   </div>

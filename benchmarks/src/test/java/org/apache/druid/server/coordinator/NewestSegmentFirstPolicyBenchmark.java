@@ -20,13 +20,15 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
+import org.apache.druid.segment.metadata.NoopIndexingStateCache;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSegmentIterator;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -61,7 +63,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
+  private final CompactionCandidateSearchPolicy policy = new NewestSegmentFirstPolicy(null);
 
   @Param("100")
   private int numDataSources;
@@ -92,20 +94,12 @@ public class NewestSegmentFirstPolicyBenchmark
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.put(
           dataSource,
-          new DataSourceCompactionConfig(
-              dataSource,
-              0,
-              inputSegmentSizeBytes,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
+          InlineSchemaDataSourceCompactionConfig
+              .builder()
+              .forDataSource(dataSource)
+              .withTaskPriority(0)
+              .withInputSegmentSizeBytes(inputSegmentSizeBytes)
+              .build()
       );
     }
 
@@ -134,13 +128,19 @@ public class NewestSegmentFirstPolicyBenchmark
         }
       }
     }
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of()).getUsedSegmentsTimelinesPerDataSource();
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments).getUsedSegmentsTimelinesPerDataSource();
   }
 
   @Benchmark
   public void measureNewestSegmentFirstPolicy(Blackhole blackhole)
   {
-    final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, Collections.emptyMap());
+    final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
+        compactionConfigs,
+        dataSources,
+        Collections.emptyMap(),
+        new DefaultIndexingStateFingerprintMapper(new NoopIndexingStateCache(), new DefaultObjectMapper())
+    );
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());
     }

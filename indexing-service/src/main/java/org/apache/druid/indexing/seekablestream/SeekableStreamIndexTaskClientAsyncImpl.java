@@ -373,7 +373,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
 
   /**
    * Helper for {@link #pauseAsync}.
-   *
+   * <p>
    * Calls {@link #getStatusAsync} in a loop until a task is paused, then calls {@link #getCurrentOffsetsAsync} to
    * get the post-pause offsets for the task.
    */
@@ -412,7 +412,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                   () ->
                       Futures.addCallback(
                           getOffsetsWhenPaused(taskId, retryPolicy),
-                          new FutureCallback<Map<PartitionIdType, SequenceOffsetType>>()
+                          new FutureCallback<>()
                           {
                             @Override
                             public void onSuccess(@Nullable Map<PartitionIdType, SequenceOffsetType> result)
@@ -567,7 +567,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
               client.asyncRequest(requestBuilder.timeout(httpTimeout), responseHandler),
               responseTransformer
           ),
-          new FutureCallback<T>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(@Nullable T result)

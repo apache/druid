@@ -24,9 +24,10 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -49,20 +50,25 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
   @Test
   public void test_abort_afterAllFrames() throws IOException
   {
-    final Sequence<Frame> frames = FrameSequenceBuilder.fromAdapter(new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex()))
+    final Sequence<Frame> frames = FrameSequenceBuilder.fromCursorFactory(new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex()))
                                                        .allocator(ArenaMemoryAllocator.createOnHeap(1000000))
-                                                       .frameType(FrameType.ROW_BASED)
+                                                       .frameType(FrameType.latestRowBased())
                                                        .frames();
 
     final File file = temporaryFolder.newFile();
-    final FrameFileWriter fileWriter = FrameFileWriter.open(Files.newByteChannel(
-        file.toPath(),
-        StandardOpenOption.WRITE
-    ), null, ByteTracker.unboundedTracker());
+    final FrameFileWriter fileWriter = FrameFileWriter.open(
+        Files.newByteChannel(
+            file.toPath(),
+            StandardOpenOption.WRITE
+        ),
+        null,
+        ByteTracker.unboundedTracker(),
+        FrameTestUtil.WT_CONTEXT_LEGACY
+    );
 
     frames.forEach(frame -> {
       try {
-        fileWriter.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+        fileWriter.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -75,7 +81,9 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Corrupt or truncated file?"))
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString("Corrupt or truncated file[")
+        )
     );
   }
 }

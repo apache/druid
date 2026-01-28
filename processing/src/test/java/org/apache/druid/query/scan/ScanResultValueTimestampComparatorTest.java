@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -52,7 +53,7 @@ public class ScanResultValueTimestampComparatorTest
   public void testComparisonDescendingList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -62,7 +63,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
-    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, 42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -73,7 +74,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
     HashMap<String, Object> event2 = new HashMap<>();
-    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, 43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -89,7 +90,7 @@ public class ScanResultValueTimestampComparatorTest
   public void testComparisonAscendingList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .order(ScanQuery.Order.ASCENDING)
+                            .order(Order.ASCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -99,7 +100,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
-    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, 42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -110,7 +111,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
     HashMap<String, Object> event2 = new HashMap<>();
-    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, 43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -126,7 +127,7 @@ public class ScanResultValueTimestampComparatorTest
   public void testComparisonDescendingCompactedList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -135,7 +136,7 @@ public class ScanResultValueTimestampComparatorTest
     ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
 
     List<List<Object>> events1 = new ArrayList<>();
-    List<Object> event1 = Collections.singletonList(new Long(42));
+    List<Object> event1 = Collections.singletonList(42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -145,7 +146,7 @@ public class ScanResultValueTimestampComparatorTest
     );
 
     List<List<Object>> events2 = new ArrayList<>();
-    List<Object> event2 = Collections.singletonList(new Long(43));
+    List<Object> event2 = Collections.singletonList(43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -161,7 +162,7 @@ public class ScanResultValueTimestampComparatorTest
   public void testAscendingCompactedList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .order(ScanQuery.Order.ASCENDING)
+                            .order(Order.ASCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -170,7 +171,7 @@ public class ScanResultValueTimestampComparatorTest
     ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
 
     List<List<Object>> events1 = new ArrayList<>();
-    List<Object> event1 = Collections.singletonList(new Long(42));
+    List<Object> event1 = Collections.singletonList(42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -180,7 +181,7 @@ public class ScanResultValueTimestampComparatorTest
     );
 
     List<List<Object>> events2 = new ArrayList<>();
-    List<Object> event2 = Collections.singletonList(new Long(43));
+    List<Object> event2 = Collections.singletonList(43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(

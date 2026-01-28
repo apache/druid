@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.security;
 
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,7 +54,8 @@ public class ForbiddenExceptionTest
   @Test
   public void testSanitizeWithTransformFunctionReturningNewString()
   {
-    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL))).thenReturn(ERROR_MESSAGE_TRANSFORMED);
+    Mockito.when(trasformFunction.apply(ArgumentMatchers.eq(ERROR_MESSAGE_ORIGINAL)))
+           .thenReturn(ERROR_MESSAGE_TRANSFORMED);
     ForbiddenException forbiddenException = new ForbiddenException(ERROR_MESSAGE_ORIGINAL);
     ForbiddenException actual = forbiddenException.sanitize(trasformFunction);
     Assert.assertNotNull(actual);
@@ -66,22 +68,24 @@ public class ForbiddenExceptionTest
   @Test
   public void testAccess()
   {
-    Access access = new Access(false);
+    Access access = Access.deny(null);
     Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals("", access.getMessage());
-    Assert.assertEquals("Allowed:false, Message:", access.toString());
-    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, access.toMessage());
+    Assert.assertEquals("Allowed:false, Message:, Policy: null", access.toString());
+    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, access.getMessage());
 
-    access = new Access(true);
+    access = Access.deny("oops");
+    Assert.assertFalse(access.isAllowed());
+    Assert.assertEquals("Allowed:false, Message:oops, Policy: null", access.toString());
+    Assert.assertEquals("Unauthorized, oops", access.getMessage());
+
+    access = Access.allow();
     Assert.assertTrue(access.isAllowed());
-    Assert.assertEquals("", access.getMessage());
-    Assert.assertEquals("Allowed:true, Message:", access.toString());
-    Assert.assertEquals("Authorized", access.toMessage());
+    Assert.assertEquals("Allowed:true, Message:, Policy: Optional.empty", access.toString());
+    Assert.assertEquals("Authorized", access.getMessage());
 
-    access = new Access(false, "oops");
-    Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals("oops", access.getMessage());
-    Assert.assertEquals("Allowed:false, Message:oops", access.toString());
-    Assert.assertEquals("Allowed:false, Message:oops", access.toMessage());
+    access = Access.allowWithRestriction(NoRestrictionPolicy.instance());
+    Assert.assertTrue(access.isAllowed());
+    Assert.assertEquals("Allowed:true, Message:, Policy: Optional[NO_RESTRICTION]", access.toString());
+    Assert.assertEquals("Authorized, with restriction [NO_RESTRICTION]", access.getMessage());
   }
 }

@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.S3InputDataConfig;
+import org.apache.druid.storage.s3.S3TransferConfig;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -113,7 +114,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   public static final AmazonS3ClientBuilder AMAZON_S3_CLIENT_BUILDER = AmazonS3Client.builder();
   public static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       S3_CLIENT,
-      new NoopServerSideEncryption()
+      new NoopServerSideEncryption(),
+      new S3TransferConfig()
   );
   public static final S3InputDataConfig INPUT_DATA_CONFIG;
   private static final int MAX_LISTING_LENGTH = 10;
@@ -156,7 +158,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   );
 
   private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES = new S3InputSourceConfig(
-      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null);
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null, null);
+  private static final S3InputSourceConfig CLOUD_CONFIG_PROPERTIES_WITH_SESSION_TOKEN = new S3InputSourceConfig(
+      new DefaultPasswordProvider("myKey"), new DefaultPasswordProvider("mySecret"), null, null,
+      new DefaultPasswordProvider("mySessionToken"));
   private static final AWSEndpointConfig ENDPOINT_CONFIG = new AWSEndpointConfig();
   private static final AWSProxyConfig PROXY_CONFIG = new AWSProxyConfig();
   private static final AWSClientConfig CLIENT_CONFIG = new AWSClientConfig();
@@ -365,6 +370,152 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
     serdeWithPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testSerdeWithCloudConfigPropertiesWithSessionToken() throws Exception
+  {
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    AMAZON_S3_CLIENT_BUILDER.withClientConfiguration(CLIENT_CONFIGURATION);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    final S3InputSource withSessionToken = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        null,
+        CLOUD_CONFIG_PROPERTIES_WITH_SESSION_TOKEN,
+        null,
+        null,
+        null
+    );
+    final S3InputSource serdeWithSessionToken =
+        MAPPER.readValue(MAPPER.writeValueAsString(withSessionToken), S3InputSource.class);
+    // This is to force the s3ClientSupplier to initialize the ServerSideEncryptingAmazonS3
+    serdeWithSessionToken.createEntity(new CloudObjectLocation("bucket", "path"));
+    Assert.assertEquals(withSessionToken, serdeWithSessionToken);
+    // Verify that the session token is properly set
+    Assert.assertNotNull(serdeWithSessionToken.getS3InputSourceConfig());
+    Assert.assertNotNull(serdeWithSessionToken.getS3InputSourceConfig().getSessionToken());
+    Assert.assertEquals("mySessionToken", serdeWithSessionToken.getS3InputSourceConfig().getSessionToken().getPassword());
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testGetSetSessionToken()
+  {
+    // Test that session token getter/setter work correctly
+    final S3InputSource inputSourceWithSessionToken = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        CLOUD_CONFIG_PROPERTIES_WITH_SESSION_TOKEN,
+        null,
+        null,
+        null
+    );
+    
+    Assert.assertNotNull(inputSourceWithSessionToken.getS3InputSourceConfig());
+    Assert.assertNotNull(inputSourceWithSessionToken.getS3InputSourceConfig().getSessionToken());
+    Assert.assertEquals(
+        "mySessionToken",
+        inputSourceWithSessionToken.getS3InputSourceConfig().getSessionToken().getPassword()
+    );
+    
+    // Test without session token
+    final S3InputSource inputSourceWithoutSessionToken = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        CLOUD_CONFIG_PROPERTIES,
+        null,
+        null,
+        null
+    );
+    
+    Assert.assertNotNull(inputSourceWithoutSessionToken.getS3InputSourceConfig());
+    Assert.assertNull(inputSourceWithoutSessionToken.getS3InputSourceConfig().getSessionToken());
+  }
+
+  @Test
+  public void testSessionCredentialsUsedWhenSessionTokenProvided() throws IOException
+  {
+    // This test verifies that when session token is provided, the S3InputSource
+    // correctly uses BasicSessionCredentials instead of BasicAWSCredentials
+    EasyMock.reset(S3_CLIENT);
+    expectListObjects(PREFIXES.get(0), ImmutableList.of(EXPECTED_URIS.get(0)), CONTENT);
+    expectGetObject(EXPECTED_URIS.get(0));
+    EasyMock.replay(S3_CLIENT);
+
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAmazonS3ClientBuilder())
+            .andStubReturn(AMAZON_S3_CLIENT_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.build())
+            .andReturn(SERVICE);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+
+    // Create S3InputSource with session token
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0)),
+        null,
+        null,
+        CLOUD_CONFIG_PROPERTIES_WITH_SESSION_TOKEN,
+        null,
+        null,
+        null
+    );
+
+    // Verify session token is set
+    Assert.assertNotNull(inputSource.getS3InputSourceConfig());
+    Assert.assertNotNull(inputSource.getS3InputSourceConfig().getSessionToken());
+    Assert.assertEquals(
+        "mySessionToken",
+        inputSource.getS3InputSourceConfig().getSessionToken().getPassword()
+    );
+
+    // Create a reader which will trigger the s3ClientSupplier and use the session credentials
+    InputRowSchema someSchema = new InputRowSchema(
+        new TimestampSpec("time", "auto", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2"))),
+        ColumnsFilter.all()
+    );
+
+    InputSourceReader reader = inputSource.reader(
+        someSchema,
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
+        temporaryFolder.newFolder()
+    );
+
+    // Read data - this exercises the session credentials path
+    CloseableIterator<InputRow> iterator = reader.read();
+    
+    while (iterator.hasNext()) {
+      InputRow nextRow = iterator.next();
+      Assert.assertEquals(NOW, nextRow.getTimestamp());
+      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+    }
+
+    EasyMock.verify(S3_CLIENT);
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
@@ -1015,7 +1166,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
 
@@ -1063,7 +1214,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
     try (CloseableIterator<InputRow> readerIterator = reader.read()) {
@@ -1111,7 +1262,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
 
@@ -1352,8 +1503,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       // See https://github.com/FasterXML/jackson-databind/issues/962.
       return ImmutableList.of(
           new SimpleModule()
-              .addDeserializer(AmazonS3.class, new ItemDeserializer<AmazonS3>())
-              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<AmazonS3ClientBuilder>())
+              .addDeserializer(AmazonS3.class, new ItemDeserializer<>())
+              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<>())
       );
     }
 

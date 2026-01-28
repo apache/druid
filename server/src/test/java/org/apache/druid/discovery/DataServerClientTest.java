@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryTimeoutException;
@@ -40,6 +39,7 @@ import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.QueryResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -51,6 +51,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.Mockito.mock;
@@ -82,12 +83,12 @@ public class DataServerClientTest
         serviceClientFactory,
         mock(ServiceLocation.class),
         jsonMapper,
-        Execs.scheduledSingleThreaded("query-cancellation-executor")
+        StandardRetryPolicy.noRetries()
     );
   }
 
   @Test
-  public void testFetchSegmentFromDataServer() throws JsonProcessingException
+  public void testFetchSegmentFromDataServer() throws JsonProcessingException, ExecutionException, InterruptedException
   {
     ScanResultValue scanResultValue = new ScanResultValue(
         null,
@@ -112,7 +113,7 @@ public class DataServerClientTest
         responseContext,
         jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
         Closer.create()
-    );
+    ).get();
 
     Assert.assertEquals(ImmutableList.of(scanResultValue), result.toList());
   }
@@ -170,7 +171,7 @@ public class DataServerClientTest
             responseContext,
             jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
             Closer.create()
-        ).toList()
+        ).get().toList()
     );
   }
 

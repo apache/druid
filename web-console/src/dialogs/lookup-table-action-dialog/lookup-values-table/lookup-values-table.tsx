@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { N } from '@druid-toolkit/query';
+import { N } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
@@ -41,10 +41,13 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
   props: LookupValuesTableProps,
 ) {
   const [entriesState] = useQueryManager<string, LookupRow[]>({
-    processQuery: async (lookupId: string) => {
-      return await queryDruidSql<LookupRow>({
-        query: `SELECT "k", "v" FROM ${N('lookup').table(lookupId)} LIMIT 5000`,
-      });
+    processQuery: async (lookupId, signal) => {
+      return await queryDruidSql<LookupRow>(
+        {
+          query: `SELECT "k", "v" FROM ${N('lookup').table(lookupId)} LIMIT 5000`,
+        },
+        signal,
+      );
     },
     initQuery: props.lookupId,
   });

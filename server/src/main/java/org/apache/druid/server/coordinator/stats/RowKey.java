@@ -29,7 +29,7 @@ import java.util.Objects;
  */
 public class RowKey
 {
-  public static final RowKey EMPTY = new RowKey(Collections.emptyMap());
+  private static final RowKey EMPTY = new RowKey(Collections.emptyMap());
 
   private final Map<Dimension, String> values;
   private final int hashCode;
@@ -50,6 +50,11 @@ public class RowKey
   public static RowKey of(Dimension dimension, String value)
   {
     return with(dimension, value).build();
+  }
+
+  public static RowKey empty()
+  {
+    return EMPTY;
   }
 
   public Map<Dimension, String> getValues()

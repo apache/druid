@@ -26,6 +26,8 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 
 public abstract class WindowValueProcessorBase implements Processor
@@ -99,5 +101,11 @@ public abstract class WindowValueProcessorBase implements Processor
   {
     return "inputColumn=" + inputColumn +
            ", outputColumn='" + outputColumn + '\'';
+  }
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    return Collections.singletonList(outputColumn);
   }
 }

@@ -22,43 +22,45 @@ package org.apache.druid.cli;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
-import io.netty.util.SuppressForbidden;
-import io.tesla.aether.Repository;
-import io.tesla.aether.TeslaAether;
-import io.tesla.aether.guice.RepositorySystemSessionProvider;
-import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
+import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
+import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyNode;
-import org.eclipse.aether.repository.Authentication;
+import org.eclipse.aether.impl.DefaultServiceLocator;
+import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.Proxy;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
+import org.eclipse.aether.resolution.DependencyResolutionException;
+import org.eclipse.aether.resolution.DependencyResult;
+import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
+import org.eclipse.aether.spi.connector.transport.TransporterFactory;
+import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
+import org.eclipse.aether.util.repository.DefaultProxySelector;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -86,72 +88,6 @@ public class PullDependencies implements Runnable
                   .put("com.fasterxml.jackson.core", "jackson-core")
                   .put("com.fasterxml.jackson.core", "jackson-annotations")
                   .build();
-   /*
-      It is possible that extensions will pull down a lot of jars that are either
-      duplicates OR conflict with druid jars. In that case, there are two problems that arise
-
-      1. Large quantity of jars are passed around to things like hadoop when they are not needed (and should not be included)
-      2. Classpath priority becomes "mostly correct" and attempted to enforced correctly, but not fully tested
-
-      These jar groups should be included by druid and *not* pulled down in extensions
-      Note to future developers: This list is hand-crafted and will probably be out of date in the future
-      A good way to know where to look for errant dependencies is to compare the lib/ directory in the distribution
-      tarball with the jars included in the extension directories.
-
-      This list is best-effort, and might still pull down more than desired.
-
-      A simple example is that if an extension's dependency uses some-library-123.jar,
-      druid uses some-library-456.jar, and hadoop uses some-library-666.jar, then we probably want to use some-library-456.jar,
-      so don't pull down some-library-123.jar, and ask hadoop to load some-library-456.jar.
-
-      In the case where some-library is NOT on this list, both some-library-456.jar and some-library-123.jar will be
-      on the class path and propagated around the system. Most places TRY to make sure some-library-456.jar has
-      precedence, but it is easy for this assumption to be violated and for the precedence of some-library-456.jar,
-      some-library-123.jar and some-library-456.jar to not be properly defined.
-
-      As of this writing there are no special unit tests for classloader issues and library version conflicts.
-
-      Different tasks which are classloader sensitive attempt to maintain a sane order for loading libraries in the
-      classloader, but it is always possible that something didn't load in the right order. Also we don't want to be
-      throwing around a ton of jars we don't need to.
-
-      Here is a list of dependencies extensions should probably exclude.
-
-      Conflicts can be discovered using the following command on the distribution tarball:
-         `find lib -iname "*.jar" | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
-
-      "org.apache.druid",
-      "com.metamx.druid",
-      "asm",
-      "org.ow2.asm",
-      "org.jboss.netty",
-      "com.google.guava",
-      "com.google.code.findbugs",
-      "com.google.protobuf",
-      "com.esotericsoftware.minlog",
-      "log4j",
-      "org.slf4j",
-      "commons-logging",
-      "org.eclipse.jetty",
-      "org.mortbay.jetty",
-      "com.sun.jersey",
-      "com.sun.jersey.contribs",
-      "common-beanutils",
-      "commons-codec",
-      "commons-lang",
-      "commons-cli",
-      "commons-io",
-      "javax.activation",
-      "org.apache.httpcomponents",
-      "org.apache.zookeeper",
-      "org.codehaus.jackson",
-      "com.fasterxml.jackson",
-      "com.fasterxml.jackson.core",
-      "com.fasterxml.jackson.dataformat",
-      "com.fasterxml.jackson.datatype",
-      "org.roaringbitmap",
-      "net.java.dev.jets3t"
-      */
 
   private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
       Dependencies.builder()
@@ -159,8 +95,6 @@ public class PullDependencies implements Runnable
                   .build();
 
   private final Dependencies hadoopExclusions;
-
-  private TeslaAether aether;
 
   @Inject
   public ExtensionsConfig extensionsConfig;
@@ -196,60 +130,53 @@ public class PullDependencies implements Runnable
       title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed."
   )
   public String localRepository = StringUtils.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
-
-  @Option(
-      name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/"
-  )
-  List<String> remoteRepositories = new ArrayList<>();
-
   @Option(
       name = "--no-default-remote-repositories",
       description = "Don't use the default remote repositories, only use the repositories provided directly via --remoteRepository"
   )
   public boolean noDefaultRemoteRepositories = false;
-
   @Option(
       name = {"-d", "--defaultVersion"},
       title = "Version to use for extension artifacts without version information."
   )
   public String defaultVersion = PullDependencies.class.getPackage().getImplementationVersion();
-
   @Option(
       name = {"--use-proxy"},
       title = "Use http/https proxy to pull dependencies."
   )
   public boolean useProxy = false;
-
   @Option(
       name = {"--proxy-type"},
       title = "The proxy type, should be either http or https"
   )
   public String proxyType = "https";
-
   @Option(
       name = {"--proxy-host"},
       title = "The proxy host"
   )
   public String proxyHost = "";
-
   @Option(
       name = {"--proxy-port"},
       title = "The proxy port"
   )
   public int proxyPort = -1;
-
   @Option(
       name = {"--proxy-username"},
       title = "The proxy username"
   )
   public String proxyUsername = "";
-
   @Option(
       name = {"--proxy-password"},
       title = "The proxy password"
   )
   public String proxyPassword = "";
+  @Option(
+      name = {"-r", "--remoteRepository"},
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/"
+  )
+  List<String> remoteRepositories = new ArrayList<>();
+  private RepositorySystem repositorySystem;
+  private RepositorySystemSession repositorySystemSession;
 
   @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
@@ -261,18 +188,74 @@ public class PullDependencies implements Runnable
   }
 
   // Used for testing only
-  PullDependencies(TeslaAether aether, ExtensionsConfig extensionsConfig, Dependencies hadoopExclusions)
+  PullDependencies(
+      RepositorySystem repositorySystem,
+      RepositorySystemSession repositorySystemSession,
+      ExtensionsConfig extensionsConfig,
+      Dependencies hadoopExclusions
+  )
   {
-    this.aether = aether;
+    this.repositorySystem = repositorySystem;
+    this.repositorySystemSession = repositorySystemSession;
     this.extensionsConfig = extensionsConfig;
     this.hadoopExclusions = hadoopExclusions;
+  }
+
+  private RepositorySystem getRepositorySystem()
+  {
+    DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
+    locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
+    locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
+    return locator.getService(RepositorySystem.class);
+  }
+
+  protected RepositorySystemSession getRepositorySystemSession()
+  {
+    DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
+    LocalRepository localRepo = new LocalRepository(localRepository);
+    session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(session, localRepo));
+
+    // Set up the proxy configuration if required
+    if (useProxy) {
+      Proxy proxy = new Proxy(
+          proxyType,
+          proxyHost,
+          proxyPort,
+          isBlank(proxyUsername) ? null : new AuthenticationBuilder()
+              .addUsername(proxyUsername)
+              .addPassword(proxyPassword)
+              .build()
+      );
+
+      final DefaultProxySelector proxySelector = new DefaultProxySelector();
+      proxySelector.add(proxy, null);
+
+      session.setProxySelector(proxySelector);
+    }
+
+    return session;
+  }
+
+  protected List<RemoteRepository> getRemoteRepositories()
+  {
+    List<RemoteRepository> repositories = new ArrayList<>();
+
+    if (!noDefaultRemoteRepositories) {
+      repositories.add(new RemoteRepository.Builder("central", "default", DEFAULT_REMOTE_REPOSITORIES.get(0)).build());
+    }
+
+    for (String repoUrl : remoteRepositories) {
+      repositories.add(new RemoteRepository.Builder(null, "default", repoUrl).build());
+    }
+
+    return repositories;
   }
 
   @Override
   public void run()
   {
-    if (aether == null) {
-      aether = getAetherClient();
+    if (repositorySystem == null) {
+      repositorySystem = getRepositorySystem();
     }
 
     final File extensionsDir = new File(extensionsConfig.getDirectory());
@@ -311,7 +294,7 @@ public class PullDependencies implements Runnable
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
 
       if (!noDefaultHadoop && hadoopCoordinates.isEmpty()) {
-        hadoopCoordinates.addAll(TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
+        hadoopCoordinates.addAll(HadoopTaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES);
       }
 
       log.info("Start downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
@@ -334,7 +317,7 @@ public class PullDependencies implements Runnable
     }
   }
 
-  private Artifact getArtifact(String coordinate)
+  protected Artifact getArtifact(String coordinate)
   {
     DefaultArtifact versionedArtifact;
     try {
@@ -367,6 +350,12 @@ public class PullDependencies implements Runnable
   {
     final CollectRequest collectRequest = new CollectRequest();
     collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
+
+    List<RemoteRepository> repositories = getRemoteRepositories();
+    for (RemoteRepository repo : repositories) {
+      collectRequest.addRepository(repo);
+    }
+
     final DependencyRequest dependencyRequest = new DependencyRequest(
         collectRequest,
         DependencyFilterUtils.andFilter(
@@ -375,13 +364,7 @@ public class PullDependencies implements Runnable
               String scope = node.getDependency().getScope();
               if (scope != null) {
                 scope = StringUtils.toLowerCase(scope);
-                if ("provided".equals(scope)) {
-                  return false;
-                }
-                if ("test".equals(scope)) {
-                  return false;
-                }
-                if ("system".equals(scope)) {
+                if ("provided".equals(scope) || "test".equals(scope) || "system".equals(scope)) {
                   return false;
                 }
               }
@@ -402,7 +385,17 @@ public class PullDependencies implements Runnable
 
     try {
       log.info("Start downloading extension [%s]", versionedArtifact);
-      final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
+      if (repositorySystemSession == null) {
+        repositorySystemSession = getRepositorySystemSession();
+      }
+
+      final DependencyResult result = repositorySystem.resolveDependencies(
+          repositorySystemSession,
+          dependencyRequest
+      );
+      final List<Artifact> artifacts = result.getArtifactResults().stream()
+                                             .map(ArtifactResult::getArtifact)
+                                             .collect(Collectors.toList());
 
       for (Artifact artifact : artifacts) {
         if (exclusions.contain(artifact)) {
@@ -413,138 +406,19 @@ public class PullDependencies implements Runnable
         }
       }
     }
-    catch (Exception e) {
-      log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
+    catch (DependencyResolutionException e) {
+      if (e.getCause() instanceof ArtifactNotFoundException) {
+        log.error("Artifact not found in any configured repositories: [%s]", versionedArtifact);
+      } else {
+        log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
+      }
+      throw new RuntimeException(e);
+    }
+    catch (IOException e) {
+      log.error(e, "I/O error while processing artifact [%s].", versionedArtifact);
       throw new RuntimeException(e);
     }
     log.info("Finish downloading extension [%s]", versionedArtifact);
-  }
-
-  @SuppressForbidden(reason = "System#out")
-  private DefaultTeslaAether getAetherClient()
-  {
-    /*
-    DefaultTeslaAether logs a bunch of stuff to System.out, which is annoying.  We choose to disable that
-    unless debug logging is turned on.  "Disabling" it, however, is kinda bass-ackwards.  We copy out a reference
-    to the current System.out, and set System.out to a noop output stream.  Then after DefaultTeslaAether has pulled
-    The reference we swap things back.
-
-    This has implications for other things that are running in parallel to this.  Namely, if anything else also grabs
-    a reference to System.out or tries to log to it while we have things adjusted like this, then they will also log
-    to nothingness.  Fortunately, the code that calls this is single-threaded and shouldn't hopefully be running
-    alongside anything else that's grabbing System.out.  But who knows.
-    */
-
-    final List<String> remoteUriList = new ArrayList<>();
-    if (!noDefaultRemoteRepositories) {
-      remoteUriList.addAll(DEFAULT_REMOTE_REPOSITORIES);
-    }
-    remoteUriList.addAll(remoteRepositories);
-
-    List<Repository> remoteRepositories = new ArrayList<>();
-    for (String uri : remoteUriList) {
-      try {
-        URI u = new URI(uri);
-        Repository r = new Repository(uri);
-
-        if (u.getUserInfo() != null) {
-          String[] auth = u.getUserInfo().split(":", 2);
-          if (auth.length == 2) {
-            r.setUsername(auth[0]);
-            r.setPassword(auth[1]);
-          } else {
-            log.warn(
-                "Invalid credentials in repository URI, expecting [<user>:<password>], got [%s] for [%s]",
-                u.getUserInfo(),
-                uri
-            );
-          }
-        }
-        remoteRepositories.add(r);
-      }
-      catch (URISyntaxException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    if (log.isTraceEnabled() || log.isDebugEnabled()) {
-      return createTeslaAether(remoteRepositories);
-    }
-
-    PrintStream oldOut = System.out;
-    try {
-      System.setOut(
-          new PrintStream(
-              new OutputStream()
-              {
-                @Override
-                public void write(int b)
-                {
-
-                }
-
-                @Override
-                public void write(byte[] b)
-                {
-
-                }
-
-                @Override
-                public void write(byte[] b, int off, int len)
-                {
-
-                }
-              },
-              false,
-              StringUtils.UTF8_STRING
-          )
-      );
-      return createTeslaAether(remoteRepositories);
-    }
-    catch (UnsupportedEncodingException e) {
-      // should never happen
-      throw new IllegalStateException(e);
-    }
-    finally {
-      System.setOut(oldOut);
-    }
-  }
-
-  private DefaultTeslaAether createTeslaAether(List<Repository> remoteRepositories)
-  {
-    if (!useProxy) {
-      return new DefaultTeslaAether(
-          localRepository,
-          remoteRepositories.toArray(new Repository[0])
-      );
-    }
-
-    if (!StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTP) &&
-        !StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTPS)) {
-      throw new IllegalArgumentException("invalid proxy type: " + proxyType);
-    }
-
-    RepositorySystemSession repositorySystemSession =
-        new RepositorySystemSessionProvider(new File(localRepository)).get();
-    List<RemoteRepository> rl = remoteRepositories.stream().map(r -> {
-      RemoteRepository.Builder builder = new RemoteRepository.Builder(r.getId(), "default", r.getUrl());
-      if (r.getUsername() != null && r.getPassword() != null) {
-        Authentication auth = new AuthenticationBuilder().addUsername(r.getUsername())
-                                                         .addPassword(r.getPassword())
-                                                         .build();
-        builder.setAuthentication(auth);
-      }
-
-      final Authentication proxyAuth;
-      if (Strings.isNullOrEmpty(proxyUsername)) {
-        proxyAuth = null;
-      } else {
-        proxyAuth = new AuthenticationBuilder().addUsername(proxyUsername).addPassword(proxyPassword).build();
-      }
-      builder.setProxy(new Proxy(proxyType, proxyHost, proxyPort, proxyAuth));
-      return builder.build();
-    }).collect(Collectors.toList());
-    return new DefaultTeslaAether(rl, repositorySystemSession);
   }
 
   /**
@@ -567,6 +441,11 @@ public class PullDependencies implements Runnable
     }
   }
 
+  private boolean isBlank(final String toCheck)
+  {
+    return toCheck == null || toCheck.isEmpty();
+  }
+
   @VisibleForTesting
   static class Dependencies
   {
@@ -579,15 +458,15 @@ public class PullDependencies implements Runnable
       groupIdToArtifactIds = builder.groupIdToArtifactIdsBuilder.build();
     }
 
+    static Builder builder()
+    {
+      return new Builder();
+    }
+
     boolean contain(Artifact artifact)
     {
       Set<String> artifactIds = groupIdToArtifactIds.get(artifact.getGroupId());
       return artifactIds.contains(ANY_ARTIFACT_ID) || artifactIds.contains(artifact.getArtifactId());
-    }
-
-    static Builder builder()
-    {
-      return new Builder();
     }
 
     static final class Builder

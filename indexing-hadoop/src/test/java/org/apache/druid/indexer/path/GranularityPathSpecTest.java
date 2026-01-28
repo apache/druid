@@ -28,15 +28,14 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.HadoopTuningConfig;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -64,7 +63,6 @@ public class GranularityPathSpecTest
       null,
       null,
       null,
-      false,
       false,
       false,
       false,
@@ -152,18 +150,17 @@ public class GranularityPathSpecTest
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                ImmutableList.of(Intervals.of("2015-11-06T00:00Z/2015-11-07T00:00Z"))
-            ),
-            null,
-            jsonMapper
-        ),
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          ImmutableList.of(Intervals.of("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+                      )
+                  )
+                  .withObjectMapper(jsonMapper)
+                  .build(),
         new HadoopIOConfig(null, null, null),
         DEFAULT_TUNING_CONFIG
     );
@@ -204,18 +201,17 @@ public class GranularityPathSpecTest
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.ALL,
-                ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
-            ),
-            null,
-            jsonMapper
-        ),
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.ALL,
+                          ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
+                      )
+                  )
+                  .withObjectMapper(jsonMapper)
+                  .build(),
         new HadoopIOConfig(null, null, null),
         DEFAULT_TUNING_CONFIG
     );

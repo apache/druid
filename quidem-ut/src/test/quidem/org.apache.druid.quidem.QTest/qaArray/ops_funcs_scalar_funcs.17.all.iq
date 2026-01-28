@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C7_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C8_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C9_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C10_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C11_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C12_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C13_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C14_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C15_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C16_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C17_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C18_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C19_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C20_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C21_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C22_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C23_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A1_B36_C24_D1
+#-------------------------------------------------------------------------
+SELECT safe_divide(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SAFE_DIVIDE' to arguments of type 'SAFE_DIVIDE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_bool, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[0]' RETURNING boolean array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C4_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_int, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C5_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[1]' RETURNING bigint array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C6_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C7_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_float, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C8_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[2]' RETURNING decimal array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C9_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C10_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_str, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C11_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[3]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C12_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C13_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_null, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C14_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[4]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C15_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C16_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_empty, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C17_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[5]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C18_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C19_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_mixed, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C20_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[6]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C21_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C22_D1
+#-------------------------------------------------------------------------
+SELECT concat(a_nested, 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C23_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B1_C24_D1
+#-------------------------------------------------------------------------
+SELECT concat(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Parameters must be of the same type
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_bool, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[0]' RETURNING boolean array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_int, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[1]' RETURNING bigint array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_float, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[2]' RETURNING decimal array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+

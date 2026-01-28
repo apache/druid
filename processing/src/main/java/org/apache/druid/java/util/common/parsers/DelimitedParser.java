@@ -35,10 +35,11 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
       @Nullable final String delimiter,
       @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
-      final int maxSkipHeaderRows
+      final int maxSkipHeaderRows,
+      final boolean tryParseNumbers
   )
   {
-    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
     final String finalDelimiter = delimiter != null ? delimiter : FlatTextFormat.DELIMITED.getDefaultDelimiter();
 
     Preconditions.checkState(
@@ -55,10 +56,11 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
       @Nullable final String listDelimiter,
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
-      final int maxSkipHeaderRows
+      final int maxSkipHeaderRows,
+      final boolean tryParseNumbers
   )
   {
-    this(delimiter, listDelimiter, hasHeaderRow, maxSkipHeaderRows);
+    this(delimiter, listDelimiter, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
 
     setFieldNames(fieldNames);
   }
@@ -66,7 +68,7 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   @VisibleForTesting
   DelimitedParser(@Nullable final String delimiter, @Nullable final String listDelimiter, final String header)
   {
-    this(delimiter, listDelimiter, false, 0);
+    this(delimiter, listDelimiter, false, 0, false);
 
     setFieldNames(header);
   }

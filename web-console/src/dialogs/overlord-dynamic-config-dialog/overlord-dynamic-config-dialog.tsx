@@ -27,8 +27,10 @@ import { OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getDruidErrorMessage } from '../../utils';
+import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
+
+import { OVERLORD_DYNAMIC_CONFIG_COMPLETIONS } from './overlord-dynamic-config-completions';
 
 import './overlord-dynamic-config-dialog.scss';
 
@@ -46,17 +48,16 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
-    processQuery: async () => {
-      const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`);
-      return historyResp.data;
+    processQuery: async (_, signal) => {
+      return await getApiArray(`/druid/indexer/v1/worker/history?count=100`, signal);
     },
   });
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async () => {
+    processQuery: async (_, signal) => {
       try {
-        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`);
+        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`, { signal });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -107,9 +108,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           <p>
             Edit the overlord dynamic configuration at runtime. For more information please refer to
             the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#overlord-dynamic-configuration`}>
               documentation
             </ExternalLink>
             .
@@ -133,6 +132,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
               height="50vh"
               onChange={setDynamicConfig}
               setError={setJsonError}
+              jsonCompletions={OVERLORD_DYNAMIC_CONFIG_COMPLETIONS}
             />
           )}
         </>

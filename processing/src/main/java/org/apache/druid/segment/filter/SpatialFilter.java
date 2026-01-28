@@ -95,6 +95,12 @@ public class SpatialFilter implements Filter
       }
 
       @Override
+      public int estimatedComputeCost()
+      {
+        return Integer.MAX_VALUE;
+      }
+
+      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);

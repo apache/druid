@@ -47,9 +47,7 @@ public class JsonIteratorTest
     final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
     List<Map<String, Object>> expectedList = ImmutableList.of(ImmutableMap.of("key1", "value1", "key2", 2));
     File testFile = File.createTempFile("testfile", "");
-    TypeReference<Map<String, Object>> type = new TypeReference<Map<String, Object>>()
-    {
-    };
+    TypeReference<Map<String, Object>> type = new TypeReference<>() {};
     try (FileOutputStream fos = new FileOutputStream(testFile)) {
       final JsonGenerator jg = mapper.getFactory().createGenerator(fos);
       final SerializerProvider serializers = mapper.getSerializerProviderInstance();

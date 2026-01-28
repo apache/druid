@@ -61,7 +61,7 @@ public class BroadcastDistributionRuleSerdeTest
   {
     final List<Rule> rules = Collections.singletonList(testRule);
     final String json = MAPPER.writeValueAsString(rules);
-    final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<List<Rule>>(){});
+    final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<>() {});
     Assert.assertEquals(rules, fromJson);
   }
 }

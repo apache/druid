@@ -21,7 +21,6 @@ package org.apache.druid.query.extraction;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 
@@ -52,7 +51,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   )
   {
     this.retainMissingValue = retainMissingValue;
-    this.replaceMissingValueWith = NullHandling.emptyToNullIfNeeded(replaceMissingValueWith);
+    this.replaceMissingValueWith = replaceMissingValueWith;
     Preconditions.checkArgument(
         !(this.retainMissingValue && !(this.replaceMissingValueWith == null)),
         "Cannot specify a [replaceMissingValueWith] and set [retainMissingValue] to true"
@@ -62,24 +61,24 @@ public abstract class FunctionalExtraction extends DimExtractionFn
     // This is intended to have the absolutely fastest code path possible and not have any extra logic in the function
     if (this.retainMissingValue) {
 
-      this.extractionFunction = new Function<String, String>()
+      this.extractionFunction = new Function<>()
       {
         @Nullable
         @Override
         public String apply(@Nullable String dimValue)
         {
           final String retval = extractionFunction.apply(dimValue);
-          return NullHandling.isNullOrEquivalent(retval) ? NullHandling.emptyToNullIfNeeded(dimValue) : retval;
+          return retval == null ? dimValue : retval;
         }
       };
     } else {
-      this.extractionFunction = new Function<String, String>()
+      this.extractionFunction = new Function<>()
       {
         @Nullable
         @Override
         public String apply(@Nullable String dimValue)
         {
-          final String retval = NullHandling.emptyToNullIfNeeded(extractionFunction.apply(dimValue));
+          final String retval = extractionFunction.apply(dimValue);
           return retval == null
                  ? FunctionalExtraction.this.replaceMissingValueWith
                  : retval;

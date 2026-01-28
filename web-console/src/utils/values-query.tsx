@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
+import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,7 +28,7 @@ import {
   SqlRecord,
   SqlType,
   SqlValues,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import { oneOf } from './general';
@@ -60,33 +60,34 @@ function isJsonString(x: unknown): boolean {
 
 export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
   const { header, rows } = sample;
-  return SqlQuery.create(
+  return SqlQuery.selectStarFrom(
     new SqlAlias({
       expression: SqlValues.create(
         rows.map(row =>
           SqlRecord.create(
-            row.map((r, i) => {
+            row.map((d, i) => {
+              if (d == null) return L.NULL;
               const column = header[i];
               const { nativeType } = column;
               const sqlType = getEffectiveSqlType(column);
               if (nativeType === 'COMPLEX<json>') {
-                return L(isJsonString(r) ? r : JSONBig.stringify(r));
+                return L(isJsonString(d) ? d : JSONBig.stringify(d));
               } else if (String(sqlType).endsWith(' ARRAY')) {
-                return L(r.join(SAMPLE_ARRAY_SEPARATOR));
+                return L(d.join(SAMPLE_ARRAY_SEPARATOR));
               } else if (
                 sqlType === 'OTHER' &&
                 String(nativeType).startsWith('COMPLEX<') &&
-                typeof r === 'string' &&
-                r.startsWith('"') &&
-                r.endsWith('"')
+                typeof d === 'string' &&
+                d.startsWith('"') &&
+                d.endsWith('"')
               ) {
-                // r is a JSON encoded base64 string
-                return L(r.slice(1, -1));
-              } else if (typeof r === 'object') {
+                // d is a JSON encoded base64 string
+                return L(d.slice(1, -1));
+              } else if (typeof d === 'object') {
                 // Cleanup array if it happens to get here, it shouldn't.
                 return L.NULL;
               } else {
-                return L(r);
+                return L(d);
               }
             }),
           ),

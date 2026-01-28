@@ -24,6 +24,7 @@ import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.column.LongArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
@@ -48,7 +49,7 @@ public class AppendableRowsAndColumnsTest extends SemanticTestBase
     RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
             "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
-            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+            "colB", new LongArrayColumn(new long[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
         )
     ));
 
@@ -58,7 +59,7 @@ public class AppendableRowsAndColumnsTest extends SemanticTestBase
 
     new RowsAndColumnsHelper()
         .expectColumn("colA", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
-        .expectColumn("colB", new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+        .expectColumn("colB", new long[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
         .expectColumn("newCol", new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
         .allColumnsRegistered()
         .validate(appender);

@@ -1,0 +1,14 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    count(*) over (),
+    ARRAY_AGG(dbl1, 100), ARRAY_AGG(f1, 100), ARRAY_AGG(m1, 100)
+  FROM numfoo
+  WHERE dbl1>0 AND f1>0
+  GROUP BY dbl1, f1, m1
+  ORDER BY dbl1, f1, m1
+
+expectedResults:
+  - [2,[1.0],[1.0],[1.0]]
+  - [2,[1.7],[0.1],[2.0]]

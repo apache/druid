@@ -17,13 +17,12 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { ActionCell } from './action-cell';
 
 describe('ActionCell', () => {
   it('matches snapshot', () => {
-    const actionCell = <ActionCell onDetail={() => {}} actions={[]} />;
+    const actionCell = <ActionCell onDetail={() => {}} actions={[]} menuTitle="item" />;
     const { container } = render(actionCell);
     expect(container.firstChild).toMatchSnapshot();
   });

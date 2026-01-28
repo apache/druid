@@ -90,7 +90,7 @@ public class BackgroundCachePopulator implements CachePopulator
         () -> {
           Futures.addCallback(
               Futures.allAsList(cacheFutures),
-              new FutureCallback<List<CacheType>>()
+              new FutureCallback<>()
               {
                 @Override
                 public void onSuccess(List<CacheType> results)

@@ -20,11 +20,10 @@
 package org.apache.druid.math.expr.vector;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.segment.column.Types;
@@ -48,7 +47,7 @@ public class VectorProcessors
       Expr right,
       Supplier<ExprVectorProcessor<?>> longProcessor,
       Supplier<ExprVectorProcessor<?>> doubleProcessor,
-      Supplier<ExprVectorProcessor<?>> stringProcessor
+      Supplier<ExprVectorProcessor<?>> objectProcessor
   )
   {
     final ExpressionType leftType = left.getOutputType(inspector);
@@ -67,7 +66,7 @@ public class VectorProcessors
 
     ExprVectorProcessor<?> processor = null;
     if (Types.is(leftType, ExprType.STRING)) {
-      processor = stringProcessor.get();
+      processor = objectProcessor.get();
     } else if (Types.is(leftType, ExprType.LONG)) {
       processor = longProcessor.get();
     } else if (Types.is(leftType, ExprType.DOUBLE)) {
@@ -81,29 +80,20 @@ public class VectorProcessors
   }
 
   /**
-   * Creates an {@link ExprVectorProcessor} that creates a {@link ExprEvalVector} for a constant {@link String} value.
+   * Creates an {@link ExprVectorProcessor} that creates a {@link ExprEvalVector} for a constant any non-numeric value.
+   * Numeric types should use {@link #constant(Double, int)} or {@link #constant(Long, int)} instead.
    *
    * @see org.apache.druid.math.expr.ConstantExpr
    */
-  public static <T> ExprVectorProcessor<T> constant(@Nullable String constant, int maxVectorSize)
+  public static <T> ExprVectorProcessor<T> constant(@Nullable Object constant, int maxVectorSize, ExpressionType type)
   {
-    final Object[] strings = new Object[maxVectorSize];
-    Arrays.fill(strings, constant);
-    final ExprEvalObjectVector eval = new ExprEvalObjectVector(strings);
-    return new ExprVectorProcessor<T>()
-    {
-      @Override
-      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
-      {
-        return (ExprEvalVector<T>) eval;
-      }
-
-      @Override
-      public ExpressionType getOutputType()
-      {
-        return ExpressionType.STRING;
-      }
-    };
+    if (type.isNumeric()) {
+      throw DruidException.defensive("Type[%s] should use the numeric constant creator instead", type);
+    }
+    final Object[] objects = new Object[maxVectorSize];
+    Arrays.fill(objects, constant);
+    final ExprEvalObjectVector eval = new ExprEvalObjectVector(objects, type);
+    return (ExprVectorProcessor<T>) new ConstantVectorProcessor<>(eval, maxVectorSize);
   }
 
   /**
@@ -116,31 +106,14 @@ public class VectorProcessors
     final double[] doubles = new double[maxVectorSize];
     final boolean[] nulls;
     if (constant == null) {
-      if (NullHandling.sqlCompatible()) {
-        nulls = new boolean[maxVectorSize];
-        Arrays.fill(nulls, true);
-      } else {
-        nulls = null;
-      }
+      nulls = new boolean[maxVectorSize];
+      Arrays.fill(nulls, true);
     } else {
       nulls = null;
       Arrays.fill(doubles, constant);
     }
     final ExprEvalDoubleVector eval = new ExprEvalDoubleVector(doubles, nulls);
-    return new ExprVectorProcessor<T>()
-    {
-      @Override
-      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
-      {
-        return (ExprEvalVector<T>) eval;
-      }
-
-      @Override
-      public ExpressionType getOutputType()
-      {
-        return ExpressionType.DOUBLE;
-      }
-    };
+    return (ExprVectorProcessor<T>) new ConstantVectorProcessor<>(eval, maxVectorSize);
   }
 
   /**
@@ -153,31 +126,14 @@ public class VectorProcessors
     final long[] longs = new long[maxVectorSize];
     final boolean[] nulls;
     if (constant == null) {
-      if (NullHandling.sqlCompatible()) {
-        nulls = new boolean[maxVectorSize];
-        Arrays.fill(nulls, true);
-      } else {
-        nulls = null;
-      }
+      nulls = new boolean[maxVectorSize];
+      Arrays.fill(nulls, true);
     } else {
       nulls = null;
       Arrays.fill(longs, constant);
     }
     final ExprEvalLongVector eval = new ExprEvalLongVector(longs, nulls);
-    return new ExprVectorProcessor<T>()
-    {
-      @Override
-      public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
-      {
-        return (ExprEvalVector<T>) eval;
-      }
-
-      @Override
-      public ExpressionType getOutputType()
-      {
-        return ExpressionType.LONG;
-      }
-    };
+    return (ExprVectorProcessor<T>) new ConstantVectorProcessor<>(eval, maxVectorSize);
   }
 
   /**
@@ -190,51 +146,13 @@ public class VectorProcessors
    */
   public static ExprVectorProcessor<?> identifier(Expr.VectorInputBindingInspector inspector, String binding)
   {
-    ExpressionType inputType = inspector.getType(binding);
+    final ExpressionType inputType = inspector.getType(binding);
 
-    if (inputType == null) {
-      // nil column, we can be anything, so be a string because it's the most flexible
-      // (numbers will be populated with default values in default mode and non-null)
-      return new IdentifierVectorProcessor<Object[]>(ExpressionType.STRING)
-      {
-        @Override
-        public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          return new ExprEvalObjectVector(bindings.getObjectVector(binding));
-        }
-      };
-    }
-    switch (inputType.getType()) {
-      case LONG:
-        return new IdentifierVectorProcessor<long[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
-          {
-            return new ExprEvalLongVector(bindings.getLongVector(binding), bindings.getNullVector(binding));
-          }
-        };
-      case DOUBLE:
-        return new IdentifierVectorProcessor<double[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<double[]> evalVector(Expr.VectorInputBinding bindings)
-          {
-            return new ExprEvalDoubleVector(bindings.getDoubleVector(binding), bindings.getNullVector(binding));
-          }
-        };
-      case STRING:
-        return new IdentifierVectorProcessor<Object[]>(inputType)
-        {
-          @Override
-          public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
-          {
-            return new ExprEvalObjectVector(bindings.getObjectVector(binding));
-          }
-        };
-      default:
-        throw Exprs.cannotVectorize("[" + binding + "]");
-    }
+    return new IdentifierVectorProcessor<>(
+        inputType == null ? ExpressionType.LONG : inputType,
+        binding,
+        inspector.getMaxVectorSize()
+    );
   }
 
   /**
@@ -244,12 +162,17 @@ public class VectorProcessors
    */
   public static <T> ExprVectorProcessor<T> parseLong(Expr.VectorInputBindingInspector inspector, Expr arg, int radix)
   {
-    final ExprVectorProcessor<?> processor = new LongOutObjectInFunctionVectorProcessor(
+    final ExprVectorProcessor<?> processor = new LongUnivariateObjectFunctionVectorProcessor(
         arg.asVectorProcessor(inspector),
-        inspector.getMaxVectorSize(),
         ExpressionType.STRING
     )
     {
+      @Override
+      public int maxVectorSize()
+      {
+        return inspector.getMaxVectorSize();
+      }
+
       @Override
       public void processIndex(Object[] strings, long[] longs, boolean[] outputNulls, int i)
       {
@@ -257,7 +180,7 @@ public class VectorProcessors
           final String input = (String) strings[i];
           if (input == null) {
             longs[i] = 0L;
-            outputNulls[i] = NullHandling.sqlCompatible();
+            outputNulls[i] = true;
           } else {
             if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
               // Strip leading 0x from hex strings.
@@ -270,7 +193,7 @@ public class VectorProcessors
         }
         catch (NumberFormatException e) {
           longs[i] = 0L;
-          outputNulls[i] = NullHandling.sqlCompatible();
+          outputNulls[i] = true;
         }
       }
     };
@@ -294,35 +217,8 @@ public class VectorProcessors
     }
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
-      processor = new ExprVectorProcessor<long[]>()
-      {
-        @Override
-        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
-
-          final int currentSize = bindings.getCurrentVectorSize();
-          final Object[] values = inputEval.values();
-          for (int i = 0; i < currentSize; i++) {
-            if (values[i] == null) {
-              outputValues[i] = 1L;
-            } else {
-              outputValues[i] = 0L;
-            }
-          }
-          return new ExprEvalLongVector(outputValues, null);
-        }
-
-        @Override
-        public ExpressionType getOutputType()
-        {
-          return ExpressionType.LONG;
-        }
-      };
-    } else if (Types.is(type, ExprType.LONG)) {
+    final ExprVectorProcessor<?> processor;
+    if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
@@ -351,6 +247,12 @@ public class VectorProcessors
         public ExpressionType getOutputType()
         {
           return ExpressionType.LONG;
+        }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return outputValues.length;
         }
       };
     } else if (Types.is(type, ExprType.DOUBLE)) {
@@ -383,12 +285,48 @@ public class VectorProcessors
         {
           return ExpressionType.LONG;
         }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return outputValues.length;
+        }
+      };
+    } else {
+      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
+      processor = new ExprVectorProcessor<long[]>()
+      {
+        @Override
+        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+        {
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
+
+          final int currentSize = bindings.getCurrentVectorSize();
+          final Object[] values = inputEval.values();
+          for (int i = 0; i < currentSize; i++) {
+            if (values[i] == null) {
+              outputValues[i] = 1L;
+            } else {
+              outputValues[i] = 0L;
+            }
+          }
+          return new ExprEvalLongVector(outputValues, null);
+        }
+
+        @Override
+        public ExpressionType getOutputType()
+        {
+          return ExpressionType.LONG;
+        }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return outputValues.length;
+        }
       };
     }
 
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
     return (ExprVectorProcessor<T>) processor;
   }
 
@@ -408,35 +346,8 @@ public class VectorProcessors
 
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
-      processor = new ExprVectorProcessor<long[]>()
-      {
-        @Override
-        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
-
-          final int currentSize = bindings.getCurrentVectorSize();
-          final Object[] values = inputEval.values();
-          for (int i = 0; i < currentSize; i++) {
-            if (values[i] == null) {
-              outputValues[i] = 0L;
-            } else {
-              outputValues[i] = 1L;
-            }
-          }
-          return new ExprEvalLongVector(outputValues, null);
-        }
-
-        @Override
-        public ExpressionType getOutputType()
-        {
-          return ExpressionType.LONG;
-        }
-      };
-    } else if (Types.is(type, ExprType.LONG)) {
+    final ExprVectorProcessor<?> processor;
+    if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
@@ -465,6 +376,12 @@ public class VectorProcessors
         public ExpressionType getOutputType()
         {
           return ExpressionType.LONG;
+        }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return outputValues.length;
         }
       };
     } else if (Types.is(type, ExprType.DOUBLE)) {
@@ -497,132 +414,49 @@ public class VectorProcessors
         {
           return ExpressionType.LONG;
         }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return outputValues.length;
+        }
+      };
+    } else {
+      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
+      processor = new ExprVectorProcessor<long[]>()
+      {
+        @Override
+        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+        {
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
+
+          final int currentSize = bindings.getCurrentVectorSize();
+          final Object[] values = inputEval.values();
+          for (int i = 0; i < currentSize; i++) {
+            if (values[i] == null) {
+              outputValues[i] = 0L;
+            } else {
+              outputValues[i] = 1L;
+            }
+          }
+          return new ExprEvalLongVector(outputValues, null);
+        }
+
+        @Override
+        public ExpressionType getOutputType()
+        {
+          return ExpressionType.LONG;
+        }
+
+        @Override
+        public int maxVectorSize()
+        {
+          return inspector.getMaxVectorSize();
+        }
       };
     }
 
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
     return (ExprVectorProcessor<T>) processor;
-  }
-
-  /**
-   * Creates an {@link ExprVectorProcessor} for the 'nvl' function, that will return the first argument value if it is
-   * not null, else the value of the 2nd argument.
-   *
-   * @see org.apache.druid.math.expr.Function.NvlFunc
-   */
-  public static <T> ExprVectorProcessor<T> nvl(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
-  {
-    final int maxVectorSize = inspector.getMaxVectorSize();
-
-    return makeSymmetricalProcessor(
-        inspector,
-        left,
-        right,
-        () -> new SymmetricalBivariateFunctionVectorProcessor<long[]>(
-            ExpressionType.LONG,
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector)
-        )
-        {
-          final long[] output = new long[maxVectorSize];
-          final boolean[] outputNulls = new boolean[maxVectorSize];
-
-          @Override
-          public void processIndex(
-              long[] leftInput,
-              @Nullable boolean[] leftNulls,
-              long[] rightInput,
-              @Nullable boolean[] rightNulls,
-              int i
-          )
-          {
-            if (leftNulls != null && leftNulls[i]) {
-              if (rightNulls != null) {
-                output[i] = rightNulls[i] ? 0L : rightInput[i];
-                outputNulls[i] = rightNulls[i];
-              } else {
-                output[i] = rightInput[i];
-                outputNulls[i] = false;
-              }
-            } else {
-              output[i] = leftInput[i];
-              outputNulls[i] = false;
-            }
-          }
-
-          @Override
-          public ExprEvalVector<long[]> asEval()
-          {
-            return new ExprEvalLongVector(output, outputNulls);
-          }
-        },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<double[]>(
-            ExpressionType.DOUBLE,
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector)
-        )
-        {
-          final double[] output = new double[maxVectorSize];
-          final boolean[] outputNulls = new boolean[maxVectorSize];
-
-          @Override
-          public void processIndex(
-              double[] leftInput,
-              @Nullable boolean[] leftNulls,
-              double[] rightInput,
-              @Nullable boolean[] rightNulls,
-              int i
-          )
-          {
-            if (leftNulls != null && leftNulls[i]) {
-              if (rightNulls != null) {
-                output[i] = rightNulls[i] ? 0.0 : rightInput[i];
-                outputNulls[i] = rightNulls[i];
-              } else {
-                output[i] = rightInput[i];
-                outputNulls[i] = false;
-              }
-            } else {
-              output[i] = leftInput[i];
-              outputNulls[i] = false;
-            }
-          }
-
-          @Override
-          public ExprEvalVector<double[]> asEval()
-          {
-            return new ExprEvalDoubleVector(output, outputNulls);
-          }
-        },
-        () -> new SymmetricalBivariateFunctionVectorProcessor<Object[]>(
-            ExpressionType.STRING,
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector)
-        )
-        {
-          final Object[] output = new Object[maxVectorSize];
-
-          @Override
-          public void processIndex(
-              Object[] leftInput,
-              @Nullable boolean[] leftNulls,
-              Object[] rightInput,
-              @Nullable boolean[] rightNulls,
-              int i
-          )
-          {
-            output[i] = leftInput[i] != null ? leftInput[i] : rightInput[i];
-          }
-
-          @Override
-          public ExprEvalVector<Object[]> asEval()
-          {
-            return new ExprEvalObjectVector(output);
-          }
-        }
-    );
   }
 
   /**
@@ -637,14 +471,9 @@ public class VectorProcessors
   public static <T> ExprVectorProcessor<T> not(Expr.VectorInputBindingInspector inspector, Expr expr)
   {
     final ExpressionType inputType = expr.getOutputType(inspector);
-    final int maxVectorSize = inspector.getMaxVectorSize();
     ExprVectorProcessor<?> processor = null;
     if (Types.is(inputType, ExprType.STRING)) {
-      processor = new LongOutObjectInFunctionVectorProcessor(
-          expr.asVectorProcessor(inspector),
-          maxVectorSize,
-          ExpressionType.STRING
-      )
+      processor = new LongUnivariateObjectFunctionVectorProcessor(expr.asVectorProcessor(inspector), ExpressionType.STRING)
       {
         @Override
         public void processIndex(Object[] strings, long[] longs, boolean[] outputNulls, int i)
@@ -656,34 +485,16 @@ public class VectorProcessors
         }
       };
     } else if (Types.is(inputType, ExprType.LONG)) {
-      processor = new LongOutLongInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
-      {
-        @Override
-        public long apply(long input)
-        {
-          return Evals.asLong(!Evals.asBoolean(input));
-        }
-      };
+      processor = new LongUnivariateLongFunctionVectorProcessor(
+          expr.asVectorProcessor(inspector),
+          (input) -> Evals.asLong(!Evals.asBoolean(input))
+      );
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
-      if (!ExpressionProcessing.useStrictBooleans()) {
-        processor = new DoubleOutDoubleInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
-        {
-          @Override
-          public double apply(double input)
-          {
-            return Evals.asDouble(!Evals.asBoolean(input));
-          }
-        };
-      } else {
-        processor = new LongOutDoubleInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
-        {
-          @Override
-          public long apply(double input)
-          {
-            return Evals.asLong(!Evals.asBoolean(input));
-          }
-        };
-      }
+
+      processor = new LongUnivariateDoubleFunctionVectorProcessor(
+          expr.asVectorProcessor(inspector),
+          input -> Evals.asLong(!Evals.asBoolean(input))
+      );
     }
     if (processor == null) {
       throw Exprs.cannotVectorize();
@@ -725,27 +536,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true -> true
-              // false/null, null/false, null/null -> null
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
+            // true/null, null/true -> true
+            // false/null, null/false, null/null -> null
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -775,27 +584,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true -> true
-              // false/null, null/false, null/null -> null
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
+            // true/null, null/true -> true
+            // false/null, null/false, null/null -> null
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -831,7 +638,7 @@ public class VectorProcessors
             final boolean rightNull = rightInput[i] == null;
             if (leftNull) {
               if (rightNull) {
-                outputNulls[i] = NullHandling.sqlCompatible();
+                outputNulls[i] = true;
                 return;
               }
               final boolean bool = Evals.asBoolean((String) rightInput[i]);
@@ -891,27 +698,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true, null/null -> null
-              // false/null, null/false -> false
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
+            // true/null, null/true, null/null -> null
+            // false/null, null/false -> false
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -941,27 +746,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true, null/null -> null
-              // false/null, null/false -> false
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
+            // true/null, null/true, null/null -> null
+            // false/null, null/false -> false
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -1030,24 +833,69 @@ public class VectorProcessors
     // No instantiation
   }
 
+  static final class ConstantVectorProcessor<T> implements ExprVectorProcessor<T>
+  {
+    private final ExprEvalVector<T> constantVector;
+    private final int maxVectorSize;
+
+    ConstantVectorProcessor(ExprEvalVector<T> constantVector, int maxVectorSize)
+    {
+      this.constantVector = constantVector;
+      this.maxVectorSize = maxVectorSize;
+    }
+
+    @Override
+    public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
+    {
+      return constantVector;
+    }
+
+    @Override
+    public ExpressionType getOutputType()
+    {
+      return constantVector.getType();
+    }
+
+    @Override
+    public int maxVectorSize()
+    {
+      return maxVectorSize;
+    }
+  }
   /**
    * Basic scaffolding for an 'identifier' {@link ExprVectorProcessor}
    * 
    * @see #identifier
    */
-  abstract static class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>
+  static final class IdentifierVectorProcessor<T> implements ExprVectorProcessor<T>
   {
     private final ExpressionType outputType;
+    private final String bindingName;
+    private final int maxVectorSize;
 
-    public IdentifierVectorProcessor(ExpressionType outputType)
+    public IdentifierVectorProcessor(ExpressionType outputType, String bindingName, int maxVectorSize)
     {
       this.outputType = outputType;
+      this.bindingName = bindingName;
+      this.maxVectorSize = maxVectorSize;
+    }
+
+    @Override
+    public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
+    {
+      return new ExprEvalBindingVector<>(outputType, bindings, bindingName);
     }
 
     @Override
     public ExpressionType getOutputType()
     {
       return outputType;
+    }
+
+    @Override
+    public int maxVectorSize()
+    {
+      return maxVectorSize;
     }
   }
 }

@@ -22,12 +22,11 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -122,7 +121,7 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
         }
 
         @Override
-        public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+        public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileSmoosher) throws IOException
         {
           delegate.writeTo(channel, fileSmoosher);
         }
@@ -141,25 +140,19 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (buffer, builder, columnConfig) -> {
+    return (buffer, builder, columnConfig, parent) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
       final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
-      if (buffer.hasRemaining() && NullHandling.sqlCompatible()) {
-        if (NullHandling.sqlCompatible()) {
-          bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
-        } else {
-          // Read from the buffer (to advance its position) but do not actually retain the bitmaps.
-          bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
-          bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
-        }
-
+      if (buffer.hasRemaining()) {
+        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
         hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();

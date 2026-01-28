@@ -19,224 +19,111 @@
 
 package org.apache.druid.benchmark.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExpressionProcessing;
-import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.StringEncodingStrategy;
-import org.apache.druid.segment.data.FrontCodedIndexed;
-import org.apache.druid.segment.generator.GeneratorBasicSchemas;
-import org.apache.druid.segment.generator.GeneratorSchemaInfo;
-import org.apache.druid.segment.generator.SegmentGenerator;
-import org.apache.druid.segment.transform.ExpressionTransform;
-import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
-import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.infra.Blackhole;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 3)
 @Measurement(iterations = 5)
-public class SqlNestedDataBenchmark
+public class SqlNestedDataBenchmark extends SqlBaseQueryBenchmark
 {
-  private static final Logger log = new Logger(SqlNestedDataBenchmark.class);
-
-  static {
-    NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests();
-  }
-
-  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
-  {
-    @Override
-    public int intermediateComputeSizeBytes()
-    {
-      return 512 * 1024 * 1024;
-    }
-
-    @Override
-    public int getNumMergeBuffers()
-    {
-      return 3;
-    }
-
-    @Override
-    public int getNumThreads()
-    {
-      return 1;
-    }
-
-    @Override
-    public String getFormatString()
-    {
-      return "benchmarks-processing-%s";
-    }
-  };
-
-
   private static final List<String> QUERIES = ImmutableList.of(
       // ===========================
       // non-nested reference queries
       // ===========================
       // 0,1: timeseries, 1 columns
-      "SELECT SUM(long1) FROM foo",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo",
+      "SELECT SUM(long1) FROM druid.nested",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested",
       // 2,3: timeseries, 2 columns
-      "SELECT SUM(long1), SUM(long2) FROM foo",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT)) FROM foo",
+      "SELECT SUM(long1), SUM(long2) FROM druid.nested",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT)) FROM druid.nested",
       // 4,5: timeseries, 3 columns
-      "SELECT SUM(long1), SUM(long2), SUM(double3) FROM foo",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM foo",
+      "SELECT SUM(long1), SUM(long2), SUM(double3) FROM druid.nested",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM druid.nested",
       // 6,7: group by string with 1 agg
-      "SELECT string1, SUM(long1) FROM foo GROUP BY 1 ORDER BY 2",
-      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT string1, SUM(long1) FROM druid.nested GROUP BY 1 ORDER BY 2",
+      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested GROUP BY 1 ORDER BY 2",
       // 8,9: group by string with 2 agg
-      "SELECT string1, SUM(long1), SUM(double3) FROM foo GROUP BY 1 ORDER BY 2",
-      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM foo GROUP BY 1 ORDER BY 2",
+      "SELECT string1, SUM(long1), SUM(double3) FROM druid.nested GROUP BY 1 ORDER BY 2",
+      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM druid.nested GROUP BY 1 ORDER BY 2",
       // 10,11: time-series filter string
-      "SELECT SUM(long1) FROM foo WHERE string1 = '10000' OR string1 = '1000'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '10000' OR JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string1 = '10000' OR string1 = '1000'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string1') = '10000' OR JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
       // 12,13: time-series filter long
-      "SELECT SUM(long1) FROM foo WHERE long2 = 10000 OR long2 = 1000",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) = 10000 OR JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) = 1000",
+      "SELECT SUM(long1) FROM druid.nested WHERE long2 = 10000 OR long2 = 1000",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) = 10000 OR JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) = 1000",
       // 14,15: time-series filter double
-      "SELECT SUM(long1) FROM foo WHERE double3 < 10000.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 10000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      "SELECT SUM(long1) FROM druid.nested WHERE double3 < 10000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 10000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 16,17: group by long filter by string
-      "SELECT long1, SUM(double3) FROM foo WHERE string1 = '10000' OR string1 = '1000' GROUP BY 1 ORDER BY 2",
-      "SELECT JSON_VALUE(nested, '$.long1' RETURNING BIGINT), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '10000' OR JSON_VALUE(nested, '$.nesteder.string1') = '1000' GROUP BY 1 ORDER BY 2",
+      "SELECT long1, SUM(double3) FROM druid.nested WHERE string1 = '10000' OR string1 = '1000' GROUP BY 1 ORDER BY 2",
+      "SELECT JSON_VALUE(nested, '$.long1' RETURNING BIGINT), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string1') = '10000' OR JSON_VALUE(nested, '$.nesteder.string1') = '1000' GROUP BY 1 ORDER BY 2",
       // 18,19: group by string filter by long
-      "SELECT string1, SUM(double3) FROM foo WHERE long2 < 10000 AND long2 > 1000 GROUP BY 1 ORDER BY 2",
-      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) < 10000 AND JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) > 1000 GROUP BY 1 ORDER BY 2",
+      "SELECT string1, SUM(double3) FROM druid.nested WHERE long2 < 10000 AND long2 > 1000 GROUP BY 1 ORDER BY 2",
+      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) < 10000 AND JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) > 1000 GROUP BY 1 ORDER BY 2",
       // 20,21: group by string filter by double
-      "SELECT string1, SUM(double3) FROM foo WHERE double3 < 10000.0 AND double3 > 1000.0 GROUP BY 1 ORDER BY 2",
-      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 10000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0 GROUP BY 1 ORDER BY 2",
+      "SELECT string1, SUM(double3) FROM druid.nested WHERE double3 < 10000.0 AND double3 > 1000.0 GROUP BY 1 ORDER BY 2",
+      "SELECT JSON_VALUE(nested, '$.nesteder.string1'), SUM(JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 10000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0 GROUP BY 1 ORDER BY 2",
       // 22, 23:
-      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46)",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46)",
+      "SELECT long2 FROM druid.nested WHERE long2 IN (1, 19, 21, 23, 25, 26, 46)",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46)",
       // 24, 25
-      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
+      "SELECT long2 FROM druid.nested WHERE long2 IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46) GROUP BY 1",
       // 26, 27
-      "SELECT SUM(long1) FROM foo WHERE double3 < 1005.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 1005.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      "SELECT SUM(long1) FROM druid.nested WHERE double3 < 1005.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 1005.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 28, 29
-      "SELECT SUM(long1) FROM foo WHERE double3 < 2000.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 2000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      "SELECT SUM(long1) FROM druid.nested WHERE double3 < 2000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 2000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 30, 31
-      "SELECT SUM(long1) FROM foo WHERE double3 < 3000.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 3000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      "SELECT SUM(long1) FROM druid.nested WHERE double3 < 3000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 3000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 32,33
-      "SELECT SUM(long1) FROM foo WHERE double3 < 5000.0 AND double3 > 1000.0",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 5000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
+      "SELECT SUM(long1) FROM druid.nested WHERE double3 < 5000.0 AND double3 > 1000.0",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) < 5000.0 AND JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) > 1000.0",
       // 34,35 smaller cardinality like range filter
-      "SELECT SUM(long1) FROM foo WHERE string1 LIKE '1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '1%'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string1 LIKE '1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '1%'",
       // 36,37 smaller cardinality like predicate filter
-      "SELECT SUM(long1) FROM foo WHERE string1 LIKE '%1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '%1%'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string1 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string1') LIKE '%1%'",
       // 38-39 moderate cardinality like range
-      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '1%'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string5 LIKE '1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '1%'",
       // 40, 41 big cardinality lex range
-      "SELECT SUM(long1) FROM foo WHERE string5 > '1'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') > '1'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string5 > '1'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string5') > '1'",
       // 42, 43 big cardinality like predicate filter
-      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
-      // 44, 45 big cardinality like filter + selector filter
-      "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
-      "SELECT SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%'",
-      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string1') = '1000' AND JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string5 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
+      // 44, 45 big cardinality like filter + selector filter with different ordering
+      "SELECT SUM(long1) FROM druid.nested WHERE string5 LIKE '%1%' AND string1 = '1000'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
+      "SELECT SUM(long1) FROM druid.nested WHERE string1 = '1000' AND string5 LIKE '%1%'",
+      "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.string1') = '1000' AND JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
       //48,49 bigger in
-      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
+      "SELECT long2 FROM druid.nested WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204)",
       //50, 51 bigger in group
-      "SELECT long2 FROM foo WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
-      "SELECT long2 FROM foo WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
-      "SELECT long2 FROM foo WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1",
-      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1"
+      "SELECT long2 FROM druid.nested WHERE long2 IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) IN (1, 19, 21, 23, 25, 26, 46, 50, 51, 55, 60, 61, 66, 68, 69, 70, 77, 88, 90, 92, 93, 94, 95, 100, 101, 102, 104, 109, 111, 113, 114, 115, 120, 121, 122, 134, 135, 136, 140, 142, 150, 155, 170, 172, 173, 174, 180, 181, 190, 199, 200, 201, 202, 203, 204) GROUP BY 1",
+      "SELECT long2 FROM druid.nested WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0)",
+      "SELECT long2 FROM druid.nested WHERE double3 IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1",
+      "SELECT JSON_VALUE(nested, '$.nesteder.long2' RETURNING BIGINT) FROM druid.nested WHERE JSON_VALUE(nested, '$.nesteder.double3' RETURNING DOUBLE) IN (1.0, 19.0, 21.0, 23.0, 25.0, 26.0, 46.0, 50.0, 51.0, 55.0, 60.0, 61.0, 66.0, 68.0, 69.0, 70.0, 77.0, 88.0, 90.0, 92.0, 93.0, 94.0, 95.0, 100.0, 101.0, 102.0, 104.0, 109.0, 111.0, 113.0, 114.0, 115.0, 120.0, 121.0, 122.0, 134.0, 135.0, 136.0, 140.0, 142.0, 150.0, 155.0, 170.0, 172.0, 173.0, 174.0, 180.0, 181.0, 190.0, 199.0, 200.0, 201.0, 202.0, 203.0, 204.0) GROUP BY 1",
+      // 56
+      "SELECT TO_JSON_STRING(nested) FROM druid.nested"
   );
 
-  @Param({"5000000"})
-  private int rowsPerSegment;
-
-  @Param({
-      "false",
-      "force"
-  })
-  private String vectorize;
-
-  @Param({
-      "none",
-      "front-coded-4",
-      "front-coded-16"
-  })
-  private String stringEncoding;
-
-  @Param({
-      "explicit",
-      "auto"
-  })
-  private String schema;
 
   @Param({
       "0",
@@ -298,176 +185,15 @@ public class SqlNestedDataBenchmark
   })
   private String query;
 
-  private SqlEngine engine;
-  @Nullable
-  private PlannerFactory plannerFactory;
-  private Closer closer = Closer.create();
-
-  @Setup(Level.Trial)
-  public void setup()
+  @Override
+  public String getQuery()
   {
-    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
-
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
-                                               .shardSpec(new LinearShardSpec(0))
-                                               .size(0)
-                                               .build();
-
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-
-    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-
-    TransformSpec transformSpec = new TransformSpec(
-        null,
-        ImmutableList.of(
-            new ExpressionTransform(
-                "nested",
-                "json_object('long1', long1, 'nesteder', json_object('string1', string1, 'long2', long2, 'double3',double3, 'string5', string5))",
-                TestExprMacroTable.INSTANCE
-            )
-        )
-    );
-
-
-
-    StringEncodingStrategy encodingStrategy;
-    if (stringEncoding.startsWith("front-coded")) {
-      String[] split = stringEncoding.split("-");
-      int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
-    } else {
-      encodingStrategy = new StringEncodingStrategy.Utf8();
-    }
-    final QueryableIndex index;
-    if ("auto".equals(schema)) {
-      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
-                                                      .getDimensions()
-                                                      .stream()
-                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                                      .collect(Collectors.toList());
-      index = segmentGenerator.generate(
-          dataSegment,
-          schemaInfo,
-          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
-          TransformSpec.NONE,
-          IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
-          Granularities.NONE,
-          rowsPerSegment
-      );
-    } else {
-      Iterable<DimensionSchema> columnSchemas = Iterables.concat(
-          schemaInfo.getDimensionsSpec().getDimensions(),
-          Collections.singletonList(new AutoTypeColumnSchema("nested", null))
-      );
-      index = segmentGenerator.generate(
-          dataSegment,
-          schemaInfo,
-          DimensionsSpec.builder().setDimensions(ImmutableList.copyOf(columnSchemas.iterator())).build(),
-          TransformSpec.NONE,
-          IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
-          Granularities.NONE,
-          rowsPerSegment
-      );
-    }
-
-    final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
-        closer,
-        PROCESSING_CONFIG
-    );
-
-    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
-        dataSegment,
-        index
-    );
-    closer.register(walker);
-
-    final DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
-    plannerFactory = new PlannerFactory(
-        rootSchema,
-        CalciteTests.createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
-        plannerConfig,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
-    );
-
-    try {
-      SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
-          plannerFactory,
-          QUERIES.get(Integer.parseInt(query))
-      );
-    }
-    catch (Throwable ex) {
-      log.warn(ex, "failed to sanity check");
-    }
-
-    final String sql = QUERIES.get(Integer.parseInt(query));
-    final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] planResult = resultSequence.toList().get(0);
-      log.info("Native query plan:\n" +
-               jsonMapper.writerWithDefaultPrettyPrinter()
-                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
-      );
-    }
-    catch (JsonMappingException e) {
-      throw new RuntimeException(e);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Yielder<Object[]> yielder = Yielders.each(resultSequence);
-      int rowCounter = 0;
-      while (!yielder.isDone()) {
-        rowCounter++;
-        yielder.next(yielder.get());
-      }
-      log.info("Total result row count:" + rowCounter);
-    }
-    catch (Throwable ex) {
-      log.warn(ex, "failed to count rows");
-    }
+    return QUERIES.get(Integer.parseInt(query));
   }
 
-  @TearDown(Level.Trial)
-  public void tearDown() throws Exception
+  @Override
+  public List<String> getDatasources()
   {
-    closer.close();
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole)
-  {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
-    );
-    final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
-      blackhole.consume(lastRow);
-    }
+    return ImmutableList.of(SqlBenchmarkDatasets.NESTED);
   }
 }

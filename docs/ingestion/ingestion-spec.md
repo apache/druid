@@ -232,7 +232,7 @@ A `dimensionsSpec` can have the following components:
 | `spatialDimensions`    | An array of [spatial dimensions](../querying/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
 | `includeAllDimensions` | Note that this field only applies to string-based schema discovery where Druid ingests dimensions it discovers as strings. This is different from schema auto-discovery where Druid infers the type for data. You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in the order that you specify them, and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.md#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
 | `useSchemaDiscovery` | Configure Druid to use schema auto-discovery to discover some or all of the dimensions and types for your data. For any dimensions that aren't a uniform type, Druid ingests them as JSON. You can use this for native batch or streaming ingestion.  | false  | 
-
+| `forceSegmentSortByTime` | When set to true (the default), segments created by the ingestion job are sorted by `{__time, dimensions[0], dimensions[1], ...}`. When set to false, segments created by the ingestion job are sorted by `{dimensions[0], dimensions[1], ...}`. To include `__time` in the sort order when this parameter is set to `false`, you must include a dimension named `__time` with type `long` explicitly in the `dimensions` list.<br /><br />Setting this to `false` is an experimental feature; see [Sorting](partitioning.md#sorting) for details. | `true` |
 
 #### Dimension objects
 
@@ -243,7 +243,7 @@ Dimension objects can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Either `auto`, `string`, `long`, `float`, `double`, or `json`. For the `auto` type, Druid determines the most appropriate type for the dimension and assigns one of the following: STRING, ARRAY<STRING\>, LONG, ARRAY<LONG\>, DOUBLE, ARRAY<DOUBLE\>, or COMPLEX<json\> columns, all sharing a common 'nested' format. When Druid infers the schema with schema auto-discovery, the type is `auto`. | `string` |
+| type | Either `auto`, `string`, `long`, `float`, `double`, or `json`. For the `auto` type, Druid determines the most appropriate type for the dimension and assigns one of the following: STRING, ARRAY\<String\>, LONG, ARRAY\<LONG\>, DOUBLE, ARRAY\<DOUBLE\>, or COMPLEX\<json\> columns, all sharing a common 'nested' format. When Druid infers the schema with schema auto-discovery, the type is `auto`. | `string` |
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
 | multiValueHandling | For `string` typed dimensions, specifies the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `array` (ingest string arrays as-is), `sorted_array` (sort string arrays during ingestion), and `sorted_set` (sort and de-duplicate string arrays during ingestion). This parameter is ignored for types other than `string`. | `sorted_array` |
@@ -301,15 +301,15 @@ An example `metricsSpec` is:
 
 ### `granularitySpec`
 
-The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
-the following operations:
+The `granularitySpec`, located in `dataSchema` → `granularitySpec`, specifies the following:
 
-1. Partitioning a datasource into [time chunks](../design/storage.md) (via `segmentGranularity`).
-2. Truncating the timestamp, if desired (via `queryGranularity`).
-3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
-4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
+1. `segmentGranularity` to partitioning a datasource into [time chunks](../design/storage.md).
+2. `queryGranularity` to optionally truncate the timestamp.
+3. `intervals` to define the time chunks of segments to create for batch ingestion.
+4.  `rollup` to enable ingestion-time [rollup](./rollup.md) or not.
 
 Other than `rollup`, these operations are all based on the [primary timestamp](./schema-model.md#primary-timestamp).
+Use the format from [Query granularities] to specify both `segmentGranualarity` and `queryGranularity`.
 
 An example `granularitySpec` is:
 
@@ -520,6 +520,7 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 |stringDictionaryEncoding|Encoding format for string value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
 |metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
 |longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
+|complexMetricCompression|Compression format for complex type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31, and only applies to complex metrics which do not have specialized column formats.|`uncompressed`|
 |jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
 #### Front coding
@@ -542,7 +543,7 @@ You can use front coding with all types of ingestion.
 Before you enable front coding for your cluster, review the [Migration guide for front-coded dictionaries](../release-info/migr-front-coded-dict.md).
 It contains important information about compatibility with Druid versions preceding 25.0.0.
 
-To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded` in the `tuningConfig` object of your [ingestion spec](../ingestion/ingestion-spec.md).
+To enable front coding, set `indexSpec.stringDictionaryEncoding.type` to `frontCoded` in the `tuningConfig` object of your ingestion spec.
 
 You can specify the following optional properties:
 

@@ -27,9 +27,8 @@ Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data 
 your source system and stores it in data files called [_segments_](../design/segments.md).
 In general, segment files contain a few million rows each.
 
-For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the
-[Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
-uses a Hadoop MapReduce job on YARN.
+For most ingestion methods, the Druid [Middle Manager](../design/middlemanager.md) processes or the
+[Indexer](../design/indexer.md) processes load your source data. 
 
 During ingestion, Druid creates segments and stores them in [deep storage](../design/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. For more information, see [Storage overview](../design/storage.md).
 
@@ -66,16 +65,16 @@ supervisor.
 There are three available options for batch ingestion. Batch ingestion jobs are associated with a controller task that
 runs for the duration of the job.
 
-| **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based](hadoop.md) |
+| **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based (deprecated)](hadoop.md) |
 |---|-----|--------------|------------|
 | **Controller task type** | `index_parallel` | `query_controller` | `index_hadoop` |
-| **How you submit it** | Send an `index_parallel` spec to the [Tasks API](../api-reference/tasks-api.md). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../api-reference/sql-ingestion-api.md#submit-a-query). | Send an `index_hadoop` spec to the [Tasks API](../api-reference/tasks-api.md). |
+| **How you submit it** | Send an `index_parallel` spec to the [Tasks API](../api-reference/tasks-api.md). | Send an [INSERT](../multi-stage-query/concepts.md#load-data-with-insert) or [REPLACE](../multi-stage-query/concepts.md#overwrite-data-with-replace) statement to the [SQL task API](../api-reference/sql-ingestion-api.md#submit-a-query). | Send an `index_hadoop` spec to the [Tasks API](../api-reference/tasks-api.md). |
 | **Parallelism** | Using subtasks, if [`maxNumConcurrentSubTasks`](native-batch.md#tuningconfig) is greater than 1. | Using `query_worker` subtasks. | Using YARN. |
 | **Fault tolerance** | Workers automatically relaunched upon failure. Controller task failure leads to job failure. | Controller or worker task failure leads to job failure. | YARN containers automatically relaunched upon failure. Controller task failure leads to job failure. |
 | **Can append?** | Yes. | Yes (INSERT). | No. |
 | **Can overwrite?** | Yes. | Yes (REPLACE). | Yes. |
 | **External dependencies** | None. | None. | Hadoop cluster. |
-| **Input sources** | Any [`inputSource`](./input-sources.md). | Any [`inputSource`](./input-sources.md) (using [EXTERN](../multi-stage-query/concepts.md#extern)) or Druid datasource (using FROM). | Any Hadoop FileSystem or Druid datasource. |
+| **Input sources** | Any [`inputSource`](./input-sources.md). | Any [`inputSource`](./input-sources.md) (using [EXTERN](../multi-stage-query/concepts.md#write-to-an-external-destination-with-extern)) or Druid datasource (using FROM). | Any Hadoop FileSystem or Druid datasource. |
 | **Input formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. |
 | **Secondary partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Range partitioning ([CLUSTERED BY](../multi-stage-query/concepts.md#clustering)). |  Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
 | **[Rollup modes](./rollup.md#perfect-rollup-vs-best-effort-rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Always perfect. |

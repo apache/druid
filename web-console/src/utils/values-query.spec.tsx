@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { QueryResult, sane } from '@druid-toolkit/query';
+import { QueryResult, sane } from 'druid-query-toolkit';
 
 import { queryResultToValuesQuery } from './values-query';
 
@@ -45,6 +45,7 @@ describe('queryResultToValuesQuery', () => {
           [2, 3],
           null,
         ],
+        [null, null, null, null, null, null, null],
       ],
       false,
       true,
@@ -64,7 +65,8 @@ describe('queryResultToValuesQuery', () => {
       FROM (
         VALUES
         ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '{"type":"sys","swap/free":1223334,"swap/max":3223334}', 'es<#>es-419', '1', NULL),
-        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '{"type":"query","time":1223,"bytes":2434234}', 'en<#>es<#>es-419', '2<#>3', NULL)
+        ('2022-02-01T00:00:00.000Z', 'brokerA.internal', 'broker', '{"type":"query","time":1223,"bytes":2434234}', 'en<#>es<#>es-419', '2<#>3', NULL),
+        (NULL, NULL, NULL, NULL, NULL, NULL, NULL)
       ) AS "t" ("c1", "c2", "c3", "c4", "c5", "c6", "c7")
     `);
   });

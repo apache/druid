@@ -85,6 +85,10 @@ public class DefaultObjectMapper extends ObjectMapper
     // closed after an exception is thrown while writing.
     configure(JsonGenerator.Feature.AUTO_CLOSE_JSON_CONTENT, false);
 
+    // Bumping Jakarta version to 2.18.4 as part of https://github.com/apache/druid/pull/18013/ seems to fix IGNORE_DUPLICATE_MODULE_REGISTRATIONS.
+    // Disabling this feature in case multiple modules are registered with the same name.
+    configure(MapperFeature.IGNORE_DUPLICATE_MODULE_REGISTRATIONS, false);
+
     addHandler(new DefaultDeserializationProblemHandler(serviceName));
   }
 

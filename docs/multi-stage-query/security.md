@@ -23,12 +23,6 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
 All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
 extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
 Druid datasources or external data. The permission needed depends on what the user is trying to do.
@@ -62,7 +56,7 @@ Depending on what a user is trying to do, they might also need the following per
 
 ## Permissions for durable storage
 
-The MSQ task engine can use Amazon S3 or Azure Blog Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
+The MSQ task engine can use Amazon S3 or Azure Blob Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
 
 ### S3
 
@@ -81,3 +75,6 @@ The MSQ task engine needs the following permissions for pushing, fetching, and r
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
+
+<!--TBD GCS-->
+

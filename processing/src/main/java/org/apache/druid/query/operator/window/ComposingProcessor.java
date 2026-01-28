@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class ComposingProcessor implements Processor
 {
@@ -35,6 +37,16 @@ public class ComposingProcessor implements Processor
   )
   {
     this.processors = processors;
+  }
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    List<String> outputColumnNames = new ArrayList<>();
+    for (Processor processor : processors) {
+      outputColumnNames.addAll(processor.getOutputColumnNames());
+    }
+    return outputColumnNames;
   }
 
   @JsonProperty("processors")

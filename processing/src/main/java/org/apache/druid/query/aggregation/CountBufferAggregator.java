@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-
 import java.nio.ByteBuffer;
 
 /**
@@ -71,9 +69,4 @@ public class CountBufferAggregator implements BufferAggregator
     // no resources to cleanup
   }
 
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
 }

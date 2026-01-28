@@ -91,7 +91,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final BasicAuthorizerCacheNotifier cacheNotifier;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
-  private final int numRetries = 5;
+  private static final int numRetries = 5;
 
   private final Map<String, BasicAuthorizerUserMapBundle> cachedUserMaps;
   private final Map<String, BasicAuthorizerGroupMappingMapBundle> cachedGroupMappingMaps;

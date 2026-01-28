@@ -21,12 +21,13 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.opentest4j.IncompleteExecutionException;
+
+import javax.annotation.Nullable;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -43,7 +44,10 @@ import static org.junit.Assert.assertThrows;
  *
  * In case a testcase marked with this annotation fails - it means that the
  * testcase no longer fails with the annotated expectation. This means that a
- * code change affected this test either
+ * code change affected this test either.
+ *
+ * Each reason must belong to a {@link Scope}; for which the
+ * {@link NotYetSupportedProcessor} be enable to be supressed.
  *
  * <ol>
  * <li>it suddenly passes: yay, assuming it makes sense that it suddenly passes,
@@ -53,15 +57,14 @@ import static org.junit.Assert.assertThrows;
  * expected error.</li>
  * </ol>
  *
- * During usage; the annotation process have to be added to registered with the testclass.
- * Ensure that it's loaded as the most outer-rule by using the right ExtendWith order - or by
- * specifying Order:
- * <code>
- *   @Order(0)
+ * During usage; the annotation process have to be added to registered with the
+ * testclass. Ensure that it's loaded as the most outer-rule by using the right
+ * ExtendWith order - or by specifying Order: <code>
+ *   &#64;Order(0)
  *   @RegisterExtension
- *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor();
+ *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor(Scope.DECOUPLED);
  *
- *   @NotYetSupported(NOT_ENOUGH_RULES)
+ *   &#64;NotYetSupported(NOT_ENOUGH_RULES)
  *   &#64;Test
  *   public void testA() {
  *   }
@@ -72,48 +75,76 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface NotYetSupported
 {
-  Modes value();
+  Modes[] value();
+
+  enum Scope
+  {
+    WINDOWING,
+    DECOUPLED,
+    DECOUPLED_DART,
+    BINDABLE,
+  }
 
   enum Modes
   {
     // @formatter:off
-    NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-    ERROR_HANDLING(AssertionError.class, "targetPersona: is <[A-Z]+> and category: is <[A-Z_]+> and errorCode: is"),
-    EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
-    COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
-    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
-    BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
-    ALLDATA_CSV(DruidException.class, "allData.csv"),
-    BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
-    INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
-    RESULT_MISMATCH(AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
-    LONG_CASTING(AssertionError.class, "expected: java.lang.Long"),
-    UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    WINDOW_OPERATOR_QUERY_ON_UNSUPPORTED_DATASOURCE(DruidException.class, "WindowOperatorQuery must run on top of a query or inline data source"),
-    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
-    UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
-    JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
-    JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type"),
-    JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
-    CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
-    SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
-    STACK_OVERFLOW(StackOverflowError.class, ""),
-    CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key");
+    DISTINCT_AGGREGATE_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "DISTINCT is not supported"),
+    NULLS_FIRST_LAST(Scope.WINDOWING, DruidException.class, "NULLS (FIRST|LAST)"),
+    BIGINT_TO_DATE(Scope.WINDOWING, DruidException.class, "BIGINT to type (DATE|TIME)"),
+    AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
+    ALLDATA_CSV(Scope.WINDOWING, DruidException.class, "allData.csv"),
+    BIGINT_TIME_COMPARE(Scope.WINDOWING, DruidException.class, "Cannot apply '.' to arguments of type"),
+    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
+    RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
+    LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
+    UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
+
+    EXPRESSION_NOT_GROUPED(Scope.BINDABLE, DruidException.class, "Expression '[a-z]+' is not being grouped"),
+
+    NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
+    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
+    UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+
+    DD_RESTRICTED_DATASOURCE_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "ForbiddenException: Unauthorized"),
+    DD_RESTRICTED_DATASOURCE_SUPPORT2(Scope.DECOUPLED_DART, AssertionError.class, "Unauthorized"),
+    DD_INCORRECT_RESULTS_EMPTY_STRING(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch at"),
+    NO_INFORMATION_SCHEMA_SUPPORT(Scope.DECOUPLED_DART, DruidException.class, "INFORMATION_SCHEMA"),
+    DD_NULL_COLUMN_ORDER(Scope.DECOUPLED_DART, DruidException.class, "sort: \\[\\] -> \\[1\\]"),
+    DD_UNION(Scope.DECOUPLED_DART, DruidException.class, "DruidUnion.DRUID_LOGICAL"),
+    DD_WINDOW(Scope.DECOUPLED_DART, DruidException.class, "DruidWindow.DRUID_LOGICAL"),
+    DD_UNNEST_RESULT_MISMATCH(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
+    DD_SORT_REMOVE_TROUBLE(Scope.DECOUPLED_DART, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
+    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch");
     // @formatter:on
 
+    public Scope scope;
     public Class<? extends Throwable> throwableClass;
     public String regex;
 
-    Modes(Class<? extends Throwable> cl, String regex)
+    Modes(Scope scope, Class<? extends Throwable> cl, String regex)
     {
+      this.scope = scope;
       this.throwableClass = cl;
       this.regex = regex;
+    }
+
+    Modes(Class<? extends Throwable> cl, String regex)
+    {
+      this(Scope.DECOUPLED, cl, regex);
     }
 
     Pattern getPattern()
     {
       return Pattern.compile(regex, Pattern.MULTILINE | Pattern.DOTALL);
+    }
+
+    @Override
+    public String toString()
+    {
+      return name() + "{" + regex + "}";
     }
   };
 
@@ -125,6 +156,13 @@ public @interface NotYetSupported
    */
   class NotYetSupportedProcessor implements InvocationInterceptor
   {
+    private final Scope scope;
+
+    public NotYetSupportedProcessor(Scope scope)
+    {
+      this.scope = scope;
+    }
+
     @Override
     public void interceptTestMethod(Invocation<Void> invocation,
         ReflectiveInvocationContext<Method> invocationContext,
@@ -132,14 +170,15 @@ public @interface NotYetSupported
     {
       Method method = extensionContext.getTestMethod().get();
       NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
+      Modes ignoreMode = getModeForScope(annotation);
 
-      if (annotation == null) {
+
+      if (ignoreMode == null) {
         invocation.proceed();
         return;
       }
       {
         {
-          Modes ignoreMode = annotation.value();
           Throwable e = null;
           try {
             invocation.proceed();
@@ -167,14 +206,28 @@ public @interface NotYetSupported
           );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.value().getPattern().matcher(trace);
+          Matcher m = ignoreMode.getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
+            throw new AssertionError("Exception stacktrace doesn't match regex: " + ignoreMode.regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
       }
+    }
+
+    private Modes getModeForScope(@Nullable NotYetSupported annotation)
+    {
+      if (annotation == null) {
+        return null;
+      }
+      for (Modes mode : annotation.value()) {
+        if (mode.scope == scope) {
+          return mode;
+        }
+
+      }
+      return null;
     }
 
     @Override

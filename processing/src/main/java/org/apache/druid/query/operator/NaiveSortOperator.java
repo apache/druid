@@ -31,18 +31,14 @@ import java.util.List;
  * that it has to accumulate all of the data of its child operator first before it can sort.  This limitation
  * means that hopefully this operator is only planned in a very small number of circumstances.
  */
-public class NaiveSortOperator implements Operator
+public class NaiveSortOperator extends AbstractSortOperator
 {
-  private final Operator child;
-  private final List<ColumnWithDirection> sortColumns;
-
   public NaiveSortOperator(
       Operator child,
       List<ColumnWithDirection> sortColumns
   )
   {
-    this.child = child;
-    this.sortColumns = sortColumns;
+    super(child, sortColumns);
   }
 
   @Override

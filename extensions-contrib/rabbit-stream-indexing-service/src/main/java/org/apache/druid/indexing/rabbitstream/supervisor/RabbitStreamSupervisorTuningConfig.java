@@ -34,8 +34,6 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
     implements SeekableStreamSupervisorTuningConfig
 {
   private final Integer workerThreads;
-  private final Boolean chatAsync;
-  private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
@@ -44,7 +42,6 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   public static RabbitStreamSupervisorTuningConfig defaultConfig()
   {
     return new RabbitStreamSupervisorTuningConfig(
-        null,
         null,
         null,
         null,
@@ -92,8 +89,6 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
-      @JsonProperty("chatAsync") Boolean chatAsync,
-      @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
       @JsonProperty("shutdownTimeout") Period shutdownTimeout,
@@ -105,7 +100,9 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll)
+      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+  )
   {
     super(
         appendableIndexSpec,
@@ -130,11 +127,10 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         numPersistThreads,
         recordBufferSize,
         recordBufferOfferTimeout,
-        maxRecordsPerPoll
+        maxRecordsPerPoll,
+        maxColumnsToMerge
     );
     this.workerThreads = workerThreads;
-    this.chatAsync = chatAsync;
-    this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
     this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
     this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(
@@ -206,7 +202,6 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
         ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
         ", workerThreads=" + workerThreads +
-        ", chatThreads=" + chatThreads +
         ", chatRetries=" + chatRetries +
         ", httpTimeout=" + httpTimeout +
         ", shutdownTimeout=" + shutdownTimeout +
@@ -219,6 +214,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
         ", numPersistThreads=" + getNumPersistThreads() +
         ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
+        ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
         '}';
   }
 
@@ -248,7 +244,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
-        getNumPersistThreads()
+        getNumPersistThreads(),
+        getMaxColumnsToMerge()
         );
   }
 }

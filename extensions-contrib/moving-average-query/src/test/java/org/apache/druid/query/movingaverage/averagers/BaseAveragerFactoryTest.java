@@ -33,7 +33,7 @@ public class BaseAveragerFactoryTest
   @Before
   public void setup()
   {
-    fac = new BaseAveragerFactory<Long, Long>("test", 5, "field", 1)
+    fac = new BaseAveragerFactory<>("test", 5, "field", 1)
     {
       @Override
       public Averager<Long> createAverager()

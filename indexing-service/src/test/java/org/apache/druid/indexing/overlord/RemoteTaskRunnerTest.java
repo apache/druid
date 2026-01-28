@@ -32,6 +32,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -47,6 +48,8 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceActio
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -58,6 +61,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
+import org.apache.zookeeper.Watcher;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -79,6 +83,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -153,6 +158,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
     Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
 
 
@@ -389,7 +395,7 @@ public class RemoteTaskRunnerTest
   public void testStatusRemoved() throws Exception
   {
     doSetup();
-
+    CountDownLatch deletionLatch = new CountDownLatch(1);
     ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
@@ -398,7 +404,16 @@ public class RemoteTaskRunnerTest
 
     Assert.assertTrue(remoteTaskRunner.getRunningTasks().iterator().next().getTaskId().equals(task.getId()));
 
-    cf.delete().forPath(JOINER.join(STATUS_PATH, task.getId()));
+    String taskStatusPath = JOINER.join(STATUS_PATH, task.getId());
+    cf.checkExists().usingWatcher((CuratorWatcher) event -> {
+      if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
+        deletionLatch.countDown();
+      }
+    }).forPath(taskStatusPath);
+
+    cf.delete().forPath(taskStatusPath);
+
+    Assert.assertTrue("Deletion event not received", deletionLatch.await(5, TimeUnit.SECONDS));
 
     TaskStatus status = future.get();
 
@@ -451,7 +466,7 @@ public class RemoteTaskRunnerTest
     final Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
             remoteTaskRunner.getRunningTasks(),
-            new Function<RemoteTaskRunnerWorkItem, String>()
+            new Function<>()
             {
               @Override
               public String apply(RemoteTaskRunnerWorkItem input)
@@ -608,6 +623,46 @@ public class RemoteTaskRunnerTest
     );
   }
 
+  @Test
+  public void testGetMaximumCapacity_noWorkerConfig()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        null
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_noAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null, null), null)
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_withAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        DefaultWorkerBehaviorConfig.defaultConfig()
+    );
+    // Default autoscaler has max workers of 0
+    Assert.assertEquals(0, remoteTaskRunner.getMaximumCapacityWithAutoscale());
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();
@@ -678,7 +733,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -699,7 +754,7 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -718,7 +773,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -739,7 +794,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ImmutableWorkerInfo>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableWorkerInfo input)
@@ -1073,7 +1128,7 @@ public class RemoteTaskRunnerTest
     EasyMock.expect(worker.getHost()).andReturn("host").atLeastOnce();
     EasyMock.replay(worker);
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
-    Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
+    Capture<EmittingLogger.LoggingAlertBuilder> capturedArgument = Capture.newInstance();
     emitter.emit(EasyMock.capture(capturedArgument));
     EasyMock.expectLastCall().atLeastOnce();
     EmittingLogger.registerEmitter(emitter);

@@ -31,9 +31,9 @@ This module can be used side to side with other lookup module like the global ca
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
 :::info
- If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+To use JDBC, you must add your database client JAR files to the extension's directory.
  For Postgres, the connector JAR is already included.
- See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#install-mysql-connectorj) or [MariaDB](./mysql.md#install-mariadb-connectorj) connector libraries.
  Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
 :::
 
@@ -81,10 +81,22 @@ This example demonstrates a polling cache that will update its on-heap cache eve
 
 ```json
 {
-    "type":"pollingLookup",
-   "pollPeriod":"PT10M",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "cacheFactory":{"type":"onHeapPolling"}
+    "type": "pollingLookup",
+    "pollPeriod": "PT10M",
+    "dataFetcher": {
+       "type": "jdbcDataFetcher",
+       "connectorConfig": {
+          "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+          "user": "druid",
+          "password": "druid"
+       },
+       "table": "lookup_table_name",
+       "keyColumn": "key_column_name",
+       "valueColumn": "value_column_name"
+    },
+    "cacheFactory": {
+       "type": "onHeapPolling"
+    }
 }
 
 ```
@@ -94,9 +106,21 @@ This example demonstrates an off-heap lookup that will be cached once and never 
 
 ```json
 {
-    "type":"pollingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "cacheFactory":{"type":"offHeapPolling"}
+   "type": "pollingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "cacheFactory": {
+      "type": "offHeapPolling"
+   }
 }
 
 ```
@@ -125,10 +149,27 @@ Guava cache configuration spec.
 
 ```json
 {
-   "type":"loadingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "loadingCacheSpec":{"type":"guava"},
-   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterWrite":10000}
+   "type": "loadingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "loadingCacheSpec": {
+      "type": "guava"
+   },
+   "reverseLoadingCacheSpec": {
+      "type": "guava",
+      "maximumSize": 500000,
+      "expireAfterAccess": 100000,
+      "expireAfterWrite": 10000
+   }
 }
 ```
 
@@ -146,10 +187,28 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 ```json
 {
-   "type":"loadingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "loadingCacheSpec":{"type":"mapDb", "maxEntriesSize":100000},
-   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterWrite":10000}
+   "type": "loadingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "loadingCacheSpec": {
+      "type": "mapDb",
+      "maxEntriesSize": 100000
+   },
+   "reverseLoadingCacheSpec": {
+      "type": "mapDb",
+      "maxStoreSize": 5,
+      "expireAfterAccess": 100000,
+      "expireAfterWrite": 10000
+   }
 }
 ```
 

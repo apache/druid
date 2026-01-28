@@ -30,19 +30,13 @@ public class LockListAction implements TaskAction<List<TaskLock>>
   @Override
   public TypeReference<List<TaskLock>> getReturnTypeReference()
   {
-    return new TypeReference<List<TaskLock>>() {};
+    return new TypeReference<>() {};
   }
 
   @Override
   public List<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getTaskLockbox().findLocksForTask(task);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

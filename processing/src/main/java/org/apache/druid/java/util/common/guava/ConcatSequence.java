@@ -50,7 +50,7 @@ public class ConcatSequence<T> implements Sequence<T>
   {
     Yielder<Sequence<T>> yielderYielder = baseSequences.toYielder(
         null,
-        new YieldingAccumulator<Sequence<T>, Sequence<T>>()
+        new YieldingAccumulator<>()
         {
           @Override
           public Sequence<T> accumulate(Sequence<T> accumulated, Sequence<T> in)
@@ -119,7 +119,7 @@ public class ConcatSequence<T> implements Sequence<T>
       return makeYielder(yielderYielder.next(null), nextInit, accumulator);
     }
 
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

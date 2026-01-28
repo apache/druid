@@ -20,11 +20,12 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -81,6 +82,10 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
   private boolean isClosed = false;
   private boolean hasNulls = false;
 
+  private int readCachedBucket = -1;
+  @Nullable
+  private ByteBuffer readBufferCache = null;
+
   public FrontCodedIntArrayIndexedWriter(
       SegmentWriteOutMedium segmentWriteOutMedium,
       ByteOrder byteOrder,
@@ -107,7 +112,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
   }
 
   @Override
-  public void write(@Nullable int[] value) throws IOException
+  public int write(@Nullable int[] value) throws IOException
   {
 
     if (prevObject != null && ARRAY_COMPARATOR.compare(prevObject, value) >= 0) {
@@ -120,8 +125,11 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
     }
 
     if (value == null) {
+      if (numWritten != 0) {
+        throw DruidException.defensive("Null must come first, got it at numWritten[%,d]!=0", numWritten);
+      }
       hasNulls = true;
-      return;
+      return 0;
     }
 
     // if the bucket buffer is full, write the bucket
@@ -147,8 +155,9 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
 
     bucketBuffer[numWritten % bucketSize] = value;
 
-    ++numWritten;
+    int retVal = numWritten++;
     prevObject = value;
+    return retVal + (hasNulls ? 1 : 0);
   }
 
 
@@ -168,7 +177,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     if (!isClosed) {
       flush();
@@ -177,7 +186,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
     // version 0
     scratch.put((byte) 0);
     scratch.put((byte) bucketSize);
-    scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
+    scratch.put(hasNulls ? TypeStrategies.IS_NULL_BYTE : TypeStrategies.IS_NOT_NULL_BYTE);
     VByte.writeInt(scratch, numWritten);
     VByte.writeInt(scratch, Ints.checkedCast(headerOut.size() + valuesOut.size()));
     scratch.flip();
@@ -206,6 +215,11 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
       return bucketBuffer[relativeIndex];
     } else {
       final int bucket = adjustedIndex >> div;
+      if (readCachedBucket == bucket) {
+        readBufferCache.position(0);
+        return getFromBucket(readBufferCache, relativeIndex);
+      }
+
       long startOffset;
       if (bucket == 0) {
         startOffset = 0;
@@ -217,10 +231,17 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
       if (currentBucketSize == 0) {
         return null;
       }
-      final ByteBuffer bucketBuffer = ByteBuffer.allocate(currentBucketSize).order(byteOrder);
-      valuesOut.readFully(startOffset, bucketBuffer);
-      bucketBuffer.clear();
-      return getFromBucket(bucketBuffer, relativeIndex);
+      if (readBufferCache == null || readBufferCache.capacity() < currentBucketSize) {
+        readBufferCache = ByteBuffer.allocate(currentBucketSize).order(byteOrder);
+      }
+      readBufferCache.clear();
+      readBufferCache.limit(currentBucketSize);
+      valuesOut.readFully(startOffset, readBufferCache);
+
+      readCachedBucket = bucket;
+
+      readBufferCache.position(0);
+      return getFromBucket(readBufferCache, relativeIndex);
     }
   }
 

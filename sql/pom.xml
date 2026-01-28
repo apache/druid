@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -86,6 +86,11 @@
           <groupId>org.eclipse.jetty</groupId>
           <artifactId>jetty-http</artifactId>
         </exclusion>
+        <exclusion>
+          <!-- javax.servlet.* will be provided as core dependncy in this module -->
+          <groupId>javax.servlet</groupId>
+          <artifactId>javax.servlet-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -100,6 +105,19 @@
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-io</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
@@ -128,10 +146,7 @@
       <groupId>com.opencsv</groupId>
       <artifactId>opencsv</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.google.inject.extensions</groupId>
-      <artifactId>guice-multibindings</artifactId>
-    </dependency>
+
     <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>jsr311-api</artifactId>
@@ -165,9 +180,16 @@
       <artifactId>avatica-metrics</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
-      <version>${checkerframework.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -184,6 +206,10 @@
       <groupId>org.immutables</groupId>
       <artifactId>value-annotations</artifactId>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
     </dependency>
 
     <!-- Tests -->
@@ -239,11 +265,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>pl.pragmatists</groupId>
       <artifactId>JUnitParams</artifactId>
       <scope>test</scope>
@@ -269,11 +290,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
@@ -289,7 +305,7 @@
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -333,8 +349,8 @@
         </executions>
       </plugin>
 
-      <!-- Following plugins and their configurations are used to generate the custom Calcite's SQL parser for Druid -->
-      <!-- Extracts the Parser.jj from Calcite to ${project.build.directory}, where all the Freemarker templates are -->
+      <!-- Extracts the base parser from the calcite-core artifcat. -->
+      <!-- This is provided to have the base available - to compare changes to -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -353,17 +369,8 @@
                   <version>${calcite.version}</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/</outputDirectory>
-                  <includes>**/Parser.jj</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.apache.calcite</groupId>
-                  <artifactId>calcite-core</artifactId>
-                  <version>${calcite.version}</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <outputDirectory>${project.build.directory}/</outputDirectory>
-                  <includes>**/default_config.fmpp</includes>
+                  <outputDirectory>${project.build.directory}/calcite-base-parser</outputDirectory>
+                  <includes>codegen/**</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
@@ -371,32 +378,7 @@
         </executions>
       </plugin>
 
-      <!-- Copy the templates present in the codegen directory of druid-sql containing custom SQL rules to
-        ${project.build.directory}/codegen -->
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-fmpp-resources</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/codegen</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>src/main/codegen</directory>
-                  <filtering>false</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- "Plugs in" the Calcite's Parser.jj with the variables present in config.fmpp. These contain the custom rules
-        as well as the class to which the custom implementation will get generated -->
+      <!-- Applies the fmpp templates to produce the final Parser.jj -->
       <plugin>
         <groupId>com.googlecode.fmpp-maven-plugin</groupId>
         <artifactId>fmpp-maven-plugin</artifactId>
@@ -408,9 +390,9 @@
               <goal>generate</goal>
             </goals>
             <configuration>
-              <cfgFile>${project.build.directory}/codegen/config.fmpp</cfgFile>
+              <cfgFile>src/main/codegen/config.fmpp</cfgFile>
               <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-              <templateDirectory>${project.build.directory}/codegen/templates</templateDirectory>
+              <templateDirectory>src/main/codegen/templates</templateDirectory>
             </configuration>
           </execution>
         </executions>
@@ -438,38 +420,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-
-      <!-- This plugin is used to replace the production rule for FROM clause in the calcite grammar.
-           It is done by a search and replace since calcite doesn't allow to override production rules generally
-           in its grammar (override is possible only if there's a hook for it in the grammar). And the FROM clause
-           doesn't contain any hook for extension. For the custom changes done in
-           extension, please check from.ftl file in sql module.
-      -->
-      <plugin>
-        <groupId>com.google.code.maven-replacer-plugin</groupId>
-        <artifactId>replacer</artifactId>
-        <version>1.5.3</version>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>replace</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <basedir>${project.build.directory}/generated-sources/org/apache/druid/sql/calcite/parser</basedir>
-          <includes>
-            <include>**/DruidSqlParserImpl.java</include>
-          </includes>
-          <replacements>
-            <replacement>
-              <token>fromClause = FromClause</token>
-              <value>fromClause = DruidFromClause</value>
-            </replacement>
-          </replacements>
-        </configuration>
       </plugin>
 
       <!-- Adds the path of the generated parser to the build path -->

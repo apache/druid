@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_empty) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_mixed) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(a_nested) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B8_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_parse(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'TIME_PARSE' to arguments of type 'TIME_PARSE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C1_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_bool, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C2_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[0]' RETURNING boolean array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C3_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][0]' RETURNING boolean array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C4_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_int, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C5_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[1]' RETURNING bigint array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C6_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][1]' RETURNING bigint array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C7_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_float, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C8_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[2]' RETURNING decimal array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C9_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][2]' RETURNING decimal array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C10_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_str, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C11_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[3]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C12_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][3]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C13_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_null, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C14_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[4]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C15_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][4]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C16_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_empty, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C17_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[5]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C18_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][5]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C19_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_mixed, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C20_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[6]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C21_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][6]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C22_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(a_nested, '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C23_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B9_C24_D1
+#-------------------------------------------------------------------------
+SELECT time_in_interval(json_value(a_nested, '$[7][7]' RETURNING varchar array), '2001-01-01/P1D') AS col
+FROM test_array;
+Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C1_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_bool) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C2_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C3_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C4_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_int) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C5_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C6_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C7_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_float) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C8_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C9_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C10_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_str) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C11_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C12_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C13_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_null) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C14_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C15_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A3_B10_C16_D1
+#-------------------------------------------------------------------------
+SELECT millis_to_timestamp(a_empty) AS col
+FROM test_array;
+Cannot apply 'MILLIS_TO_TIMESTAMP' to arguments of type 'MILLIS_TO_TIMESTAMP(
+!error
+

@@ -108,6 +108,7 @@ public class DoublesSketchComplexMetricSerdeTest
 
     ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
     ObjectStrategy<DoublesSketch> objectStrategy = serde.getObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
 
     // valid sketch should not explode when copied, which reads the memory
     objectStrategy.fromByteBufferSafe(buf, bytes.length).toByteArray(true);

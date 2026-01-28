@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { getApiArray, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
@@ -31,29 +30,32 @@ export interface DatasourcesCardProps {
 
 export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
-    processQuery: async capabilities => {
-      let datasources: any[];
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, signal) => {
+      let datasources: string[];
       if (capabilities.hasSql()) {
-        datasources = await queryDruidSql({
-          query: `SELECT datasource FROM sys.segments GROUP BY 1`,
-        });
+        datasources = await queryDruidSql(
+          {
+            query: `SELECT datasource FROM sys.segments GROUP BY 1`,
+            context: { engine: 'native' },
+          },
+          signal,
+        );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const datasourcesResp = await Api.instance.get('/druid/coordinator/v1/datasources');
-        datasources = datasourcesResp.data;
+        datasources = await getApiArray<string>('/druid/coordinator/v1/datasources', signal);
       } else {
         throw new Error(`must have SQL or coordinator access`);
       }
 
       return datasources.length;
     },
-    initQuery: props.capabilities,
   });
 
   return (
     <HomeViewCard
       className="datasources-card"
       href="#datasources"
-      icon={IconNames.MULTI_SELECT}
+      icon={getConsoleViewIcon('datasources')}
       title="Datasources"
       loading={datasourceCountState.loading}
       error={datasourceCountState.error}

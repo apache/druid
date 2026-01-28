@@ -20,7 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Inject;
-import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
@@ -36,9 +36,9 @@ public class CoordinatorOverlordRedirectInfo implements RedirectInfo
   private final CoordinatorRedirectInfo coordinatorRedirectInfo;
 
   @Inject
-  public CoordinatorOverlordRedirectInfo(TaskMaster taskMaster, DruidCoordinator druidCoordinator)
+  public CoordinatorOverlordRedirectInfo(DruidOverlord druidOverlord, DruidCoordinator druidCoordinator)
   {
-    this.overlordRedirectInfo = new OverlordRedirectInfo(taskMaster);
+    this.overlordRedirectInfo = new OverlordRedirectInfo(druidOverlord);
     this.coordinatorRedirectInfo = new CoordinatorRedirectInfo(druidCoordinator);
   }
 

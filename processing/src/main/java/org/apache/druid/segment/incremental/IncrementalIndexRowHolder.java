@@ -38,6 +38,7 @@ public class IncrementalIndexRowHolder implements LongColumnSelector
   @Nullable
   private IncrementalIndexRow currEntry = null;
 
+  @Nullable
   public IncrementalIndexRow get()
   {
     return currEntry;

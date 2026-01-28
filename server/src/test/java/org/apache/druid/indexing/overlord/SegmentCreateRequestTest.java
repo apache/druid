@@ -36,7 +36,6 @@ public class SegmentCreateRequestTest
         null,
         "version",
         partialShardSpec,
-        null,
         null
     );
     Assert.assertEquals("sequence", request.getSequenceName());

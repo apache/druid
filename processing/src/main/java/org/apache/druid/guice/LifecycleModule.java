@@ -138,7 +138,7 @@ public class LifecycleModule implements Module
   @Provides @LazySingleton
   public Lifecycle getLifecycle(final Injector injector)
   {
-    final Key<Set<KeyHolder>> keyHolderKey = Key.get(new TypeLiteral<Set<KeyHolder>>(){}, Names.named("lifecycle"));
+    final Key<Set<KeyHolder>> keyHolderKey = Key.get(new TypeLiteral<>() {}, Names.named("lifecycle"));
     final Set<KeyHolder> eagerClasses = injector.getInstance(keyHolderKey);
 
     Lifecycle lifecycle = new Lifecycle("module")

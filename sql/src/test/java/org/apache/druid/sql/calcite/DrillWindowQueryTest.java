@@ -22,46 +22,26 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Injector;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.apache.druid.sql.calcite.NotYetSupported.Scope;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.LocalTime;
 import org.junit.Assert;
@@ -72,7 +52,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,6 +66,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -96,6 +76,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -114,17 +95,8 @@ import static org.junit.Assert.fail;
 @SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @RegisterExtension
-  public DisableUnlessRule disableWhenNonSqlCompat = DisableUnless.SQL_COMPATIBLE;
-
-  @RegisterExtension
-  public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor();
+  public NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(Scope.WINDOWING);
 
   @RegisterExtension
   public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
@@ -132,8 +104,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void ensureAllDeclared() throws Exception
   {
+    assumeTrue(DrillWindowQueryTest.class.equals(getClass()));
+
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
+
 
     Set<String> allCases = FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
@@ -249,150 +224,19 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
     )
     {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-
-      attachIndex(
-          retVal,
-          "tblWnulls.parquet",
-          new LongDimensionSchema("c1"),
-          new StringDimensionSchema("c2"));
-
-      // {"col0":1,"col1":65534,"col2":256.0,"col3":1234.9,"col4":73578580,"col5":1393720082338,"col6":421185052800000,"col7":false,"col8":"CA","col9":"AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXZ"}
-      attachIndex(
-          retVal,
-          "allTypsUniq.parquet",
-          new LongDimensionSchema("col0"),
-          new LongDimensionSchema("col1"),
-          new DoubleDimensionSchema("col2"),
-          new DoubleDimensionSchema("col3"),
-          new LongDimensionSchema("col4"),
-          new LongDimensionSchema("col5"),
-          new LongDimensionSchema("col6"),
-          new StringDimensionSchema("col7"),
-          new StringDimensionSchema("col8"),
-          new StringDimensionSchema("col9"));
-      attachIndex(
-          retVal,
-          "smlTbl.parquet",
-          // "col_int": 8122,
-          new LongDimensionSchema("col_int"),
-          // "col_bgint": 817200,
-          new LongDimensionSchema("col_bgint"),
-          // "col_char_2": "IN",
-          new StringDimensionSchema("col_char_2"),
-          // "col_vchar_52":
-          // "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
-          new StringDimensionSchema("col_vchar_52"),
-          // "col_tmstmp": 1409617682418,
-          new LongDimensionSchema("col_tmstmp"),
-          // "col_dt": 422717616000000,
-          new LongDimensionSchema("col_dt"),
-          // "col_booln": false,
-          new StringDimensionSchema("col_booln"),
-          // "col_dbl": 12900.48,
-          new DoubleDimensionSchema("col_dbl"),
-          // "col_tm": 33109170
-          new LongDimensionSchema("col_tm"));
-      attachIndex(
-          retVal,
-          "fewRowsAllData.parquet",
-          // "col0":12024,
-          new LongDimensionSchema("col0"),
-          // "col1":307168,
-          new LongDimensionSchema("col1"),
-          // "col2":"VT",
-          new StringDimensionSchema("col2"),
-          // "col3":"DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF",
-          new StringDimensionSchema("col3"),
-          // "col4":1338596882419,
-          new LongDimensionSchema("col4"),
-          // "col5":422705433600000,
-          new LongDimensionSchema("col5"),
-          // "col6":true,
-          new StringDimensionSchema("col6"),
-          // "col7":3.95110006277E8,
-          new DoubleDimensionSchema("col7"),
-          // "col8":67465430
-          new LongDimensionSchema("col8"));
-      attachIndex(
-          retVal,
-          "t_alltype.parquet",
-          // "c1":1,
-          new LongDimensionSchema("c1"),
-          // "c2":592475043,
-          new LongDimensionSchema("c2"),
-          // "c3":616080519999272,
-          new LongDimensionSchema("c3"),
-          // "c4":"ObHeWTDEcbGzssDwPwurfs",
-          new StringDimensionSchema("c4"),
-          // "c5":"0sZxIfZ CGwTOaLWZ6nWkUNx",
-          new StringDimensionSchema("c5"),
-          // "c6":1456290852307,
-          new LongDimensionSchema("c6"),
-          // "c7":421426627200000,
-          new LongDimensionSchema("c7"),
-          // "c8":true,
-          new StringDimensionSchema("c8"),
-          // "c9":0.626179100469
-          new DoubleDimensionSchema("c9"));
-
-      return retVal;
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void attachIndex(SpecificSegmentsQuerySegmentWalker texasRanger, String dataSource, DimensionSchema... dims)
-    {
-      ArrayList<String> dimensionNames = new ArrayList<>(dims.length);
-      for (DimensionSchema dimension : dims) {
-        dimensionNames.add(dimension.getName());
-      }
-
+      super.addSegmentsToWalker(walker, jsonMapper);
       final File tmpFolder = tempDirProducer.newTempFolder();
-      final QueryableIndex queryableIndex = IndexBuilder
-          .create()
-          .tmpDir(new File(tmpFolder, dataSource))
-          .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
-          .schema(new IncrementalIndexSchema.Builder()
-              .withRollup(false)
-              .withDimensionsSpec(new DimensionsSpec(Arrays.asList(dims)))
-              .build())
-          .rows(
-              () -> {
-                try {
-                  return Iterators.transform(
-                      MAPPER.readerFor(Map.class)
-                          .readValues(
-                              ClassLoader.getSystemResource("drill/window/datasources/" + dataSource + ".json")),
-                      (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionNames, input));
-                }
-                catch (IOException e) {
-                  throw new RE(e, "problem reading file");
-                }
-              })
-          .buildMMappedIndex();
-
-      texasRanger.add(
-          DataSegment.builder()
-              .dataSource(dataSource)
-              .interval(Intervals.ETERNITY)
-              .version("1")
-              .shardSpec(new NumberedShardSpec(0, 0))
-              .size(0)
-              .build(),
-          queryableIndex);
+      TestDataBuilder.attachIndexesForDrillTestDatasources(walker, tmpFolder);
+      return walker;
     }
   }
 
-  public class TextualResultsVerifier implements ResultsVerifier
+  public static class TextualResultsVerifier implements ResultsVerifier
   {
     protected final List<String[]> expectedResultsText;
     @Nullable
@@ -422,7 +266,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
         if (!isOrdered(queryResults)) {
-          // in case the resultset is not ordered; order via the same comparator before comparision
+          // in case the resultset is not ordered; order via the same comparator before comparison
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
@@ -463,30 +307,35 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (int i = 0; i < cc.size(); i++) {
         ColumnType type = rs.getColumnType(i).get();
         assertNull(type.getComplexTypeName());
-        final String val = row[i];
-        Object newVal;
-        if ("null".equals(val)) {
-          newVal = null;
-        } else {
-          switch (type.getType()) {
-            case STRING:
-              newVal = val;
-              break;
-            case LONG:
-              newVal = parseLongValue(val);
-              break;
-            case DOUBLE:
-              newVal = Numbers.parseDoubleObject(val);
-              break;
-            default:
-              throw new RuntimeException("unimplemented");
-          }
-        }
-        newRow[i] = newVal;
+        newRow[i] = parseElement(row[i], type.getType());
       }
       ret.add(newRow);
     }
     return ret;
+  }
+
+  private static Object parseElement(String element, ValueType elementType)
+  {
+    if ("null".equals(element)) {
+      return null;
+    }
+    switch (elementType) {
+      case STRING:
+        return element;
+      case LONG:
+        return parseLongValue(element);
+      case DOUBLE:
+        return Numbers.parseDoubleObject(element);
+      case ARRAY:
+        String[] elements = element.substring(1, element.length() - 1).split(",");
+        List<String> arrayElements = new ArrayList<>();
+        for (String s : elements) {
+          arrayElements.add(parseElement(s.trim(), ValueType.STRING).toString());
+        }
+        return "[" + String.join(",", arrayElements) + "]";
+      default:
+        throw new RuntimeException("unimplemented type: " + elementType);
+    }
   }
 
   private static Object parseLongValue(final String val)
@@ -532,14 +381,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       DrillTestCase testCase = drillTestCaseRule.testCase;
       thread.setName("drillWindowQuery-" + testCase.filename);
 
+      final Map<String, Object> queryContext = new HashMap<>(testBuilder().getQueryContext());
+      queryContext.putAll(getQueryContext());
+
       testBuilder()
           .skipVectorize(true)
-          .queryContext(ImmutableMap.of(
-                            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                            PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-                            QueryContexts.ENABLE_DEBUG, true
-                        )
-          )
+          .queryContext(queryContext)
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
@@ -551,6 +398,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  protected Map<String, Object> getQueryContext()
+  {
+    return ImmutableMap.of(
+        PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
+        QueryContexts.ENABLE_DEBUG, true
+    );
+  }
 
   // testcases_start
   @DrillTest("aggregates/aggOWnFn_11")
@@ -4383,7 +4237,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
+  @NotYetSupported(Modes.AGGREGATION_NOT_SUPPORT_TYPE)
   @DrillTest("frameclause/subQueries/frmInSubQry_25")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_25()
@@ -4391,7 +4245,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.INCORRECT_SYNTAX)
+  @NotYetSupported(Modes.VIEWS_NOT_SUPPORTED)
   @DrillTest("nestedAggs/nstdWinView01")
   @Test
   public void test_nestedAggs_nstdWinView01()
@@ -4572,7 +4426,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()
@@ -5229,7 +5083,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
   @DrillTest("aggregates/testW_Nulls_5")
   @Test
   public void test_aggregates_testW_Nulls_5()
@@ -5237,7 +5090,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
   @DrillTest("aggregates/testW_Nulls_6")
   @Test
   public void test_aggregates_testW_Nulls_6()
@@ -7413,7 +7265,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
   @Test
   public void test_nestedAggs_emtyOvrCls_8()
@@ -7662,6 +7514,290 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/multiWin_8")
   @Test
   public void test_nestedAggs_multiWin_8()
+  {
+    windowQueryTest();
+  }
+
+  /*
+  Druid query tests
+   */
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1")
+  @Test
+  public void test_same_window_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1_named_window")
+  @Test
+  public void test_same_window_wikipedia_query_1_named_window()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1_named_windows")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1_named_windows()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_1")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_2")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_1")
+  @Test
+  public void test_empty_over_single_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_2")
+  @Test
+  public void test_empty_over_single_empty_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_3")
+  @Test
+  public void test_empty_over_single_empty_over_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/multiple_empty_over_1")
+  @Test
+  public void test_empty_over_multiple_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_1")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_2")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_multiple_sort_columns")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_multiple_sort_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_same_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_same_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_different_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_different_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_1")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_2")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_multiple_partition_columns")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_multiple_partition_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_same_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_same_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_different_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_different_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_2")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_3")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_1")
+  @Test
+  public void test_partition_by_array_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_2")
+  @Test
+  public void test_partition_by_array_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
+  @Test
+  public void test_partition_by_array_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_1")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_2")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_3")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/multiple_partition_columns_1")
+  @Test
+  public void test_array_concat_agg_with_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/only_sorting_column_1")
+  @Test
+  public void test_array_concat_agg_with_only_sorting_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/empty_over_1")
+  @Test
+  public void test_array_concat_agg_with_empty_over_1()
   {
     windowQueryTest();
   }

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;

@@ -19,27 +19,24 @@
 
 package org.apache.druid.server.router;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
-import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.http.RulesResource;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
@@ -58,15 +55,9 @@ public class CoordinatorRuleManager
 {
   private static final Logger LOG = new Logger(CoordinatorRuleManager.class);
 
-  private static final TypeReference<Map<String, List<Rule>>> TYPE_REFERENCE =
-      new TypeReference<Map<String, List<Rule>>>()
-      {
-      };
-
-  private final ObjectMapper jsonMapper;
   private final Supplier<TieredBrokerConfig> config;
   private final AtomicReference<Map<String, List<Rule>>> rules;
-  private final DruidLeaderClient druidLeaderClient;
+  private final CoordinatorClient coordinatorClient;
 
   private final Object lock = new Object();
 
@@ -77,14 +68,12 @@ public class CoordinatorRuleManager
 
   @Inject
   public CoordinatorRuleManager(
-      @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      @Coordinator DruidLeaderClient druidLeaderClient
+      CoordinatorClient coordinatorClient
   )
   {
-    this.jsonMapper = jsonMapper;
     this.config = config;
-    this.druidLeaderClient = druidLeaderClient;
+    this.coordinatorClient = coordinatorClient;
 
     this.rules = new AtomicReference<>(Collections.emptyMap());
   }
@@ -134,24 +123,24 @@ public class CoordinatorRuleManager
   public void poll()
   {
     try {
-      StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, RulesResource.RULES_ENDPOINT)
-      );
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while polling rules, status[%s] content[%s]",
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-
-      final Map<String, List<Rule>> map = jsonMapper.readValue(response.getContent(), TYPE_REFERENCE);
+      final Map<String, List<Rule>> map = FutureUtils.getUnchecked(coordinatorClient.getRulesForAllDatasources(), true);
       final Map<String, List<Rule>> immutableMapBuilder = Maps.newHashMapWithExpectedSize(map.size());
       map.forEach((k, list) -> immutableMapBuilder.put(k, Collections.unmodifiableList(list)));
       rules.set(Collections.unmodifiableMap(immutableMapBuilder));
     }
     catch (Exception e) {
+      Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        final HttpResponseException httpException = (HttpResponseException) rootCause;
+        final HttpResponse response = httpException.getResponse().getResponse();
+        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+          throw new ISE(
+              "Error while polling rules, status[%s] content[%s]",
+              response.getStatus(),
+              response.getContent()
+          );
+        }
+      }
       LOG.error(e, "Exception while polling for rules");
     }
   }

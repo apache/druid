@@ -54,10 +54,10 @@ public class AppendableMemory implements Closeable
   // One holder for every Memory we've allocated.
   private final List<ResourceHolder<WritableMemory>> blockHolders = new ArrayList<>();
 
-  // The amount of space that has been used from each Memory block. Same length as "memoryHolders".
+  // The amount of space that has been used from each Memory block. Same length as "blockHolders".
   private final IntList limits = new IntArrayList();
 
-  // The global starting position for each Memory block (blockNumber -> position). Same length as "memoryHolders".
+  // The global starting position for each Memory block (blockNumber -> position). Same length as "blockHolders".
   private final LongArrayList globalStartPositions = new LongArrayList();
 
   // Whether the blocks we've allocated are "packed"; meaning all non-final block limits equal the allocationSize.
@@ -105,6 +105,36 @@ public class AppendableMemory implements Closeable
   }
 
   /**
+   * Maximum number that can be successfully passed to {@link #reserveAdditional(int)}.
+   */
+  public int availableToReserve()
+  {
+    final int currentBlockIdx = currentBlockNumber();
+    final long availableInCurrentBlock;
+    final boolean currentBlockIsEmpty;
+
+    if (currentBlockIdx < 0) {
+      availableInCurrentBlock = 0;
+      currentBlockIsEmpty = false;
+    } else {
+      final int usedInCurrentBlock = limits.getInt(currentBlockIdx);
+      availableInCurrentBlock = blockHolders.get(currentBlockIdx).get().getCapacity() - usedInCurrentBlock;
+      currentBlockIsEmpty = usedInCurrentBlock == 0;
+    }
+
+    // If currentBlockIsEmpty, add availableInCurrentBlock to account for reclamation in reclaimLastBlockIfEmpty().
+    final long availableInAllocator = allocator.available() + (currentBlockIsEmpty ? availableInCurrentBlock : 0);
+
+    return (int) Math.min(
+        Integer.MAX_VALUE,
+        Math.max(
+            availableInAllocator,
+            availableInCurrentBlock
+        )
+    );
+  }
+
+  /**
    * Ensure that at least "bytes" amount of space is available after the cursor. Allocates a new block if needed.
    * Note: the amount of bytes is guaranteed to be in a *single* block.
    *
@@ -126,11 +156,18 @@ public class AppendableMemory implements Closeable
       return true;
     }
 
-    if (bytes > allocator.available()) {
-      return false;
-    }
+    releaseLastBlockIfEmpty();
 
-    final int idx = blockHolders.size() - 1;
+    final int idx = currentBlockNumber();
+
+    // The request cannot be satisfied by the available bytes in the allocator
+    if (bytes > allocator.available()) {
+      // Check if the last allocated block has enough memory to satisfy the request
+      if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+        // The request cannot be satisfied by the allocator and the last allocated block. Return false
+        return false;
+      }
+    }
 
     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
       // Allocation needed.
@@ -228,6 +265,9 @@ public class AppendableMemory implements Closeable
     cursor.set(currentBlockMemory, newLimit, currentBlockMemory.getCapacity() - newLimit);
   }
 
+  /**
+   * Current used size, in bytes.
+   */
   public long size()
   {
     long sz = 0;
@@ -295,12 +335,21 @@ public class AppendableMemory implements Closeable
     cursor.set(blockMemory, 0, blockMemory.getCapacity());
   }
 
+  private void releaseLastBlockIfEmpty()
+  {
+    final int lastBlockNumber = currentBlockNumber();
+    if (lastBlockNumber != NO_BLOCK && limits.getInt(lastBlockNumber) == 0) {
+      blockHolders.remove(lastBlockNumber).close();
+      limits.removeInt(lastBlockNumber);
+    }
+  }
+
+  /**
+   * Returns the index into {@link #blockHolders} and {@link #limits} of the current block, or {@link #NO_BLOCK}
+   * if there are no blocks.
+   */
   private int currentBlockNumber()
   {
-    if (blockHolders.isEmpty()) {
-      return NO_BLOCK;
-    } else {
-      return blockHolders.size() - 1;
-    }
+    return blockHolders.size() - 1;
   }
 }

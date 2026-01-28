@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,19 +39,31 @@ public class HttpInputSourceConfig
   @JsonProperty
   private final Set<String> allowedProtocols;
 
+  @JsonProperty
+  private final Set<String> allowedHeaders;
+
   @JsonCreator
   public HttpInputSourceConfig(
-      @JsonProperty("allowedProtocols") @Nullable Set<String> allowedProtocols
+      @JsonProperty("allowedProtocols") @Nullable Set<String> allowedProtocols,
+      @JsonProperty("allowedHeaders") @Nullable Set<String> allowedHeaders
   )
   {
     this.allowedProtocols = allowedProtocols == null || allowedProtocols.isEmpty()
                             ? DEFAULT_ALLOWED_PROTOCOLS
                             : allowedProtocols.stream().map(StringUtils::toLowerCase).collect(Collectors.toSet());
+    this.allowedHeaders = allowedHeaders == null
+                          ? Collections.emptySet()
+                          : allowedHeaders.stream().map(StringUtils::toLowerCase).collect(Collectors.toSet());
   }
 
   public Set<String> getAllowedProtocols()
   {
     return allowedProtocols;
+  }
+
+  public Set<String> getAllowedHeaders()
+  {
+    return allowedHeaders;
   }
 
   @Override
@@ -63,13 +76,16 @@ public class HttpInputSourceConfig
       return false;
     }
     HttpInputSourceConfig that = (HttpInputSourceConfig) o;
-    return Objects.equals(allowedProtocols, that.allowedProtocols);
+    return Objects.equals(allowedProtocols, that.allowedProtocols) && Objects.equals(
+        allowedHeaders,
+        that.allowedHeaders
+    );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(allowedProtocols);
+    return Objects.hash(allowedProtocols, allowedHeaders);
   }
 
   @Override
@@ -77,6 +93,7 @@ public class HttpInputSourceConfig
   {
     return "HttpInputSourceConfig{" +
            "allowedProtocols=" + allowedProtocols +
+           ", allowedHeaders=" + allowedHeaders +
            '}';
   }
 }

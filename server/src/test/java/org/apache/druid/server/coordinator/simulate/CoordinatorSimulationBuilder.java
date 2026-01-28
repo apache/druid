@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -36,10 +38,15 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -48,8 +55,6 @@ import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyF
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -59,8 +64,11 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
@@ -68,12 +76,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Builder for {@link CoordinatorSimulation}.
@@ -87,8 +98,6 @@ public class CoordinatorSimulationBuilder
               DataSegment.PruneSpecsHolder.DEFAULT
           )
       );
-  private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
-      new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
   private List<DruidServer> servers;
@@ -204,7 +213,7 @@ public class CoordinatorSimulationBuilder
         env.coordinatorInventoryView,
         env.serviceEmitter,
         env.executorFactory,
-        null,
+        new SimOverlordClient(env.segmentManager),
         env.loadQueueTaskMaster,
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
@@ -212,9 +221,11 @@ public class CoordinatorSimulationBuilder
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        COMPACTION_SEGMENT_SEARCH_POLICY,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(),
+        env.configSyncer,
+        env.cloneStatusManager
     );
 
     return new SimulationImpl(coordinator, env);
@@ -318,7 +329,18 @@ public class CoordinatorSimulationBuilder
     }
 
     @Override
+    public void loadQueuedSegmentsSkipCallbacks()
+    {
+      loadSegments(false);
+    }
+
+    @Override
     public void loadQueuedSegments()
+    {
+      loadSegments(true);
+    }
+
+    private void loadSegments(boolean executeCallbacks)
     {
       verifySimulationRunning();
       Preconditions.checkState(
@@ -327,7 +349,9 @@ public class CoordinatorSimulationBuilder
       );
 
       final BlockingExecutorService loadQueueExecutor = env.executorFactory.loadQueueExecutor;
-      while (loadQueueExecutor.hasPendingTasks()) {
+      final BlockingExecutorService loadCallbackExecutor = env.executorFactory.loadCallbackExecutor;
+      while (loadQueueExecutor.hasPendingTasks()
+             || (executeCallbacks && loadCallbackExecutor.hasPendingTasks())) {
         // Drain all the items from the load queue executor
         // This sends at most 1 load/drop request to each server
         loadQueueExecutor.finishAllPendingTasks();
@@ -335,7 +359,9 @@ public class CoordinatorSimulationBuilder
         // Load all the queued segments, handle their responses and execute callbacks
         int loadedSegments = env.executorFactory.historicalLoader.finishAllPendingTasks();
         loadQueueExecutor.finishNextPendingTasks(loadedSegments);
-        env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
+        if (executeCallbacks) {
+          env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
+        }
       }
     }
 
@@ -356,6 +382,16 @@ public class CoordinatorSimulationBuilder
     {
       if (segments != null) {
         segments.forEach(env.segmentManager::addSegment);
+      }
+    }
+
+    @Override
+    public void deleteSegments(List<DataSegment> segments)
+    {
+      if (segments != null) {
+        env.segmentManager.markSegmentsAsUnused(
+            segments.stream().map(DataSegment::getId).collect(Collectors.toSet())
+        );
       }
     }
 
@@ -414,6 +450,8 @@ public class CoordinatorSimulationBuilder
     private final MetadataManager metadataManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
+    private final CoordinatorDynamicConfigSyncer configSyncer;
+    private final CloneStatusManager cloneStatusManager;
 
     private final boolean loadImmediately;
     private final boolean autoSyncInventory;
@@ -448,18 +486,21 @@ public class CoordinatorSimulationBuilder
           createBalancerStrategy(balancerStrategy),
           new HttpLoadQueuePeonConfig(null, null, null)
       );
+
+      JacksonConfigManager jacksonConfigManager = mockConfigManager();
+      setDynamicConfig(dynamicConfig);
+
       this.loadQueueTaskMaster = new LoadQueueTaskMaster(
           OBJECT_MAPPER,
           executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
           executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
           coordinatorConfig.getHttpLoadQueuePeonConfig(),
-          httpClient
+          httpClient,
+          () -> dynamicConfig
       );
+
       this.loadQueueManager =
           new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
-
-      JacksonConfigManager jacksonConfigManager = mockConfigManager();
-      setDynamicConfig(dynamicConfig);
 
       this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
       mocks.add(jacksonConfigManager);
@@ -467,13 +508,20 @@ public class CoordinatorSimulationBuilder
 
       this.metadataManager = new MetadataManager(
           null,
-          new CoordinatorConfigManager(jacksonConfigManager, null, null),
+          new CoordinatorConfigManager(jacksonConfigManager, null, null, null),
           segmentManager,
           null,
           ruleManager,
           null,
-          null
+          null,
+          NoopSegmentMetadataCache.instance()
       );
+
+      this.configSyncer = EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class);
+      this.cloneStatusManager = EasyMock.niceMock(CloneStatusManager.class);
+
+      mocks.add(configSyncer);
+      mocks.add(cloneStatusManager);
     }
 
     private void setUp() throws Exception
@@ -512,11 +560,11 @@ public class CoordinatorSimulationBuilder
 
       EasyMock.expect(
           jacksonConfigManager.watch(
-              EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-              EasyMock.eq(CoordinatorCompactionConfig.class),
+              EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
+              EasyMock.eq(DruidCompactionConfig.class),
               EasyMock.anyObject()
           )
-      ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+      ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
 
       return jacksonConfigManager;
     }
@@ -610,6 +658,35 @@ public class CoordinatorSimulationBuilder
     private void tearDown()
     {
       blockingExecutors.values().forEach(BlockingExecutorService::shutdown);
+    }
+  }
+
+  private static class SimOverlordClient extends NoopOverlordClient
+  {
+    private final TestSegmentsMetadataManager segmentsMetadataManager;
+
+    private SimOverlordClient(TestSegmentsMetadataManager segmentsMetadataManager)
+    {
+      this.segmentsMetadataManager = segmentsMetadataManager;
+    }
+
+    @Override
+    public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+        String dataSource,
+        SegmentsToUpdateFilter filter
+    )
+    {
+      final Set<SegmentId> segmentsToUpdate = new HashSet<>();
+      if (filter.getSegmentIds() != null) {
+        for (String idString : filter.getSegmentIds()) {
+          SegmentId segmentId = SegmentId.tryParse(dataSource, idString);
+          if (segmentId != null) {
+            segmentsToUpdate.add(segmentId);
+          }
+        }
+      }
+      int numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(segmentsToUpdate);
+      return Futures.immediateFuture(new SegmentUpdateResponse(numUpdatedSegments));
     }
   }
 

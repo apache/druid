@@ -18,7 +18,6 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
 
 import { AlertDialog } from '../../../dialogs';
 import type { CapacityInfo } from '../../../druid-models';

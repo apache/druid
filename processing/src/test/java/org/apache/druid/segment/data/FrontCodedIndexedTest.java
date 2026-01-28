@@ -436,7 +436,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     while (sortedStrings.hasNext()) {
       final String next = sortedStrings.next();
       final byte[] nextBytes = StringUtils.toUtf8Nullable(next);
-      writer.write(nextBytes);
+      Assert.assertEquals(index, writer.write(nextBytes));
       if (nextBytes == null) {
         Assert.assertNull(writer.get(index));
       } else {

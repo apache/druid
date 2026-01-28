@@ -22,15 +22,9 @@ package org.apache.druid.query.aggregation.histogram;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -86,23 +80,9 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
-  {
-    final GenericIndexed<ApproximateHistogram> column =
-        GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
-  }
-
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
-  }
-
-  @Override
   public ObjectStrategy<ApproximateHistogram> getObjectStrategy()
   {
-    return new ObjectStrategy<ApproximateHistogram>()
+    return new ObjectStrategy<>()
     {
       @Override
       public Class<ApproximateHistogram> getClazz()
@@ -130,6 +110,12 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       public int compare(ApproximateHistogram o1, ApproximateHistogram o2)
       {
         return ApproximateHistogramAggregator.COMPARATOR.compare(o1, o2);
+      }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
       }
     };
   }

@@ -29,6 +29,15 @@ import java.io.IOException;
 public interface ColumnarLongsSerializer extends Serializer
 {
   void open() throws IOException;
+
   int size();
+
   void add(long value) throws IOException;
+
+  default void addAll(long[] values, int start, int end) throws IOException
+  {
+    for (int i = start; i < end; ++i) {
+      add(values[i]);
+    }
+  }
 }

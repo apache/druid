@@ -56,114 +56,38 @@ public class IndexTaskSerdeTest
   @Test
   public void testSerdeTuningConfigWithDynamicPartitionsSpec() throws IOException
   {
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        100,
-        2000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(1000, 2000L),
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        false,
-        null,
-        null,
-        100L,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        10,
-        100,
-        1234,
-        0L,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new DynamicPartitionsSpec(1000, 2000L))
+        .withForceGuaranteedRollup(false)
+        .build();
     assertSerdeTuningConfig(tuningConfig);
   }
 
   @Test
   public void testSerdeTuningConfigWithHashedPartitionsSpec() throws IOException
   {
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        100,
-        2000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(null, 10, ImmutableList.of("dim1", "dim2")),
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        null,
-        null,
-        100L,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        10,
-        100,
-        null,
-        -1L,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+        .withForceGuaranteedRollup(true)
+        .build();
     assertSerdeTuningConfig(tuningConfig);
   }
 
   @Test
   public void testSerdeTuningConfigWithDeprecatedDynamicPartitionsSpec() throws IOException
   {
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        1000,
-        null,
-        100,
-        2000L,
-        null,
-        3000L,
-        null,
-        null,
-        null,
-        null,
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        false,
-        null,
-        null,
-        100L,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        10,
-        100,
-        null,
-        1L,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withMaxRowsPerSegment(1000)
+        .withMaxRowsInMemory(100)
+        .withMaxBytesInMemory(2000L)
+        .withMaxTotalRows(3000L)
+        .withForceGuaranteedRollup(false)
+        .withPushTimeout(100L)
+        .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+        .build();
     assertSerdeTuningConfig(tuningConfig);
   }
 
@@ -210,38 +134,10 @@ public class IndexTaskSerdeTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("DynamicPartitionsSpec cannot be used for perfect rollup");
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        100,
-        2000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(1000, 2000L),
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        true,
-        null,
-        null,
-        100L,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        10,
-        100,
-        null,
-        null,
-        null
-    );
+    TuningConfigBuilder.forIndexTask()
+                       .withForceGuaranteedRollup(true)
+                       .withPartitionsSpec(new DynamicPartitionsSpec(1000, 2000L))
+                       .build();
   }
 
   @Test
@@ -249,38 +145,10 @@ public class IndexTaskSerdeTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        100,
-        2000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(null, 10, ImmutableList.of("dim1", "dim2")),
-        IndexSpec.builder()
-                 .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                 .withDimensionCompression(CompressionStrategy.LZ4)
-                 .withMetricCompression(CompressionStrategy.LZF)
-                 .withLongEncoding(LongEncodingStrategy.LONGS)
-                 .build(),
-        null,
-        null,
-        false,
-        null,
-        null,
-        100L,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true,
-        10,
-        100,
-        null,
-        null,
-        null
-    );
+    TuningConfigBuilder.forIndexTask()
+                       .withForceGuaranteedRollup(false)
+                       .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+                       .build();
   }
 
   private static void assertSerdeTuningConfig(IndexTuningConfig tuningConfig) throws IOException

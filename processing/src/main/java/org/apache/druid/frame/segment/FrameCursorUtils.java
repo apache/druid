@@ -23,6 +23,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -32,6 +33,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -100,14 +102,19 @@ public class FrameCursorUtils
   /**
    * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
    * and writes the columns to the frames. The iterable is lazy, and it traverses the required portion of the cursor
-   * as required
+   * as required.
+   * <p>
+   * If the type is missing from the signature, the method throws an exception without advancing/modifying/closing the
+   * cursor
    */
   public static Iterable<Frame> cursorToFramesIterable(
       final Cursor cursor,
       final FrameWriterFactory frameWriterFactory
   )
   {
-    return () -> new Iterator<Frame>()
+    throwIfColumnsHaveUnknownType(frameWriterFactory.signature());
+
+    return () -> new Iterator<>()
     {
       @Override
       public boolean hasNext()
@@ -158,7 +165,19 @@ public class FrameCursorUtils
       final FrameWriterFactory frameWriterFactory
   )
   {
-
     return Sequences.simple(cursorToFramesIterable(cursor, frameWriterFactory));
+  }
+
+  /**
+   * Throws {@link UnsupportedColumnTypeException} if the row signature has columns with unknown types. This is used to
+   * pre-determine if the frames can be materialized as rows, without touching the resource generating the frames.
+   */
+  public static void throwIfColumnsHaveUnknownType(final RowSignature rowSignature)
+  {
+    for (int i = 0; i < rowSignature.size(); ++i) {
+      if (!rowSignature.getColumnType(i).isPresent()) {
+        throw new UnsupportedColumnTypeException(rowSignature.getColumnName(i), null);
+      }
+    }
   }
 }

@@ -60,6 +60,12 @@ public class IntKeySerde implements Grouper.KeySerde<IntKey>
   }
 
   @Override
+  public Long getDictionarySize()
+  {
+    return 0L;
+  }
+
+  @Override
   public ByteBuffer toByteBuffer(IntKey key)
   {
     buf.putInt(0, key.intValue());

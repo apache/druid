@@ -19,15 +19,16 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.query.Order;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.RowNumCounter;
 import org.apache.druid.segment.RowPointer;
 import org.apache.druid.segment.TimeAndDimsPointer;
 import org.apache.druid.segment.TransformableRowIterator;
-import org.apache.druid.segment.VirtualColumns;
 
 import java.util.Iterator;
 import java.util.List;
@@ -48,7 +49,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   private final RowPointer currentRowPointer;
   private final TimeAndDimsPointer markedRowPointer;
 
-  IncrementalIndexRowIterator(IncrementalIndex incrementalIndex)
+  IncrementalIndexRowIterator(IncrementalIndexRowSelector incrementalIndex)
   {
     this.timeAndDimsIterator = incrementalIndex.getFacts().persistIterable().iterator();
     this.currentRowPointer = makeRowPointer(incrementalIndex, currentRowHolder, currentRowNumCounter);
@@ -58,17 +59,17 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   }
 
   private static RowPointer makeRowPointer(
-      IncrementalIndex incrementalIndex,
+      IncrementalIndexRowSelector incrementalIndex,
       IncrementalIndexRowHolder rowHolder,
       RowNumCounter rowNumCounter
   )
   {
     ColumnSelectorFactory columnSelectorFactory =
         new IncrementalIndexColumnSelectorFactory(
-            new IncrementalIndexStorageAdapter(incrementalIndex),
-            VirtualColumns.EMPTY,
-            false,
-            rowHolder
+            incrementalIndex,
+            rowHolder,
+            CursorBuildSpec.FULL_SCAN,
+            incrementalIndex.getTimePosition() == 0 ? Order.ASCENDING : Order.NONE
         );
     ColumnValueSelector[] dimensionSelectors = incrementalIndex
         .getDimensions()
@@ -91,6 +92,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
 
     return new RowPointer(
         rowHolder,
+        incrementalIndex.getTimePosition(),
         dimensionSelectors,
         dimensionHandlers,
         metricSelectors,

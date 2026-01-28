@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.mean;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -44,7 +43,7 @@ public class DoubleMeanAggregator implements Aggregator
   {
     Object update = selector.getObject();
 
-    if (update == null && NullHandling.replaceWithDefault() == false) {
+    if (update == null) {
       return;
     }
 

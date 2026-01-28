@@ -34,7 +34,7 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
   {
     final CloseableIterator<T> delegate = this;
 
-    return new CloseableIterator<R>()
+    return new CloseableIterator<>()
     {
       @Override
       public boolean hasNext()
@@ -63,7 +63,7 @@ public interface CloseableIterator<T> extends Iterator<T>, Closeable
   {
     final CloseableIterator<T> outerIterator = this;
 
-    return new CloseableIterator<R>()
+    return new CloseableIterator<>()
     {
       CloseableIterator<R> currInnerIterator = null;
 

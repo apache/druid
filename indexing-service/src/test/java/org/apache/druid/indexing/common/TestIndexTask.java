@@ -31,8 +31,8 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -61,42 +61,20 @@ public class TestIndexTask extends IndexTask
         id,
         taskResource,
         new IndexIngestionSpec(
-            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, null, mapper),
+            DataSchema.builder().withDataSource(dataSource).withObjectMapper(mapper).build(),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),
                 false,
                 false
             ),
-
-            new IndexTask.IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                IndexSpec.DEFAULT,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withIndexSpec(IndexSpec.getDefault())
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withForceGuaranteedRollup(false)
+                               .withMaxPendingPersists(3)
+                               .build()
         ),
         null
     );

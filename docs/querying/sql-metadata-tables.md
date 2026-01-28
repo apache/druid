@@ -234,8 +234,13 @@ Servers table lists all discovered servers in the cluster.
 |tier|VARCHAR|Distribution tier see [druid.server.tier](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
 |current_size|BIGINT|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
-|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (null or zero depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
+|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
+|version|VARCHAR|Druid version running on the server|
+|labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
+|available_processors|BIGINT|Total number of CPU processors available to the server|
+|total_memory|BIGINT|Total memory in bytes available to the server|
+
 To retrieve information about all servers, use the query:
 
 ```sql
@@ -266,7 +271,7 @@ GROUP BY servers.server;
 
 ### TASKS table
 
-The tasks table provides information about active and recently-completed indexing tasks. For more information
+The tasks table provides information about active and recently completed tasks. For more information
 check out the documentation for [ingestion tasks](../ingestion/tasks.md).
 
 |Column|Type|Notes|
@@ -299,6 +304,7 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|VARCHAR|Supervisor task identifier|
+|datasource|VARCHAR|Datasource the supervisor operates on|
 |state|VARCHAR|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md) for more information.|
 |detailed_state|VARCHAR|Supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md).|
 |healthy|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|
@@ -312,3 +318,54 @@ For example, to retrieve supervisor tasks information filtered by health status,
 ```sql
 SELECT * FROM sys.supervisors WHERE healthy=0;
 ```
+
+### SERVER_PROPERTIES table
+
+The `server_properties` table exposes the runtime properties configured on for each Druid server. Each row represents a single property key-value pair associated with a specific server.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|server|VARCHAR|Host and port of the server, in the form `host:port`|
+|service_name|VARCHAR|Service name of the server, as defined by `druid.service`|
+|node_roles|VARCHAR|Comma-separated list of roles that the server performs. For example, `[coordinator,overlord]` if the server functions as both a Coordinator and an Overlord.|
+|property|VARCHAR|Name of the property|
+|value|VARCHAR|Value of the property|
+
+For example, to retrieve properties for a specific server, use the query
+
+```sql
+SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
+```
+
+### QUERIES table
+
+:::info
+ The `sys.queries` table is an experimental feature. You must enable it by setting the runtime property
+ `druid.sql.planner.enableSysQueriesTable=true` on Broker processes. The main reason this table is experimental
+  is that it only shows queries from the [Dart](dart.md) engine, which is also experimental.
+:::
+
+The queries table provides information about currently running and recently completed SQL queries.
+
+|Column|Type|Notes|
+|------|-----|-----|
+|id|VARCHAR|Execution ID for the query. For Dart queries, this is the `dartQueryId`.|
+|engine|VARCHAR|SQL engine that executed the query, e.g., `msq-dart`|
+|state|VARCHAR|Query status: `ACCEPTED`, `RUNNING`, `SUCCESS`, `FAILED`, or `CANCELED`|
+|info|VARCHAR|JSON-serialized query information including `sqlQueryId`, `sql`, `identity`, `startTime`, and other engine-specific details|
+
+For example, to retrieve all recently completed Dart queries:
+
+```sql
+SELECT *
+FROM sys.queries
+WHERE
+  engine = 'msq-dart'
+  AND state IN ('SUCCESS', 'FAILED', 'CANCELED')
+```
+
+:::info
+ The retention of completed query information is controlled by Dart controller configuration.
+ See `druid.msq.dart.controller.maxRetainedReportCount` and `druid.msq.dart.controller.maxRetainedReportDuration`
+ for details on how long completed queries are retained.
+:::

@@ -32,38 +32,46 @@ import java.util.function.BiFunction;
 public class NaivePartitioningOperatorTest
 {
   @Test
-  public void testDefaultImplementation()
+  public void testPartitioning()
   {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
     );
 
     NaivePartitioningOperator op = new NaivePartitioningOperator(
-        ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac)
+        ImmutableList.of("column"),
+        inlineScanOperator
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2})
-                .expectColumn("unsorted", new int[]{54})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{4, 4, 4})
-                .expectColumn("unsorted", new int[]{2, 3, 92})
-                .allColumnsRegistered()
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(4, 4, 4)
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
+  public void testPartitioningWithMultipleRACs()
+  {
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 2, 2, 2)
+    );
+
+    NaivePartitioningOperator op = new NaivePartitioningOperator(
+        ImmutableList.of("column"),
+        inlineScanOperator
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2, 2)
         )
         .runToCompletion(op);
   }
@@ -71,26 +79,19 @@ public class NaivePartitioningOperatorTest
   @Test
   public void testStopMidStream()
   {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
     );
 
     NaivePartitioningOperator op = new NaivePartitioningOperator(
-        ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac)
+        ImmutableList.of("column"),
+        inlineScanOperator
     );
 
     new OperatorTestHelper()
         .expectAndStopAfter(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21}),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5})
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1)
         )
         .runToCompletion(op);
   }

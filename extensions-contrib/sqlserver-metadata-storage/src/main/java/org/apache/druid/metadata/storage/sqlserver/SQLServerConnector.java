@@ -240,7 +240,7 @@ public class SQLServerConnector extends SQLMetadataConnector
       final byte[] value)
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle)
@@ -291,6 +291,25 @@ public class SQLServerConnector extends SQLMetadataConnector
       if (TRANSIENT_SQL_CLASS_CODES.contains(sqlClassCode)) {
         return true;
       }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23000 for Sql Server
+        if ("23000".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
     }
     return false;
   }

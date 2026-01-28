@@ -245,7 +245,7 @@ public class OssDataSegmentPuller implements URIDataPuller
   public Predicate<Throwable> shouldRetryPredicate()
   {
     // Yay! smart retries!
-    return new Predicate<Throwable>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(Throwable e)

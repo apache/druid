@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C15_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C16_D1
+#-------------------------------------------------------------------------
+SELECT lower(a_empty) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C17_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C18_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C19_D1
+#-------------------------------------------------------------------------
+SELECT lower(a_mixed) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C20_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C21_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C22_D1
+#-------------------------------------------------------------------------
+SELECT lower(a_nested) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C23_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B8_C24_D1
+#-------------------------------------------------------------------------
+SELECT lower(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'LOWER' to arguments of type 'LOWER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C1_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_bool) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C2_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C3_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C4_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_int) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C5_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C6_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C7_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_float) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C8_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C9_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C10_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_str) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C11_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C12_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C13_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_null) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C14_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C15_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C16_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_empty) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C17_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C18_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C19_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_mixed) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C20_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C21_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C22_D1
+#-------------------------------------------------------------------------
+SELECT upper(a_nested) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C23_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B9_C24_D1
+#-------------------------------------------------------------------------
+SELECT upper(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'UPPER' to arguments of type 'UPPER(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C1_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_bool) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C2_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C3_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C4_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_int) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C5_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C6_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C7_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_float) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C8_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C9_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C10_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_str) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C11_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C12_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C13_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_null) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C14_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C15_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B10_C16_D1
+#-------------------------------------------------------------------------
+SELECT parse_long(a_empty) AS col
+FROM test_array;
+Cannot apply 'PARSE_LONG' to arguments of type 'PARSE_LONG(
+!error
+

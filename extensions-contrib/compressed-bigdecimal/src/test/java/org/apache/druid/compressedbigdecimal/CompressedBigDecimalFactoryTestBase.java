@@ -22,7 +22,7 @@ package org.apache.druid.compressedbigdecimal;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorFactoryCreator;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -151,8 +151,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
   {
     TestColumnValueSelector<CompressedBigDecimal> columnValueSelector = TestColumnValueSelector.of(
         CompressedBigDecimal.class,
-        ImmutableList.of(ArrayCompressedBigDecimal.wrap(new int[]{67, 0}, 0)),
-        DateTimes.of("2020-01-01")
+        ImmutableList.of(ArrayCompressedBigDecimal.wrap(new int[]{67, 0}, 0))
     );
 
     columnValueSelector.advance();
@@ -167,8 +166,7 @@ public abstract class CompressedBigDecimalFactoryTestBase
         ImmutableList.of(
             ArrayCompressedBigDecimal.wrap(new int[]{1, 0}, 0),
             ArrayCompressedBigDecimal.wrap(new int[]{10, 0}, 0)
-        ),
-        DateTimes.of("2020-01-01")
+        )
     );
 
     columnValueSelector.advance();

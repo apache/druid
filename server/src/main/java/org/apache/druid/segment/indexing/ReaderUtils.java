@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.transform.Transform;
 import org.apache.druid.segment.transform.TransformSpec;
 
@@ -130,10 +131,16 @@ public class ReaderUtils
       }
     }
 
-    // Determine any fields we need to read from input file that is used in the transformSpec
+    // Determine any fields we need to read from input file that is used in the transform of the transformSpec
     List<Transform> transforms = transformSpec.getTransforms();
     for (Transform transform : transforms) {
       fieldsRequired.addAll(transform.getRequiredColumns());
+    }
+
+    // Determine any fields we need to read from input file that is used in the filter of the transformSpec
+    DimFilter filter = transformSpec.getFilter();
+    if (filter != null) {
+      fieldsRequired.addAll(filter.getRequiredColumns());
     }
 
     // Determine any fields we need to read from input file that is used in the dimensionsSpec

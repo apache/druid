@@ -27,7 +27,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.collections.spatial.RTree;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,6 +47,7 @@ import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -63,16 +64,31 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Nullable
   private ByteBufferWriter<ImmutableRTree> spatialWriter;
 
+  /**
+   * @param dimensionName         column name
+   * @param outputName            output smoosh file name. if this is a base table column, it will be the equivalent to
+   *                              name, however if this merger is for a projection, this will be prefixed with the
+   *                              projection name so that multiple projections can store the same column name at
+   *                              different smoosh file "paths"
+   * @param indexSpec             segment level storage options such as compression format and bitmap type
+   * @param segmentWriteOutMedium temporary storage location to stage segment outputs before finalizing into the segment
+   * @param capabilities          options for writing the column such as if we should write bitmap or spatial indexes
+   * @param progress              hook to update status of what this merger is doing during segment persist and merging
+   * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
+   *                              when the segment is finished writing
+   */
   public StringDimensionMergerV9(
       String dimensionName,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
-    super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+    super(dimensionName, outputName, indexSpec, segmentWriteOutMedium, capabilities, progress, segmentBaseDir, closer);
   }
 
   @Override
@@ -96,7 +112,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected String coerceValue(String value)
   {
-    return NullHandling.emptyToNullIfNeeded(value);
+    return value;
   }
 
   @Override
@@ -113,7 +129,10 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
   {
-    return new SpatialIndexesMerger();
+    if (capabilities.hasSpatialIndexes()) {
+      return new SpatialIndexesMerger();
+    }
+    return null;
   }
 
   @Override
@@ -127,9 +146,8 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.STRING);
     builder.setHasMultipleValues(hasMultiValue);
-    final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
+    DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
         .serializerBuilder()
-        .withDictionary(dictionaryWriter)
         .withValue(
             encodedValueSerializer,
             hasMultiValue,
@@ -140,9 +158,31 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         .withSpatialIndex(spatialWriter)
         .withByteOrder(IndexIO.BYTE_ORDER);
 
+    if (writeDictionary) {
+      partBuilder = partBuilder.withDictionary(dictionaryWriter);
+    }
+
     return builder
         .addSerde(partBuilder.build())
         .build();
+  }
+
+  @Override
+  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
+  {
+    DruidException.conditionalDefensive(
+        parent instanceof StringDimensionMergerV9,
+        "Projection parent column must be same type, got [%s]",
+        parent.getClass()
+    );
+    StringDimensionMergerV9 stringParent = (StringDimensionMergerV9) parent;
+    dictionarySize = stringParent.dictionarySize;
+    dimConversions = stringParent.dimConversions;
+    dictionaryWriter = stringParent.dictionaryWriter;
+    cardinality = dictionaryWriter.getCardinality();
+    adapters = projectionAdapters;
+    setupEncodedValueWriter();
+    writeDictionary = false;
   }
 
   /**

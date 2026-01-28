@@ -55,21 +55,14 @@ public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
   @Override
   public TypeReference<Integer> getReturnTypeReference()
   {
-    return new TypeReference<Integer>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
   public Integer perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .markSegmentsAsUnusedWithinInterval(dataSource, interval);
+                  .markSegmentsWithinIntervalAsUnused(dataSource, interval, null);
   }
 
-  @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
 }

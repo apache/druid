@@ -58,7 +58,7 @@ public class JacksonUtilsTest
 
     final List<SerializableClass> deserializedValues = objectMapper.readValue(
         baos.toByteArray(),
-        new TypeReference<List<SerializableClass>>() {}
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals(
@@ -85,7 +85,7 @@ public class JacksonUtilsTest
 
     final List<Object> deserializedValues = objectMapper.readValue(
         baos.toByteArray(),
-        new TypeReference<List<Object>>() {}
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals(

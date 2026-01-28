@@ -20,8 +20,8 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.base.Function;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -31,10 +31,8 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,7 +40,13 @@ import java.util.List;
 
 public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory<RowsAndColumns, WindowOperatorQuery>
 {
-  public static final WindowOperatorQueryQueryToolChest TOOLCHEST = new WindowOperatorQueryQueryToolChest();
+  public final WindowOperatorQueryQueryToolChest toolChest;
+
+  @Inject
+  public WindowOperatorQueryQueryRunnerFactory(WindowOperatorQueryQueryToolChest toolChest)
+  {
+    this.toolChest = toolChest;
+  }
 
   @Override
   public QueryRunner<RowsAndColumns> createRunner(Segment segment)
@@ -94,25 +98,14 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
               {
                 return Sequences.map(
                     input.run(queryPlus, responseContext),
-                    new Function<RowsAndColumns, RowsAndColumns>()
+                    new Function<>()
                     {
                       @Nullable
                       @Override
                       public RowsAndColumns apply(@Nullable RowsAndColumns input)
                       {
-                        // This is interim code to force a materialization by synthesizing the wire transfer
-                        // that will need to naturally happen as we flesh out this code more.  For now, we
-                        // materialize the bytes on-heap and then read them back in as a frame.
                         if (input instanceof LazilyDecoratedRowsAndColumns) {
-                          final WireTransferable wire = WireTransferable.fromRAC(input);
-                          final byte[] frameBytes = wire.bytesToTransfer();
-
-                          RowSignature.Builder sigBob = RowSignature.builder();
-                          for (String column : input.getColumnNames()) {
-                            sigBob.add(column, input.findColumn(column).toAccessor().getType());
-                          }
-
-                          return new ColumnBasedFrameRowsAndColumns(Frame.wrap(frameBytes), sigBob.build());
+                          return input.as(FrameRowsAndColumns.class);
                         }
                         return input;
                       }
@@ -128,7 +121,7 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
   @Override
   public QueryToolChest<RowsAndColumns, WindowOperatorQuery> getToolchest()
   {
-    return TOOLCHEST;
+    return toolChest;
   }
 
 }

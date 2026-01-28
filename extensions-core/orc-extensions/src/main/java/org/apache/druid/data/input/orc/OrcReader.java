@@ -105,7 +105,7 @@ public class OrcReader extends IntermediateRowParsingReader<OrcStruct>
     final RecordReader batchReader = reader.rows(reader.options());
     final OrcMapredRecordReader<OrcStruct> recordReader = new OrcMapredRecordReader<>(batchReader, schema);
     closer.register(recordReader::close);
-    return new CloseableIterator<OrcStruct>()
+    return new CloseableIterator<>()
     {
       final NullWritable key = recordReader.createKey();
       OrcStruct value = null;

@@ -43,6 +43,6 @@ public class TopNQueryRunnerTestHelper
       }
       expected.add(theVals);
     }
-    return new Result<TopNResultValue>(DateTimes.of(date), TopNResultValue.create(expected));
+    return new Result<>(DateTimes.of(date), TopNResultValue.create(expected));
   }
 }

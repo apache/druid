@@ -324,7 +324,7 @@ public abstract class ResponseContext
       @SuppressWarnings("unchecked")
       public Object mergeValues(Object oldValue, Object newValue)
       {
-        final List<Interval> result = new ArrayList<Interval>((List<Interval>) oldValue);
+        final List<Interval> result = new ArrayList<>((List<Interval>) oldValue);
         result.addAll((List<Interval>) newValue);
         return result;
       }
@@ -385,7 +385,7 @@ public abstract class ResponseContext
       @SuppressWarnings("unchecked")
       public Object mergeValues(Object oldValue, Object newValue)
       {
-        final List<SegmentDescriptor> result = new ArrayList<SegmentDescriptor>((List<SegmentDescriptor>) oldValue);
+        final List<SegmentDescriptor> result = new ArrayList<>((List<SegmentDescriptor>) oldValue);
         result.addAll((List<SegmentDescriptor>) newValue);
         return result;
       }

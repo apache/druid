@@ -54,7 +54,7 @@ Additionally, this extension has following configuration.
 
 ### Gotchas
 
-- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. This limitation may be removed in future.
+- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. 
 - All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
 - All Druid Pods need permissions to be able to add labels to self-pod, List and Watch other Pods, create and read ConfigMap for leader election. Assuming, "default" service account is used by Druid pods, you might need to add following or something similar Kubernetes Role and Role Binding.
 

@@ -20,24 +20,77 @@
 package org.apache.druid.query.vector;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.query.Order;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
 /**
- * Class that helps vectorized query engines handle "granularity" parameters. Nonvectorized engines have it handled
- * for them by the StorageAdapter. Vectorized engines don't, because they can get efficiency gains by pushing
- * granularity handling into the engine layer.
+ * Class that helps vectorized query engines handle "granularity" parameters. Given a set of intervals, this class
+ * provides mechansims to advance a cursor to the start of an interval ({@link #setCurrentOffsets(Interval)}),
+ * advance a cursor within a bucket interval ({@link #advanceCursorWithinBucket()}), and check the offsets of the
+ * current vector that are within the bucket ({@link #getStartOffset()}, {@link #getEndOffset()}).
+ *
+ * @see org.apache.druid.query.CursorGranularizer for non-vectorized query engines.
  */
 public class VectorCursorGranularizer
 {
-  // And a cursor that has been made from it.
+  @Nullable
+  public static VectorCursorGranularizer create(
+      final VectorCursor cursor,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      final Order timeOrder,
+      final Granularity granularity,
+      final Interval queryInterval
+  )
+  {
+    if (!Granularities.ALL.equals(granularity) && timeOrder == Order.NONE) {
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNSUPPORTED)
+          .build("Cannot use granularity[%s] on non-time-sorted data.", granularity);
+    }
+
+    final Interval clippedQueryInterval;
+
+    if (timeBoundaryInspector != null) {
+      clippedQueryInterval = queryInterval.overlap(
+          new Interval(
+              timeBoundaryInspector.getMinTime(),
+              granularity.bucketEnd(timeBoundaryInspector.getMaxTime())
+          )
+      );
+    } else {
+      clippedQueryInterval = queryInterval;
+    }
+
+    if (clippedQueryInterval == null) {
+      return null;
+    }
+
+    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
+    final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
+
+    final VectorValueSelector timeSelector;
+    if (firstBucket.contains(clippedQueryInterval)) {
+      // Only one bucket, no need to read the time column.
+      assert Iterables.size(bucketIterable) == 1;
+      timeSelector = null;
+    } else {
+      // Multiple buckets, need to read the time column to know when we move from one to the next.
+      timeSelector = cursor.getColumnSelectorFactory().makeValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+    }
+
+    return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
+  }
+
   private final VectorCursor cursor;
 
   // Iterable that iterates over time buckets.
@@ -66,40 +119,6 @@ public class VectorCursorGranularizer
     this.cursor = cursor;
     this.bucketIterable = bucketIterable;
     this.timeSelector = timeSelector;
-  }
-
-  @Nullable
-  public static VectorCursorGranularizer create(
-      final StorageAdapter storageAdapter,
-      final VectorCursor cursor,
-      final Granularity granularity,
-      final Interval queryInterval
-  )
-  {
-    final DateTime minTime = storageAdapter.getMinTime();
-    final DateTime maxTime = storageAdapter.getMaxTime();
-
-    final Interval storageAdapterInterval = new Interval(minTime, granularity.bucketEnd(maxTime));
-    final Interval clippedQueryInterval = queryInterval.overlap(storageAdapterInterval);
-
-    if (clippedQueryInterval == null) {
-      return null;
-    }
-
-    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
-    final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
-
-    final VectorValueSelector timeSelector;
-    if (firstBucket.contains(clippedQueryInterval)) {
-      // Only one bucket, no need to read the time column.
-      assert Iterables.size(bucketIterable) == 1;
-      timeSelector = null;
-    } else {
-      // Multiple buckets, need to read the time column to know when we move from one to the next.
-      timeSelector = cursor.getColumnSelectorFactory().makeValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-    }
-
-    return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
   }
 
   public void setCurrentOffsets(final Interval bucketInterval)

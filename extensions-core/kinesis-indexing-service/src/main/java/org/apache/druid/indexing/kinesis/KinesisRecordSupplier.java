@@ -26,6 +26,7 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.clientlibrary.types.UserRecord;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
@@ -49,7 +50,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -69,7 +70,6 @@ import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -94,7 +94,7 @@ import java.util.stream.Collectors;
  * This class implements a local buffer for storing fetched Kinesis records. Fetching is done
  * in background threads.
  */
-public class KinesisRecordSupplier implements RecordSupplier<String, String, ByteEntity>
+public class KinesisRecordSupplier implements RecordSupplier<String, String, KinesisRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
@@ -210,7 +210,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
-        OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
+        OrderedPartitionableRecord<String, String, KinesisRecordEntity> currRecord;
         long recordBufferOfferWaitMillis;
         try {
 
@@ -224,8 +224,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
                 KinesisSequenceNumber.END_OF_SHARD_MARKER,
                 null
             );
-
-            recordsResult = null;
 
             recordBufferOfferWaitMillis = recordBufferOfferTimeout;
             while (!records.offer(
@@ -248,7 +246,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
-            final List<ByteEntity> data;
+            final List<KinesisRecordEntity> data;
 
             if (deaggregateHandle == null || getDataHandle == null) {
               throw new ISE("deaggregateHandle or getDataHandle is null!");
@@ -256,15 +254,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             data = new ArrayList<>();
 
-            final List userRecords = (List) deaggregateHandle.invokeExact(
+            final List<UserRecord> userRecords = (List<UserRecord>) deaggregateHandle.invokeExact(
                 Collections.singletonList(kinesisRecord)
             );
 
             int recordSize = 0;
-            for (Object userRecord : userRecords) {
-              ByteEntity byteEntity = new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord));
-              recordSize += byteEntity.getBuffer().array().length;
-              data.add(byteEntity);
+            for (UserRecord userRecord : userRecords) {
+              KinesisRecordEntity kinesisRecordEntity = new KinesisRecordEntity(userRecord);
+              recordSize += kinesisRecordEntity.getBuffer().array().length;
+              data.add(kinesisRecordEntity);
             }
 
 
@@ -408,11 +406,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
-  private MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
+  private MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> records;
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
-  private AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
+  private final AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -615,12 +613,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   @Nonnull
   @Override
-  public List<OrderedPartitionableRecord<String, String, ByteEntity>> poll(long timeout)
+  public List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> poll(long timeout)
   {
     start();
 
     try {
-      List<MemoryBoundLinkedBlockingQueue.ObjectContainer<OrderedPartitionableRecord<String, String, ByteEntity>>> polledRecords = new ArrayList<>();
+      List<MemoryBoundLinkedBlockingQueue.ObjectContainer<OrderedPartitionableRecord<String, String, KinesisRecordEntity>>> polledRecords = new ArrayList<>();
 
       records.drain(
           polledRecords,
@@ -873,7 +871,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
-   *
+   * <p>
    * When there are no records at the offset corresponding to the ShardIteratorType,
    *    If shard is closed, return custom EOS sequence marker
    *    While getting the earliest sequence number, return a custom marker corresponding to TRIM_HORIZON
@@ -973,7 +971,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
       // If no more new data after offsetToUse, it means there is no lag for now.
       // So report lag points as 0L.
-      if (recordsResult.getRecords().size() == 0) {
+      if (recordsResult.getRecords().isEmpty()) {
         return 0L;
       } else {
         recordsResult = getRecordsForLag(iteratorType, offsetToUse, partition);
@@ -992,10 +990,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             offsetToUse
     ).getShardIterator();
 
-    GetRecordsResult recordsResult = kinesis.getRecords(
-            new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
+    return kinesis.getRecords(
+        new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
     );
-    return recordsResult;
   }
 
   /**
@@ -1011,7 +1008,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   /**
    * This method must be called before a seek operation ({@link #seek}, {@link #seekToLatest}, or
    * {@link #seekToEarliest}).
-   *
+   * <p>
    * When called, it will nuke the {@link #scheduledExec} that is shared by all {@link PartitionResource}, filters
    * records from the buffer for partitions which will have a seek operation performed, and stops background fetch for
    * each {@link PartitionResource} to prepare for the seek. If background fetch is not currently running, the
@@ -1040,7 +1037,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ =
+    MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> newQ =
         new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
 
     records.stream()
@@ -1060,6 +1057,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     records = newQ;
 
     // restart fetching threads
-    partitionResources.values().forEach(x -> x.stopBackgroundFetch());
+    partitionResources.values().forEach(PartitionResource::stopBackgroundFetch);
   }
 }

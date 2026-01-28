@@ -25,12 +25,14 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Comparator;
 
 public class NestedCommonFormatColumnHandler implements DimensionHandler<StructuredData, StructuredData, StructuredData>
@@ -44,11 +46,18 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   private final String name;
   @Nullable
   private final ColumnType castTo;
+  @Nullable
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
-  public NestedCommonFormatColumnHandler(String name, @Nullable ColumnType castTo)
+  public NestedCommonFormatColumnHandler(
+      String name,
+      @Nullable ColumnType castTo,
+      @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec
+  )
   {
     this.name = name;
     this.castTo = castTo;
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Override
@@ -66,25 +75,35 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
-    return new AutoTypeColumnSchema(name, castTo);
+    return new AutoTypeColumnSchema(name, castTo, columnFormatSpec);
   }
 
   @Override
-  public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer()
   {
-    return new AutoTypeColumnIndexer(name, castTo);
+    return new AutoTypeColumnIndexer(name, castTo, columnFormatSpec);
   }
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, castTo, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(
+        name,
+        outputName,
+        castTo,
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec),
+        segmentWriteOutMedium,
+        segmentBaseDir,
+        closer
+    );
   }
 
   @Override

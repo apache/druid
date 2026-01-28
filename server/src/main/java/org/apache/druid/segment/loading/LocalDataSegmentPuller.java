@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.FileUtils;
@@ -116,12 +115,6 @@ public class LocalDataSegmentPuller implements URIDataPuller
   }
 
   private static final Logger log = new Logger(LocalDataSegmentPuller.class);
-
-  @VisibleForTesting
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
-  {
-    getSegmentFiles(getFile(segment), dir);
-  }
 
   public FileUtils.FileCopyResult getSegmentFiles(final File sourceFile, final File dir) throws SegmentLoadingException
   {
@@ -227,7 +220,7 @@ public class LocalDataSegmentPuller implements URIDataPuller
     // not found, there's only so much that retries would do (unless the file was temporarily absent for some reason).
     // Since this is not a commonly used puller in production, and in general is more useful in testing/debugging,
     // I do not have a good sense of what kind of Exceptions people would expect to encounter in the wild
-    return new Predicate<Throwable>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(Throwable input)

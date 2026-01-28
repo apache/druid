@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.regex.Pattern;
@@ -62,9 +63,16 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, Map<String, String> extraLabels)
+  public Metrics(PrometheusEmitterConfig config)
   {
-    Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
+    String namespace = config.getNamespace();
+    String path = config.getDimensionMapPath();
+    boolean isAddHostAsLabel = config.isAddHostAsLabel();
+    boolean isAddServiceAsLabel = config.isAddServiceAsLabel();
+    Map<String, String> extraLabels = config.getExtraLabels();
+    Integer ttlSeconds = config.getFlushPeriod();
+
+    Map<String, DimensionsAndCollector> parsedRegisteredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
 
     if (extraLabels == null) {
@@ -108,7 +116,7 @@ public class Metrics
             .namespace(namespace)
             .name(formattedName)
             .labelNames(dimensions)
-            .buckets(.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300)
+            .buckets(metric.histogramBuckets)
             .help(metric.help)
             .register();
       } else {
@@ -116,10 +124,10 @@ public class Metrics
       }
 
       if (collector != null) {
-        registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
+        parsedRegisteredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor, metric.histogramBuckets, ttlSeconds));
       }
     }
-    this.registeredMetrics = Collections.unmodifiableMap(registeredMetrics);
+    this.registeredMetrics = Collections.unmodifiableMap(parsedRegisteredMetrics);
   }
 
   private Map<String, Metric> readConfig(String path)
@@ -153,19 +161,26 @@ public class Metrics
     public final Type type;
     public final String help;
     public final double conversionFactor;
+    public final double[] histogramBuckets;
 
     @JsonCreator
     public Metric(
         @JsonProperty("dimensions") SortedSet<String> dimensions,
         @JsonProperty("type") Type type,
         @JsonProperty("help") String help,
-        @JsonProperty("conversionFactor") double conversionFactor
+        @JsonProperty("conversionFactor") double conversionFactor,
+        @JsonProperty("histogramBuckets") List<Double> histogramBuckets
     )
     {
       this.dimensions = dimensions;
       this.type = type;
       this.help = help;
       this.conversionFactor = conversionFactor;
+      if (histogramBuckets != null && !histogramBuckets.isEmpty()) {
+        this.histogramBuckets = histogramBuckets.stream().mapToDouble(Double::doubleValue).toArray();
+      } else {
+        this.histogramBuckets = new double[] {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
+      }
     }
 
     public enum Type

@@ -314,8 +314,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         final String upper = hasUpperBound() ? upperEval.asString() : null;
         return rangeIndexes.forRange(lower, lowerOpen, upper, upperOpen);
       }
-    }
-    if (matchValueType.isNumeric()) {
+    } else if (matchValueType.isNumeric()) {
       final NumericRangeIndexes rangeIndexes = indexSupplier.as(NumericRangeIndexes.class);
       if (rangeIndexes != null) {
         final Number lower = (Number) lowerEval.value();

@@ -19,33 +19,45 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
+ * Contains dimension names used while emitting metrics.
  */
 public class DruidMetrics
 {
+  // Query dimensions
   public static final String DATASOURCE = "dataSource";
   public static final String TYPE = "type";
   public static final String INTERVAL = "interval";
   public static final String ID = "id";
+  public static final String SUBQUERY_ID = "subQueryId";
+  public static final String STATUS_CODE = "statusCode";
+  public static final String STATUS = "status";
+  public static final String ENGINE = "engine";
+  public static final String DURATION = "duration";
+  public static final String SUCCESS = "success";
+
+  // Task dimensions
   public static final String TASK_ID = "taskId";
   public static final String GROUP_ID = "groupId";
-  public static final String STATUS = "status";
-  public static final String TASK_INGESTION_MODE = "taskIngestionMode";
-
-  public static final String PARTITIONING_TYPE = "partitioningType";
-
-  // task metrics
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";
+  public static final String DESCRIPTION = "description";
 
+  // Ingestion dimensions
+  public static final String PARTITIONING_TYPE = "partitioningType";
+  public static final String TASK_INGESTION_MODE = "taskIngestionMode";
+  public static final String TASK_ACTION_TYPE = "taskActionType";
   public static final String STREAM = "stream";
-
   public static final String PARTITION = "partition";
+  public static final String SUPERVISOR_ID = "supervisorId";
+  public static final String REASON = "reason";
 
   public static final String TAGS = "tags";
 
@@ -78,5 +90,30 @@ public class DruidMetrics
     }
     queryMetrics.remoteAddress(remoteAddr);
     return queryMetrics;
+  }
+
+  /**
+   * Computes the HTTP status code based on the query error (if any) for tagged metric emission.
+   * <ul>
+   *   <li>If error is null: returns 200 (success)</li>
+   *   <li>If error is a {@link DruidException} or {@link QueryException}: returns the corresponding status code</li>
+   *   <li>Otherwise (unclassified error): returns 500 (internal server error)</li>
+   * </ul>
+   *
+   * @param error The throwable error, or null if successful
+   * @return HTTP status code appropriate for the error
+   */
+  public static int computeStatusCode(@Nullable Throwable error)
+  {
+    if (error == null) {
+      return 200;
+    }
+    if (error instanceof DruidException) {
+      return ((DruidException) error).getCategory().getExpectedStatus();
+    } else if (error instanceof QueryException) {
+      return ((QueryException) error).getFailType().getExpectedStatus();
+    }
+    // Unclassified errors default to 500 (defensive)
+    return DruidException.Category.DEFENSIVE.getExpectedStatus();
   }
 }

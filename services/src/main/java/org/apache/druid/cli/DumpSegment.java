@@ -48,7 +48,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -71,14 +70,16 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -87,6 +88,7 @@ import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
@@ -97,7 +99,6 @@ import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.chrono.ISOChronology;
 import org.roaringbitmap.IntIterator;
 
 import java.io.File;
@@ -125,7 +126,8 @@ public class DumpSegment extends GuiceRunnable
     ROWS,
     METADATA,
     BITMAPS,
-    NESTED
+    NESTED,
+    METADATA_V10
   }
 
   public DumpSegment()
@@ -194,10 +196,15 @@ public class DumpSegment extends GuiceRunnable
       throw new IAE("Not a valid dump type: %s", dumpTypeString);
     }
 
+    if (dumpType == DumpType.METADATA_V10) {
+      dumpV10Metadata(injector, directory, outputFileName);
+      return;
+    }
+
     try (final QueryableIndex index = indexIO.loadIndex(new File(directory))) {
       switch (dumpType) {
         case ROWS:
-          runDump(injector, index);
+          runDump(injector, outputFileName, index, getColumnsToInclude(index), filterJson, timeISO8601);
           break;
         case METADATA:
           runMetadata(injector, index);
@@ -226,6 +233,16 @@ public class DumpSegment extends GuiceRunnable
     }
   }
 
+  private List<String> getColumnsToInclude(final QueryableIndex index)
+  {
+    return getColumnsToInclude(index, columnNamesFromCli);
+  }
+
+  private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
+  {
+    return withOutputStream(f, outputFileName);
+  }
+
   private void runMetadata(final Injector injector, final QueryableIndex index) throws IOException
   {
     final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class))
@@ -243,7 +260,7 @@ public class DumpSegment extends GuiceRunnable
         null
     );
     withOutputStream(
-        new Function<OutputStream, Object>()
+        new Function<>()
         {
           @Override
           public Object apply(final OutputStream out)
@@ -251,7 +268,7 @@ public class DumpSegment extends GuiceRunnable
             evaluateSequenceForSideEffects(
                 Sequences.map(
                     executeQuery(injector, index, query),
-                    new Function<SegmentAnalysis, Object>()
+                    new Function<>()
                     {
                       @Override
                       public Object apply(SegmentAnalysis analysis)
@@ -274,77 +291,74 @@ public class DumpSegment extends GuiceRunnable
     );
   }
 
-  private void runDump(final Injector injector, final QueryableIndex index) throws IOException
+  @VisibleForTesting
+  public static void runDump(
+      final Injector injector,
+      final String outputFileName,
+      final QueryableIndex index,
+      final List<String> columnNames,
+      final String filterJson,
+      final boolean timeISO8601
+  )
+      throws IOException
   {
     final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-    final List<String> columnNames = getColumnsToInclude(index);
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
     final DimFilter filter = filterJson != null ? objectMapper.readValue(filterJson, DimFilter.class) : null;
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        Filters.toFilter(filter),
-        index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(Filters.toFilter(filter))
+                                                     .build();
 
-    withOutputStream(
-        new Function<OutputStream, Object>()
-        {
-          @Override
-          public Object apply(final OutputStream out)
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      if (cursor == null) {
+        return;
+      }
+
+      withOutputStream(
+          new Function<>()
           {
-            final Sequence<Object> sequence = Sequences.map(
-                cursors,
-                new Function<Cursor, Object>()
-                {
-                  @Override
-                  public Object apply(Cursor cursor)
-                  {
-                    ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-                    final List<BaseObjectColumnValueSelector> selectors = columnNames
-                        .stream()
-                        .map(columnSelectorFactory::makeColumnValueSelector)
-                        .collect(Collectors.toList());
+            @Override
+            public Object apply(final OutputStream out)
+            {
+              ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+              final List<BaseObjectColumnValueSelector> selectors = columnNames
+                  .stream()
+                  .map(columnSelectorFactory::makeColumnValueSelector)
+                  .collect(Collectors.toList());
 
-                    while (!cursor.isDone()) {
-                      final Map<String, Object> row = Maps.newLinkedHashMap();
+              while (!cursor.isDone()) {
+                final Map<String, Object> row = Maps.newLinkedHashMap();
 
-                      for (int i = 0; i < columnNames.size(); i++) {
-                        final String columnName = columnNames.get(i);
-                        final Object value = selectors.get(i).getObject();
+                for (int i = 0; i < columnNames.size(); i++) {
+                  final String columnName = columnNames.get(i);
+                  final Object value = selectors.get(i).getObject();
 
-                        if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
-                          row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
-                        } else {
-                          row.put(columnName, value);
-                        }
-                      }
-
-                      try {
-                        out.write(objectMapper.writeValueAsBytes(row));
-                        out.write('\n');
-                      }
-                      catch (IOException e) {
-                        throw new RuntimeException(e);
-                      }
-
-                      cursor.advance();
-                    }
-
-                    return null;
+                  if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
+                    row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
+                  } else {
+                    row.put(columnName, value);
                   }
                 }
-            );
 
-            evaluateSequenceForSideEffects(sequence);
+                try {
+                  out.write(objectMapper.writeValueAsBytes(row));
+                  out.write('\n');
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
 
-            return null;
-          }
-        }
-    );
+                cursor.advance();
+              }
+
+              return null;
+            }
+          },
+          outputFileName
+      );
+    }
   }
 
   @VisibleForTesting
@@ -450,11 +464,11 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn baseColumn = columnHolder.getColumn();
                 Preconditions.checkArgument(baseColumn instanceof CompressedNestedDataComplexColumn);
-                final CompressedNestedDataComplexColumn<?> nestedDataColumn =
-                    (CompressedNestedDataComplexColumn<?>) baseColumn;
+                final CompressedNestedDataComplexColumn<?, ?> nestedDataColumn =
+                    (CompressedNestedDataComplexColumn<?, ?>) baseColumn;
 
                 jg.writeFieldName("fields");
                 jg.writeStartArray();
@@ -464,7 +478,7 @@ public class DumpSegment extends GuiceRunnable
                   jg.writeFieldName("path");
                   jg.writeString(NestedPathFinder.toNormalizedJsonPath(field));
                   jg.writeFieldName("types");
-                  Set<ColumnType> types = nestedDataColumn.getColumnTypes(field);
+                  Set<ColumnType> types = nestedDataColumn.getFieldTypes(field);
                   jg.writeStartArray();
                   for (ColumnType type : types) {
                     jg.writeString(type.asTypeString());
@@ -581,7 +595,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn column = columnHolder.getColumn();
                 Preconditions.checkArgument(column instanceof CompressedNestedDataComplexColumn);
                 final CompressedNestedDataComplexColumn nestedDataColumn = (CompressedNestedDataComplexColumn) column;
@@ -595,11 +609,8 @@ public class DumpSegment extends GuiceRunnable
 
                 SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());
                 final ColumnValueSelector rawSelector = nestedDataColumn.makeColumnValueSelector(offset);
-                final DimensionSelector fieldSelector = nestedDataColumn.makeDimensionSelector(
-                    pathParts,
-                    offset,
-                    null
-                );
+                final DimensionSelector fieldSelector =
+                    nestedDataColumn.makeDimensionSelector(pathParts, null, null, offset);
                 if (indexSupplier == null) {
                   jg.writeNullField(path);
                 } else {
@@ -611,7 +622,7 @@ public class DumpSegment extends GuiceRunnable
                     jg.writeFieldName(path);
                     jg.writeStartObject();
                     jg.writeFieldName("types");
-                    Set<ColumnType> types = nestedDataColumn.getColumnTypes(pathParts);
+                    Set<ColumnType> types = nestedDataColumn.getFieldTypes(pathParts);
                     jg.writeStartArray();
                     for (ColumnType type : types) {
                       jg.writeString(type.asTypeString());
@@ -686,10 +697,33 @@ public class DumpSegment extends GuiceRunnable
         outputFileName
     );
   }
-
-  private List<String> getColumnsToInclude(final QueryableIndex index)
+  @VisibleForTesting
+  public static void dumpV10Metadata(Injector injector, String segmentFile, String output)
   {
-    final Set<String> columnNames = Sets.newLinkedHashSet(columnNamesFromCli);
+    final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    try (SegmentFileMapperV10 fileMapperV10 = SegmentFileMapperV10.create(new File(segmentFile), objectMapper)) {
+      withOutputStream(
+          (Function<OutputStream, Object>) outStream -> {
+            try {
+              objectMapper.writeValue(outStream, fileMapperV10.getSegmentFileMetadata());
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+            return null;
+          },
+          output
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  public static List<String> getColumnsToInclude(final QueryableIndex index, List<String> columns)
+  {
+    final Set<String> columnNames = Sets.newLinkedHashSet(columns);
 
     // Empty columnNames => include all columns.
     if (columnNames.isEmpty()) {
@@ -705,11 +739,6 @@ public class DumpSegment extends GuiceRunnable
     }
 
     return ImmutableList.copyOf(columnNames);
-  }
-
-  private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
-  {
-    return withOutputStream(f, outputFileName);
   }
 
   @SuppressForbidden(reason = "System#out")

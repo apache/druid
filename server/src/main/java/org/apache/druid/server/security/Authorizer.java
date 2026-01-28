@@ -22,13 +22,9 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthorizer.class)
-})
 /**
  * An Authorizer is responsible for performing authorization checks for resource accesses.
- *
+ * <p>
  * A single instance of each Authorizer implementation will be created per node.
  * Security-sensitive endpoints will need to extract the identity string contained in the request's Druid-Auth-Token
  * attribute, previously set by an Authenticator. Each endpoint will pass this identity String to the
@@ -37,16 +33,22 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * After a request is authorized, a new attribute, "Druid-Authorization-Checked", should be set in the
  * request header with the result of the authorization decision.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = AuthConfig.ALLOW_ALL_NAME, value = AllowAllAuthorizer.class)
+})
 public interface Authorizer
 {
   /**
    * Check if the entity represented by {@code identity} is authorized to perform {@code action} on {@code resource}.
+   * <p>
+   * If the action involves reading a table, the outcome could include {@link org.apache.druid.query.policy.Policy} restrictions.
+   * However, if the action does not involve reading a table, there must be no {@link org.apache.druid.query.policy.Policy} restrictions.
    *
-   * @param authenticationResult  The authentication result of the request
-   * @param resource  The resource to be accessed
-   * @param action    The action to perform on the resource
-   *
-   * @return An Access object representing the result of the authorization check. Must not be null.
+   * @param authenticationResult The authentication result of the request
+   * @param resource             The resource to be accessed
+   * @param action               The action to perform on the resource
+   * @return An {@link Access} object representing the result of the authorization check. Must not be null.
    */
   Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action);
 }

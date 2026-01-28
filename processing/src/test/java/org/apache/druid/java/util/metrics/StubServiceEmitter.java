@@ -19,16 +19,24 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Test implementation of {@link ServiceEmitter} that collects emitted metrics
@@ -36,18 +44,32 @@ import java.util.Map;
  */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
-  private final List<Event> events = new ArrayList<>();
-  private final List<AlertEvent> alertEvents = new ArrayList<>();
-  private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
+  public static final String TYPE = "stub";
+
+  private final Deque<Event> events = new ConcurrentLinkedDeque<>();
+  private final Deque<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
+  private final ConcurrentHashMap<String, Deque<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {
-    super("testing", "localhost", null);
+    this("testing", "localhost");
   }
 
   public StubServiceEmitter(String service, String host)
   {
-    super(service, host, null);
+    this(service, host, new NoopTaskHolder());
+  }
+
+  public StubServiceEmitter(String service, String host, TaskHolder taskHolder)
+  {
+    super(service, host, new NoopEmitter(), ImmutableMap.of(), taskHolder);
+  }
+
+  public static StubServiceEmitter createStarted()
+  {
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter();
+    stubServiceEmitter.start();
+    return stubServiceEmitter;
   }
 
   @Override
@@ -55,7 +77,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   {
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
+      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ConcurrentLinkedDeque<>())
                   .add(metricEvent);
     } else if (event instanceof AlertEvent) {
       alertEvents.add((AlertEvent) event);
@@ -68,17 +90,23 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
    */
   public List<Event> getEvents()
   {
-    return events;
+    return new ArrayList<>(events);
+  }
+
+  public int getNumEmittedEvents()
+  {
+    return events.size();
   }
 
   /**
-   * Gets all the metric events emitted since the previous {@link #flush()}.
+   * Gets all the metric events emitted for the given metric name since the previous {@link #flush()}.
    *
-   * @return Map from metric name to list of events emitted for that metric.
+   * @return List of events emitted for the given metric.
    */
-  public Map<String, List<ServiceMetricEvent>> getMetricEvents()
+  public List<ServiceMetricEvent> getMetricEvents(String metricName)
   {
-    return metricEvents;
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? List.of() : List.copyOf(metricEventQueue);
   }
 
   /**
@@ -86,18 +114,18 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
    */
   public List<AlertEvent> getAlerts()
   {
-    return alertEvents;
+    return new ArrayList<>(alertEvents);
   }
 
   @Override
   public List<Number> getMetricValues(
       String metricName,
-      Map<String, Object> dimensionFilters
+      @Nullable Map<String, Object> dimensionFilters
   )
   {
     final List<Number> values = new ArrayList<>();
-    final List<ServiceMetricEvent> events =
-        metricEvents.getOrDefault(metricName, Collections.emptyList());
+    final Queue<ServiceMetricEvent> events =
+        metricEvents.getOrDefault(metricName, new ArrayDeque<>());
     final Map<String, Object> filters =
         dimensionFilters == null ? Collections.emptyMap() : dimensionFilters;
     for (ServiceMetricEvent event : events) {
@@ -114,9 +142,42 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     return values;
   }
 
+  public int getMetricEventCount(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? 0 : metricEventQueue.size();
+  }
+
+  public long getMetricEventLongSum(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    long total = 0;
+    for (ServiceMetricEvent event : metricEventQueue) {
+      total += event.getValue().longValue();
+    }
+    return total;
+  }
+
+  @Nullable
+  public Number getLatestMetricEventValue(String metricName)
+  {
+    final Deque<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? null : metricEventQueue.getLast().getValue();
+  }
+
+  public Number getLatestMetricEventValue(String metricName, Number defaultValue)
+  {
+    final Number latest = getLatestMetricEventValue(metricName);
+    if (latest == null) {
+      return defaultValue;
+    }
+    return latest;
+  }
+
   @Override
   public void start()
   {
+    super.start();
   }
 
   @Override
@@ -130,5 +191,11 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public void close()
   {
+    try {
+      super.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

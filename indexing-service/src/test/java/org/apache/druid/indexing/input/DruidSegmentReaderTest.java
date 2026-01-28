@@ -22,7 +22,7 @@ package org.apache.druid.indexing.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
@@ -646,7 +646,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     MutableBoolean isSequenceClosed = new MutableBoolean(false);
     MutableBoolean isFileClosed = new MutableBoolean(false);
     Sequence<Map<String, Object>> sequence = new BaseSequence<>(
-        new IteratorMaker<Map<String, Object>, Iterator<Map<String, Object>>>()
+        new IteratorMaker<>()
         {
           @Override
           public Iterator<Map<String, Object>> make()
@@ -694,7 +694,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),
             new DoubleDimensionSchema("dblCol"),
-            new AutoTypeColumnSchema("arrayCol", null)
+            AutoTypeColumnSchema.of("arrayCol")
         )
     );
     List<AggregatorFactory> metrics = ImmutableList.of(
@@ -743,7 +743,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -768,7 +768,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 StringDimensionSchema.create("strCol"),
                 new DoubleDimensionSchema("dblCol"),
-                new AutoTypeColumnSchema("arrayCol", null)
+                AutoTypeColumnSchema.of("arrayCol")
             )
         ),
         ColumnsFilter.all(),
@@ -806,7 +806,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),
             new DoubleDimensionSchema("dblCol"),
-            new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY)
+            new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY, null)
         )
     );
     List<AggregatorFactory> metrics = ImmutableList.of(
@@ -855,7 +855,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -880,7 +880,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 StringDimensionSchema.create("strCol"),
                 new DoubleDimensionSchema("dblCol"),
-                new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY)
+                new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY, null)
             )
         ),
         ColumnsFilter.all(),
@@ -932,9 +932,21 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         new NoopSegmentCacheManager()
         {
           @Override
+          public void load(DataSegment segment)
+          {
+            // do nothing
+          }
+
+          @Override
           public File getSegmentFiles(DataSegment segment)
           {
             return segmentDirectory;
+          }
+
+          @Override
+          public void drop(DataSegment segment)
+          {
+            segmentDirectory.delete();
           }
         },
         DataSegment.builder()
@@ -1018,7 +1030,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);

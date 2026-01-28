@@ -20,6 +20,7 @@
 package org.apache.druid.js;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,5 +60,30 @@ public class JavaScriptConfigTest
     );
 
     Assert.assertFalse(config.isEnabled());
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.simple()
+            .forClass(JavaScriptConfig.class)
+            .usingGetClass()
+            .withNonnullFields("enabled")
+            .verify();
+  }
+
+  @Test
+  public void testToString()
+  {
+    JavaScriptConfig javaScriptConfig = new JavaScriptConfig(true);
+    Assert.assertEquals("JavaScriptConfig{enabled=true}", javaScriptConfig.toString());
+  }
+
+  @Test
+  public void testEnabledInstance()
+  {
+    JavaScriptConfig javaScriptConfig = JavaScriptConfig.getEnabledInstance();
+    Assert.assertTrue(javaScriptConfig.isEnabled());
+    Assert.assertSame(javaScriptConfig, JavaScriptConfig.getEnabledInstance());
   }
 }

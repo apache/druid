@@ -43,7 +43,7 @@ This expression language supports the following operators (listed in decreasing 
 |^|Binary power op|
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
-|<, <=, >, >=, ==, !=|Binary Comparison|
+|&lt;, &le;, &gt;, &ge;, ==, !=|Binary Comparison|
 |&&, &#124;&#124;|Binary Logical AND, OR|
 
 Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
@@ -65,7 +65,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY\<LONG\>, or ARRAY\<DOUBLE\> or ARRAY\<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |coalesce|coalesce(exprs) returns the first non-null expression, or null if all expressions are null. |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null. |
@@ -81,7 +81,7 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name[,replaceMissingValueWith]) looks up expr in a registered,`replaceMissingValueWith` is an optional constant string [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
@@ -134,8 +134,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
 |bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) converts a long to the IEEE 754 floating-point double specified by the bits stored in the long. If the input is not a long, it is implicitly cast to a long prior to conversion|
 |bitwiseOr|bitwiseOr(x,y) returns the result of x [PIPE] y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
-|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x << y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
-|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x >> y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x `<<` y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x `>>` y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |bitwiseXor|bitwiseXor(x,y) returns the result of x ^ y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |atan2|atan2(y, x) returns the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
 |cbrt|cbrt(x) returns the cube root of x|
@@ -162,7 +162,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
 |round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
-|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns `null` or 0 if `druid.generic.useDefaultValueForNull=true` (legacy mode) |
+|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. Returns `null` if y is 0.|
 |scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) returns the signum function of the argument x|
 |sin|sin(x) returns the trigonometric sine of an angle x|
@@ -185,8 +185,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
 | scalar_in_array(expr, arr) | returns 1 if the scalar is present in the array, else 0 if the expr is non-null, or null if the expr is null |
-| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
-| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
@@ -246,6 +246,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 | to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
 | json_keys(expr, path) | Get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
 | json_paths(expr) | Get array of all JSONPath paths available from `expr` |
+| json_merge(expr1, expr2[, expr3 ...]) | Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. |
 
 ### JSONPath syntax
 
@@ -299,7 +300,7 @@ For the IPv6 address function, the `address` argument accepts a semicolon separa
 
 
 ## Vectorization support
-A number of expressions support ['vectorized' query engines](../querying/query-context.md#vectorization-parameters)
+A number of expressions support ['vectorized' query engines](../querying/query-context-reference.md#vectorization-parameters)
 
 Supported features:
 * constants and identifiers are supported for any column type
@@ -314,8 +315,8 @@ Supported features:
 * string functions: the concatenation operator (`+`) and `concat` function are supported for string and numeric types
 * other: `parse_long` is supported for numeric and string types
 
-## Logical operator modes
-In Druid 28.0 and later, `druid.expressions.useStrictBooleans=true` is set by default. Logical operations treat `null` values as "unknown" for SQL compatible behavior. _All boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. 
+## Logical operator behavior
+Logical operations treat `null` values as "unknown" for SQL compatible behavior. _All boolean output functions_ output `LONG` typed boolean values of `1` for `true` and `0` for `false`. 
 
 For the "or" operator:
 * `true || null`, `null || true`, -> `1`
@@ -325,22 +326,14 @@ For the "and" operator:
 * `true && null`, `null && true`, `null && null` -> `null`
 * `false && null`, `null && false` -> `0`
 
-Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
+Druid allows implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values: 
 * `LONG` or `DOUBLE`: any value greater than 0 is considered `true`, else `false`.
 * `STRING`: the value `'true'` (case insensitive) is considered `true`, everything else is `false`.
 
-SQL compatible behavior:
+Behavior examples:
 * `100 && 11` -> `1`
 * `0.7 || 0.3` -> `1`
 * `100 && 0` -> `0`
 * `'troo' && 'true'` -> `0`
 * `'troo' || 'true'` -> `1`
 
-Prior to Druid 28.0.0, `druid.expressions.useStrictBooleans=false` was the default. In this mode, boolean function expressions have inconsistent handling of true and false values. The logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values, similar to many scripting languages, and treat `null` as false, which results in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison produces `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. This legacy mode can still be enabled by setting `druid.expressions.useStrictBooleans=false`.
-
-Legacy behavior:
-* `100 && 11` -> `11`
-* `0.7 || 0.3` -> `0.3`
-* `100 && 0` -> `0`
-* `'troo' && 'true'` -> `'troo'`
-* `'troo' || 'true'` -> `'true'`

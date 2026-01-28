@@ -41,9 +41,12 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.metrics.KafkaMetric;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,6 +63,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertThrows;
 
 public class KafkaRecordSupplierTest
 {
@@ -253,6 +258,38 @@ public class KafkaRecordSupplierTest
   }
 
   @Test
+  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty() throws ExecutionException, InterruptedException
+  {
+    // Insert data
+    insertData();
+
+    Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
+        StreamPartition.of(TOPIC, PARTITION_0),
+        StreamPartition.of(TOPIC, PARTITION_1)
+    );
+
+    Map<String, Object> properties = KAFKA_SERVER.consumerProperties();
+    properties.put("sasl.mechanism", "OAUTHBEARER");
+    properties.put("security.protocol", "SASL_SSL");
+    properties.put("sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+    properties.put("sasl.login.callback.handler.class", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler");
+
+    properties.put("sasl.oauthbearer.token.endpoint.url", "http://localhost:8080/token");
+
+    MatcherAssert.assertThat(
+        assertThrows(KafkaException.class, () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false)),
+        CoreMatchers.instanceOf(KafkaException.class)
+    );
+
+    properties.remove("sasl.oauthbearer.token.endpoint.url");
+    properties.put("sasl.oauthbearer.jwks.endpoint.url", "http://localhost:8080/jwks");
+    MatcherAssert.assertThat(
+        assertThrows(KafkaException.class, () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false)),
+        CoreMatchers.instanceOf(KafkaException.class)
+    );
+  }
+
+  @Test
   public void testMultiTopicSupplierSetup() throws ExecutionException, InterruptedException
   {
     // Insert data into TOPIC
@@ -437,6 +474,16 @@ public class KafkaRecordSupplierTest
     Assert.assertTrue(monitor.monitor(emitter));
     emitter.verifyEmitted("kafka/consumer/bytesConsumed", 1);
     emitter.verifyEmitted("kafka/consumer/recordsConsumed", 1);
+    emitter.verifyEmitted("kafka/consumer/fetch", 1);
+    emitter.verifyEmitted("kafka/consumer/recordsLag", 2); // per partition
+    emitter.verifyEmitted("kafka/consumer/fetchRate", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchLatencyAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchLatencyMax", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchSizeAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/fetchSizeMax", 1);
+    emitter.verifyEmitted("kafka/consumer/recordsPerRequestAvg", 1);
+    emitter.verifyEmitted("kafka/consumer/incomingBytes", 2);
+    emitter.verifyEmitted("kafka/consumer/outgoingBytes", 2);
 
     recordSupplier.close();
     Assert.assertFalse(monitor.monitor(emitter));
@@ -675,7 +722,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getLatestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -687,7 +734,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -699,7 +746,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getLatestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -711,7 +758,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
   }
 
   @Test

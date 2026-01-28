@@ -30,19 +30,21 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -50,14 +52,14 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -71,6 +73,13 @@ public class FrameTestUtil
 {
   public static final String ROW_NUMBER_COLUMN = "__row_number";
 
+  /**
+   * A context that uses legacy frame serde, and does not support {@link WireTransferable}.
+   * Use this for tests that only need to exercise the legacy frame serde path.
+   */
+  public static final WireTransferableContext WT_CONTEXT_LEGACY =
+      new WireTransferableContext(null, null, true);
+
   private FrameTestUtil()
   {
     // No instantiation.
@@ -78,16 +87,33 @@ public class FrameTestUtil
 
   public static File writeFrameFile(final Sequence<Frame> frames, final File file) throws IOException
   {
-    try (
-        final FileOutputStream fos = new FileOutputStream(file);
-        final FrameFileWriter writer = FrameFileWriter.open(
-            Channels.newChannel(fos), null, ByteTracker.unboundedTracker()
-        )
-    ) {
+    return writeFrameFile(frames, file, null);
+  }
+
+  public static File writeFrameFile(
+      final Sequence<Frame> frames,
+      final File file,
+      @Nullable final WireTransferableContext wireTransferableContext
+  ) throws IOException
+  {
+    writeFrameFile(frames, Files.newOutputStream(file.toPath()), wireTransferableContext);
+    return file;
+  }
+
+  public static void writeFrameFile(
+      final Sequence<Frame> frames,
+      final OutputStream out,
+      @Nullable final WireTransferableContext wireTransferableContext
+  ) throws IOException
+  {
+    final WireTransferableContext context =
+        wireTransferableContext != null ? wireTransferableContext : WT_CONTEXT_LEGACY;
+    try (final FrameFileWriter writer =
+             FrameFileWriter.open(Channels.newChannel(out), null, ByteTracker.unboundedTracker(), context)) {
       frames.forEach(
           frame -> {
             try {
-              writer.writeFrame(frame, FrameFileWriter.NO_PARTITION);
+              writer.write(frame.asRAC(), FrameFileWriter.NO_PARTITION);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -95,24 +121,26 @@ public class FrameTestUtil
           }
       );
     }
-
-    return file;
   }
 
-  public static File writeFrameFileWithPartitions(
+  public static void writeFrameFileWithPartitions(
       final Sequence<IntObjectPair<Frame>> framesWithPartitions,
-      final File file
+      final OutputStream out,
+      @Nullable final WireTransferableContext wireTransferableContext
   ) throws IOException
   {
+    final WireTransferableContext context =
+        wireTransferableContext != null ? wireTransferableContext : WT_CONTEXT_LEGACY;
     try (final FrameFileWriter writer = FrameFileWriter.open(
-        Channels.newChannel(new FileOutputStream(file)),
+        Channels.newChannel(out),
         null,
-        ByteTracker.unboundedTracker()
+        ByteTracker.unboundedTracker(),
+        context
     )) {
       framesWithPartitions.forEach(
           frameWithPartition -> {
             try {
-              writer.writeFrame(frameWithPartition.right(), frameWithPartition.leftInt());
+              writer.write(frameWithPartition.right().asRAC(), frameWithPartition.leftInt());
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -120,8 +148,6 @@ public class FrameTestUtil
           }
       );
     }
-
-    return file;
   }
 
   public static void assertRowsEqual(final Sequence<List<Object>> expected, final Sequence<List<Object>> actual)
@@ -180,10 +206,10 @@ public class FrameTestUtil
     }
   }
 
-  public static Frame adapterToFrame(final StorageAdapter adapter, final FrameType frameType)
+  public static Frame cursorFactoryToFrame(final CursorFactory adapter, final FrameType frameType)
   {
     return Iterables.getOnlyElement(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(adapter)
                             .allocator(HeapMemoryAllocator.unlimited())
                             .frameType(frameType)
                             .frames()
@@ -191,34 +217,20 @@ public class FrameTestUtil
     );
   }
 
-  public static FrameSegment adapterToFrameSegment(
-      final StorageAdapter adapter,
+  public static FrameSegment cursorFactoryToFrameSegment(
+      final CursorFactory adapter,
       final FrameType frameType
   )
   {
     return new FrameSegment(
-        adapterToFrame(adapter, frameType),
-        FrameReader.create(adapter.getRowSignature()),
-        SegmentId.of("TestFrame", adapter.getInterval(), "0", 0)
-    );
-  }
-
-  public static FrameSegment adapterToFrameSegment(
-      final StorageAdapter adapter,
-      final FrameType frameType,
-      final SegmentId segmentId
-  )
-  {
-    return new FrameSegment(
-        adapterToFrame(adapter, frameType),
-        FrameReader.create(adapter.getRowSignature()),
-        segmentId
+        cursorFactoryToFrame(adapter, frameType),
+        FrameReader.create(adapter.getRowSignature())
     );
   }
 
   /**
    * Reads a sequence of rows from a frame channel using a non-vectorized cursor from
-   * {@link FrameStorageAdapter#makeCursors}.
+   * {@link FrameReader#makeCursorFactory(Frame)}.
    *
    * @param channel     the channel
    * @param frameReader reader for this channel
@@ -230,45 +242,64 @@ public class FrameTestUtil
   {
     return new FrameChannelSequence(channel)
         .flatMap(
-            frame ->
-                new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                    .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null)
-                    .flatMap(cursor -> readRowsFromCursor(cursor, frameReader.signature()))
+            rac -> {
+              final CursorHolder cursorHolder = frameReader.makeCursorFactory(rac.as(Frame.class))
+                                                           .makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+              final Cursor cursor = cursorHolder.asCursor();
+              if (cursor == null) {
+                return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+              }
+              return readRowsFromCursor(cursor, frameReader.signature()).withBaggage(cursorHolder);
+            }
         );
   }
 
   /**
-   * Reads a sequence of rows from a storage adapter.
+   * Reads a sequence of rows from a {@link CursorFactory}.
    *
    * If {@param populateRowNumberIfPresent} is set, and the provided signature contains {@link #ROW_NUMBER_COLUMN},
-   * then that column will be populated with a row number from the adapter.
+   * then that column will be populated with a row number from the cursor.
    *
-   * @param adapter           the adapter
-   * @param signature         optional signature for returned rows; will use {@code adapter.rowSignature()} if null
+   * @param cursorFactory     the cursor factory
+   * @param signature         optional signature for returned rows; will use {@code cursorFactory.rowSignature()} if
+   *                          null
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static Sequence<List<Object>> readRowsFromAdapter(
-      final StorageAdapter adapter,
+  public static Sequence<List<Object>> readRowsFromCursorFactory(
+      final CursorFactory cursorFactory,
       @Nullable final RowSignature signature,
       final boolean populateRowNumber
   )
   {
-    final RowSignature signatureToUse = signature == null ? adapter.getRowSignature() : signature;
-    return makeCursorsForAdapter(adapter, populateRowNumber).flatMap(
-        cursor -> readRowsFromCursor(cursor, signatureToUse)
-    );
+    final RowSignature signatureToUse = signature == null ? cursorFactory.getRowSignature() : signature;
+    final CursorHolder cursorHolder = makeCursorForCursorFactory(cursorFactory, populateRowNumber);
+    final Cursor cursor = cursorHolder.asCursor();
+    if (cursor == null) {
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    }
+    return readRowsFromCursor(cursor, signatureToUse).withBaggage(cursorHolder);
+  }
+
+  public static Sequence<List<Object>> readRowsFromCursorFactory(CursorFactory cursorFactory)
+  {
+    return readRowsFromCursorFactory(cursorFactory, null, false);
+  }
+
+  public static Sequence<List<Object>> readRowsFromCursorFactoryWithRowNumber(CursorFactory cursorFactory)
+  {
+    return readRowsFromCursorFactory(cursorFactory, null, true);
   }
 
   /**
-   * Creates a single-Cursor Sequence from a storage adapter.
+   * Creates a {@link CursorHolder} from a {@link CursorFactory}.
    *
    * If {@param populateRowNumber} is set, the row number will be populated into {@link #ROW_NUMBER_COLUMN}.
    *
-   * @param adapter           the adapter
+   * @param cursorFactory     the cursor factory
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static Sequence<Cursor> makeCursorsForAdapter(
-      final StorageAdapter adapter,
+  public static CursorHolder makeCursorForCursorFactory(
+      final CursorFactory cursorFactory,
       final boolean populateRowNumber
   )
   {
@@ -283,14 +314,40 @@ public class FrameTestUtil
       virtualColumns = VirtualColumns.EMPTY;
     }
 
-    return adapter.makeCursors(null, Intervals.ETERNITY, virtualColumns, Granularities.ALL, false, null)
-                  .map(cursor -> {
-                    if (populateRowNumber) {
-                      return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
-                    } else {
-                      return cursor;
-                    }
-                  });
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
+    if (populateRowNumber) {
+      return new CursorHolder()
+      {
+        @Nullable
+        @Override
+        public Cursor asCursor()
+        {
+          final Cursor cursor = cursorHolder.asCursor();
+          if (cursor == null) {
+            return null;
+          }
+          return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
+        }
+
+        @Override
+        public List<OrderBy> getOrdering()
+        {
+          return cursorHolder.getOrdering();
+        }
+
+        @Override
+        public void close()
+        {
+          cursorHolder.close();
+        }
+      };
+    } else {
+      return cursorHolder;
+    }
   }
 
   public static Sequence<List<Object>> readRowsFromCursor(final Cursor cursor, final RowSignature signature)
@@ -326,46 +383,41 @@ public class FrameTestUtil
 
   public static Sequence<List<Object>> readRowsFromVectorCursor(final VectorCursor cursor, final RowSignature signature)
   {
-    try {
-      final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+    final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-      final List<Supplier<Object[]>> columnReaders = new ArrayList<>();
+    final List<Supplier<Object[]>> columnReaders = new ArrayList<>();
 
-      for (int i = 0; i < signature.size(); i++) {
-        final String columnName = signature.getColumnName(i);
-        final Supplier<Object[]> columnReader = ColumnProcessors.makeVectorProcessor(
-            columnName,
-            RowReadingVectorColumnProcessorFactory.INSTANCE,
-            columnSelectorFactory
-        );
+    for (int i = 0; i < signature.size(); i++) {
+      final String columnName = signature.getColumnName(i);
+      final Supplier<Object[]> columnReader = ColumnProcessors.makeVectorProcessor(
+          columnName,
+          RowReadingVectorColumnProcessorFactory.INSTANCE,
+          columnSelectorFactory
+      );
 
-        columnReaders.add(columnReader);
-      }
+      columnReaders.add(columnReader);
+    }
 
-      final List<List<Object>> retVal = new ArrayList<>();
+    final List<List<Object>> retVal = new ArrayList<>();
 
-      while (!cursor.isDone()) {
-        final int vectorSize = cursor.getCurrentVectorSize();
-        final List<Object[]> columns = columnReaders.stream().map(Supplier::get).collect(Collectors.toList());
+    while (!cursor.isDone()) {
+      final int vectorSize = cursor.getCurrentVectorSize();
+      final List<Object[]> columns = columnReaders.stream().map(Supplier::get).collect(Collectors.toList());
 
-        for (int i = 0; i < vectorSize; i++) {
-          final List<Object> row = new ArrayList<>();
+      for (int i = 0; i < vectorSize; i++) {
+        final List<Object> row = new ArrayList<>();
 
-          for (final Object[] column : columns) {
-            row.add(column[i]);
-          }
-
-          retVal.add(row);
+        for (final Object[] column : columns) {
+          row.add(column[i]);
         }
 
-        cursor.advance();
+        retVal.add(row);
       }
 
-      return Sequences.simple(retVal);
+      cursor.advance();
     }
-    finally {
-      cursor.close();
-    }
+
+    return Sequences.simple(retVal);
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)

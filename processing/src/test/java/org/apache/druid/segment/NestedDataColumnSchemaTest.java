@@ -22,17 +22,36 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.column.BitmapIndexType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class NestedDataColumnSchemaTest
 {
-  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null);
-  private static final DefaultColumnFormatConfig DEFAULT_CONFIG_V4 = new DefaultColumnFormatConfig(4);
+  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null, null, null);
+  private static final NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_SPEC =
+      NestedCommonFormatColumnFormatSpec.builder()
+                                        .setObjectFieldsDictionaryEncoding(
+                                            new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1)
+                                        )
+                                        .setObjectStorageCompression(CompressionStrategy.ZSTD)
+                                        .setLongFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+                                        .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+                                        .build();
+
+  private static final DefaultColumnFormatConfig DEFAULT_NESTED_SPEC_CONFIG = new DefaultColumnFormatConfig(
+      null,
+      null,
+      IndexSpec.builder().withAutoColumnFormatSpec(DEFAULT_NESTED_SPEC).build()
+  );
+
   private static final ObjectMapper MAPPER;
-  private static final ObjectMapper MAPPER_V4;
+  private static final ObjectMapper DEFAULT_NESTED_SPEC_MAPPER;
 
   static {
     MAPPER = new DefaultObjectMapper();
@@ -42,12 +61,11 @@ public class NestedDataColumnSchemaTest
             DEFAULT_CONFIG
         )
     );
-
-    MAPPER_V4 = new DefaultObjectMapper();
-    MAPPER_V4.setInjectableValues(
+    DEFAULT_NESTED_SPEC_MAPPER = new DefaultObjectMapper();
+    DEFAULT_NESTED_SPEC_MAPPER.setInjectableValues(
         new InjectableValues.Std().addValue(
             DefaultColumnFormatConfig.class,
-            DEFAULT_CONFIG_V4
+            DEFAULT_NESTED_SPEC_CONFIG
         )
     );
   }
@@ -55,9 +73,7 @@ public class NestedDataColumnSchemaTest
   @Test
   public void testSerdeRoundTrip() throws JsonProcessingException
   {
-    final NestedDataColumnSchema v4 = new NestedDataColumnSchema("test", 4);
-    final NestedDataColumnSchema v5 = new NestedDataColumnSchema("test", 5);
-    Assert.assertEquals(v4, MAPPER.readValue(MAPPER.writeValueAsString(v4), NestedDataColumnSchema.class));
+    final NestedDataColumnSchema v5 = new NestedDataColumnSchema("test", 5, DEFAULT_NESTED_SPEC, DEFAULT_CONFIG);
     Assert.assertEquals(v5, MAPPER.readValue(MAPPER.writeValueAsString(v5), NestedDataColumnSchema.class));
   }
 
@@ -70,32 +86,13 @@ public class NestedDataColumnSchemaTest
   }
 
   @Test
-  public void testSerdeSystemDefault() throws JsonProcessingException
+  public void testSerdeDefaultNestedSpec() throws JsonProcessingException
   {
     final String there = "{\"type\":\"json\", \"name\":\"test\"}";
-    NestedDataColumnSchema andBack = MAPPER_V4.readValue(there, NestedDataColumnSchema.class);
-    Assert.assertEquals(new NestedDataColumnSchema("test", 4), andBack);
-  }
-
-  @Test
-  public void testSerdeOverride() throws JsonProcessingException
-  {
-    final String there = "{\"type\":\"json\", \"name\":\"test\",\"formatVersion\":4}";
-    NestedDataColumnSchema andBack = MAPPER.readValue(there, NestedDataColumnSchema.class);
-    Assert.assertEquals(new NestedDataColumnSchema("test", 4), andBack);
-  }
-
-  @Test
-  public void testVersionTooSmall()
-  {
-    Throwable t = Assert.assertThrows(DruidException.class, () -> new NestedDataColumnSchema("test", 3));
-    Assert.assertEquals("Unsupported nested column format version[3]", t.getMessage());
-  }
-
-  @Test
-  public void testVersionTooBig()
-  {
-    Throwable t = Assert.assertThrows(DruidException.class, () -> new NestedDataColumnSchema("test", 6));
-    Assert.assertEquals("Unsupported nested column format version[6]", t.getMessage());
+    NestedDataColumnSchema andBack = DEFAULT_NESTED_SPEC_MAPPER.readValue(there, NestedDataColumnSchema.class);
+    Assert.assertEquals(
+        new NestedDataColumnSchema("test", 5, DEFAULT_NESTED_SPEC, DEFAULT_NESTED_SPEC_CONFIG),
+        andBack
+    );
   }
 }

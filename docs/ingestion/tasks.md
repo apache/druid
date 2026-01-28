@@ -36,8 +36,8 @@ Task APIs are available in two main places:
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
 review logs and reports, and more. Refer to the [Tasks API reference](../api-reference/tasks-api.md) for a
 full list.
-- Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
-running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
+- Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about active
+and recently completed tasks. This table is read-only and has a subset of the full task report available through
 the Overlord APIs.
 
 <a name="reports"></a>
@@ -239,6 +239,7 @@ The `ingestionState` shows what step of ingestion the task reached. Possible sta
 - `NOT_STARTED`: The task has not begun reading any rows
 - `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
 - `BUILD_SEGMENTS`: The task is processing rows to construct segments
+- `SEGMENT_AVAILABILITY_WAIT`: The task has published its segments and is waiting for them to become available.
 - `COMPLETED`: The task has finished its work.
 
 Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as those created by the Kafka Indexing Service do not have a DETERMINE_PARTITIONS phase.
@@ -457,7 +458,7 @@ To enable batched segment allocation on the overlord, set  `druid.indexer.tasklo
 The task context is used for various individual task configuration.
 Specify task context configurations in the `context` field of the ingestion spec.
 When configuring [automatic compaction](../data-management/automatic-compaction.md), set the task context configurations in `taskContext` rather than in `context`.
-The settings get passed into the `context` field of the compaction tasks issued to MiddleManagers.
+The settings get passed into the `context` field of the compaction tasks issued to Middle Managers.
 
 The following parameters apply to all task types.
 
@@ -469,6 +470,9 @@ The following parameters apply to all task types.
 |`storeEmptyColumns`|Enables the task to store empty columns during ingestion. When `true`, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). When `false`, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|`true`|
 |`taskLockTimeout`|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|300000|
 |`useLineageBasedSegmentAllocation`|Enables the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to `true` to ensure data correctness.|`false` in 0.21 or earlier, `true` in 0.22 or later|
+|`lookupLoadingMode`|Controls the lookup loading behavior in tasks. This property supports three values: `ALL` mode loads all the lookups, `NONE` mode does not load any lookups and `ONLY_REQUIRED` mode loads the lookups specified with context key `lookupsToLoad`. This property must not be specified for `MSQ` and `kill` tasks as the task engine enforces `ONLY_REQUIRED` mode for `MSQWorkerTask` and `NONE` mode for `MSQControllerTask` and `kill` tasks.|`ALL`|
+|`lookupsToLoad`|List of lookup names to load in tasks. This property is required only if the `lookupLoadingMode` is set to `ONLY_REQUIRED`. For `MSQWorkerTask` type, the lookup names to load are identified by the controller task by parsing the SQL. |`null`|
+|`subTaskTimeoutMillis`|Maximum time (in milliseconds) to wait before cancelling a long-running sub-task. Applicable only for `index_parallel` tasks and `compact` tasks (when running in parallel mode). Set to 0 for no timeout (infinite).|0 (unlimited)|
 
 ## Task logs
 
@@ -476,18 +480,18 @@ Logs are created by ingestion tasks as they run. You can configure Druid to push
 
 Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired. Worker slot allocation is then `PENDING` until the task can actually start executing.
 
-The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.worker.baseTaskDirs`](../configuration/index.md#middlemanager-configuration).
+The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.worker.baseTaskDirs`](../configuration/index.md#middle-manager-configuration).
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the Middle Manager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
-1. the middleManager / indexer failed to push the log file to deep storage or
-2. the task did not complete.
+- the Middle Manager / indexer failed to push the log file to deep storage or
+- the task did not complete.
 
-You can check the middleManager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
+You can check the Middle Manager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
 :::info
  If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.

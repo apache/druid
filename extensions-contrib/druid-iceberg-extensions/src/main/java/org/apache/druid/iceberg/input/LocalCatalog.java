@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.BaseMetastoreCatalog;
+import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 
 import javax.annotation.Nullable;
@@ -46,7 +46,7 @@ public class LocalCatalog extends IcebergCatalog
   @JsonProperty
   private final Boolean caseSensitive;
 
-  private BaseMetastoreCatalog catalog;
+  private Catalog catalog;
 
   @JsonCreator
   public LocalCatalog(
@@ -83,7 +83,7 @@ public class LocalCatalog extends IcebergCatalog
   }
 
   @Override
-  public BaseMetastoreCatalog retrieveCatalog()
+  public Catalog retrieveCatalog()
   {
     if (catalog == null) {
       catalog = setupCatalog();

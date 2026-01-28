@@ -28,21 +28,19 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -53,6 +51,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestIndex;
@@ -60,9 +59,10 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -96,8 +96,8 @@ public class ClientCompactionTaskQuerySerdeTest
   private static final ClientCompactionTaskGranularitySpec CLIENT_COMPACTION_TASK_GRANULARITY_SPEC =
       new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true);
   private static final AggregatorFactory[] METRICS_SPEC = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
-  private static final ClientCompactionTaskTransformSpec CLIENT_COMPACTION_TASK_TRANSFORM_SPEC =
-      new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+  private static final CompactionTransformSpec CLIENT_COMPACTION_TASK_TRANSFORM_SPEC =
+      new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
   private static final DynamicPartitionsSpec DYNAMIC_PARTITIONS_SPEC = new DynamicPartitionsSpec(100, 30000L);
   private static final SegmentsSplitHintSpec SEGMENTS_SPLIT_HINT_SPEC = new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10);
 
@@ -293,7 +293,7 @@ public class ClientCompactionTaskQuerySerdeTest
     );
   }
 
-  private ClientCompactionTaskQuery createCompactionTaskQuery(String id, ClientCompactionTaskTransformSpec transformSpec)
+  private ClientCompactionTaskQuery createCompactionTaskQuery(String id, CompactionTransformSpec transformSpec)
   {
     Map<String, Object> context = new HashMap<>();
     context.put("key", "value");
@@ -329,53 +329,41 @@ public class ClientCompactionTaskQuerySerdeTest
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
         METRICS_SPEC,
         transformSpec,
-        context
+        null,
+        context,
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
   }
 
-  private CompactionTask createCompactionTask(ClientCompactionTaskTransformSpec transformSpec)
+  private CompactionTask createCompactionTask(CompactionTransformSpec transformSpec)
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER),
-        new RetryPolicyFactory(new RetryPolicyConfig())
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(
-            new ParallelIndexTuningConfig(
-                null,
-                null,
-                new OnheapIncrementalIndex.Spec(true),
-                40000,
-                2000L,
-                null,
-                null,
-                null,
-                SEGMENTS_SPLIT_HINT_SPEC,
-                DYNAMIC_PARTITIONS_SPEC,
-                INDEX_SPEC,
-                INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS,
-                2,
-                null,
-                null,
-                1000L,
-                TmpFileSegmentWriteOutMediumFactory.instance(),
-                null,
-                100,
-                5,
-                1000L,
-                new Duration(3000L),
-                7,
-                1000,
-                100,
-                null,
-                null,
-                null,
-                2,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder
+                .forParallelIndexTask()
+                .withAppendableIndexSpec(new OnheapIncrementalIndex.Spec(true))
+                .withMaxRowsInMemory(40000)
+                .withMaxBytesInMemory(2000L)
+                .withSplitHintSpec(SEGMENTS_SPLIT_HINT_SPEC)
+                .withPartitionsSpec(DYNAMIC_PARTITIONS_SPEC)
+                .withIndexSpec(INDEX_SPEC)
+                .withIndexSpecForIntermediatePersists(INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS)
+                .withMaxPendingPersists(2)
+                .withPushTimeout(1000L)
+                .withSegmentWriteOutMediumFactory(TmpFileSegmentWriteOutMediumFactory.instance())
+                .withMaxNumConcurrentSubTasks(100)
+                .withMaxRetry(5)
+                .withTaskStatusCheckPeriodMs(1000L)
+                .withChatHandlerTimeout(new Duration(3000L))
+                .withChatHandlerNumRetries(7)
+                .withMaxNumSegmentsToMerge(1000)
+                .withTotalNumMergeTasks(100)
+                .withMaxColumnsToMerge(2)
+                .build()
         )
         .granularitySpec(CLIENT_COMPACTION_TASK_GRANULARITY_SPEC)
         .dimensionsSpec(

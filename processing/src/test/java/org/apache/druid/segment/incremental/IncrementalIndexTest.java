@@ -79,11 +79,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new StringDimensionSchema("bool_string"),
             new LongDimensionSchema("bool_long"),
-            new AutoTypeColumnSchema("bool_auto", null),
-            new AutoTypeColumnSchema("array_string", ColumnType.STRING_ARRAY),
-            new AutoTypeColumnSchema("array_double", ColumnType.DOUBLE_ARRAY),
-            new AutoTypeColumnSchema("array_long", ColumnType.LONG_ARRAY),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("bool_auto"),
+            new AutoTypeColumnSchema("array_string", ColumnType.STRING_ARRAY, null),
+            new AutoTypeColumnSchema("array_double", ColumnType.DOUBLE_ARRAY, null),
+            new AutoTypeColumnSchema("array_long", ColumnType.LONG_ARRAY, null),
+            AutoTypeColumnSchema.of("nested")
         )
     );
     AggregatorFactory[] metrics = {
@@ -114,7 +114,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateDimensions() throws IndexSizeExceededException
+  public void testDuplicateDimensions()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -134,7 +134,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
+  public void testDuplicateDimensionsFirstOccurrence()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -147,7 +147,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void controlTest() throws IndexSizeExceededException
+  public void controlTest()
   {
     IncrementalIndex index = indexCreator.createIndex();
     index.add(
@@ -174,7 +174,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnparseableNumerics() throws IndexSizeExceededException
+  public void testUnparseableNumerics()
   {
     IncrementalIndex index = indexCreator.createIndex();
 
@@ -197,7 +197,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [could not convert value [asdj] to long]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [Could not convert value [asdj] to long for dimension [long].]",
         result.getParseException().getMessage()
     );
 
@@ -219,7 +219,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [could not convert value [aaa] to float]",
+        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [Could not convert value [aaa] to float for dimension [float].]",
         result.getParseException().getMessage()
     );
 
@@ -241,13 +241,13 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [could not convert value [] to double]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [Could not convert value [] to double for dimension [double].]",
         result.getParseException().getMessage()
     );
   }
 
   @Test
-  public void testMultiValuedNumericDimensions() throws IndexSizeExceededException
+  public void testMultiValuedNumericDimensions()
   {
     IncrementalIndex index = indexCreator.createIndex();
 
@@ -270,7 +270,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [10, 5] as long. A long column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [[10, 5]] as long for dimension [long]. A long column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
 
@@ -292,7 +292,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [10.0, 5.0] as float. A float column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [[10.0, 5.0]] as float for dimension [float]. A float column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
 
@@ -314,13 +314,13 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [10.0, 5.0] as double. A double column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [[10.0, 5.0]] as double for dimension [double]. A double column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
   }
 
   @Test
-  public void sameRow() throws IndexSizeExceededException
+  public void sameRow()
   {
     MapBasedInputRow row = new MapBasedInputRow(
         System.currentTimeMillis() - 1,
@@ -332,11 +332,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     index.add(row);
     index.add(row);
 
-    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.size());
+    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.numRows());
   }
 
   @Test
-  public void testTypeHandling() throws IndexSizeExceededException
+  public void testTypeHandling()
   {
     IncrementalIndex index = indexCreator.createIndex();
 

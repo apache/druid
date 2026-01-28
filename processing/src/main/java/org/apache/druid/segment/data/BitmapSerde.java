@@ -20,7 +20,10 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.error.DruidException;
 
 public class BitmapSerde
 {
@@ -47,5 +50,15 @@ public class BitmapSerde
   public static BitmapSerdeFactory createLegacyFactory()
   {
     return new LegacyBitmapSerdeFactory();
+  }
+
+  public static BitmapSerdeFactory forBitmapFactory(BitmapFactory factory)
+  {
+    if (factory instanceof RoaringBitmapFactory) {
+      return new DefaultBitmapSerdeFactory();
+    } else if (factory instanceof ConciseBitmapFactory) {
+      return new ConciseBitmapSerdeFactory();
+    }
+    throw DruidException.defensive("Unknown type of bitmapFactory [%s]", factory.getClass());
   }
 }

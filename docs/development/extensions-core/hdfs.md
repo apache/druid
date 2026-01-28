@@ -22,7 +22,6 @@ title: "HDFS"
   ~ under the License.
   -->
 
-
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-hdfs-storage` in the extensions load list and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
 ## Deep Storage
@@ -44,11 +43,11 @@ If you want to eagerly authenticate against a secured hadoop/hdfs cluster you mu
 
 ### Configuration for Cloud Storage
 
-You can also use the AWS S3 or the Google Cloud Storage as the deep storage via HDFS.
+You can also use the Amazon S3 or the Google Cloud Storage as the deep storage via HDFS.
 
-#### Configuration for AWS S3
+#### Configuration for Amazon S3
 
-To use the AWS S3 as the deep storage, you need to configure `druid.storage.storageDirectory` properly.
+To use the Amazon S3 as the deep storage, you need to configure `druid.storage.storageDirectory` properly.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

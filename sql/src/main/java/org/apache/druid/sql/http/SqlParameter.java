@@ -34,6 +34,11 @@ import javax.annotation.Nullable;
 import java.sql.Date;
 import java.util.Objects;
 
+/**
+ * See {@link org.apache.druid.query.http.ClientSqlParameter} for the equivalent POJO class used on the client side.
+ * Note: The field {@link #type} relies on a Calcite data type, which prevents this class from being moved
+ * to the processing module for reuse.
+ */
 public class SqlParameter
 {
   private final SqlType type;

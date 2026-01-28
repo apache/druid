@@ -24,7 +24,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
@@ -37,10 +37,10 @@ public class ReadableConcatFrameChannelTest extends InitializedNullHandlingTest
   @Test
   public void testChannel() throws Exception
   {
-    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
     final List<Frame> frames =
-        FrameSequenceBuilder.fromAdapter(adapter)
-                            .frameType(FrameType.ROW_BASED)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                            .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(11)
                             .frames()
                             .toList();
@@ -58,8 +58,8 @@ public class ReadableConcatFrameChannelTest extends InitializedNullHandlingTest
 
     final ReadableConcatFrameChannel concatChannel = ReadableConcatFrameChannel.open(channels.iterator());
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(concatChannel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(concatChannel, FrameReader.create(cursorFactory.getRowSignature()))
     );
   }
 }

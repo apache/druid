@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -85,7 +86,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final SegmentLoadingConfig segmentLoadingConfig
-        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegments().size());
+        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegmentCount());
 
     final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
     cancelLoadsOnDecommissioningServers(cluster);
@@ -93,11 +94,12 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     collectHistoricalStats(cluster, stats);
     collectUsedSegmentStats(params, stats);
+    collectDebugStats(segmentLoadingConfig, stats);
 
     final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
-    log.info(
-        "Using balancer strategy [%s] with [%d] threads.",
+    log.debug(
+        "Using balancer strategy[%s] with [%d] threads.",
         balancerStrategy.getClass().getSimpleName(), numBalancerThreads
     );
 
@@ -118,7 +120,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   {
     final AtomicInteger cancelledCount = new AtomicInteger(0);
     final List<ServerHolder> decommissioningServers
-        = cluster.getAllServers().stream()
+        = cluster.getAllManagedServers().stream()
                  .filter(ServerHolder::isDecommissioning)
                  .collect(Collectors.toList());
 
@@ -130,13 +132,6 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
               cancelledCount.incrementAndGet();
             }
           }
-      );
-    }
-
-    if (cancelledCount.get() > 0) {
-      log.info(
-          "Cancelled [%d] load/move operations on [%d] decommissioning servers.",
-          cancelledCount.get(), decommissioningServers.size()
       );
     }
   }
@@ -158,6 +153,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   )
   {
     final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
+    final Set<String> unmanagedServers = new HashSet<>(dynamicConfig.getCloneServers().keySet());
     final DruidCluster.Builder cluster = DruidCluster.builder();
     for (ImmutableDruidServer server : currentServers) {
       cluster.add(
@@ -165,6 +161,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
               server,
               taskMaster.getPeonForServer(server),
               decommissioningServers.contains(server.getHost()),
+              unmanagedServers.contains(server.getHost()),
               segmentLoadingConfig.getMaxSegmentsInLoadQueue(),
               segmentLoadingConfig.getMaxLifetimeInLoadQueue()
           )
@@ -179,7 +176,16 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       RowKey rowKey = RowKey.of(Dimension.TIER, tier);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
 
-      long totalCapacity = historicals.stream().mapToLong(ServerHolder::getMaxSize).sum();
+      long totalCapacity = 0;
+      long cloneCount = 0;
+      for (ServerHolder holder : historicals) {
+        if (holder.isUnmanaged()) {
+          cloneCount += 1;
+        } else {
+          totalCapacity += holder.getMaxSize();
+        }
+      }
+      stats.add(Stats.Tier.CLONE_COUNT, rowKey, cloneCount);
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
     });
   }
@@ -194,5 +200,11 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
       stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
     });
+  }
+
+  private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)
+  {
+    stats.add(Stats.Balancer.COMPUTE_THREADS, config.getBalancerComputeThreads());
+    stats.add(Stats.Segments.REPLICATION_THROTTLE_LIMIT, config.getReplicationThrottleLimit());
   }
 }

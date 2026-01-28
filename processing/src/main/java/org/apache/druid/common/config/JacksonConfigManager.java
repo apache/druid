@@ -130,7 +130,7 @@ public class JacksonConfigManager
   @VisibleForTesting
   <T> ConfigSerde<T> create(final Class<? extends T> clazz, final T defaultVal)
   {
-    return new ConfigSerde<T>()
+    return new ConfigSerde<>()
     {
       @Override
       public byte[] serialize(T obj)
@@ -158,7 +158,7 @@ public class JacksonConfigManager
   @VisibleForTesting
   <T> ConfigSerde<T> create(final TypeReference<? extends T> clazz, final T defaultVal)
   {
-    return new ConfigSerde<T>()
+    return new ConfigSerde<>()
     {
       @Override
       public byte[] serialize(T obj)

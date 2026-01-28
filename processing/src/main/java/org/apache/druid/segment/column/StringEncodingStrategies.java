@@ -22,7 +22,6 @@ package org.apache.druid.segment.column;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.data.DictionaryWriter;
@@ -32,6 +31,7 @@ import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -72,7 +72,7 @@ public class StringEncodingStrategies
   }
 
   public static Supplier<? extends Indexed<ByteBuffer>> getStringDictionarySupplier(
-      SmooshedFileMapper mapper,
+      SegmentFileMapper mapper,
       ByteBuffer stringDictionaryBuffer,
       ByteOrder byteOrder
   )
@@ -140,7 +140,7 @@ public class StringEncodingStrategies
     public Iterator<String> iterator()
     {
       final Iterator<ByteBuffer> delegateIterator = delegate.iterator();
-      return new Iterator<String>()
+      return new Iterator<>()
       {
         @Override
         public boolean hasNext()

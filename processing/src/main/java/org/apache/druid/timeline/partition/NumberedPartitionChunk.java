@@ -35,7 +35,7 @@ public class NumberedPartitionChunk<T> implements PartitionChunk<T>
       T obj
   )
   {
-    return new NumberedPartitionChunk<T>(chunkNumber, chunks, obj);
+    return new NumberedPartitionChunk<>(chunkNumber, chunks, obj);
   }
 
   public NumberedPartitionChunk(

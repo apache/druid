@@ -19,7 +19,13 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.function.Function;
 
 public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
@@ -42,4 +48,55 @@ public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     return new ConcatRowsAndColumns(theRac);
   };
+
+  @Test
+  public void testConstructorWithNullRacBuffer()
+  {
+    final NullPointerException e = Assert.assertThrows(
+        NullPointerException.class,
+        () -> new ConcatRowsAndColumns(null)
+    );
+    Assert.assertEquals("racBuffer cannot be null", e.getMessage());
+  }
+
+  @Test
+  public void testFindColumn()
+  {
+    MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "column1", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6}),
+            "column2", new IntArrayColumn(new int[]{6, 5, 4, 3, 2, 1})
+        )
+    );
+    ConcatRowsAndColumns apply = MAKER.apply(rac);
+    Assert.assertEquals(1, apply.findColumn("column1").toAccessor().getInt(0));
+    Assert.assertEquals(6, apply.findColumn("column2").toAccessor().getInt(0));
+  }
+
+  @Test
+  public void testFindColumnWithEmptyRacBuffer()
+  {
+    ConcatRowsAndColumns concatRowsAndColumns = new ConcatRowsAndColumns(new ArrayList<>());
+    Assert.assertNull(concatRowsAndColumns.findColumn("columnName"));
+  }
+
+  @Test
+  public void testGetColumns()
+  {
+    MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "column1", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
+            "column2", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+        )
+    );
+    ConcatRowsAndColumns apply = MAKER.apply(rac);
+    Assert.assertEquals(Arrays.asList("column1", "column2"), new ArrayList<>(apply.getColumnNames()));
+  }
+
+  @Test
+  public void testGetColumnsWithEmptyRacBuffer()
+  {
+    ConcatRowsAndColumns concatRowsAndColumns = new ConcatRowsAndColumns(new ArrayList<>());
+    Assert.assertTrue(concatRowsAndColumns.getColumnNames().isEmpty());
+  }
 }

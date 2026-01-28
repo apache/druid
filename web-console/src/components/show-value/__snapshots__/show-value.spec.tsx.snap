@@ -8,14 +8,14 @@ exports[`ShowValue matches snapshot 1`] = `
     class="top-actions"
   >
     <div
-      class="bp4-button-group right-buttons"
+      class="bp5-button-group right-buttons"
     >
       <button
-        class="bp4-button bp4-minimal"
+        class="bp5-button bp5-minimal"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           Download
         </span>
@@ -26,7 +26,7 @@ exports[`ShowValue matches snapshot 1`] = `
     class="main-area"
   >
     <textarea
-      class="bp4-input"
+      class="bp5-input bp5-text-area"
       readonly=""
     >
       { hello: 'world' }

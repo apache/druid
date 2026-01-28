@@ -16,15 +16,18 @@
  * limitations under the License.
  */
 
-import type { SqlBase } from '@druid-toolkit/query';
+import type { SqlBase } from 'druid-query-toolkit';
 import {
+  F,
+  L,
   SqlColumn,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
   SqlQuery,
+  SqlSetStatement,
   SqlStar,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
@@ -109,7 +112,7 @@ export function findSqlQueryPrefix(text: string): string | undefined {
 }
 
 export function cleanSqlQueryPrefix(text: string): string {
-  const matchReplace = text.match(/\sREPLACE$/i);
+  const matchReplace = /\sREPLACE$/i.exec(text);
   if (matchReplace) {
     // This query likely grabbed a "REPLACE" (which is not a reserved keyword) from the next query over, see if we can delete it
     const textWithoutReplace = text.slice(0, -matchReplace[0].length).trimEnd();
@@ -136,26 +139,70 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
   let remainingText = text;
   let offset = 0;
   let m: RegExpExecArray | null = null;
-  do {
-    m = /SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
-    if (m) {
-      const sql = findSqlQueryPrefix(remainingText.slice(m.index));
-      const advanceBy = m.index + m[0].length; // Skip the initial word
-      if (sql) {
-        const endIndex = m.index + sql.length;
-        found.push({
-          index: found.length,
-          startOffset: offset + m.index,
-          startRowColumn: offsetToRowColumn(text, offset + m.index)!,
-          endOffset: offset + endIndex,
-          endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
-          sql: cleanSqlQueryPrefix(sql),
-        });
-      }
-      remainingText = remainingText.slice(advanceBy);
-      offset += advanceBy;
+  // Have an upper bound to how many queries we might extract from a long text
+  for (let i = 0; i < 1e3; i++) {
+    m = /SET|SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
+    if (!m) break;
+
+    const sql = findSqlQueryPrefix(remainingText.slice(m.index));
+    if (sql) {
+      const endIndex = m.index + sql.length;
+      found.push({
+        index: found.length,
+        startOffset: offset + m.index,
+        startRowColumn: offsetToRowColumn(text, offset + m.index)!,
+        endOffset: offset + endIndex,
+        endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
+        sql: cleanSqlQueryPrefix(sql),
+      });
     }
-  } while (m);
+
+    let advanceBy = m.index;
+    const initialWord = m[0].toUpperCase();
+    if (sql && initialWord === 'SET') {
+      const startOfSetStatements = remainingText.slice(m.index);
+      const [setPart, queryPart] = SqlSetStatement.partitionSetStatements(
+        startOfSetStatements,
+        true,
+      );
+      advanceBy += setPart.length;
+      const nextWord = /SELECT|WITH|INSERT|REPLACE/i.exec(queryPart);
+      if (nextWord) {
+        advanceBy += nextWord[0].length;
+      }
+    } else {
+      advanceBy += initialWord.length; // Skip the initial word only
+    }
+
+    remainingText = remainingText.slice(advanceBy);
+    offset += advanceBy;
+  }
 
   return found;
+}
+
+const GRANULARITY_TO_ALIGN_TO_DAY: Record<string, boolean> = {
+  PT2H: true,
+  PT3H: true,
+  PT4H: true,
+  PT6H: true,
+  PT8H: true,
+  PT12H: true,
+  PT24H: true,
+};
+
+/**
+ * A smart time floor that adjusts the origin for the hour granularities that divide evenly into days to make them align with days
+ */
+export function smartTimeFloor(
+  ex: SqlExpression,
+  granularity: string,
+  isUTC: boolean,
+): SqlExpression {
+  return F(
+    'TIME_FLOOR',
+    ex,
+    L(granularity),
+    !isUTC && GRANULARITY_TO_ALIGN_TO_DAY[granularity] ? F.timeFloor(ex, 'P1D') : undefined,
+  );
 }

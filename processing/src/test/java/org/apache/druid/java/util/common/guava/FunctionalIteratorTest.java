@@ -107,7 +107,7 @@ public class FunctionalIteratorTest
         Lists.newArrayList(
             FunctionalIterator.create(Arrays.asList("1", "2", "3").iterator())
                               .filter(
-                                  new Predicate<String>()
+                                  new Predicate<>()
                                   {
                                     @Override
                                     public boolean apply(String input)

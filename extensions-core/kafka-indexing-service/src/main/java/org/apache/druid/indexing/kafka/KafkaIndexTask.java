@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -33,13 +34,11 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +46,14 @@ import java.util.Set;
 public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private static final String TYPE = "index_kafka";
+
+  /**
+   * Resources that a {@link KafkaIndexTask} is authorized to use. Includes
+   * performing a read action on an external resource of type
+   */
+  public static final Set<ResourceAction> INPUT_SOURCE_RESOURCES = Set.of(
+      AuthorizationUtils.createExternalResourceReadAction(KafkaIndexTaskModule.SCHEME)
+  );
 
   private final ObjectMapper configMapper;
 
@@ -56,6 +63,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   @JsonCreator
   public KafkaIndexTask(
       @JsonProperty("id") String id,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
@@ -66,12 +74,13 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   {
     super(
         getOrMakeId(id, dataSchema.getDataSource(), TYPE),
+        supervisorId,
         taskResource,
         dataSchema,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
     );
     this.configMapper = configMapper;
 
@@ -90,10 +99,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   protected SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
-    return new IncrementalPublishingKafkaIndexTaskRunner(
+    return new KafkaIndexTaskRunner(
         this,
         dataSchema.getParser(),
-        authorizerMapper,
         lockGranularityToUse
     );
   }
@@ -155,10 +163,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(KafkaIndexTaskModule.SCHEME, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return INPUT_SOURCE_RESOURCES;
   }
 
   @Override

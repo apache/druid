@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { sane } from '@druid-toolkit/query';
+import { C, sane } from 'druid-query-toolkit';
 
-import { findAllSqlQueriesInText, findSqlQueryPrefix } from './sql';
+import { findAllSqlQueriesInText, findSqlQueryPrefix, smartTimeFloor } from './sql';
 
 describe('sql', () => {
   describe('getSqlQueryPrefix', () => {
@@ -618,6 +618,314 @@ describe('sql', () => {
           },
         ]
       `);
+    });
+
+    it('works with SET statements', () => {
+      const text = sane`
+        SET timeout = 100;
+        SET timeout = 50;
+        SELECT * FROM wikipedia
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 60,
+            "endRowColumn": {
+              "column": 23,
+              "row": 2,
+            },
+            "index": 0,
+            "sql": "SET timeout = 100;
+        SET timeout = 50;
+        SELECT * FROM wikipedia",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+        ]
+      `);
+    });
+
+    it('works with multiple SET statement queries', () => {
+      const text = sane`
+        SET timeout = 100;
+        SELECT * FROM wikipedia
+
+
+        SET timeout = 50;
+        SET sqlTimeZone = 'Etc/UTC';
+        SELECT * FROM wikipedia
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 42,
+            "endRowColumn": {
+              "column": 23,
+              "row": 1,
+            },
+            "index": 0,
+            "sql": "SET timeout = 100;
+        SELECT * FROM wikipedia",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          {
+            "endOffset": 115,
+            "endRowColumn": {
+              "column": 23,
+              "row": 6,
+            },
+            "index": 1,
+            "sql": "SET timeout = 50;
+        SET sqlTimeZone = 'Etc/UTC';
+        SELECT * FROM wikipedia",
+            "startOffset": 45,
+            "startRowColumn": {
+              "column": 0,
+              "row": 4,
+            },
+          },
+        ]
+      `);
+    });
+
+    it('test', () => {
+      const text = sane`
+        SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "kttm-v2-2019-08-25" OVERWRITE ALL
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"
+        PARTITIONED BY DAY
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        [
+          {
+            "endOffset": 655,
+            "endRowColumn": {
+              "column": 18,
+              "row": 34,
+            },
+            "index": 0,
+            "sql": "SET finalizeAggregations = FALSE;
+        SET groupByEnableMultiValueUnnesting = FALSE;
+        REPLACE INTO "kttm-v2-2019-08-25" OVERWRITE ALL
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"
+        PARTITIONED BY DAY",
+            "startOffset": 0,
+            "startRowColumn": {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          {
+            "endOffset": 636,
+            "endRowColumn": {
+              "column": 10,
+              "row": 33,
+            },
+            "index": 1,
+            "sql": "SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "agent_category",
+          "agent_type",
+          "browser",
+          "browser_version",
+          "city",
+          "continent",
+          "country",
+          "version",
+          "event_type",
+          "event_subtype",
+          "loaded_image",
+          "adblock_list",
+          "forwarded_for",
+          ARRAY_TO_MV("language") AS "language",
+          "number",
+          "os",
+          "path",
+          "platform",
+          "referrer",
+          "referrer_host",
+          "region",
+          "remote_address",
+          "screen",
+          "session",
+          "session_length",
+          "timezone",
+          "timezone_offset",
+          "window"
+        FROM "ext"",
+            "startOffset": 128,
+            "startRowColumn": {
+              "column": 0,
+              "row": 3,
+            },
+          },
+        ]
+      `);
+    });
+  });
+
+  describe('smartTimeFloor', () => {
+    const timestampColumn = C('__time');
+
+    it('works with PT1H granularity in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT1H', true);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'PT1H')`);
+    });
+
+    it('works with PT1H granularity not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT1H', false);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'PT1H')`);
+    });
+
+    it('aligns PT2H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT2H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT2H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('does not align PT2H to day boundary when in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT2H', true);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'PT2H')`);
+    });
+
+    it('aligns PT3H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT3H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT3H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('aligns PT4H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT4H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT4H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('aligns PT6H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT6H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT6H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('aligns PT8H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT8H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT8H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('aligns PT12H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT12H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT12H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('aligns PT24H to day boundary when not in UTC', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT24H', false);
+      expect(result.toString()).toEqual(
+        `TIME_FLOOR("__time", 'PT24H', TIME_FLOOR("__time", 'P1D'))`,
+      );
+    });
+
+    it('does not align PT5H (non-divisor) to day boundary', () => {
+      const result = smartTimeFloor(timestampColumn, 'PT5H', false);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'PT5H')`);
+    });
+
+    it('works with P1D granularity', () => {
+      const result = smartTimeFloor(timestampColumn, 'P1D', false);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'P1D')`);
+    });
+
+    it('works with P1W granularity', () => {
+      const result = smartTimeFloor(timestampColumn, 'P1W', false);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'P1W')`);
+    });
+
+    it('works with P1M granularity', () => {
+      const result = smartTimeFloor(timestampColumn, 'P1M', true);
+      expect(result.toString()).toEqual(`TIME_FLOOR("__time", 'P1M')`);
     });
   });
 });

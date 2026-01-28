@@ -43,7 +43,6 @@ public class QueryContextsTest
     final Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         new HashMap<>()
     );
     Assert.assertEquals(300_000, query.context().getDefaultTimeout());
@@ -55,7 +54,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         new HashMap<>()
     );
     Assert.assertEquals(300_000, query.context().getTimeout());
@@ -70,7 +68,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
     );
     Assert.assertEquals(1000, query.context().getTimeout());
@@ -87,7 +84,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
     );
 
@@ -102,7 +98,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 1000)
     );
 
@@ -115,7 +110,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, false)
     );
     Assert.assertFalse(query.context().isSecondaryPartitionPruningEnabled());
@@ -127,7 +121,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of()
     );
     Assert.assertTrue(query.context().isSecondaryPartitionPruningEnabled());
@@ -152,11 +145,11 @@ public class QueryContextsTest
   }
 
   @Test
-  public void testDefaultWindowingStrictValidation()
+  public void testDefaultCloneQueryMode()
   {
     Assert.assertEquals(
-        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION,
-        QueryContext.empty().isWindowingStrictValidation()
+        CloneQueryMode.EXCLUDECLONES,
+        QueryContext.empty().getCloneQueryMode()
     );
   }
 
@@ -222,7 +215,6 @@ public class QueryContextsTest
     new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         queryContext
     ).context().getTimeout();
   }
@@ -306,7 +298,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of("e1", "FORCE",
                         "e2", "INVALID_ENUM"
         )
@@ -329,7 +320,6 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
         ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, "SYNC", QueryContexts.CTX_EXECUTION_MODE + "_1", "ASYNC")
     );
 

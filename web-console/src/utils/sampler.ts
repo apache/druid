@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { dedupe, F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import { dedupe, F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -40,6 +40,7 @@ import {
   getSpecType,
   getTimestampSchema,
   isDruidSource,
+  isFixedFormatSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
   REINDEX_TIMESTAMP_SPEC,
   TIME_COLUMN,
@@ -73,16 +74,18 @@ export interface SampleResponse {
   numRowsRead: number;
 }
 
+export type TimeColumnAction = 'preserve' | 'ignore' | 'ignoreIfZero';
+
 export function getHeaderNamesFromSampleResponse(
   sampleResponse: SampleResponse,
-  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+  timeColumnAction: TimeColumnAction = 'preserve',
 ): string[] {
   return getHeaderFromSampleResponse(sampleResponse, timeColumnAction).map(s => s.name);
 }
 
 export function getHeaderFromSampleResponse(
   sampleResponse: SampleResponse,
-  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+  timeColumnAction: TimeColumnAction = 'preserve',
 ): { name: string; type: string }[] {
   const ignoreTimeColumn =
     timeColumnAction === 'ignore' ||
@@ -185,12 +188,15 @@ export async function getProxyOverlordModules(): Promise<string[]> {
 export async function postToSampler(
   sampleSpec: SampleSpec,
   forStr: string,
+  signal?: AbortSignal,
 ): Promise<SampleResponse> {
   sampleSpec = fixSamplerLookups(fixSamplerTypes(sampleSpec));
 
   let sampleResp: any;
   try {
-    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec, {
+      signal,
+    });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -251,6 +257,11 @@ const KAFKA_SAMPLE_INPUT_FORMAT: InputFormat = {
   valueFormat: WHOLE_ROW_INPUT_FORMAT,
 };
 
+const KINESIS_SAMPLE_INPUT_FORMAT: InputFormat = {
+  type: 'kinesis',
+  valueFormat: WHOLE_ROW_INPUT_FORMAT,
+};
+
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -262,15 +273,19 @@ export async function sampleForConnect(
     sampleStrategy,
   );
 
-  const reingestMode = isDruidSource(spec);
-  if (!reingestMode) {
+  if (!isFixedFormatSource(spec)) {
     ioConfig = deepSet(
       ioConfig,
       'inputFormat',
-      samplerType === 'kafka' ? KAFKA_SAMPLE_INPUT_FORMAT : WHOLE_ROW_INPUT_FORMAT,
+      samplerType === 'kafka'
+        ? KAFKA_SAMPLE_INPUT_FORMAT
+        : samplerType === 'kinesis'
+        ? KINESIS_SAMPLE_INPUT_FORMAT
+        : WHOLE_ROW_INPUT_FORMAT,
     );
   }
 
+  const reingestMode = isDruidSource(spec);
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
@@ -279,7 +294,7 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: {},
+        dimensionsSpec: { useSchemaDiscovery: true },
         granularitySpec: {
           rollup: false,
         },
@@ -453,13 +468,17 @@ export async function sampleForTimestamp(
 export async function sampleForTransform(
   spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
+  forceSegmentSortByTime: boolean,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
   // Extra step to simulate auto-detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
+  let specialDimensionSpec: DimensionsSpec = {
+    useSchemaDiscovery: true,
+    forceSegmentSortByTime,
+  };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,

@@ -1,0 +1,743 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ingest/hashed_rollup_true
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][1]' RETURNING bigint array) = ARRAY[NULL,
+                                                                     2,
+                                                                     1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = json_value(a_nested, '$[7][2]' RETURNING decimal array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[0.1,
+                      0.2,
+                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                   0.2,
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[0.1,
+                                                                      0.2,
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_float = ARRAY[NULL,
+                      0.2,
+                      0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                   0.2,
+                                                                   0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][2]' RETURNING decimal array) = ARRAY[NULL,
+                                                                      0.2,
+                                                                      0.1];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = json_value(a_nested, '$[7][3]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY['S1',
+                    'S2',
+                    NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY['S1',
+                                                                   'S2',
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY['S1',
+                                                                      'S2',
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_str = ARRAY[NULL,
+                    'S2',
+                    'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S2',
+                                                                   'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][3]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S2',
+                                                                      'S1'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[4]' RETURNING varchar array) = json_value(a_nested, '$[7][4]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = json_value(a_nested, '$[7][5]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][5]' RETURNING varchar array) = ARRAY['FILLER'];
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = json_value(a_nested, '$[7][6]' RETURNING varchar array);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY['true',
+                      '1',
+                      '0.1',
+                      'S1',
+                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY['true',
+                                                                   '1',
+                                                                   '0.1',
+                                                                   'S1',
+                                                                   NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY['true',
+                                                                      '1',
+                                                                      '0.1',
+                                                                      'S1',
+                                                                      NULL];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE a_mixed = ARRAY[NULL,
+                      'S1',
+                      '0.1',
+                      '1',
+                      'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                   'S1',
+                                                                   '0.1',
+                                                                   '1',
+                                                                   'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE json_value(a_nested, '$[7][6]' RETURNING varchar array) = ARRAY[NULL,
+                                                                      'S1',
+                                                                      '0.1',
+                                                                      '1',
+                                                                      'true'];
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_bool_scalar1 = 'true';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_bool_scalar1 IS NULL;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_int_scalar1 = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_int_scalar1 IS NULL;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_float_scalar1 = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_float_scalar1 IS NULL;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_str_scalar1 = 'S1';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_str_scalar1 IS NULL;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_null_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_null_scalar2 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_empty_scalar1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_empty_scalar2 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_mixed_scalar1 = 'true';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_hashed_rollup_true TEST_ID: E00
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_array
+WHERE t_mixed_scalar1 IS NULL;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+

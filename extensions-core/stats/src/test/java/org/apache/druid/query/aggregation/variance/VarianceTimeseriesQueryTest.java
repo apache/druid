@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -142,8 +141,8 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
                                   .build();
     Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("rows", 0L);
-    resultMap.put("index", NullHandling.defaultDoubleValue());
-    resultMap.put("variance", NullHandling.defaultDoubleValue());
+    resultMap.put("index", null);
+    resultMap.put("variance", null);
     List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02"),

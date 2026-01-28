@@ -19,13 +19,12 @@
 
 package org.apache.druid.frame.write;
 
-import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.write.columnar.ColumnarFrameWriterFactory;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -47,28 +46,44 @@ public class FrameWriters
   /**
    * Creates a {@link FrameWriterFactory}.
    *
-   * @param frameType        type of the frames
+   * @param frameType        frame type to write
    * @param allocatorFactory supplier of allocators, which ultimately determine frame size. Frames are closed and
    *                         written once the allocator runs out of memory.
    * @param signature        signature of the frames
    * @param sortColumns      sort columns for the frames. If nonempty, {@link FrameSort#sort} is used to sort the
    *                         resulting frames.
+   * @param removeNullBytes  whether null bytes should be removed from strings as part of writing to the frame.
+   *                         Can only be set to "true" for row-based frame types.
    */
   public static FrameWriterFactory makeFrameWriterFactory(
       final FrameType frameType,
       final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
+      final List<KeyColumn> sortColumns,
+      final boolean removeNullBytes
+  )
+  {
+    if (frameType.isRowBased()) {
+      return new RowBasedFrameWriterFactory(allocatorFactory, frameType, signature, sortColumns, removeNullBytes);
+    } else {
+      // Columnar.
+      if (removeNullBytes) {
+        // Defensive exception because user-provided "removeNullBytes" should never make it this far. Calling code
+        // should take care to not request columnar writers with removeNullBytes = true.
+        throw DruidException.defensive("Cannot use removeNullBytes with frameType[%s]", frameType);
+      }
+
+      return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
+    }
+  }
+
+  public static FrameWriterFactory makeColumnBasedFrameWriterFactory(
+      final MemoryAllocatorFactory allocatorFactory,
+      final RowSignature signature,
       final List<KeyColumn> sortColumns
   )
   {
-    switch (Preconditions.checkNotNull(frameType, "frameType")) {
-      case COLUMNAR:
-        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
-      case ROW_BASED:
-        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns);
-      default:
-        throw new ISE("Unrecognized frame type [%s]", frameType);
-    }
+    return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
   }
 
   /**

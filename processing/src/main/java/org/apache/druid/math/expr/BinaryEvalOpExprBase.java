@@ -20,12 +20,11 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -79,7 +78,8 @@ abstract class BinaryOpExprBase implements Expr
   public BindingAnalysis analyzeInputs()
   {
     // currently all binary operators operate on scalar inputs
-    return left.analyzeInputs().with(right).withScalarArguments(ImmutableSet.of(left, right));
+    return BindingAnalysis.collectExprs(Arrays.asList(left, right))
+                          .withScalarArguments(ImmutableSet.of(left, right));
   }
 
   @Nullable
@@ -131,8 +131,8 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
     // Result of any Binary expressions is null if any of the argument is null.
     // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
-    if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
-      return ExprEval.of(null);
+    if (leftVal.value() == null || rightVal.value() == null) {
+      return ExprEval.ofMissing();
     }
 
     ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
@@ -143,8 +143,8 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
         return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
       case DOUBLE:
       default:
-        if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-          return ExprEval.of(null);
+        if (leftVal.isNumericNull() || rightVal.isNumericNull()) {
+          return ExprEval.ofMissing();
         }
         return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));
     }
@@ -182,8 +182,8 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
 
     // Result of any Binary expressions is null if any of the argument is null.
     // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
-    if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
-      return ExprEval.of(null);
+    if (leftVal.value() == null || rightVal.value() == null) {
+      return ExprEval.ofMissing();
     }
 
     ExpressionType type = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
@@ -200,14 +200,11 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
         break;
       case DOUBLE:
       default:
-        if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
-          return ExprEval.of(null);
+        if (leftVal.isNumericNull() || rightVal.isNumericNull()) {
+          return ExprEval.ofMissing();
         }
         result = evalDouble(leftVal.asDouble(), rightVal.asDouble());
         break;
-    }
-    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING) && !type.isArray()) {
-      return ExprEval.ofBoolean(result, type);
     }
     return ExprEval.ofLongBoolean(result);
   }
@@ -224,11 +221,7 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (ExpressionProcessing.useStrictBooleans() || Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return ExpressionType.LONG;
   }
 
   @Override

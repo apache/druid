@@ -22,12 +22,11 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -45,16 +44,12 @@ public class IndexIngestionSpecTest
         "Cannot use parser and inputSource together. Try using inputFormat instead of parser."
     );
     final IndexIngestionSpec spec = new IndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            ImmutableMap.of("fake", "parser map"),
-            new AggregatorFactory[0],
-            new ArbitraryGranularitySpec(Granularities.NONE, null),
-            null,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("dataSource")
+                  .withParserMap(ImmutableMap.of("fake", "parser map"))
+                  .withGranularity(new ArbitraryGranularitySpec(Granularities.NONE, null))
+                  .build(),
         new IndexIOConfig(
-            null,
             new NoopInputSource(),
             new NoopInputFormat(),
             null,
@@ -70,16 +65,12 @@ public class IndexIngestionSpecTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot use parser and inputSource together.");
     final IndexIngestionSpec spec = new IndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            ImmutableMap.of("fake", "parser map"),
-            new AggregatorFactory[0],
-            new ArbitraryGranularitySpec(Granularities.NONE, null),
-            null,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("dataSource")
+                  .withParserMap(ImmutableMap.of("fake", "parser map"))
+                  .withGranularity(new ArbitraryGranularitySpec(Granularities.NONE, null))
+                  .build(),
         new IndexIOConfig(
-            null,
             new NoopInputSource(),
             null,
             null,

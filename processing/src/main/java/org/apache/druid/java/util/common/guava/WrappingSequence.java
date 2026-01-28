@@ -42,7 +42,7 @@ final class WrappingSequence<T> implements Sequence<T>
     OutType result;
     try {
       wrapper.before();
-      result = wrapper.wrap(new Supplier<OutType>()
+      result = wrapper.wrap(new Supplier<>()
       {
         @Override
         public OutType get()
@@ -80,7 +80,7 @@ final class WrappingSequence<T> implements Sequence<T>
   {
     try {
       wrapper.before();
-      return wrapper.wrap(new Supplier<Yielder<OutType>>()
+      return wrapper.wrap(new Supplier<>()
       {
         @Override
         public Yielder<OutType> get()

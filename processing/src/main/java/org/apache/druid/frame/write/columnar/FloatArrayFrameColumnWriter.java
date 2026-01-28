@@ -51,7 +51,6 @@ public class FloatArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
   @Override
   void putArrayElement(WritableMemory memory, long offset, Number element)
   {
-    // The element is of type Float, and non-null, therefore it can be cast safely
-    memory.putFloat(offset, (float) element);
+    memory.putFloat(offset, element.floatValue());
   }
 }

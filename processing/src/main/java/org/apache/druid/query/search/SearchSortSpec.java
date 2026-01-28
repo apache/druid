@@ -50,7 +50,7 @@ public class SearchSortSpec implements Cacheable
 
   public Comparator<SearchHit> getComparator()
   {
-    return new Comparator<SearchHit>()
+    return new Comparator<>()
     {
       @Override
       public int compare(SearchHit searchHit, SearchHit searchHit1)

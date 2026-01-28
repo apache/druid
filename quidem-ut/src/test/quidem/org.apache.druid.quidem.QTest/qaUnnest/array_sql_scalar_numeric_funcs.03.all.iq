@@ -1,0 +1,1113 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE)) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE))>0
+       OR bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE))<0
+       OR bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+cast(c AS DOUBLE)) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 4611686018427387904 |
+| 4611686018427387904 |
+| 4611686018427387904 |
+| 4616189618054758400 |
+| 4616189618054758400 |
+| 4616189618054758400 |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(s_int))>0
+       OR (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(s_int))<0
+       OR (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE))+bitwise_convert_double_to_long_bits(s_int)) IS NULL);
++----------------------+
+| col                  |
++----------------------+
+| -9223372036854775808 |
+|  9214364837600034816 |
+|  9218868437227405312 |
+|  9218868437227405312 |
+|                      |
+|                      |
+|                      |
+|                      |
+|                      |
++----------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B26_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+s_int)>0
+       OR bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+s_int)<0
+       OR bitwise_convert_double_to_long_bits(cast(c AS DOUBLE)+s_int) IS NULL);
++---------------------+
+| col                 |
++---------------------+
+| 4611686018427387904 |
+| 4613937818241073152 |
+| 4613937818241073152 |
+| 4616189618054758400 |
+|                     |
+|                     |
+|                     |
+|                     |
+|                     |
++---------------------+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C1_D2
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE (s_int IN (0,
+                    1,
+                    2)
+          OR s_int IS NULL)
+     AND ((bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(c))<99999
+          OR (bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(c)) IS NULL));
++--------+
+| EXPR$0 |
++--------+
+|      9 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C2_D2
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(c+c) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE (s_int IN (0,
+                    1,
+                    2)
+          OR s_int IS NULL)
+     AND (bitwise_convert_long_bits_to_double(c+c)<99999
+          OR bitwise_convert_long_bits_to_double(c+c) IS NULL));
++--------+
+| EXPR$0 |
++--------+
+|      9 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C3_D2
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE (s_int IN (0,
+                    1,
+                    2)
+          OR s_int IS NULL)
+     AND ((bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(s_int))<99999
+          OR (bitwise_convert_long_bits_to_double(c)+bitwise_convert_long_bits_to_double(s_int)) IS NULL));
++--------+
+| EXPR$0 |
++--------+
+|      9 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B27_C4_D2
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT bitwise_convert_long_bits_to_double(c+s_int) AS col
+   FROM test_unnest,
+        unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+   WHERE (s_int IN (0,
+                    1,
+                    2)
+          OR s_int IS NULL)
+     AND (bitwise_convert_long_bits_to_double(c+s_int)<99999
+          OR bitwise_convert_long_bits_to_double(c+s_int) IS NULL));
++--------+
+| EXPR$0 |
++--------+
+|      9 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_or(c, 1)+bitwise_or(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_or(c, 1)+bitwise_or(c, 1))<99999
+       OR (bitwise_or(c, 1)+bitwise_or(c, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
+|   6 |
+|   6 |
+|   6 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_or(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_or(c, c)<99999
+       OR bitwise_or(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_or(c, 1)+bitwise_or(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_or(c, 1)+bitwise_or(s_int, 1))<99999
+       OR (bitwise_or(c, 1)+bitwise_or(s_int, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   2 |
+|   4 |
+|   4 |
+|   6 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B28_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_or(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_or(c, s_int)<99999
+       OR bitwise_or(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   2 |
+|   3 |
+|   3 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(c, 1)+bitwise_shift_left(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_shift_left(c, 1)+bitwise_shift_left(c, 1))<99999
+       OR (bitwise_shift_left(c, 1)+bitwise_shift_left(c, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   4 |
+|   4 |
+|   4 |
+|   8 |
+|   8 |
+|   8 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_shift_left(c, c)<99999
+       OR bitwise_shift_left(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   2 |
+|   2 |
+|   2 |
+|   8 |
+|   8 |
+|   8 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(c, 1)+bitwise_shift_left(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_shift_left(c, 1)+bitwise_shift_left(s_int, 1))<99999
+       OR (bitwise_shift_left(c, 1)+bitwise_shift_left(s_int, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   4 |
+|   6 |
+|   6 |
+|   8 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B29_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_left(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_shift_left(c, s_int)<99999
+       OR bitwise_shift_left(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   2 |
+|   4 |
+|   4 |
+|   8 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(c, 1)+bitwise_shift_right(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_shift_right(c, 1)+bitwise_shift_right(c, 1))<99999
+       OR (bitwise_shift_right(c, 1)+bitwise_shift_right(c, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   2 |
+|   2 |
+|   2 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_shift_right(c, c)<99999
+       OR bitwise_shift_right(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(c, 1)+bitwise_shift_right(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_shift_right(c, 1)+bitwise_shift_right(s_int, 1))<99999
+       OR (bitwise_shift_right(c, 1)+bitwise_shift_right(s_int, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   1 |
+|   2 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B30_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_shift_right(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_shift_right(c, s_int)<99999
+       OR bitwise_shift_right(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   1 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C1_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(c, 1)+bitwise_xor(c, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_xor(c, 1)+bitwise_xor(c, 1))<99999
+       OR (bitwise_xor(c, 1)+bitwise_xor(c, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   6 |
+|   6 |
+|   6 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C2_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_xor(c, c)<99999
+       OR bitwise_xor(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|   0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C3_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(c, 1)+bitwise_xor(s_int, 1) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((bitwise_xor(c, 1)+bitwise_xor(s_int, 1))<99999
+       OR (bitwise_xor(c, 1)+bitwise_xor(s_int, 1)) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   3 |
+|   3 |
+|   6 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B31_C4_D2
+#-------------------------------------------------------------------------
+SELECT bitwise_xor(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (bitwise_xor(c, s_int)<99999
+       OR bitwise_xor(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   0 |
+|   3 |
+|   3 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C1_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(c)+human_readable_binary_byte_format(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_binary_byte_format(c)+human_readable_binary_byte_format(c))<'99999'
+       OR (human_readable_binary_byte_format(c)+human_readable_binary_byte_format(c)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C2_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_binary_byte_format(c+c)<'99999'
+       OR human_readable_binary_byte_format(c+c) IS NULL);
++-----+
+| col |
++-----+
+| 2 B |
+| 2 B |
+| 2 B |
+| 4 B |
+| 4 B |
+| 4 B |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C3_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(c)+human_readable_binary_byte_format(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_binary_byte_format(c)+human_readable_binary_byte_format(s_int))<'99999'
+       OR (human_readable_binary_byte_format(c)+human_readable_binary_byte_format(s_int)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B33_C4_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_binary_byte_format(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_binary_byte_format(c+s_int)<'99999'
+       OR human_readable_binary_byte_format(c+s_int) IS NULL);
++-----+
+| col |
++-----+
+| 2 B |
+| 3 B |
+| 3 B |
+| 4 B |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C1_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(c))<'99999'
+       OR (human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(c)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C2_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_decimal_byte_format(c+c)<'99999'
+       OR human_readable_decimal_byte_format(c+c) IS NULL);
++-----+
+| col |
++-----+
+| 2 B |
+| 2 B |
+| 2 B |
+| 4 B |
+| 4 B |
+| 4 B |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C3_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(s_int))<'99999'
+       OR (human_readable_decimal_byte_format(c)+human_readable_decimal_byte_format(s_int)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B34_C4_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_byte_format(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_decimal_byte_format(c+s_int)<'99999'
+       OR human_readable_decimal_byte_format(c+s_int) IS NULL);
++-----+
+| col |
++-----+
+| 2 B |
+| 3 B |
+| 3 B |
+| 4 B |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C1_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(c)+human_readable_decimal_format(c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_decimal_format(c)+human_readable_decimal_format(c))<99999
+       OR (human_readable_decimal_format(c)+human_readable_decimal_format(c)) IS NULL);
++-----+
+| col |
++-----+
+| 2.0 |
+| 2.0 |
+| 2.0 |
+| 4.0 |
+| 4.0 |
+| 4.0 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C2_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(c+c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_decimal_format(c+c)<99999
+       OR human_readable_decimal_format(c+c) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 2   |
+| 2   |
+| 4   |
+| 4   |
+| 4   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C3_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(c)+human_readable_decimal_format(s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((human_readable_decimal_format(c)+human_readable_decimal_format(s_int))<99999
+       OR (human_readable_decimal_format(c)+human_readable_decimal_format(s_int)) IS NULL);
++-----+
+| col |
++-----+
+| 2.0 |
+| 3.0 |
+| 3.0 |
+| 4.0 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B35_C4_D2
+#-------------------------------------------------------------------------
+SELECT human_readable_decimal_format(c+s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (human_readable_decimal_format(c+s_int)<99999
+       OR human_readable_decimal_format(c+s_int) IS NULL);
++-----+
+| col |
++-----+
+| 2   |
+| 3   |
+| 3   |
+| 4   |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C1_D2
+#-------------------------------------------------------------------------
+SELECT safe_divide(c, 0)+safe_divide(c, 0) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((safe_divide(c, 0)+safe_divide(c, 0))<99999
+       OR (safe_divide(c, 0)+safe_divide(c, 0)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C2_D2
+#-------------------------------------------------------------------------
+SELECT safe_divide(c, c) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (safe_divide(c, c)<99999
+       OR safe_divide(c, c) IS NULL);
++-----+
+| col |
++-----+
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|   1 |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C3_D2
+#-------------------------------------------------------------------------
+SELECT safe_divide(c, 0)+safe_divide(s_int, 0) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND ((safe_divide(c, 0)+safe_divide(s_int, 0))<99999
+       OR (safe_divide(c, 0)+safe_divide(s_int, 0)) IS NULL);
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B36_C4_D2
+#-------------------------------------------------------------------------
+SELECT safe_divide(c, s_int) AS col
+FROM test_unnest,
+     unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
+WHERE (s_int IN (0,
+                 1,
+                 2)
+       OR s_int IS NULL)
+  AND (safe_divide(c, s_int)<99999
+       OR safe_divide(c, s_int) IS NULL);
++-----+
+| col |
++-----+
+|   0 |
+|   1 |
+|   1 |
+|   2 |
+|     |
+|     |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
+

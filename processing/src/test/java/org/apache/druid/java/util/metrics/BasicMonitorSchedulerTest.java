@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
@@ -48,6 +49,12 @@ public class BasicMonitorSchedulerTest
   {
     emitter = Mockito.mock(ServiceEmitter.class);
     exec = Execs.scheduledSingleThreaded("BasicMonitorSchedulerTest");
+  }
+
+  @After
+  public void teardown()
+  {
+    exec.shutdownNow();
   }
 
   @Test

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -104,10 +103,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class FilteredAggregatorBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"75000"})
   private int rowsPerSegment;
 
@@ -277,7 +272,7 @@ public class FilteredAggregatorBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
           qIndexesDir,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       incIndex.close();

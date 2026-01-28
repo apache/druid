@@ -20,25 +20,6 @@
 
 .edit-context-dialog {
   &.#{$bp-ns}-dialog {
-    padding-bottom: 10px;
-  }
-
-  .#{$bp-ns}-input {
-    margin: 10px;
-    height: 400px;
-  }
-
-  .#{$bp-ns}-dialog-footer-actions {
-    padding: 0px 10px 0px 10px;
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    grid-template-areas: 'error buttons';
-  }
-
-  .edit-context-dialog-error {
-    grid-area: error;
-  }
-  .edit-context-dialog-buttons {
-    grid-area: buttons;
+    height: 60vh;
   }
 }

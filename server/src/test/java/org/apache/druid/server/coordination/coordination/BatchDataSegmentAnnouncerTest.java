@@ -31,7 +31,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
@@ -47,6 +47,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -284,7 +285,10 @@ public class BatchDataSegmentAnnouncerTest
     List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(
+          TEST_SEGMENTS_PATH,
+          zNode
+      )));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
       Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
@@ -307,7 +311,10 @@ public class BatchDataSegmentAnnouncerTest
     List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(
+          TEST_SEGMENTS_PATH,
+          zNode
+      )));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertNull(announcedSegment.getLoadSpec());
     }
@@ -402,7 +409,8 @@ public class BatchDataSegmentAnnouncerTest
     segmentAnnouncer.announceSegmentSchemas(
         taskId,
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)),
-        new SegmentSchemas(Collections.singletonList(absoluteSchema1)));
+        new SegmentSchemas(Collections.singletonList(absoluteSchema1))
+    );
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot;
 
@@ -563,21 +571,19 @@ public class BatchDataSegmentAnnouncerTest
     }
   }
 
-  private DataSegment makeSegment(int offset, boolean isTombstone)
+  private static DataSegment makeSegment(int offset, boolean isTombstone)
   {
-    DataSegment.Builder builder = DataSegment.builder();
-    builder.dataSource("foo")
-           .interval(
-               new Interval(
-                   DateTimes.of("2013-01-01").plusDays(offset),
-                   DateTimes.of("2013-01-02").plusDays(offset)
-               )
-           )
-           .version(DateTimes.nowUtc().toString())
-           .dimensions(ImmutableList.of("dim1", "dim2"))
-           .metrics(ImmutableList.of("met1", "met2"))
-           .loadSpec(ImmutableMap.of("type", "local"))
-           .size(0);
+    Interval interval = new Interval(
+        DateTimes.of("2013-01-01").plusDays(offset),
+        DateTimes.of("2013-01-02").plusDays(offset)
+    );
+    SegmentId segmentId = SegmentId.of("foo", interval, DateTimes.nowUtc().toString(), null);
+    DataSegment.Builder builder = DataSegment.builder(segmentId)
+                                             .loadSpec(ImmutableMap.of("type", "local"))
+                                             .dimensions(ImmutableList.of("dim1", "dim2"))
+                                             .metrics(ImmutableList.of("met1", "met2"))
+                                             .projections(ImmutableList.of("proj1", "proj2"))
+                                             .size(0);
     if (isTombstone) {
       builder.loadSpec(Collections.singletonMap("type", DataSegment.TOMBSTONE_LOADSPEC_TYPE));
     }
@@ -585,7 +591,7 @@ public class BatchDataSegmentAnnouncerTest
     return builder.build();
   }
 
-  private DataSegment makeSegment(int offset)
+  private static DataSegment makeSegment(int offset)
   {
     return makeSegment(offset, false);
   }
@@ -606,9 +612,7 @@ public class BatchDataSegmentAnnouncerTest
       try {
         if (cf.checkExists().forPath(path) != null) {
           return jsonMapper.readValue(
-              cf.getData().forPath(path), new TypeReference<Set<DataSegment>>()
-              {
-              }
+              cf.getData().forPath(path), new TypeReference<>() {}
           );
         }
       }
@@ -620,7 +624,7 @@ public class BatchDataSegmentAnnouncerTest
     }
   }
 
-  private static class TestAnnouncer extends Announcer
+  private static class TestAnnouncer extends NodeAnnouncer
   {
     private final ConcurrentHashMap<String, ConcurrentHashMap<byte[], AtomicInteger>> numPathAnnounced = new ConcurrentHashMap<>();
 
@@ -632,7 +636,9 @@ public class BatchDataSegmentAnnouncerTest
     @Override
     public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
     {
-      numPathAnnounced.computeIfAbsent(path, k -> new ConcurrentHashMap<>()).computeIfAbsent(bytes, k -> new AtomicInteger(0)).incrementAndGet();
+      numPathAnnounced.computeIfAbsent(path, k -> new ConcurrentHashMap<>())
+                      .computeIfAbsent(bytes, k -> new AtomicInteger(0))
+                      .incrementAndGet();
       super.announce(path, bytes, removeParentIfCreated);
     }
   }

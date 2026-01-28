@@ -1,0 +1,403 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C23_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B16_C24_D1
+#-------------------------------------------------------------------------
+SELECT replace(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'A', 'B') AS col
+FROM test_array;
+Cannot apply 'REPLACE' to arguments of type 'REPLACE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C1_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_bool, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C2_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C3_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][0]' RETURNING boolean array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C4_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_int, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C5_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C6_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][1]' RETURNING bigint array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C7_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_float, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C8_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C9_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C10_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_str, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C11_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C12_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C13_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_null, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C14_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C15_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C16_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_empty, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C17_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C18_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C19_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_mixed, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C20_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C21_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C22_D1
+#-------------------------------------------------------------------------
+SELECT strpos(a_nested, 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C23_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B17_C24_D1
+#-------------------------------------------------------------------------
+SELECT strpos(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'ABCD') AS col
+FROM test_array;
+Cannot apply 'STRPOS' to arguments of type 'STRPOS(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C1_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_bool, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C2_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C3_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][0]' RETURNING boolean array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C4_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_int, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C5_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C6_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][1]' RETURNING bigint array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C7_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_float, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C8_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C9_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][2]' RETURNING decimal array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C10_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_str, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C11_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C12_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][3]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C13_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_null, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C14_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C15_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][4]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C16_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_empty, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C17_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C18_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][5]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C19_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_mixed, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C20_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C21_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][6]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C22_D1
+#-------------------------------------------------------------------------
+SELECT substring(a_nested, 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C23_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B18_C24_D1
+#-------------------------------------------------------------------------
+SELECT substring(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
+FROM test_array;
+Cannot apply 'SUBSTRING' to arguments of type 'SUBSTRING(
+!error
+

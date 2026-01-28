@@ -22,11 +22,11 @@ package org.apache.druid.client.selector;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +37,8 @@ import java.util.Set;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "highestPriority", value = HighestPriorityTierSelectorStrategy.class),
     @JsonSubTypes.Type(name = "lowestPriority", value = LowestPriorityTierSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "custom", value = CustomTierSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "custom", value = CustomTierSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "preferred", value = PreferredTierSelectorStrategy.class),
 })
 public interface TierSelectorStrategy
 {

@@ -68,7 +68,6 @@ public abstract class BalancerStrategyFactory
 
   private ListeningExecutorService createNewBalancerExecutor(int numThreads)
   {
-    log.info("Creating new balancer executor with [%d] threads.", numThreads);
     cachedBalancerThreadNumber = numThreads;
     return MoreExecutors.listeningDecorator(
         Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")

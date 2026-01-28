@@ -32,7 +32,7 @@ public class Stats
     public static final CoordinatorStat DROPPED
         = CoordinatorStat.toDebugAndEmit("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
-        = CoordinatorStat.toLogAndEmit("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("deleted", "segment/deleted/count");
     public static final CoordinatorStat MOVED
         = CoordinatorStat.toDebugAndEmit("moved", "segment/moved/count");
 
@@ -61,6 +61,16 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
     public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
         = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
+
+    // Values computed in a run
+    public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
+        = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
+
+    // Cloned segments in a run
+    public static final CoordinatorStat ASSIGNED_TO_CLONE
+        = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
+    public static final CoordinatorStat DROPPED_FROM_CLONE
+        = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
   }
 
   public static class SegmentQueue
@@ -71,6 +81,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("bytesToLoad", "segment/loadQueue/size");
     public static final CoordinatorStat NUM_TO_DROP
         = CoordinatorStat.toDebugAndEmit("numToDrop", "segment/dropQueue/count");
+    public static final CoordinatorStat LOAD_RATE_KBPS
+        = CoordinatorStat.toDebugAndEmit("loadRateKbps", "segment/loading/rateKbps");
 
     public static final CoordinatorStat ASSIGNED_ACTIONS
         = CoordinatorStat.toDebugAndEmit("assignedActions", "segment/loadQueue/assigned");
@@ -92,12 +104,23 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT
         = CoordinatorStat.toDebugAndEmit("numHistorical", "tier/historical/count");
+    public static final CoordinatorStat CLONE_COUNT
+        = CoordinatorStat.toDebugAndEmit("numClones", "tier/historical/clone/count");
   }
 
   public static class Compaction
   {
+    public static final CoordinatorStat JOB_CREATION_TIME
+        = CoordinatorStat.toDebugAndEmit("jobCreationTime", "compact/createJobs/time");
+    public static final CoordinatorStat CREATED_JOBS
+        = CoordinatorStat.toDebugAndEmit("jobQueueSize", "compact/createJobs/count");
+    public static final CoordinatorStat SCHEDULER_RUN_TIME
+        = CoordinatorStat.toDebugAndEmit("schedulerRunTime", "compact/runScheduler/time");
+
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
+    public static final CoordinatorStat CANCELLED_TASKS
+        = CoordinatorStat.toDebugAndEmit("compactCancelled", "compactTask/cancelled/count");
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
@@ -168,5 +191,18 @@ public class Stats
     );
     public static final CoordinatorStat COMPUTATION_TIME = CoordinatorStat.toDebugOnly("costComputeTime");
     public static final CoordinatorStat COMPUTATION_COUNT = CoordinatorStat.toDebugOnly("costComputeCount");
+
+    public static final CoordinatorStat COMPUTE_THREADS = CoordinatorStat.toDebugOnly("balancerComputeThreads");
+    public static final CoordinatorStat MAX_TO_MOVE = CoordinatorStat.toDebugOnly("maxToMove");
+  }
+
+  public static class Configuration
+  {
+    public static final CoordinatorStat BROKER_SYNC_TIME
+        = CoordinatorStat.toDebugAndEmit("brokerSyncTime", "config/brokerSync/time");
+    public static final CoordinatorStat TOTAL_SYNC_TIME
+        = CoordinatorStat.toDebugAndEmit("totalBrokerSyncTime", "config/brokerSync/total/time");
+    public static final CoordinatorStat BROKER_SYNC_ERROR
+        = CoordinatorStat.toDebugAndEmit("configSyncFailure", "config/brokerSync/error");
   }
 }

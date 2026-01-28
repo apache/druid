@@ -28,9 +28,8 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprEval;
@@ -40,8 +39,8 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.IsFalseDimFilter;
 import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -62,7 +61,7 @@ public class EqualityFilterTests
     public EqualityFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -80,13 +79,11 @@ public class EqualityFilterTests
     @Test
     public void testSingleValueStringColumnWithoutNulls()
     {
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(new EqualityFilter("dim0", ColumnType.STRING, "", null), ImmutableList.of());
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim0", ColumnType.STRING, "", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-      }
+      assertFilterMatches(new EqualityFilter("dim0", ColumnType.STRING, "", null), ImmutableList.of());
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim0", ColumnType.STRING, "", null)),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
       assertFilterMatches(new EqualityFilter("dim0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("dim0", ColumnType.STRING, "0", null)),
@@ -108,14 +105,18 @@ public class EqualityFilterTests
           NotDimFilter.of(new EqualityFilter("dim0", ColumnType.LONG, 1L, null)),
           ImmutableList.of("0", "2", "3", "4", "5")
       );
+
+      assertFilterMatches(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null), ImmutableList.of("1"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
     }
 
     @Test
     public void testSingleValueVirtualStringColumnWithoutNulls()
     {
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(new EqualityFilter("vdim0", ColumnType.STRING, "", null), ImmutableList.of());
-      }
+      assertFilterMatches(new EqualityFilter("vdim0", ColumnType.STRING, "", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.STRING, "1", null), ImmutableList.of("1"));
       assertFilterMatches(new EqualityFilter("vdim0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
@@ -132,9 +133,7 @@ public class EqualityFilterTests
       );
       assertFilterMatchesSkipVectorize(
           NotDimFilter.of(new EqualityFilter("allow-dim0", ColumnType.STRING, "1", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("3", "4")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("3", "4")
       );
       assertFilterMatchesSkipVectorize(
           new EqualityFilter("allow-dim0", ColumnType.STRING, "4", null),
@@ -142,9 +141,7 @@ public class EqualityFilterTests
       );
       assertFilterMatchesSkipVectorize(
           NotDimFilter.of(new EqualityFilter("allow-dim0", ColumnType.STRING, "4", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("3")
-          : ImmutableList.of("0", "1", "2", "3", "5")
+          ImmutableList.of("3")
       );
       assertFilterMatchesSkipVectorize(
           new EqualityFilter("deny-dim0", ColumnType.STRING, "0", null),
@@ -152,9 +149,7 @@ public class EqualityFilterTests
       );
       assertFilterMatchesSkipVectorize(
           NotDimFilter.of(new EqualityFilter("deny-dim0", ColumnType.STRING, "0", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "2", "5")
-          : ImmutableList.of("1", "2", "3", "4", "5")
+          ImmutableList.of("1", "2", "5")
       );
       assertFilterMatchesSkipVectorize(
           new EqualityFilter("deny-dim0", ColumnType.STRING, "4", null),
@@ -162,9 +157,7 @@ public class EqualityFilterTests
       );
       assertFilterMatchesSkipVectorize(
           NotDimFilter.of(new EqualityFilter("deny-dim0", ColumnType.STRING, "4", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "5")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "5")
       );
 
       // auto ingests arrays instead of MVDs which dont work with list filtered virtual column
@@ -175,9 +168,7 @@ public class EqualityFilterTests
         );
         assertFilterMatchesSkipVectorize(
             NotDimFilter.of(new EqualityFilter("allow-dim2", ColumnType.STRING, "b", null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("0", "3")
-            : ImmutableList.of("0", "1", "2", "3", "4", "5")
+            ImmutableList.of("0", "3")
         );
         assertFilterMatchesSkipVectorize(
             new EqualityFilter("allow-dim2", ColumnType.STRING, "a", null),
@@ -185,7 +176,7 @@ public class EqualityFilterTests
         );
         assertFilterMatchesSkipVectorize(
             NotDimFilter.of(new EqualityFilter("allow-dim2", ColumnType.STRING, "a", null)),
-            NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("1", "2", "4", "5")
+            ImmutableList.of()
         );
         assertFilterMatchesSkipVectorize(
             new EqualityFilter("deny-dim2", ColumnType.STRING, "b", null),
@@ -193,9 +184,7 @@ public class EqualityFilterTests
         );
         assertFilterMatchesSkipVectorize(
             NotDimFilter.of(new EqualityFilter("deny-dim2", ColumnType.STRING, "b", null)),
-            NullHandling.replaceWithDefault()
-            ? ImmutableList.of("1", "2", "3", "4", "5")
-            : ImmutableList.of("2", "4")
+            ImmutableList.of("2", "4")
         );
         assertFilterMatchesSkipVectorize(
             new EqualityFilter("deny-dim2", ColumnType.STRING, "a", null),
@@ -204,9 +193,7 @@ public class EqualityFilterTests
         // mvds are strange
         assertFilterMatchesSkipVectorize(
             NotDimFilter.of(new EqualityFilter("deny-dim2", ColumnType.STRING, "a", null)),
-            NullHandling.replaceWithDefault()
-            ? ImmutableList.of("0", "1", "2", "3", "4", "5")
-            : ImmutableList.of("0", "2", "4")
+            ImmutableList.of("0", "2", "4")
         );
       }
     }
@@ -214,24 +201,22 @@ public class EqualityFilterTests
     @Test
     public void testSingleValueStringColumnWithNulls()
     {
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            new EqualityFilter("dim1", ColumnType.STRING, "", null),
-            ImmutableList.of("0")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "", null)),
-            ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            new EqualityFilter("s0", ColumnType.STRING, "", null),
-            ImmutableList.of("0")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "", null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
-      }
+      assertFilterMatches(
+          new EqualityFilter("dim1", ColumnType.STRING, "", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "", null)),
+          ImmutableList.of("1", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          new EqualityFilter("s0", ColumnType.STRING, "", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "", null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
       assertFilterMatches(new EqualityFilter("dim1", ColumnType.STRING, "10", null), ImmutableList.of("1"));
       assertFilterMatches(new EqualityFilter("dim1", ColumnType.STRING, "2", null), ImmutableList.of("2"));
       assertFilterMatches(new EqualityFilter("dim1", ColumnType.STRING, "1", null), ImmutableList.of("3"));
@@ -244,119 +229,64 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("s0", ColumnType.STRING, "c", null), ImmutableList.of("4"));
       assertFilterMatches(new EqualityFilter("s0", ColumnType.STRING, "noexist", null), ImmutableList.of());
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "10", null)),
-            ImmutableList.of("0", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "4")
-        );
-        // "(s0 = 'a') is not true", same rows as "s0 <> 'a'", but also with null rows
-        assertFilterMatches(
-            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("1", "5")
-        );
-        // "(s0 = 'a') is false", equivalent results to "s0 <> 'a'"
-        assertFilterMatches(
-            IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "4")
-        );
-        // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
-        assertFilterMatches(
-            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("1", "3", "5")
-        );
-
-        try {
-          // make sure if 3vl is disabled with behave with 2vl
-          NullHandling.initializeForTestsWithValues(false, false, null);
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-              ImmutableList.of("0", "2", "3", "4")
-          );
-        }
-        finally {
-          NullHandling.initializeForTests();
-        }
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "4", "5")
-        );
-      } else {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "10", null)),
-            ImmutableList.of("0", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-
-        // in default value mode, is true/is false are basically pointless since they have the same behavior as = and <>
-        // "(s0 = 'a') is not true" equivalent to "s0 <> 'a'"
-        assertFilterMatches(
-            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("1", "5")
-        );
-        // "(s0 = 'a') is false" equivalent to "s0 <> 'a'"
-        assertFilterMatches(
-            IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is not false", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("1", "5")
-        );
-      }
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "10", null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim1", ColumnType.STRING, "noexist", null)),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("0", "2", "4")
+      );
+      // "(s0 = 'a') is not true", same rows as "s0 <> 'a'", but also with null rows
+      assertFilterMatches(
+          NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+          ImmutableList.of("0", "2", "3", "4")
+      );
+      // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
+      assertFilterMatches(
+          IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("1", "5")
+      );
+      // "(s0 = 'a') is false", equivalent results to "s0 <> 'a'"
+      assertFilterMatches(
+          IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("0", "2", "4")
+      );
+      // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
+      assertFilterMatches(
+          NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+          ImmutableList.of("1", "3", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
+          ImmutableList.of("0", "1", "2", "4", "5")
+      );
     }
 
     @Test
     public void testSingleValueVirtualStringColumnWithNulls()
     {
       // testSingleValueStringColumnWithNulls but with virtual column selector
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            new EqualityFilter("vdim1", ColumnType.STRING, "", null),
-            ImmutableList.of("0")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "", null)),
-            ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            new EqualityFilter("vs0", ColumnType.STRING, "", null),
-            ImmutableList.of("0")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "", null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
-      }
+      assertFilterMatches(
+          new EqualityFilter("vdim1", ColumnType.STRING, "", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "", null)),
+          ImmutableList.of("1", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          new EqualityFilter("vs0", ColumnType.STRING, "", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "", null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
       assertFilterMatches(new EqualityFilter("vdim1", ColumnType.STRING, "10", null), ImmutableList.of("1"));
       assertFilterMatches(new EqualityFilter("vdim1", ColumnType.STRING, "2", null), ImmutableList.of("2"));
       assertFilterMatches(new EqualityFilter("vdim1", ColumnType.STRING, "1", null), ImmutableList.of("3"));
@@ -369,41 +299,22 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("vs0", ColumnType.STRING, "c", null), ImmutableList.of("4"));
       assertFilterMatches(new EqualityFilter("vs0", ColumnType.STRING, "noexist", null), ImmutableList.of());
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "10", null)),
-            ImmutableList.of("0", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "4")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "4", "5")
-        );
-      } else {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "10", null)),
-            ImmutableList.of("0", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-      }
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "10", null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vdim1", ColumnType.STRING, "noexist", null)),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("0", "2", "4")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vs0", ColumnType.STRING, "noexist", null)),
+          ImmutableList.of("0", "1", "2", "4", "5")
+      );
     }
 
 
@@ -425,13 +336,11 @@ public class EqualityFilterTests
     {
       if (isAutoSchema()) {
         // auto ingests arrays instead of strings
-        if (NullHandling.sqlCompatible()) {
-          assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of());
-          assertFilterMatches(
-              new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of(""), null),
-              ImmutableList.of("2")
-          );
-        }
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of());
+        assertFilterMatches(
+            new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of(""), null),
+            ImmutableList.of("2")
+        );
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "a", null), ImmutableList.of());
         assertFilterMatches(
             new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of("a"), null),
@@ -471,29 +380,25 @@ public class EqualityFilterTests
             ImmutableList.of()
         );
       } else {
-        if (NullHandling.sqlCompatible()) {
-          assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of("2"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("dim2", ColumnType.STRING, "", null)),
-              ImmutableList.of("0", "3", "4")
-          );
-        }
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of("2"));
+        assertFilterMatches(
+            NotDimFilter.of(new EqualityFilter("dim2", ColumnType.STRING, "", null)),
+            ImmutableList.of("0", "3", "4")
+        );
         assertFilterMatches(
             new EqualityFilter("dim2", ColumnType.STRING, "a", null),
             ImmutableList.of("0", "3")
         );
         assertFilterMatches(
             NotDimFilter.of(new EqualityFilter("dim2", ColumnType.STRING, "a", null)),
-            NullHandling.replaceWithDefault() ? ImmutableList.of("1", "2", "4", "5") : ImmutableList.of("2", "4")
+            ImmutableList.of("2", "4")
         );
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "b", null), ImmutableList.of("0"));
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "c", null), ImmutableList.of("4"));
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "d", null), ImmutableList.of());
         assertFilterMatches(
             NotDimFilter.of(new EqualityFilter("dim2", ColumnType.STRING, "d", null)),
-            NullHandling.replaceWithDefault()
-            ? ImmutableList.of("0", "1", "2", "3", "4", "5")
-            : ImmutableList.of("0", "2", "3", "4")
+            ImmutableList.of("0", "2", "3", "4")
         );
       }
 
@@ -504,48 +409,40 @@ public class EqualityFilterTests
       );
       assertFilterMatchesSkipVectorize(
           NotDimFilter.of(new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null)),
-          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("1", "2", "3", "4", "5")
+          ImmutableList.of()
       );
     }
 
     @Test
     public void testMissingColumnSpecifiedInDimensionList()
     {
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(new EqualityFilter("dim3", ColumnType.STRING, "", null), ImmutableList.of());
-      }
+      assertFilterMatches(new EqualityFilter("dim3", ColumnType.STRING, "", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim3", ColumnType.STRING, "a", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim3", ColumnType.STRING, "b", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim3", ColumnType.STRING, "c", null), ImmutableList.of());
 
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("dim3", ColumnType.STRING, "c", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of()
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of()
       );
 
       assertFilterMatches(new EqualityFilter("vdim3-concat", ColumnType.STRING, "1", null), ImmutableList.of());
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("vdim3-concat", ColumnType.STRING, "1", null)),
-          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of()
       );
     }
 
     @Test
     public void testMissingColumnNotSpecifiedInDimensionList()
     {
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(new EqualityFilter("dim4", ColumnType.STRING, "", null), ImmutableList.of());
-      }
+      assertFilterMatches(new EqualityFilter("dim4", ColumnType.STRING, "", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim4", ColumnType.STRING, "a", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim4", ColumnType.STRING, "b", null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("dim4", ColumnType.STRING, "c", null), ImmutableList.of());
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("dim4", ColumnType.STRING, "c", null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of()
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of()
       );
     }
 
@@ -589,198 +486,91 @@ public class EqualityFilterTests
     @Test
     public void testNumericColumnNullsAndDefaults()
     {
-      if (canTestNumericNullsAsDefaultValues) {
-        assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0", "4"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null)),
-            ImmutableList.of("1", "2", "3", "5")
-        );
-        assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null)),
-            ImmutableList.of("1", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 0L, null), ImmutableList.of("0", "3"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("l0", ColumnType.LONG, 0L, null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null)),
+          ImmutableList.of("1", "2", "3", "5")
+      );
+      assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null)),
+          ImmutableList.of("1", "3", "4", "5")
+      );
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("l0", ColumnType.LONG, 0L, null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
 
-        assertFilterMatches(new EqualityFilter("f0", ColumnType.STRING, "0", null), ImmutableList.of("0", "4"));
-        assertFilterMatches(new EqualityFilter("d0", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
-        assertFilterMatches(new EqualityFilter("l0", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
-      } else {
-        assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("f0", ColumnType.FLOAT, 0f, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "2", "3", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("d0", ColumnType.DOUBLE, 0.0, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "3", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("l0", ColumnType.LONG, 0L, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "2", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-
-        assertFilterMatches(new EqualityFilter("f0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        assertFilterMatches(new EqualityFilter("d0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        assertFilterMatches(new EqualityFilter("l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-      }
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("d0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
     }
 
     @Test
     public void testVirtualNumericColumnNullsAndDefaults()
     {
-      if (canTestNumericNullsAsDefaultValues) {
-        assertFilterMatches(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0", "4"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null)),
-            ImmutableList.of("1", "2", "3", "5")
-        );
-        assertFilterMatches(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null)),
-            ImmutableList.of("1", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("vl0", ColumnType.LONG, 0L, null), ImmutableList.of("0", "3"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vl0", ColumnType.LONG, 0L, null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
+      assertFilterMatches(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null)),
+          ImmutableList.of("1", "2", "3", "5")
+      );
+      assertFilterMatches(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null)),
+          ImmutableList.of("1", "3", "4", "5")
+      );
+      assertFilterMatches(new EqualityFilter("vl0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vl0", ColumnType.LONG, 0L, null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
 
-        assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "4"));
-        assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
-        assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
+      assertFilterMatches(new EqualityFilter("vf0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("vd0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("vl0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
 
-        assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0", "4"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null)),
-            ImmutableList.of("1", "2", "3", "5")
-        );
-        assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
-            ImmutableList.of("1", "3", "4", "5")
-        );
+      // these fail in default value mode that cannot be tested as numeric default values becuase of type
+      // mismatch for subtract operation
+      assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null)),
+          ImmutableList.of("1", "2", "3", "5")
+      );
+      assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
+          ImmutableList.of("1", "3", "4", "5")
+      );
+      assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vl0-add-sub", ColumnType.LONG, 0L, null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
 
-        // virtual column that refers to another virtual column
-        assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "4"));
-        assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
-        assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
+      assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
 
-        assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0", "4"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null)),
-            ImmutableList.of("1", "2", "3", "5")
-        );
-        assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
-            ImmutableList.of("1", "3", "4", "5")
-        );
+      assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null)),
+          ImmutableList.of("1", "2", "3", "5")
+      );
+      assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
+          ImmutableList.of("1", "3", "4", "5")
+      );
+      assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
 
-        assertFilterMatches(new EqualityFilter("vl0", ColumnType.LONG, 0L, null), ImmutableList.of("0", "3"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vl0", ColumnType.LONG, 0L, null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
-
-        assertFilterMatches(new EqualityFilter("vf0", ColumnType.STRING, "0", null), ImmutableList.of("0", "4"));
-        assertFilterMatches(new EqualityFilter("vd0", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
-        assertFilterMatches(new EqualityFilter("vl0", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
-      } else {
-        assertFilterMatches(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vf0", ColumnType.FLOAT, 0f, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "2", "3", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vd0", ColumnType.DOUBLE, 0.0, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "3", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("vl0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("vl0", ColumnType.LONG, 0L, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "2", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-
-        assertFilterMatches(new EqualityFilter("vf0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        assertFilterMatches(new EqualityFilter("vd0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        assertFilterMatches(new EqualityFilter("vl0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-
-        if (NullHandling.sqlCompatible()) {
-          // these fail in default value mode that cannot be tested as numeric default values becuase of type
-          // mismatch for subtract operation
-          assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("vf0-add-sub", ColumnType.FLOAT, 0f, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "2", "3", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-          assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "3", "4", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-          assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("vl0-add-sub", ColumnType.LONG, 0L, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "2", "4", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-
-          assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-          assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-          assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-
-          assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "2", "3", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-          assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "3", "4", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-          assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null)),
-              NullHandling.sqlCompatible()
-              ? ImmutableList.of("1", "2", "4", "5")
-              : ImmutableList.of("1", "2", "3", "4", "5")
-          );
-
-          assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-          assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-          assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        }
-      }
+      assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
     }
 
     @Test
@@ -804,7 +594,7 @@ public class EqualityFilterTests
       // different type matcher
       assertFilterMatches(
           new EqualityFilter("d0", ColumnType.LONG, 0L, null),
-          canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2") : ImmutableList.of("0")
+          ImmutableList.of("0")
       );
       assertFilterMatches(new EqualityFilter("d0", ColumnType.LONG, 60L, null), ImmutableList.of("4"));
 
@@ -881,9 +671,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "2", "4", "5")
+          ImmutableList.of("1", "4", "5")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -930,9 +718,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "3", "4", "5")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "3", "4", "5")
       );
 
 
@@ -954,9 +740,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "3", "4", "5")
+          ImmutableList.of("1", "4", "5")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -1003,9 +787,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "4", "5")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "4", "5")
       );
 
       // test loss of precision matching long arrays with double array match values
@@ -1056,9 +838,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("2", "3", "4")
-          : ImmutableList.of("2", "3", "4", "5")
+          ImmutableList.of("2", "3", "4")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -1105,9 +885,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "3", "4")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "3", "4")
       );
     }
 
@@ -1222,94 +1000,47 @@ public class EqualityFilterTests
       // nested column mirrors the top level columns, so these cases are copied from other tests
       Assume.assumeTrue(canTestArrayColumns());
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            new EqualityFilter("nested.s0", ColumnType.STRING, "", null),
-            ImmutableList.of("0")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "", null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
-      }
+      assertFilterMatches(
+          new EqualityFilter("nested.s0", ColumnType.STRING, "", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "", null)),
+          ImmutableList.of("1", "2", "4", "5")
+      );
       assertFilterMatches(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null), ImmutableList.of("1", "5"));
       assertFilterMatches(new EqualityFilter("nested.s0", ColumnType.STRING, "b", null), ImmutableList.of("2"));
       assertFilterMatches(new EqualityFilter("nested.s0", ColumnType.STRING, "c", null), ImmutableList.of("4"));
       assertFilterMatches(new EqualityFilter("nested.s0", ColumnType.STRING, "noexist", null), ImmutableList.of());
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "4")
-        );
-        // "(s0 = 'a') is not true", same rows as "s0 <> 'a'", but also with null rows
-        assertFilterMatches(
-            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("1", "5")
-        );
-        // "(s0 = 'a') is false", equivalent results to "s0 <> 'a'"
-        assertFilterMatches(
-            IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "4")
-        );
-        // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
-        assertFilterMatches(
-            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("1", "3", "5")
-        );
-
-        try {
-          // make sure if 3vl is disabled with behave with 2vl
-          NullHandling.initializeForTestsWithValues(false, false, null);
-          assertFilterMatches(
-              NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-              ImmutableList.of("0", "2", "3", "4")
-          );
-        }
-        finally {
-          NullHandling.initializeForTests();
-        }
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "4", "5")
-        );
-      } else {
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "noexist", null)),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-
-        // in default value mode, is true/is false are basically pointless since they have the same behavior as = and <>
-        // "(s0 = 'a') is not true" equivalent to "s0 <> 'a'"
-        assertFilterMatches(
-            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("1", "5")
-        );
-        // "(s0 = 'a') is false" equivalent to "s0 <> 'a'"
-        assertFilterMatches(
-            IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
-            ImmutableList.of("0", "2", "3", "4")
-        );
-        // "(s0 = 'a') is not false", equivalent to "s0 = 'a'"
-        assertFilterMatches(
-            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
-            ImmutableList.of("1", "5")
-        );
-      }
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("0", "2", "4")
+      );
+      // "(s0 = 'a') is not true", same rows as "s0 <> 'a'", but also with null rows
+      assertFilterMatches(
+          NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
+          ImmutableList.of("0", "2", "3", "4")
+      );
+      // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
+      assertFilterMatches(
+          IsTrueDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("1", "5")
+      );
+      // "(s0 = 'a') is false", equivalent results to "s0 <> 'a'"
+      assertFilterMatches(
+          IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null)),
+          ImmutableList.of("0", "2", "4")
+      );
+      // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
+      assertFilterMatches(
+          NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "a", null))),
+          ImmutableList.of("1", "3", "5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("nested.s0", ColumnType.STRING, "noexist", null)),
+          ImmutableList.of("0", "1", "2", "4", "5")
+      );
 
       /*
         dim0   d0         l0
@@ -1326,16 +1057,12 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "3", "4", "5")
-          : ImmutableList.of("1", "2", "3", "4", "5")
+          ImmutableList.of("1", "3", "4", "5")
       );
       assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null)),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "2", "4", "5")
-          : ImmutableList.of("1", "2", "3", "4", "5")
+          ImmutableList.of("1", "2", "4", "5")
       );
 
       assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
@@ -1394,9 +1121,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "2", "4", "5")
+          ImmutableList.of("1", "4", "5")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -1443,9 +1168,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "3", "4", "5")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "3", "4", "5")
       );
 
 
@@ -1467,9 +1190,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "3", "4", "5")
+          ImmutableList.of("1", "4", "5")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -1516,9 +1237,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "4", "5")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "4", "5")
       );
 
       // test loss of precision matching long arrays with double array match values
@@ -1569,9 +1288,7 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("2", "3", "4")
-          : ImmutableList.of("2", "3", "4", "5")
+          ImmutableList.of("2", "3", "4")
       );
       assertFilterMatches(
           new EqualityFilter(
@@ -1618,9 +1335,95 @@ public class EqualityFilterTests
                   null
               )
           ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "3", "4")
-          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+          ImmutableList.of("0", "1", "2", "3", "4")
+      );
+    }
+
+    @Test
+    public void testArraysAsMvds()
+    {
+      Assume.assumeTrue(canTestArrayColumns());
+      /*
+          dim0 .. arrayString               arrayLong             arrayDouble
+          "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+          "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+          "2", .. null,                     [1L, 2L, 3L],         [null]
+          "3", .. ["a", "b", "c"],          null,                 []
+          "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+          "5", .. [null],                   [123L, 345L],         null
+       */
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayStringAsMvd",
+              ColumnType.STRING,
+              "b",
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayStringAsMvd",
+                  ColumnType.STRING,
+                  "b",
+                  null
+              )
+          ),
+          ImmutableList.of("1", "4")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayLongAsMvd",
+              ColumnType.STRING,
+              "2",
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayLongAsMvd",
+                  ColumnType.STRING,
+                  "2",
+                  null
+              )
+          ),
+          ImmutableList.of("1", "5")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayDoubleAsMvd",
+              ColumnType.STRING,
+              "3.3",
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayDoubleAsMvd",
+                  ColumnType.STRING,
+                  "3.3",
+                  null
+              )
+          ),
+          ImmutableList.of("3", "4")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayConstantAsMvd",
+              ColumnType.STRING,
+              "3",
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
     }
   }
@@ -1754,7 +1557,7 @@ public class EqualityFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       f1 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f1_2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3, 4)), null);
@@ -1821,7 +1624,7 @@ public class EqualityFilterTests
                         "optimizedFilterNoIncludeUnknown"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
-                    .withPrefabValues(ExprEval.class, ExprEval.of("hello"), ExprEval.of(1.0))
+                    .withPrefabValues(ExprEval.class, ExprEval.ofString("hello"), ExprEval.of(1.0))
                     .withIgnoredFields(
                         "predicateFactory",
                         "optimizedFilterIncludeUnknown",

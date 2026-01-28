@@ -20,7 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -116,7 +116,7 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
       Closer closer
   )
   {
-    return new WritableSupplier<T>()
+    return new WritableSupplier<>()
     {
       @Override
       public T get()
@@ -135,10 +135,10 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
       @Override
       public void writeTo(
           WritableByteChannel channel,
-          FileSmoosher smoosher
+          SegmentFileBuilder fileBuilder
       ) throws IOException
       {
-        supplier.writeTo(channel, smoosher);
+        supplier.writeTo(channel, fileBuilder);
       }
     };
   }

@@ -71,11 +71,11 @@ public abstract class AbstractDruidServiceModule implements Module
     binder.install(MultibindingsScanner.asModule());
     MapBinder<NodeRole, Set<Class<? extends DruidService>>> serviceBinder = MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<NodeRole>(){},
-        new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
     );
     serviceBinder
         .addBinding(role)
-        .to(Key.get(new TypeLiteral<Set<Class<? extends DruidService>>>(){}, role.getDruidServiceInjectName()));
+        .to(Key.get(new TypeLiteral<>() {}, role.getDruidServiceInjectName()));
   }
 }

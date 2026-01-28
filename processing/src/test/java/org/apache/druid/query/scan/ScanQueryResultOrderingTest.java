@@ -32,16 +32,18 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.TestSegmentUtils.InMemoryTestSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -61,11 +63,11 @@ import java.util.stream.IntStream;
 
 /**
  * Tests the order in which Scan query results come back.
- *
+ * <p>
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
 @RunWith(Parameterized.class)
-public class ScanQueryResultOrderingTest
+public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
@@ -85,8 +87,8 @@ public class ScanQueryResultOrderingTest
                                                                 .add(ID_COLUMN, ColumnType.LONG)
                                                                 .build();
 
-  private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
-      new RowBasedSegment<>(
+  private static final List<InMemoryTestSegment<Object[]>> SEGMENTS = ImmutableList.of(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
@@ -103,7 +105,7 @@ public class ScanQueryResultOrderingTest
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
-      new RowBasedSegment<>(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 1),
           Sequences.simple(
               ImmutableList.of(
@@ -120,7 +122,7 @@ public class ScanQueryResultOrderingTest
           ROW_ADAPTER,
           ROW_SIGNATURE
       ),
-      new RowBasedSegment<>(
+      new InMemoryTestSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-02/P1D"), "1", 0),
           Sequences.simple(
               ImmutableList.of(
@@ -156,7 +158,7 @@ public class ScanQueryResultOrderingTest
 
     // Try every limit up to one past the total number of rows.
     final Set<Integer> limits = new TreeSet<>();
-    final int totalNumRows = SEGMENTS.stream().mapToInt(s -> s.asStorageAdapter().getNumRows()).sum();
+    int totalNumRows = 19;
     for (int i = 0; i <= totalNumRows + 1; i++) {
       limits.add(i);
     }
@@ -190,10 +192,7 @@ public class ScanQueryResultOrderingTest
   public void setUp()
   {
     queryRunnerFactory = new ScanQueryRunnerFactory(
-        new ScanQueryQueryToolChest(
-            new ScanQueryConfig(),
-            new DefaultGenericQueryMetricsFactory()
-        ),
+        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
         new ScanQueryEngine(),
         new ScanQueryConfig()
     );
@@ -209,7 +208,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.NONE)
+              .order(Order.NONE)
               .build(),
         ImmutableList.of(
             101,
@@ -243,7 +242,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.ASCENDING)
+              .order(Order.ASCENDING)
               .build(),
         ImmutableList.of(
             101,
@@ -277,7 +276,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.DESCENDING)
+              .order(Order.DESCENDING)
               .build(),
         ImmutableList.of(
             8,
@@ -324,7 +323,7 @@ public class ScanQueryResultOrderingTest
                      .map(
                          runners ->
                              queryRunnerFactory.getToolchest().mergeResults(
-                                 new QueryRunner<ScanResultValue>()
+                                 new QueryRunner<>()
                                  {
                                    @Override
                                    public Sequence<ScanResultValue> run(
@@ -397,6 +396,6 @@ public class ScanQueryResultOrderingTest
         brokerRunner.run(QueryPlus.wrap(query))
     ).toList();
 
-    return results.stream().mapToInt(row -> (int) row[1]).boxed().collect(Collectors.toList());
+    return results.stream().mapToInt(row -> ((Number) row[1]).intValue()).boxed().collect(Collectors.toList());
   }
 }

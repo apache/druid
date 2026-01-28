@@ -25,8 +25,8 @@ sidebar_label: "Overlord"
 
 
 The Overlord service is responsible for accepting tasks, coordinating task distribution, creating locks around tasks, and returning statuses to callers. The Overlord can be configured to run in one of two modes - local or remote (local being default).
-In local mode, the Overlord is also responsible for creating Peons for executing tasks. When running the Overlord in local mode, all MiddleManager and Peon configurations must be provided as well.
-Local mode is typically used for simple workflows. In remote mode, the Overlord and MiddleManager are run in separate services and you can run each on a different server.
+In local mode, the Overlord is also responsible for creating Peons for executing tasks. When running the Overlord in local mode, all Middle Manager and Peon configurations must be provided as well.
+Local mode is typically used for simple workflows. In remote mode, the Overlord and Middle Manager are run in separate services and you can run each on a different server.
 This mode is recommended if you intend to use the indexing service as the single endpoint for all Druid indexing.
 
 ## Configuration
@@ -41,7 +41,7 @@ For a list of API endpoints supported by the Overlord, please see the [Service s
 
 ## Blacklisted workers
 
-If a MiddleManager has task failures above a threshold, the Overlord will blacklist these MiddleManagers. No more than 20% of the MiddleManagers can be blacklisted. Blacklisted MiddleManagers will be periodically whitelisted.
+If a Middle Manager has task failures above a threshold, the Overlord will blacklist these Middle Managers. No more than 20% of the Middle Managers can be blacklisted. Blacklisted Middle Managers will be periodically whitelisted.
 
 The following variables can be used to set the threshold and blacklist timeouts.
 
@@ -54,6 +54,6 @@ druid.indexer.runner.maxPercentageBlacklistWorkers
 
 ## Autoscaling
 
-The autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, MiddleManager services are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
+The autoscaling mechanisms currently in place are tightly coupled with our deployment infrastructure but the framework should be in place for other implementations. We are highly open to new implementations or extensions of the existing mechanisms. In our own deployments, Middle Manager services are Amazon AWS EC2 nodes and they are provisioned to register themselves in a [galaxy](https://github.com/ning/galaxy) environment.
 
-If autoscaling is enabled, new MiddleManagers may be added when a task has been in pending state for too long. MiddleManagers may be terminated if they have not run any tasks for a period of time.
+If autoscaling is enabled, new Middle Managers may be added when a task has been in pending state for too long. Middle Managers may be terminated if they have not run any tasks for a period of time.

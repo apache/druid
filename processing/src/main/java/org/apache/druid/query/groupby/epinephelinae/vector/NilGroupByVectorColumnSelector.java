@@ -42,6 +42,12 @@ public class NilGroupByVectorColumnSelector implements GroupByVectorColumnSelect
   }
 
   @Override
+  public int getValueCardinality()
+  {
+    return 1;
+  }
+
+  @Override
   public int writeKeys(WritableMemory keySpace, int keySize, int keyOffset, int startRow, int endRow)
   {
     // Nothing to do.

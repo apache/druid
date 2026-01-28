@@ -38,6 +38,7 @@ import org.apache.druid.segment.Segment;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNResultValue>, TopNQuery>
 {
@@ -61,7 +62,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
   public QueryRunner<Result<TopNResultValue>> createRunner(final Segment segment)
   {
     final TopNQueryEngine queryEngine = new TopNQueryEngine(computationBufferPool);
-    return new QueryRunner<Result<TopNResultValue>>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<Result<TopNResultValue>> run(
@@ -74,7 +75,11 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
         }
 
         TopNQuery query = (TopNQuery) input.getQuery();
-        return queryEngine.query(query, segment.asStorageAdapter(), (TopNQueryMetrics) input.getQueryMetrics());
+        return queryEngine.query(
+            query,
+            segment,
+            (TopNQueryMetrics) input.getQueryMetrics()
+        );
       }
     };
 

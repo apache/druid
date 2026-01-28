@@ -41,6 +41,7 @@ import java.util.Queue;
 public class MockServiceClient implements ServiceClient
 {
   private final Queue<Expectation> expectations = new ArrayDeque<>(16);
+  private int requestNumber = -1;
 
   @Override
   public <IntermediateType, FinalType> ListenableFuture<FinalType> asyncRequest(
@@ -50,8 +51,9 @@ public class MockServiceClient implements ServiceClient
   {
     final Expectation expectation = expectations.poll();
 
+    requestNumber++;
     Assert.assertEquals(
-        "request",
+        "request[" + requestNumber + "]",
         expectation == null ? null : expectation.request,
         requestBuilder
     );

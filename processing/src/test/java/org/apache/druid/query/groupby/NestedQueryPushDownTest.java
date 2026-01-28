@@ -185,7 +185,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -229,7 +229,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
@@ -287,35 +287,40 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
-    GroupByResourcesReservationPool groupByResourcesReservationPool2 = new GroupByResourcesReservationPool(mergePool2, config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergePool, config);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool2 =
+        new GroupByResourcesReservationPool(mergePool2, config);
     final GroupingEngine engine1 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupingEngine engine2 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(
         engine1,
-        new GroupByQueryQueryToolChest(engine1, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(engine1, groupByResourcesReservationPool),
+        bufferPool
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
         engine2,
-        new GroupByQueryQueryToolChest(engine2, groupByResourcesReservationPool2)
+        new GroupByQueryQueryToolChest(engine2, groupByResourcesReservationPool2),
+        bufferPool
     );
   }
 

@@ -55,7 +55,7 @@ The installation of a MySQL metadata store is outside the scope of this document
 Use of other databases such as Postgres or Derby are entirely reasonable, but doing so is left as an excercise to the reader.
 
 ## ZooKeeper
-This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
+This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latest distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
 On macOS, you can also achieve this through the following commands
 
@@ -74,7 +74,7 @@ Intellij IDEA debugger can attach to a local or remote Java process (Druid proce
 Follow these steps to debug a Druid process using the IntelliJ IDEA debugger.
 1. Enable debugging in the Druid process
     1. For Druid services (such as Overlord, Coordinator, etc), include the following as JVM config `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=<PORT>` where `<PORT>` is any available port. Note that different port values should be chosen for each Druid service.
-    2. For the peons (workers on Middlemanager), include the following `agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0` in runtime properties `druid.indexer.runner.javaOpts` of the Middle Manager. Note that `address=0` will tell the debugger to assign ephemeral port.
+    2. For the peons (workers on Middlemanager), add the string `"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0"` to the runtime property `druid.indexer.runner.javaOptsArray` of the Middle Manager. Note that `address=0` will tell the debugger to assign an ephemeral port.
 2. Find the port assigned to the Druid process.
     1. For Druid services, the port value is what you chose in the JVM argument of step 1i above. The port value can also be found in the first line of each Druid service log.
     2. For the peons (workers on Middlemanager), you can find the assigned ephemeral port by checking the first line of the task log.

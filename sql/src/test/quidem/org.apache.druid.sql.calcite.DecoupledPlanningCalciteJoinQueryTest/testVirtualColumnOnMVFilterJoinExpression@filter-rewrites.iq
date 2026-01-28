@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterJoinExpression@filter-rewrites case-crc:ec24f5d6
-# quidem testcase reason: SLIGHTLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterJoinExpression@filter-rewrites case-crc:2e072da5
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite true
@@ -67,11 +67,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -100,11 +100,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "rightPrefix" : "j0.",
@@ -117,10 +117,10 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim3", "j0.dim3" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

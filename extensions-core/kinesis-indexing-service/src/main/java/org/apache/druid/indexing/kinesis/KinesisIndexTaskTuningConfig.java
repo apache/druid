@@ -37,11 +37,6 @@ import java.util.Objects;
 @JsonTypeName("KinesisTuningConfig")
 public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
-  // Assumed record buffer size is larger when dealing with aggregated messages, because aggregated messages tend to
-  // be larger, up to 1MB in size.
-  static final int ASSUMED_RECORD_SIZE = 10_000;
-  static final int ASSUMED_RECORD_SIZE_AGGREGATE = 1_000_000;
-
   /**
    * Together with {@link KinesisIndexTaskIOConfig#MAX_RECORD_FETCH_MEMORY}, don't take up more than 200MB per task.
    */
@@ -55,7 +50,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
 
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
-  private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
   private static final int DEFAULT_MAX_BYTES_PER_POLL = 1_000_000;
   private final Integer recordBufferSize;
   private final Integer recordBufferSizeBytes;
@@ -92,7 +86,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @Nullable Integer maxSavedParseExceptions,
       @Deprecated @Nullable Integer maxRecordsPerPoll,
       @Nullable Integer maxBytesPerPoll,
-      @Nullable Period intermediateHandoffPeriod
+      @Nullable Period intermediateHandoffPeriod,
+      @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -116,7 +111,9 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
-        null
+        null,
+        maxColumnsToMerge,
+        false
     );
     this.recordBufferSize = recordBufferSize;
     this.recordBufferSizeBytes = recordBufferSizeBytes;
@@ -161,7 +158,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Deprecated @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
-      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
+      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this(
@@ -191,7 +189,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxSavedParseExceptions,
         maxRecordsPerPoll,
         maxBytesPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        maxColumnsToMerge
     );
   }
 
@@ -294,7 +293,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
         getMaxBytesPerPollConfigured(),
-        getIntermediateHandoffPeriod()
+        getIntermediateHandoffPeriod(),
+        getMaxColumnsToMerge()
     );
   }
 
@@ -363,6 +363,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxRecordsPerPoll=" + maxRecordsPerPoll +
            ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
-            '}';
+           ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
+           '}';
   }
 }

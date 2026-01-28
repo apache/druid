@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, FormGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
-import { F } from '@druid-toolkit/query';
+import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
+import { F } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -151,7 +150,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
 
             const underlyingSelectExpression = expression.getUnderlyingExpression();
             convertButton = (
-              <Popover2
+              <Popover
                 content={
                   <Menu>
                     <Menu>
@@ -228,7 +227,7 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
                 }
               >
                 <Button icon={IconNames.EXCHANGE} text="Convert to metric" />
-              </Popover2>
+              </Popover>
             );
           } else {
             const groupByExpression = convertToGroupByExpression(expression);
@@ -261,9 +260,9 @@ export const ColumnActions = React.memo(function ExpressionEditor(props: ColumnA
       <div className="title">Column actions</div>
       {transformMenuItems.length > 0 && (
         <FormGroup>
-          <Popover2 content={<Menu>{transformMenuItems}</Menu>}>
+          <Popover content={<Menu>{transformMenuItems}</Menu>}>
             <Button icon={IconNames.FUNCTION} text="Transform" />
-          </Popover2>
+          </Popover>
         </FormGroup>
       )}
       {removeFilterButton && <FormGroup>{removeFilterButton}</FormGroup>}

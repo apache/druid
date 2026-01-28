@@ -89,7 +89,7 @@ public class BitmapIterationTest extends TestCase
     public UnmodifiableIterator<Integer> iterator()
     {
       final IntIterator iterator = bitmap.iterator();
-      return new UnmodifiableIterator<Integer>()
+      return new UnmodifiableIterator<>()
       {
         @Override
         public boolean hasNext()

@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 
 import { TasksView } from './tasks-view';
 
@@ -27,10 +26,10 @@ describe('TasksView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <TasksView
-        filters={[]}
+        filters={TableFilters.empty()}
         onFiltersChange={() => {}}
         openTaskDialog={undefined}
-        goToDatasource={() => {}}
+        goToView={() => {}}
         goToQuery={() => {}}
         goToClassicBatchDataLoader={() => {}}
         capabilities={Capabilities.FULL}

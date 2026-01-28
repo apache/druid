@@ -27,7 +27,9 @@ import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatab
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class WindowFramedAggregateProcessor implements Processor
@@ -44,6 +46,16 @@ public class WindowFramedAggregateProcessor implements Processor
 
   private final WindowFrame frame;
   private final AggregatorFactory[] aggregations;
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    List<String> outputColumnNames = new ArrayList<>();
+    for (AggregatorFactory aggregation : aggregations) {
+      outputColumnNames.add(aggregation.getName());
+    }
+    return outputColumnNames;
+  }
 
   @JsonCreator
   public WindowFramedAggregateProcessor(

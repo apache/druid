@@ -307,6 +307,29 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return ColumnType.DOUBLE;
   }
 
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+
+    ArrayOfDoublesSketchAggregatorFactory that = (ArrayOfDoublesSketchAggregatorFactory) preAggregated;
+    if (nominalEntries <= that.nominalEntries &&
+        numberOfValues == that.numberOfValues &&
+        Objects.equals(fieldName, that.fieldName) &&
+        Objects.equals(metricColumns, that.metricColumns)
+    ) {
+      return getCombiningFactory();
+    }
+    return null;
+  }
+
   @Override
   public String toString()
   {

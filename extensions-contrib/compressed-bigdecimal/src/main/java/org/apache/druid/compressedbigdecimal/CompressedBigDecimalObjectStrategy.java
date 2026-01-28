@@ -91,4 +91,10 @@ public class CompressedBigDecimalObjectStrategy implements ObjectStrategy<Compre
 
     return buf.array();
   }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    return false;
+  }
 }

@@ -91,11 +91,7 @@ public class SQLAuditManagerTest
     final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
-    Assert.assertEquals(1, metricEvents.size());
-
-    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
-    Assert.assertNotNull(auditMetricEvents);
+    List<ServiceMetricEvent> auditMetricEvents = serviceEmitter.getMetricEvents("config/audit");
     Assert.assertEquals(1, auditMetricEvents.size());
 
     ServiceMetricEvent metric = auditMetricEvents.get(0);
@@ -120,10 +116,8 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, dbEntry);
 
     // Verify emitted metrics
-    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
-    Assert.assertEquals(1, metricEvents.size());
-
-    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
+    List<ServiceMetricEvent> auditMetricEvents
+        = serviceEmitter.getMetricEvents("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 

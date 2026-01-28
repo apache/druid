@@ -21,20 +21,28 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import static org.junit.Assert.assertThrows;
 
 public class TombstoneSegmentizerFactoryTest
 {
-
   @Test
   public void testSegmentCreation()
   {
@@ -50,11 +58,11 @@ public class TombstoneSegmentizerFactoryTest
         .build();
 
     Segment segment = factory.factorize(tombstone, null, true, null);
-    Assert.assertNotNull(segment.asStorageAdapter());
+    Assert.assertNotNull(segment.as(CursorFactory.class));
     Assert.assertEquals("foo_2021-01-01T00:00:00.000Z_2022-01-01T00:00:00.000Z_1", segment.getId().toString());
     Assert.assertEquals(expectedInterval, segment.getDataInterval());
 
-    QueryableIndex queryableIndex = segment.asQueryableIndex();
+    QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
     Assert.assertNotNull(queryableIndex);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getNumRows);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getAvailableDimensions);
@@ -63,10 +71,74 @@ public class TombstoneSegmentizerFactoryTest
     assertThrows(UnsupportedOperationException.class, queryableIndex::getDimensionHandlers);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getColumnNames);
     assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
+    Assert.assertTrue(segment.isTombstone());
 
-    StorageAdapter storageAdapter = segment.asStorageAdapter();
-    Assert.assertNotNull(storageAdapter);
-    Assert.assertTrue(storageAdapter.isFromTombstone());
+    Assert.assertNotNull(segment.as(CursorFactory.class));
 
+  }
+
+  @Test
+  public void testDefaultSegmentIsTombstoneFalse()
+  {
+    Segment segment = new Segment()
+    {
+      @Override
+      public SegmentId getId()
+      {
+        return null;
+      }
+
+      @Override
+      public Interval getDataInterval()
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public <T> T as(@Nonnull Class<T> clazz)
+      {
+        if (CursorFactory.class.equals(clazz)) {
+          return (T) new CursorFactory()
+          {
+            @Override
+            public CursorHolder makeCursorHolder(CursorBuildSpec spec)
+            {
+              return new CursorHolder()
+              {
+                @Nullable
+                @Override
+                public Cursor asCursor()
+                {
+                  return null;
+                }
+              };
+            }
+
+            @Override
+            public RowSignature getRowSignature()
+            {
+              return RowSignature.empty();
+            }
+
+            @Override
+            @Nullable
+            public ColumnCapabilities getColumnCapabilities(String column)
+            {
+              return null;
+            }
+          };
+        }
+        return null;
+      }
+
+      @Override
+      public void close()
+      {
+
+      }
+    };
+
+    Assert.assertFalse(segment.isTombstone());
   }
 }

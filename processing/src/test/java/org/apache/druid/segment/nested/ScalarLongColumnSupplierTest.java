@@ -25,13 +25,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
@@ -45,6 +43,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -105,7 +104,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void staticSetup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -127,12 +126,12 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarLongColumnSerializer serializer = new ScalarLongColumnSerializer(
           fileNameBase,
-          IndexSpec.DEFAULT,
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec()),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -150,14 +149,14 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(tempFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),
           globalDictionarySortedCollector.getSortedDoubles(),
           () -> new AutoTypeColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
-              serializer.getGlobalLookup()
+              serializer.getDictionaryIdLookup()
           )
       );
       serializer.open();
@@ -168,7 +167,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         serializer.serialize(valueSelector);
       }
 
-      try (SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize())) {
+      try (SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize())) {
         serializer.writeTo(writer, smoosher);
       }
       smoosher.close();
@@ -192,7 +191,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -210,37 +210,43 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
 
     final int threads = 10;
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(threads, "StandardNestedColumnSupplierTest-%d")
+        Execs.multiThreaded(threads, "ScalarLongColumnSupplierTest-%d")
     );
-    Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
-    final CountDownLatch threadsStartLatch = new CountDownLatch(1);
-    for (int i = 0; i < threads; ++i) {
-      futures.add(
-          executorService.submit(() -> {
-            try {
-              threadsStartLatch.await();
-              for (int iter = 0; iter < 5000; iter++) {
-                try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
-                  smokeTest(supplier, column);
+    try {
+      Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
+      final CountDownLatch threadsStartLatch = new CountDownLatch(1);
+      for (int i = 0; i < threads; ++i) {
+        futures.add(
+            executorService.submit(() -> {
+              try {
+                threadsStartLatch.await();
+                for (int iter = 0; iter < 5000; iter++) {
+                  try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
+                    smokeTest(supplier, column);
+                  }
                 }
               }
-            }
-            catch (Throwable ex) {
-              failureReason.set(ex.getMessage());
-            }
-          })
-      );
+              catch (Throwable ex) {
+                failureReason.set(ex.getMessage());
+              }
+            })
+        );
+      }
+      threadsStartLatch.countDown();
+      Futures.allAsList(futures).get();
+      Assert.assertEquals(expectedReason, failureReason.get());
     }
-    threadsStartLatch.countDown();
-    Futures.allAsList(futures).get();
-    Assert.assertEquals(expectedReason, failureReason.get());
+    finally {
+      executorService.shutdownNow();
+    }
   }
 
   private void smokeTest(ScalarLongColumnAndIndexSupplier supplier, ScalarLongColumn column)
@@ -275,7 +281,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(row.doubleValue(), vectorValueSelector.getDoubleVector()[0], 0.0);
         Assert.assertEquals(row.floatValue(), vectorValueSelector.getFloatVector()[0], 0.0);
         boolean[] nullVector = vectorValueSelector.getNullVector();
-        if (NullHandling.sqlCompatible() && nullVector != null) {
+        if (nullVector != null) {
           Assert.assertFalse(nullVector[0]);
         } else {
           Assert.assertNull(nullVector);
@@ -299,30 +305,14 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
 
       } else {
-        if (NullHandling.sqlCompatible()) {
-          Assert.assertNull(valueSelector.getObject());
-          Assert.assertTrue(valueSelector.isNull());
-          Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
-          Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                          .computeBitmapResult(resultFactory, false)
-                                          .get(i));
-        } else {
-          Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
-          Assert.assertFalse(valueSelector.isNull());
-          Assert.assertNull(vectorValueSelector.getNullVector());
-          Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                           .computeBitmapResult(resultFactory, false)
-                                           .get(i));
-          final String defaultString = String.valueOf(NullHandling.defaultLongValue());
-          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory, false).get(i));
-          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(defaultString))
-                                          .computeBitmapResult(resultFactory, false)
-                                          .get(i));
-        }
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
+        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                        .computeBitmapResult(resultFactory, false)
+                                        .get(i));
 
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));

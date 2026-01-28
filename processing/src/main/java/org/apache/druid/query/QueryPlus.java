@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
@@ -57,6 +58,14 @@ public final class QueryPlus<T>
   public Query<T> getQuery()
   {
     return query;
+  }
+
+  public <C extends Query<T>> C unwrapQuery(Class<C> clazz)
+  {
+    if (clazz.isInstance(query)) {
+      return (C) query;
+    }
+    throw DruidException.defensive("Encountered unexpected query type [%s] instead of [%s]", query.getClass(), clazz);
   }
 
   @Nullable

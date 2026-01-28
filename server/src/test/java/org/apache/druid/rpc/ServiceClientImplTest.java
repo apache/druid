@@ -686,14 +686,6 @@ public class ServiceClientImplTest
   }
 
   @Test
-  public void test_normalizeHost()
-  {
-    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("[1:2:3:4:5:6:7:8]"));
-    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("1:2:3:4:5:6:7:8"));
-    Assert.assertEquals("1.2.3.4", ServiceClientImpl.sanitizeHost("1.2.3.4"));
-  }
-
-  @Test
   public void test_isRedirect()
   {
     Assert.assertTrue(ServiceClientImpl.isRedirect(HttpResponseStatus.FOUND));
@@ -721,6 +713,23 @@ public class ServiceClientImplTest
             ArgumentMatchers.eq(RequestBuilder.DEFAULT_TIMEOUT)
         )
     );
+  }
+
+  @Test
+  public void test_request_authErrorRetry() throws Exception
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.GET, "/foo");
+    final ImmutableMap<String, String> expectedResponseObject = ImmutableMap.of("foo", "bar");
+
+    // Unauthorized response from SERVER1, then OK response.
+    stubLocatorCall(locations(SERVER1, SERVER2));
+    expectHttpCall(requestBuilder, SERVER1)
+        .thenReturn(errorResponse(HttpResponseStatus.UNAUTHORIZED, null, "unauthorized"))
+        .thenReturn(valueResponse(expectedResponseObject));
+
+    serviceClient = makeServiceClient(StandardRetryPolicy.unlimited());
+    final Map<String, String> response = doRequest(serviceClient, requestBuilder);
+    Assert.assertEquals(expectedResponseObject, response);
   }
 
   private void stubLocatorCall(final ServiceLocations locations)

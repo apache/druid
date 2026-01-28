@@ -44,7 +44,6 @@ import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,15 +69,14 @@ public class SQLMetadataConnectorTest
   public void testCreateTables()
   {
     final List<String> tables = new ArrayList<>();
-    final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
-    tables.add(tablesConfig.getLockTable(entryType));
-    tables.add(tablesConfig.getLogTable(entryType));
-    tables.add(tablesConfig.getEntryTable(entryType));
+    tables.add(tablesConfig.getTaskLockTable());
+    tables.add(tablesConfig.getTasksTable());
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
+    tables.add(tablesConfig.getIndexingStatesTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
@@ -86,6 +84,7 @@ public class SQLMetadataConnectorTest
     connector.createTaskTables();
     connector.createAuditTable();
     connector.createSupervisorsTable();
+    connector.createIndexingStatesTable();
 
     connector.getDBI().withHandle(
         handle -> {
@@ -116,8 +115,7 @@ public class SQLMetadataConnectorTest
   @Test
   public void testIndexCreationOnTaskTable()
   {
-    final String entryType = tablesConfig.getTaskEntryType();
-    String entryTableName = tablesConfig.getEntryTable(entryType);
+    String entryTableName = tablesConfig.getTasksTable();
     connector.createTaskTables();
     Set<String> createdIndexSet = connector.getIndexOnTable(entryTableName);
     Set<String> expectedIndexSet = Sets.newHashSet(
@@ -143,8 +141,7 @@ public class SQLMetadataConnectorTest
       connector.createIndex(
           tableName,
           "some_string",
-          Lists.newArrayList("a", "b"),
-          new HashSet<>()
+          Lists.newArrayList("a", "b")
       );
     }
     catch (Exception e) {
@@ -189,6 +186,22 @@ public class SQLMetadataConnectorTest
     Assert.assertFalse(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
+    ));
+  }
+
+  /**
+   * This is a test for the upgrade path where a cluster is upgrading from a version that did not have used_status_last_updated
+   * in the segments table.
+   */
+  @Test
+  public void testAlterSegmentTableAddIndexingStateFingerprint()
+  {
+    connector.createSegmentTable();
+    derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN INDEXING_STATE_FINGERPRINT");
+    connector.alterSegmentTable();
+    Assert.assertTrue(connector.tableHasColumn(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+        "INDEXING_STATE_FINGERPRINT"
     ));
   }
 
@@ -308,6 +321,148 @@ public class SQLMetadataConnectorTest
     );
   }
 
+  @Test
+  public void test_useShortIndexNames_true_tableIndices_areNotAdded_ifExist()
+  {
+    tablesConfig = new MetadataStorageTablesConfig(
+        "druidTest",
+        null, null, null, null, null, null, null, null, null, null, null,
+        true,
+        null
+    );
+    connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
+
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+    connector.getDBI().withHandle(handle -> {
+      handle.execute("DROP INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0");
+      handle.execute("CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED ON druidTest_segments(used)");
+      return null;
+    });
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    final Set<String> expectedIndices = Sets.newHashSet(
+        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
+        "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
+    );
+    assertIndicesPresentOnTable(segmentsTable, expectedIndices);
+
+    dropTable(segmentsTable);
+    connector.tearDown();
+  }
+
+  @Test
+  public void test_useShortIndexNames_false_tableIndices_areNotAdded_ifExist()
+  {
+    tablesConfig = new MetadataStorageTablesConfig(
+        "druidTest",
+        null, null, null, null, null, null, null, null, null, null, null,
+        false,
+        null
+    );
+    connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
+
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+    connector.getDBI().withHandle(handle -> {
+      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED");
+      handle.execute("CREATE INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0 ON druidTest_segments(used)");
+      return null;
+    });
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    final Set<String> expectedIndices = Sets.newHashSet(
+        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
+    );
+    assertIndicesPresentOnTable(segmentsTable, expectedIndices);
+
+    dropTable(segmentsTable);
+    connector.tearDown();
+  }
+
+  @Test
+  public void test_useShortIndexNames_true_tableIndices_areAdded_IfNotExist()
+  {
+    tablesConfig = new MetadataStorageTablesConfig(
+        "druidTest",
+        null, null, null, null, null, null, null, null, null, null, null,
+        true,
+        null
+    );
+    connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
+
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+
+    final Set<String> expectedIndices = Sets.newHashSet(
+        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
+        "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
+    );
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    assertIndicesPresentOnTable(segmentsTable, expectedIndices);
+    dropTable(segmentsTable);
+    connector.tearDown();
+  }
+
+  @Test
+  public void test_useShortIndexNames_false_tableIndices_areAdded_IfNotExist()
+  {
+    tablesConfig = new MetadataStorageTablesConfig(
+        "druidTest",
+        null, null, null, null, null, null, null, null, null, null, null,
+        false,
+        null
+    );
+    connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+
+    final Set<String> expectedIndices = Sets.newHashSet(
+        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
+    );
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    assertIndicesPresentOnTable(segmentsTable, expectedIndices);
+    dropTable(segmentsTable);
+    connector.tearDown();
+  }
+
+  private void assertIndicesPresentOnTable(String tableName, Set<String> expectedIndices)
+  {
+    // Fetch list of user-created indices, ignoring things like Derby-generated constraint indices, etc.
+    final Set<String> actualIndices = connector.getIndexOnTable(tableName)
+                                               .stream()
+                                               .filter(name -> !name.startsWith("SQL"))
+                                               .collect(Collectors.toSet());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Received unexpected table index set for table[%s]. Got [%s], expected [%s].",
+            tableName,
+            actualIndices,
+            expectedIndices
+        ),
+        actualIndices,
+        expectedIndices
+    );
+  }
+
   static class TestSQLMetadataConnector extends SQLMetadataConnector
   {
     public TestSQLMetadataConnector(
@@ -335,6 +490,12 @@ public class SQLMetadataConnectorTest
     public String limitClause(int limit)
     {
       return "";
+    }
+
+    @Override
+    public boolean isUniqueConstraintViolation(Throwable t)
+    {
+      return false;
     }
 
     @Override

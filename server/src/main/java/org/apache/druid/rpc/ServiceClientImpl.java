@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -179,7 +178,7 @@ public class ServiceClientImpl implements ServiceClient
 
           Futures.addCallback(
               responseFuture,
-              new FutureCallback<Either<StringFullResponseHolder, FinalType>>()
+              new FutureCallback<>()
               {
                 @Override
                 public void onSuccess(@Nullable final Either<StringFullResponseHolder, FinalType> result)
@@ -207,6 +206,7 @@ public class ServiceClientImpl implements ServiceClient
                   }
                   catch (Throwable t) {
                     // It's a bug if this happens. The purpose of this line is to help us debug what went wrong.
+                    log.error(t, "Service[%s] handler exited unexpected", serviceName);
                     retVal.setException(new RpcException(t, "Service [%s] handler exited unexpectedly", serviceName));
                   }
                 }
@@ -397,7 +397,7 @@ public class ServiceClientImpl implements ServiceClient
   {
     Futures.addCallback(
         serviceLocator.locate(),
-        new FutureCallback<ServiceLocations>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final ServiceLocations locations)
@@ -488,7 +488,7 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   @VisibleForTesting
-  static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
+  public static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
   {
     return Math.max(
         retryPolicy.minWaitMillis(),
@@ -497,19 +497,7 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
-   * Sanitizes IPv6 address if it has brackets. Eg. host = "[1:2:3:4:5:6:7:8]" will be returned as "1:2:3:4:5:6:7:8"
-   * after this function
-   */
-  static String sanitizeHost(String host)
-  {
-    if (host.charAt(0) == '[') {
-      return host.substring(1, host.length() - 1);
-    }
-    return host;
-  }
-
-  /**
-   * Returns a {@link ServiceLocation} without a path component, based on a URI.
+   * Returns a {@link ServiceLocation} without a path component, based on a URI. Returns null on invalid URIs.
    */
   @Nullable
   @VisibleForTesting
@@ -520,24 +508,17 @@ public class ServiceClientImpl implements ServiceClient
     }
 
     try {
-      final URI uri = new URI(uriString);
+      final ServiceLocation location = ServiceLocation.fromUri(URI.create(uriString));
 
-      if (uri.getHost() == null) {
-        return null;
-      }
-
-      final String scheme = uri.getScheme();
-      final String host = sanitizeHost(uri.getHost());
-
-      if ("http".equals(scheme)) {
-        return new ServiceLocation(host, uri.getPort() < 0 ? 80 : uri.getPort(), -1, "");
-      } else if ("https".equals(scheme)) {
-        return new ServiceLocation(host, -1, uri.getPort() < 0 ? 443 : uri.getPort(), "");
-      } else {
-        return null;
-      }
+      // Strip path.
+      return new ServiceLocation(
+          location.getHost(),
+          location.getPlaintextPort(),
+          location.getTlsPort(),
+          ""
+      );
     }
-    catch (URISyntaxException e) {
+    catch (IllegalArgumentException e) {
       return null;
     }
   }
@@ -549,8 +530,8 @@ public class ServiceClientImpl implements ServiceClient
   static boolean serviceLocationMatches(final ServiceLocation left, final ServiceLocation right)
   {
     return left.getHost().equals(right.getHost())
-        && portMatches(left.getPlaintextPort(), right.getPlaintextPort())
-        && portMatches(left.getTlsPort(), right.getTlsPort());
+           && portMatches(left.getPlaintextPort(), right.getPlaintextPort())
+           && portMatches(left.getTlsPort(), right.getTlsPort());
   }
 
   static boolean portMatches(int left, int right)

@@ -19,6 +19,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
@@ -31,6 +32,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
@@ -49,99 +51,21 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  build:
-    name: "build (jdk${{ matrix.jdk }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ '8', '11', '17', '21' ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v4
-
-      # skip the "cache: maven" step from setup-java. We explicitly use a
-      # different cache key since we cannot reuse it across commits.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
-
-      # the build step produces SNAPSHOT artifacts into the local maven repository,
-      # we include github.sha in the cache key to make it specific to that build/jdk
-      - name: Cache Maven m2 repository
-        id: maven
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
-
-      - name: Cache targets
-        id: target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ./**/target
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-
-      - name: Cache image
-        id: docker_container
-        uses: actions/cache@v4
-        with:
-          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
-          path: |
-            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
-
-      - name: Maven build
-        id: maven_build
-        run: |
-          ./it.sh ci
-
-      - name: Container build
-        run: |
-          ./it.sh image
-          source ./integration-tests-ex/image/target/env.sh
-          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
-
-      - name: Save docker container to archive
-        run: |
-          source ./integration-tests-ex/image/target/env.sh
-          echo $DRUID_IT_IMAGE_NAME
-          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
-
-  unit-tests-phase2:
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ 11, 17, 21 ]
-    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
-    uses: ./.github/workflows/unit-tests.yml
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-    with:
-      jdk: ${{ matrix.jdk }}
-      sql_compatibility: true
-
   unit-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        sql_compatibility: [ false, true ]
-    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
-    uses: ./.github/workflows/unit-tests.yml
-    needs: build
-    with:
-      jdk: 8
-      sql_compatibility: ${{ matrix.sql_compatibility }}
+    name: "unit tests"
+    uses: ./.github/workflows/ci.yml
 
   standard-its:
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    needs: [unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
-  revised-its:
-    needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-    uses: ./.github/workflows/revised-its.yml
+  docker-tests:
+    needs: [unit-tests]
+    uses: ./.github/workflows/docker-tests.yml
+
+  actions-timeline:
+    needs: [unit-tests, standard-its, docker-tests]
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: Kesin11/actions-timeline@54d513e0b5ff1158f1cf8321108d666a5a6c1fca

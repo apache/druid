@@ -55,9 +55,10 @@ public class DoublesSketchToQuantilesPostAggregatorTest
         new double[] {0, 0.5, 1}
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToQuantilesPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToQuantilesPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

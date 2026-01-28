@@ -29,6 +29,15 @@ import java.io.IOException;
 public interface ColumnarDoublesSerializer extends Serializer
 {
   void open() throws IOException;
+
   int size();
+
   void add(double value) throws IOException;
+
+  default void addAll(double[] values, int start, int end) throws IOException
+  {
+    for (int i = start; i < end; ++i) {
+      add(values[i]);
+    }
+  }
 }

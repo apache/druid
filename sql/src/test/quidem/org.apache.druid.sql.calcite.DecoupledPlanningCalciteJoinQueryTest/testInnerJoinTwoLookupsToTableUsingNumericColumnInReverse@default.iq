@@ -1,0 +1,125 @@
+# testInnerJoinTwoLookupsToTableUsingNumericColumnInReverse@default case-crc:fe49c163
+# quidem testcase reason: EQUIV_PLAN_CAST_MATERIALIZED_EARLIER
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT COUNT(*)
+FROM lookup.lookyloo l1
+INNER JOIN lookup.lookyloo l2 ON l1.k = l2.k
+INNER JOIN foo on l2.k = foo.m1;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
++--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+    LogicalProject(k00=[CAST($1):FLOAT])
+      LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+        LogicalProject(k=[$0])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalProject(k=[$0])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+    LogicalProject(m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+  DruidJoin(condition=[=($0, $1)], joinType=[inner])
+    DruidProject(k00=[CAST($1):FLOAT], druid=[logical])
+      DruidJoin(condition=[=($0, $1)], joinType=[inner])
+        DruidProject(k=[$0], druid=[logical])
+          DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+        DruidProject(k=[$0], druid=[logical])
+          DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+    DruidProject(m1=[$5], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "right" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "rightPrefix" : "j0.",
+          "condition" : "(\"k\" == \"j0.k\")",
+          "joinType" : "INNER"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "CAST(\"j0.k\", 'DOUBLE')",
+          "outputType" : "FLOAT"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "columnTypes" : [ "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "m1" ],
+        "columnTypes" : [ "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"v0\" == \"_j0.m1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+!nativePlan

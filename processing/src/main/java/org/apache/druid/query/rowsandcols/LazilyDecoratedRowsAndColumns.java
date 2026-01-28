@@ -20,8 +20,9 @@
 package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -29,11 +30,8 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -41,13 +39,15 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.query.rowsandcols.semantic.DefaultRowsAndColumnsDecorator;
 import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
@@ -67,7 +67,7 @@ import java.util.function.Function;
 
 public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
-  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+  private static final Map<Class<?>, Function<LazilyDecoratedRowsAndColumns, ?>> AS_MAP = SemanticUtils
       .makeAsMap(LazilyDecoratedRowsAndColumns.class);
 
   private RowsAndColumns base;
@@ -77,6 +77,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private OffsetLimit limit;
   private LinkedHashSet<String> viewableColumns;
   private List<ColumnWithDirection> ordering;
+  private final Integer allocatorCapacity;
 
   public LazilyDecoratedRowsAndColumns(
       RowsAndColumns base,
@@ -85,7 +86,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       VirtualColumns virtualColumns,
       OffsetLimit limit,
       List<ColumnWithDirection> ordering,
-      LinkedHashSet<String> viewableColumns
+      LinkedHashSet<String> viewableColumns,
+      Long allocatorCapacity
   )
   {
     this.base = base;
@@ -95,6 +97,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     this.limit = limit;
     this.ordering = ordering;
     this.viewableColumns = viewableColumns;
+    this.allocatorCapacity = allocatorCapacity != null ? allocatorCapacity.intValue() : 200 << 20;
   }
 
   @Override
@@ -150,16 +153,10 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   @SuppressWarnings("unused")
   @SemanticCreator
-  public WireTransferable toWireTransferable()
+  public FrameRowsAndColumns toFrameRowsAndColumns()
   {
-    return () -> {
-      final Pair<byte[], RowSignature> materialized = materialize();
-      if (materialized == null) {
-        return new byte[]{};
-      } else {
-        return materialized.lhs;
-      }
-    };
+    maybeMaterialize();
+    return base.as(FrameRowsAndColumns.class);
   }
 
   private void maybeMaterialize()
@@ -185,11 +182,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       throw new ISE("Cannot reorder[%s] scan data right now", ordering);
     }
 
-    final StorageAdapter as = base.as(StorageAdapter.class);
+    final CursorFactory as = base.as(CursorFactory.class);
     if (as == null) {
       return naiveMaterialize(base);
     } else {
-      return materializeStorageAdapter(as);
+      return materializeCursorFactory(as);
     }
   }
 
@@ -205,18 +202,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   }
 
   @Nullable
-  private Pair<byte[], RowSignature> materializeStorageAdapter(StorageAdapter as)
+  private Pair<byte[], RowSignature> materializeCursorFactory(CursorFactory cursorFactory)
   {
-    final Sequence<Cursor> cursors = as.makeCursors(
-        filter,
-        interval == null ? Intervals.ETERNITY : interval,
-        virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-
     final Collection<String> cols;
     if (viewableColumns != null) {
       cols = viewableColumns;
@@ -230,19 +217,27 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
                             .build();
       }
     }
-    AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
+    final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                          .setFilter(filter);
+    if (interval != null) {
+      builder.setInterval(interval);
+    }
+    if (virtualColumns != null) {
+      builder.setVirtualColumns(virtualColumns);
+    }
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(builder.build())) {
+      final Cursor cursor = cursorHolder.asCursor();
 
-    FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
-      if (accumulated != null) {
-        // We should not get multiple cursors because we set the granularity to ALL.  So, this should never
-        // actually happen, but it doesn't hurt us to defensive here, so we test against it.
-        throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
+      if (cursor == null) {
+        return null;
       }
+
+      final AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
       long remainingRowsToSkip = limit.getOffset();
       long remainingRowsToFetch = limit.getLimitOrMax();
 
-      final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
+      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
@@ -275,33 +270,30 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         }
       }
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
-          new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+          new ArenaMemoryAllocatorFactory(allocatorCapacity),
           signature,
           sortColumns
       );
 
-      final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      for (; !in.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
-        in.advance();
+      final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory);
+      for (; !cursor.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
+        cursor.advance();
       }
-      for (; !in.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
-        frameWriter.addSelection();
-        in.advance();
+      for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
+        writer.addSelection();
+        cursor.advance();
       }
 
-      return frameWriter;
-    });
-
-    if (writer == null) {
-      // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
-      // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
-      // should be completely empty.
-      return null;
-    } else {
-      final byte[] bytes = writer.toByteArray();
-      return Pair.of(bytes, siggy.get());
+      if (writer == null) {
+        // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
+        // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
+        // should be completely empty.
+        return null;
+      } else {
+        final byte[] bytes = writer.toByteArray();
+        return Pair.of(bytes, siggy.get());
+      }
     }
   }
 
@@ -378,8 +370,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     // is being left as an exercise for the future.
 
     final RowSignature.Builder sigBob = RowSignature.builder();
-    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
-
+    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(allocatorCapacity);
 
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
@@ -392,8 +383,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     long remainingRowsToSkip = limit.getOffset();
     long remainingRowsToFetch = limit.getLimitOrMax();
 
-    final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriter frameWriter = FrameWriters.makeColumnBasedFrameWriterFactory(
         memFactory,
         sigBob.build(),
         Collections.emptyList()

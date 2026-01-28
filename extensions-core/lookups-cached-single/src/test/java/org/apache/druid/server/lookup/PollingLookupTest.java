@@ -20,11 +20,8 @@
 package org.apache.druid.server.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.cache.polling.OffHeapPollingCache;
@@ -102,7 +99,12 @@ public class PollingLookupTest extends InitializedNullHandlingTest
     }
 
     @Override
-    @SuppressWarnings("EqualsHashCode")
+    public int hashCode()
+    {
+      return 0;
+    }
+
+    @Override
     public boolean equals(Object obj)
     {
       return obj instanceof MockDataFetcher;
@@ -192,15 +194,7 @@ public class PollingLookupTest extends InitializedNullHandlingTest
   public void testBulkApply()
   {
     Map<String, String> map = pollingLookup.applyAll(FIRST_LOOKUP_MAP.keySet());
-    Assert.assertEquals(FIRST_LOOKUP_MAP, Maps.transformValues(map, new Function<String, String>()
-    {
-      @Override
-      public String apply(String input)
-      {
-        //make sure to rewrite null strings as empty.
-        return NullHandling.nullToEmptyIfNeeded(input);
-      }
-    }));
+    Assert.assertEquals(FIRST_LOOKUP_MAP, map);
   }
 
   @Test
@@ -237,7 +231,7 @@ public class PollingLookupTest extends InitializedNullHandlingTest
     for (Map.Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String val = entry.getValue();
-      Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(val), lookup.apply(key));
+      Assert.assertEquals("non-null check", val, lookup.apply(key));
     }
   }
 }

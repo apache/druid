@@ -38,7 +38,8 @@ In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router s
 
 ### Submit a query
 
-Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
+Submits a SQL-based query in the JSON or text format request body. 
+Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
 Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query).
 
@@ -46,12 +47,14 @@ Each query has an associated SQL query ID. You can set this ID manually using th
 
 `POST` `/druid/v2/sql`
 
-#### Request body
+#### JSON Format Request body
+
+To send queries in JSON format, the `Content-Type` in the HTTP request MUST be `application/json`.
+If there are multiple `Content-Type` headers, the **first** one is used.
 
 The request body takes the following properties:
 
-* `query`: SQL query string.
-
+* `query`: SQL query string. HTTP requests are permitted to include multiple `SET` statements to assign [SQL query context parameter](../querying/sql-query-context.md) values to apply to the query statement, see [SET](../querying/sql.md#set) for details. Context parameters set by `SET` statements take priority over values set in `context`.
 * `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
   * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
      Object field names match the columns returned by the SQL query in the same order as the SQL query.
@@ -83,19 +86,51 @@ The request body takes the following properties:
    * The `header` property is set to true.
    * The version of Druid supports `typesHeader` and `sqlTypesHeader`, regardless of whether either property is set.
 
-* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
+* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count. You can also set the context through the SQL SET command. For more information, see [Druid SQL overview](../querying/sql.md#set).
 
-* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For more information on using dynamic parameters, see [Dynamic parameters](../querying/sql.md#dynamic-parameters). For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
     For example:
+
     ```json
-    "parameters": [
-        {
-            "type": "VARCHAR",
-            "value": "bar"
-        }
-    ]
+    {
+        "query": "SELECT \"arrayDouble\", \"stringColumn\" FROM \"array_example\" WHERE ARRAY_CONTAINS(\"arrayDouble\", ?) AND \"stringColumn\" = ?",
+        "parameters": [
+            {"type": "ARRAY", "value": [999.0, null, 5.5]},
+            {"type": "VARCHAR", "value": "bar"}
+            ]
+    }
     ```
+
+##### Text Format Request body
+
+Druid also allows you to submit SQL queries in text format which is simpler than above JSON format. 
+To do this, just set the `Content-Type` request header to `text/plain` or `application/x-www-form-urlencoded`, and pass SQL via the HTTP Body. 
+
+If `application/x-www-form-urlencoded` is used, make sure the SQL query is URL-encoded.
+
+If there are multiple `Content-Type` headers, the **first** one is used.
+
+For response, the `resultFormat` is always `object` with the HTTP response header `Content-Type: application/json`.
+If you want more control over the query context or response format, use the above JSON format request body instead.
+
+The following example demonstrates how to submit a SQL query in text format:
+
+```commandline
+echo 'SELECT 1' | curl -H 'Content-Type: text/plain' http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @- 
+```
+
+We can also use `application/x-www-form-urlencoded` to submit URL-encoded SQL queries as shown by the following examples:
+
+```commandline
+echo 'SELECT%20%31' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data @-
+echo 'SELECT 1' | curl http://ROUTER_IP:ROUTER_PORT/druid/v2/sql --data-urlencode @-
+```
+
+The `curl` tool uses `application/x-www-form-urlencoded` as Content-Type header if the header is not given.
+
+The first example pass the URL-encoded query `SELECT%20%31`, which is `SELECT 1`, to the `curl` and `curl` will directly sends it to the server.
+While the second example passes the raw query `SELECT 1` to `curl` and the `curl` encodes the query to `SELECT%20%31` because of `--data-urlencode` option and sends the encoded text to the server.
 
 #### Responses
 
@@ -151,10 +186,14 @@ If you detect a truncated response, treat it as an error.
 
 ---
 
-
 #### Sample request
 
-The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
+In the following example, this query demonstrates the following actions:
+- Retrieves all rows from the `wikipedia` datasource.
+- Filters the results where the `user` value is `BlueMoon2662`.
+- Applies the `sqlTimeZone` context parameter to set the time zone of results to `America/Los_Angeles`.
+- Returns descriptors for `header`, `typesHeader`, and `sqlTypesHeader`.
+
 
 <Tabs>
 
@@ -166,7 +205,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 --header 'Content-Type: application/json' \
 --data '{
     "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -181,11 +220,11 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 POST /druid/v2/sql HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 Content-Type: application/json
-Content-Length: 192
+Content-Length: 201
 
 {
     "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
-    "context" : {"sqlQueryId" : "request01"},
+    "context" : {"sqlTimeZone" : "America/Los_Angeles"},
     "header" : true,
     "typesHeader" : true,
     "sqlTypesHeader" : true
@@ -194,6 +233,20 @@ Content-Length: 192
 
 </TabItem>
 </Tabs>
+
+You can also specify query-level context parameters directly within the SQL query string using the `SET` command. For more details, see [SET](../querying/sql.md#set).
+
+The following request body is functionally equivalent to the previous example and uses SET instead of the `context` parameter:
+
+```JSON
+{
+  "query": "SET sqlTimeZone='America/Los_Angeles'; SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+  "header": true,
+  "typesHeader": true,
+  "sqlTypesHeader": true
+}
+```
+
 
 #### Sample response
 
@@ -228,24 +281,24 @@ Content-Length: 192
             "sqlType": "VARCHAR"
         },
         "isAnonymous": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isMinor": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isNew": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isRobot": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "isUnpatrolled": {
-            "type": "LONG",
-            "sqlType": "BIGINT"
+            "type": "STRING",
+            "sqlType": "VARCHAR"
         },
         "metroCode": {
             "type": "LONG",
@@ -285,22 +338,22 @@ Content-Length: 192
         }
     },
     {
-        "__time": "2015-09-12T00:47:53.259Z",
+        "__time": "2015-09-11T17:47:53.259-07:00",
         "channel": "#ja.wikipedia",
-        "cityName": "",
+        "cityName": null,
         "comment": "/* 対戦通算成績と得失点 */",
-        "countryIsoCode": "",
-        "countryName": "",
-        "isAnonymous": 0,
-        "isMinor": 1,
-        "isNew": 0,
-        "isRobot": 0,
-        "isUnpatrolled": 0,
-        "metroCode": 0,
+        "countryIsoCode": null,
+        "countryName": null,
+        "isAnonymous": "false",
+        "isMinor": "true",
+        "isNew": "false",
+        "isRobot": "false",
+        "isUnpatrolled": "false",
+        "metroCode": null,
         "namespace": "Main",
         "page": "アルビレックス新潟の年度別成績一覧",
-        "regionIsoCode": "",
-        "regionName": "",
+        "regionIsoCode": null,
+        "regionName": null,
         "user": "BlueMoon2662",
         "delta": 14,
         "added": 14,
@@ -629,9 +682,20 @@ Retrieves information about the query associated with the given query ID. The re
   - `sizeInBytes`: the size of the page.
   - `id`: the page number that you can use to reference a specific page when you get query results.
 
+If the optional query parameter `detail` is supplied, then the response also includes the following:
+- A `stages` object that summarizes information about the different stages being used for query execution, such as stage number, phase, start time, duration, input and output information, processing methods, and partitioning.
+- A `counters` object that provides details on the rows, bytes, and files processed at various stages for each worker across different channels, along with sort progress.
+- A `warnings` object that provides details about any warnings.
+
 #### URL
 
 `GET` `/druid/v2/sql/statements/{queryId}`
+
+#### Query parameters
+* `detail` (optional)
+    * Type: Boolean
+    * Default: false
+    * Fetch additional details about the query, which includes the information about different stages, counters for each stage, and any warnings.
 
 #### Responses
 
@@ -672,7 +736,7 @@ The following example retrieves the status of a query with specified ID `query-9
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true"
 ```
 
 </TabItem>
@@ -680,7 +744,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-4
 
 
 ```HTTP
-GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
+GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -835,7 +899,421 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "sizeInBytes": 375
             }
         ]
-    }
+    },
+    "stages": [
+        {
+            "stageNumber": 0,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_0",
+                "input": [
+                    {
+                        "type": "table",
+                        "dataSource": "wikipedia",
+                        "intervals": [
+                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                        ],
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "filterFields": [
+                            "user"
+                        ]
+                    }
+                ],
+                "processor": {
+                    "type": "scan",
+                    "query": {
+                        "queryType": "scan",
+                        "dataSource": {
+                            "type": "inputNumber",
+                            "inputNumber": 0
+                        },
+                        "intervals": {
+                            "type": "intervals",
+                            "intervals": [
+                                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                            ]
+                        },
+                        "virtualColumns": [
+                            {
+                                "type": "expression",
+                                "name": "v0",
+                                "expression": "'BlueMoon2662'",
+                                "outputType": "STRING"
+                            }
+                        ],
+                        "resultFormat": "compactedList",
+                        "limit": 1001,
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "columns": [
+                            "__time",
+                            "added",
+                            "channel",
+                            "cityName",
+                            "comment",
+                            "commentLength",
+                            "countryIsoCode",
+                            "countryName",
+                            "deleted",
+                            "delta",
+                            "deltaBucket",
+                            "diffUrl",
+                            "flags",
+                            "isAnonymous",
+                            "isMinor",
+                            "isNew",
+                            "isRobot",
+                            "isUnpatrolled",
+                            "metroCode",
+                            "namespace",
+                            "page",
+                            "regionIsoCode",
+                            "regionName",
+                            "v0"
+                        ],
+                        "context": {
+                            "__resultFormat": "array",
+                            "__user": "allowAll",
+                            "executionMode": "async",
+                            "finalize": true,
+                            "maxNumTasks": 2,
+                            "maxParseExceptions": 0,
+                            "queryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "scanSignature": "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"commentLength\",\"type\":\"LONG\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"deltaBucket\",\"type\":\"LONG\"},{\"name\":\"diffUrl\",\"type\":\"STRING\"},{\"name\":\"flags\",\"type\":\"STRING\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"STRING\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"STRING\"}]",
+                            "sqlOuterLimit": 1001,
+                            "sqlQueryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "sqlStringifyArrays": false
+                        },
+                        "columnTypes": [
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING"
+                        ],
+                        "granularity": {
+                            "type": "all"
+                        },
+                        "legacy": false
+                    }
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "mix"
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "mix",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.255Z",
+            "duration": 103
+        },
+        {
+            "stageNumber": 1,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_1",
+                "input": [
+                    {
+                        "type": "stage",
+                        "stage": 0
+                    }
+                ],
+                "processor": {
+                    "type": "limit",
+                    "limit": 1001
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "maxCount",
+                    "clusterBy": {
+                        "columns": [
+                            {
+                                "columnName": "__boost",
+                                "order": "ASCENDING"
+                            }
+                        ]
+                    },
+                    "partitions": 1
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "globalSort",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.355Z",
+            "duration": 10,
+            "sort": true
+        }
+    ],
+    "counters": {
+        "0": {
+            "0": {
+                "input0": {
+                    "type": "channel",
+                    "rows": [
+                        24433
+                    ],
+                    "bytes": [
+                        7393933
+                    ],
+                    "files": [
+                        22
+                    ],
+                    "totalFiles": [
+                        22
+                    ]
+                }
+            }
+        },
+        "1": {
+            "0": {
+                "sortProgress": {
+                    "type": "sortProgress",
+                    "totalMergingLevels": -1,
+                    "levelToTotalBatches": {},
+                    "levelToMergedBatches": {},
+                    "totalMergersForUltimateLevel": -1,
+                    "triviallyComplete": true,
+                    "progressDigest": 1
+                }
+            }
+        }
+    },
+    "warnings": []
 }
   ```
 </details>
@@ -860,6 +1338,9 @@ Getting the query results for an ingestion query returns an empty response.
 * `resultFormat` (optional)
     * Type: String
     * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
+* `filename` (optional)
+    * Type: String  
+    * If set, attaches a `Content-Disposition` header to the response with the value of `attachment; filename={filename}`. The filename must not be longer than 255 characters and must not contain the characters `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `\0`, `\n`, or `\r`.
 
 #### Responses
 

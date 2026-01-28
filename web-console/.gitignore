@@ -5,12 +5,14 @@ public/
 private/
 lib/*.css
 coverage/
+.claude/
+CLAUDE.md
 
 coordinator-console/
 pages/
 /index.html
 
-lib/sql-docs.js
+lib/sql-docs.*
 
 .tscache
 tscommand-*.tmp.txt

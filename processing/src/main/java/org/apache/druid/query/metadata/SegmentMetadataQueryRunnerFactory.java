@@ -19,25 +19,16 @@
 
 package org.apache.druid.query.metadata;
 
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
-import org.apache.druid.query.ConcatQueryRunner;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
-import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -46,25 +37,23 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final Logger log = new Logger(SegmentMetadataQueryRunnerFactory.class);
-
-
   private final SegmentMetadataQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
@@ -81,7 +70,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   @Override
   public QueryRunner<SegmentAnalysis> createRunner(final Segment segment)
   {
-    return new QueryRunner<SegmentAnalysis>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, ResponseContext responseContext)
@@ -117,7 +106,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
         if (updatedQuery.hasAggregators()) {
-          metadata = segment.asStorageAdapter().getMetadata();
+          metadata = getMetadata(segment);
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = new HashMap<>();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
@@ -130,10 +119,24 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
+        final Map<String, AggregateProjectionMetadata> projectionsMap;
+        if (updatedQuery.hasProjections()
+            && ((metadata = Objects.isNull(metadata) ? getMetadata(segment) : metadata)) != null
+            && metadata.getProjections() != null) {
+          projectionsMap = metadata.getProjections()
+                                   .stream()
+                                   .collect(Collectors.toUnmodifiableMap(
+                                       projectionMetadata -> projectionMetadata.getSchema().getName(),
+                                       p -> p
+                                   ));
+        } else {
+          projectionsMap = null;
+        }
+
         final TimestampSpec timestampSpec;
         if (updatedQuery.hasTimestampSpec()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
         } else {
@@ -143,7 +146,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Granularity queryGranularity;
         if (updatedQuery.hasQueryGranularity()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
@@ -153,7 +156,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         Boolean rollup = null;
         if (updatedQuery.hasRollup()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           rollup = metadata != null ? metadata.isRollup() : null;
           if (rollup == null) {
@@ -172,6 +175,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     totalSize,
                     numRows,
                     aggregators,
+                    projectionsMap,
                     timestampSpec,
                     queryGranularity,
                     rollup
@@ -188,71 +192,22 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-    return new ConcatQueryRunner<SegmentAnalysis>(
-        Sequences.map(
-            Sequences.simple(queryRunners),
-            new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
-            {
-              @Override
-              public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
-              {
-                return new QueryRunner<SegmentAnalysis>()
-                {
-                  @Override
-                  public Sequence<SegmentAnalysis> run(
-                      final QueryPlus<SegmentAnalysis> queryPlus,
-                      final ResponseContext responseContext
-                  )
-                  {
-                    final Query<SegmentAnalysis> query = queryPlus.getQuery();
-                    final int priority = query.context().getPriority();
-                    final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
-                        new AbstractPrioritizedQueryRunnerCallable<Sequence<SegmentAnalysis>, SegmentAnalysis>(priority, input)
-                        {
-                          @Override
-                          public Sequence<SegmentAnalysis> call()
-                          {
-                            return Sequences.simple(input.run(threadSafeQueryPlus, responseContext).toList());
-                          }
-                        }
-                    );
-                    try {
-                      queryWatcher.registerQueryFuture(query, future);
-                      final QueryContext context = query.context();
-                      if (context.hasTimeout()) {
-                        return future.get(context.getTimeout(), TimeUnit.MILLISECONDS);
-                      } else {
-                        return future.get();
-                      }
-                    }
-                    catch (InterruptedException e) {
-                      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (CancellationException e) {
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (TimeoutException e) {
-                      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
-                    }
-                    catch (ExecutionException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-                };
-              }
-            }
-        )
-    );
+    return new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryRunners);
   }
 
   @Override
   public QueryToolChest<SegmentAnalysis, SegmentMetadataQuery> getToolchest()
   {
     return toolChest;
+  }
+
+  @Nullable
+  private Metadata getMetadata(Segment segment)
+  {
+    PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
+    if (inspector != null) {
+      return inspector.getMetadata();
+    }
+    return null;
   }
 }

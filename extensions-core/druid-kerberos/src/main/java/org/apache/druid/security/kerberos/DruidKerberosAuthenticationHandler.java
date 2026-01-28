@@ -53,7 +53,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
   private String keytab;
   private GSSManager gssManager;
   private Subject serverSubject = new Subject();
-  private List<LoginContext> loginContexts = new ArrayList<LoginContext>();
+  private List<LoginContext> loginContexts = new ArrayList<>();
 
   @Override
   public void destroy()
@@ -120,7 +120,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
         loginContexts.add(loginContext);
       }
       try {
-        gssManager = Subject.doAs(serverSubject, new PrivilegedExceptionAction<GSSManager>()
+        gssManager = Subject.doAs(serverSubject, new PrivilegedExceptionAction<>()
         {
 
           @Override
@@ -157,7 +157,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       final byte[] clientToken = StringUtils.decodeBase64String(authorization);
       final String serverName = request.getServerName();
       try {
-        token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<AuthenticationToken>()
+        token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<>()
         {
 
           @Override

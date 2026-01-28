@@ -64,7 +64,7 @@ public class RearrangedRowsAndColumnsTest extends RowsAndColumnsTestBase
   @SuppressWarnings("UnusedCollectionModifiedInPlace")
   private static void shuffleArray(int[] pointers)
   {
-    Collections.shuffle(new AbstractList<Object>()
+    Collections.shuffle(new AbstractList<>()
     {
       @Override
       public Object get(int index)

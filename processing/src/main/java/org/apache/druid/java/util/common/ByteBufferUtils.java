@@ -20,17 +20,15 @@
 package org.apache.druid.java.util.common;
 
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -88,61 +86,17 @@ public class ByteBufferUtils
   {
     final MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
-      if (JvmUtils.isIsJava9Compatible()) {
-        return unmapJava9(lookup);
-      } else {
-        return unmapJava7Or8(lookup);
-      }
+      MethodHandle unmapper = lookup.findVirtual(
+          UnsafeUtils.theUnsafeClass(),
+          "invokeCleaner",
+          MethodType.methodType(void.class, ByteBuffer.class)
+      );
+      return unmapper.bindTo(UnsafeUtils.theUnsafe());
     }
     catch (ReflectiveOperationException | RuntimeException e1) {
       throw new UnsupportedOperationException("Unmapping is not supported on this platform, because internal " +
                                               "Java APIs are not compatible with this Druid version", e1);
     }
-  }
-
-  /**
-   * NB: while Druid no longer support Java 7, this method would still work with that version as well.
-   */
-  private static MethodHandle unmapJava7Or8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-    // "Compile" a MethodHandle that is roughly equivalent to the following lambda:
-    //
-    // (ByteBuffer buffer) -> {
-    //   sun.misc.Cleaner cleaner = ((java.nio.DirectByteBuffer) byteBuffer).cleaner();
-    //   if (nonNull(cleaner))
-    //     cleaner.clean();
-    //   else
-    //     noop(cleaner); // the noop is needed because MethodHandles#guardWithTest always needs both if and else
-    // }
-    //
-    Class<?> directBufferClass = Class.forName("java.nio.DirectByteBuffer");
-    Method m = directBufferClass.getMethod("cleaner");
-    m.setAccessible(true);
-    MethodHandle directBufferCleanerMethod = lookup.unreflect(m);
-    Class<?> cleanerClass = directBufferCleanerMethod.type().returnType();
-    MethodHandle cleanMethod = lookup.findVirtual(cleanerClass, "clean", MethodType.methodType(void.class));
-    MethodHandle nonNullTest = lookup.findStatic(Objects.class, "nonNull",
-                                                 MethodType.methodType(boolean.class, Object.class)
-    ).asType(MethodType.methodType(boolean.class, cleanerClass));
-    MethodHandle noop = MethodHandles.dropArguments(MethodHandles.constant(
-        Void.class,
-        null
-    ).asType(MethodType.methodType(void.class)), 0, cleanerClass);
-    MethodHandle unmapper = MethodHandles.filterReturnValue(
-        directBufferCleanerMethod,
-        MethodHandles.guardWithTest(nonNullTest, cleanMethod, noop)
-    ).asType(MethodType.methodType(void.class, ByteBuffer.class));
-    return unmapper;
-  }
-
-  private static MethodHandle unmapJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-    MethodHandle unmapper = lookup.findVirtual(
-        UnsafeUtils.theUnsafeClass(),
-        "invokeCleaner",
-        MethodType.methodType(void.class, ByteBuffer.class)
-    );
-    return unmapper.bindTo(UnsafeUtils.theUnsafe());
   }
 
   /**
@@ -258,5 +212,29 @@ public class ByteBufferUtils
     {
       return compareUtf8ByteBuffers(o1, o2);
     }
+  }
+
+  /**
+   * Wraps a byte array in a little-endian ByteBuffer.
+   *
+   * @param array byte array to wrap
+   * @return ByteBuffer wrapping the array with little-endian byte order
+   */
+  public static ByteBuffer wrapLE(byte[] array)
+  {
+    return ByteBuffer.wrap(array).order(ByteOrder.LITTLE_ENDIAN);
+  }
+
+  /**
+   * Wraps a portion of a byte array in a little-endian ByteBuffer.
+   *
+   * @param array byte array to wrap
+   * @param offset offset within the array
+   * @param length length of the region to wrap
+   * @return ByteBuffer wrapping the specified portion with little-endian byte order
+   */
+  public static ByteBuffer wrapLE(byte[] array, int offset, int length)
+  {
+    return ByteBuffer.wrap(array, offset, length).order(ByteOrder.LITTLE_ENDIAN);
   }
 }

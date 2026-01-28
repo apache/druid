@@ -48,7 +48,6 @@ public class HadoopTuningConfigTest
         null,
         100,
         null,
-        false,
         true,
         true,
         true,
@@ -75,8 +74,8 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), actual.getAppendableIndexSpec());
     Assert.assertNotNull(actual.getPartitionsSpec());
     Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
-    Assert.assertEquals(IndexSpec.DEFAULT, actual.getIndexSpec());
-    Assert.assertEquals(IndexSpec.DEFAULT, actual.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(IndexSpec.getDefault(), actual.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), actual.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(100, actual.getMaxRowsInMemory());
     Assert.assertEquals(true, actual.isLeaveIntermediate());
     Assert.assertEquals(true, actual.isCleanupOnFailure());

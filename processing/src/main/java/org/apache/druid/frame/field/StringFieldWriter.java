@@ -45,7 +45,7 @@ public class StringFieldWriter implements FieldWriter
   public static final byte NULL_ROW = 0x00;
 
   /**
-   * Different from the values in {@link org.apache.druid.common.config.NullHandling}, since we want to be able to
+   * Different from the values in {@link org.apache.druid.segment.column.TypeStrategies}, since we want to be able to
    * sort as bytes, and we want nulls to come before non-nulls.
    */
   public static final byte NULL_BYTE = 0x02;
@@ -55,17 +55,19 @@ public class StringFieldWriter implements FieldWriter
   private static final byte NULL_ROW_SIZE = 2; // NULL_ROW + ROW_TERMINATOR
 
   private final DimensionSelector selector;
+  private final boolean removeNullBytes;
 
-  public StringFieldWriter(final DimensionSelector selector)
+  public StringFieldWriter(final DimensionSelector selector, final boolean removeNullbytes)
   {
     this.selector = selector;
+    this.removeNullBytes = removeNullbytes;
   }
 
   @Override
   public long writeTo(final WritableMemory memory, final long position, final long maxSize)
   {
     final List<ByteBuffer> byteBuffers = FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, true);
-    return writeUtf8ByteBuffers(memory, position, maxSize, byteBuffers);
+    return writeUtf8ByteBuffers(memory, position, maxSize, byteBuffers, removeNullBytes);
   }
 
   @Override
@@ -89,7 +91,8 @@ public class StringFieldWriter implements FieldWriter
       final WritableMemory memory,
       final long position,
       final long maxSize,
-      @Nullable final List<ByteBuffer> byteBuffers
+      @Nullable final List<ByteBuffer> byteBuffers,
+      final boolean removeNullBytes
   )
   {
     if (byteBuffers == null) {
@@ -125,8 +128,14 @@ public class StringFieldWriter implements FieldWriter
         written++;
 
         if (len > 0) {
-          FrameWriterUtils.copyByteBufferToMemory(utf8Datum, memory, position + written, len, false);
-          written += len;
+          int lenWritten = FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(
+              utf8Datum,
+              memory,
+              position + written,
+              len,
+              removeNullBytes
+          );
+          written += lenWritten;
         }
       }
 

@@ -17,14 +17,16 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { filterMap, typeIsKnown } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
+import { FILTER_COMPLETIONS } from '../filter/filter-completions';
 import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
+
+import { AGGREGATOR_COMPLETIONS } from './aggregator-completions';
 
 export interface MetricSpec {
   readonly type: string;
@@ -178,12 +180,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     type: 'json',
     defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
+    jsonCompletions: FILTER_COMPLETIONS,
   },
   {
     name: 'aggregator',
     type: 'json',
     defined: typeIsKnown(KNOWN_TYPES, 'filtered'),
     required: true,
+    jsonCompletions: AGGREGATOR_COMPLETIONS,
   },
   // thetaSketch
   {
@@ -201,7 +205,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize">
             DataSketches site
           </ExternalLink>{' '}
           for details.
@@ -307,7 +311,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           Must be a power of 2 from 2 to 32768. See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy">
             Quantiles Accuracy
           </ExternalLink>{' '}
           for details.
@@ -385,7 +389,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
           <ExternalLink
             href={`${getLink(
               'DOCS',
-            )}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
+            )}/development/extensions-core/approximate-histograms#outlier-handling-modes`}
           >
             outlier handling modes
           </ExternalLink>{' '}

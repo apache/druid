@@ -23,11 +23,18 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.utils.CloseableUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,12 +44,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -166,6 +175,65 @@ public class CompressedLongsSerdeTest
     }
   }
 
+  @Test
+  public void testLargeColumn() throws IOException
+  {
+    // This test only makes sense if we can use BlockLayoutColumnarLongsSerializer directly. Exclude incompatible
+    // combinations of compressionStrategy, encodingStrategy.
+    Assume.assumeThat(compressionStrategy, CoreMatchers.not(CoreMatchers.equalTo(CompressionStrategy.NONE)));
+    Assume.assumeThat(encodingStrategy, CoreMatchers.equalTo(CompressionFactory.LongEncodingStrategy.LONGS));
+
+    final File columnDir = temporaryFolder.newFolder();
+    final String columnName = "column";
+    final long numRows = 500_000; // enough values that we expect to switch into large-column mode
+
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder());
+        FileSmoosher smoosher = new FileSmoosher(columnDir)
+    ) {
+      final Random random = new Random(0);
+      final int fileSizeLimit = 128_000; // limit to 128KB so we switch to large-column mode sooner
+      final ColumnarLongsSerializer serializer = new BlockLayoutColumnarLongsSerializer(
+          columnName,
+          segmentWriteOutMedium,
+          columnName,
+          order,
+          new LongsLongEncodingWriter(order),
+          compressionStrategy,
+          fileSizeLimit,
+          segmentWriteOutMedium.getCloser()
+      );
+      serializer.open();
+
+      for (int i = 0; i < numRows; i++) {
+        serializer.add(random.nextLong());
+      }
+
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
+        serializer.writeTo(primaryWriter, smoosher);
+      }
+    }
+
+    try (SmooshedFileMapper smooshMapper = SmooshedFileMapper.load(columnDir)) {
+      MatcherAssert.assertThat(
+          "Number of value parts written", // ensure the column actually ended up multi-part
+          smooshMapper.getInternalFilenames().stream().filter(s -> s.startsWith("column_value_")).count(),
+          Matchers.greaterThan(1L)
+      );
+
+      final CompressedColumnarLongsSupplier columnSupplier = CompressedColumnarLongsSupplier.fromByteBuffer(
+          smooshMapper.mapFile(columnName),
+          order,
+          smooshMapper
+      );
+
+      try (final ColumnarLongs column = columnSupplier.get()) {
+        Assert.assertEquals(numRows, column.size());
+      }
+    }
+  }
+
   public void testWithValues(long[] values) throws Exception
   {
     testValues(values);
@@ -186,16 +254,14 @@ public class CompressedLongsSerdeTest
     );
     serializer.open();
 
-    for (long value : values) {
-      serializer.add(value);
-    }
+    serializer.addAll(values, 0, values.length);
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarLongsSupplier supplier = CompressedColumnarLongsSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     try (ColumnarLongs longs = supplier.get()) {
 
       assertIndexMatchesVals(longs, values);
@@ -257,10 +323,8 @@ public class CompressedLongsSerdeTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedColumnarLongsSupplier anotherSupplier = CompressedColumnarLongsSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes),
-        order
-    );
+    CompressedColumnarLongsSupplier anotherSupplier =
+        CompressedColumnarLongsSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), order, null);
     try (ColumnarLongs indexed = anotherSupplier.get()) {
       assertIndexMatchesVals(indexed, vals);
     }
@@ -273,7 +337,7 @@ public class CompressedLongsSerdeTest
       final ColumnarLongs indexed, final long[] vals
   ) throws Exception
   {
-    final AtomicReference<String> reason = new AtomicReference<String>("none");
+    final AtomicReference<String> reason = new AtomicReference<>("none");
 
     final int numRuns = 1000;
     final CountDownLatch startLatch = new CountDownLatch(1);

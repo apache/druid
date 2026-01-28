@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,10 +51,6 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IncrementalIndexRowTypeBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"250000"})
   private int rowsPerSegment;
 
@@ -67,9 +62,9 @@ public class IncrementalIndexRowTypeBenchmark
   private static AggregatorFactory[] aggs;
   static final int DIMENSION_COUNT = 8;
 
-  private ArrayList<InputRow> longRows = new ArrayList<InputRow>();
-  private ArrayList<InputRow> floatRows = new ArrayList<InputRow>();
-  private ArrayList<InputRow> stringRows = new ArrayList<InputRow>();
+  private ArrayList<InputRow> longRows = new ArrayList<>();
+  private ArrayList<InputRow> floatRows = new ArrayList<>();
+  private ArrayList<InputRow> stringRows = new ArrayList<>();
 
 
   static {
@@ -95,7 +90,7 @@ public class IncrementalIndexRowTypeBenchmark
   private MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
     Random rng = ThreadLocalRandom.current();
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -108,7 +103,7 @@ public class IncrementalIndexRowTypeBenchmark
   private MapBasedInputRow getFloatRow(long timestamp, int dimensionCount)
   {
     Random rng = ThreadLocalRandom.current();
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -121,7 +116,7 @@ public class IncrementalIndexRowTypeBenchmark
   private MapBasedInputRow getStringRow(long timestamp, int dimensionCount)
   {
     Random rng = ThreadLocalRandom.current();
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);

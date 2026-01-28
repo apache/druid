@@ -20,19 +20,18 @@ import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
 import { csvParseRows, tsvParseRows } from 'd3-dsv';
 import type { JSX } from 'react';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
-  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
   deepSet,
   deepSetIfUnset,
+  deleteKeys,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -44,6 +43,8 @@ import {
   typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
+import { DEFAULT_ARRAY_INGEST_MODE } from '../array-ingest-mode/array-ingest-mode';
 import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
   getDimensionSpecColumnType,
@@ -76,9 +77,14 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   readonly type: IngestionType;
+  readonly id?: string;
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
+
+  // Added by the server
+  readonly groupId?: string;
+  readonly resource?: any;
 }
 
 export interface IngestionSpecInner {
@@ -212,8 +218,10 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1];
-  return ingestionType;
+  return parts[parts.length - 1]
+    .split(/(?=[A-Z])/)
+    .join('-')
+    .toLowerCase();
 }
 
 export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
@@ -221,18 +229,21 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
   switch (type) {
     case 'kafka':
-      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion.html`;
+      return `${getLink('DOCS')}/ingestion/kafka-ingestion`;
 
     case 'kinesis':
-      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
+      return `${getLink('DOCS')}/ingestion/kinesis-ingestion`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
+      return `${getLink('DOCS')}/ingestion/input-sources`;
   }
 }
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
+    case 'azure-event-hubs':
+      return 'druid-kafka-indexing-service';
+
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
@@ -288,8 +299,15 @@ export interface DataSchema {
 
 export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
-export type ArrayMode = 'arrays' | 'multi-values';
+export const DEFAULT_FORCE_SEGMENT_SORT_BY_TIME = true;
+export const DEFAULT_SCHEMA_MODE: SchemaMode = 'fixed';
 
+export function getForceSegmentSortByTime(spec: Partial<IngestionSpec>): boolean {
+  return (
+    deepGet(spec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime') ??
+    DEFAULT_FORCE_SEGMENT_SORT_BY_TIME
+  );
+}
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'type-aware-discovery';
@@ -301,17 +319,17 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(
+export function getArrayIngestMode(
   spec: Partial<IngestionSpec>,
-  whenUnclear: ArrayMode = 'arrays',
-): ArrayMode {
+  whenUnclear: ArrayIngestMode = DEFAULT_ARRAY_INGEST_MODE,
+): ArrayIngestMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
-      return 'arrays';
+      return 'array';
 
     case 'string-only-discovery':
-      return 'multi-values';
+      return 'mvd';
 
     default: {
       const dimensions: (DimensionSpec | string)[] = deepGet(
@@ -325,7 +343,7 @@ export function getArrayMode(
             typeof d === 'object' && d.type === 'auto' && String(d.castToType).startsWith('ARRAY'),
         )
       ) {
-        return 'arrays';
+        return 'array';
       }
 
       if (
@@ -336,7 +354,7 @@ export function getArrayMode(
             typeof d.multiValueHandling === 'string',
         )
       ) {
-        return 'multi-values';
+        return 'mvd';
       }
 
       return whenUnclear;
@@ -344,7 +362,7 @@ export function getArrayMode(
   }
 }
 
-export function showArrayModeToggle(spec: Partial<IngestionSpec>): boolean {
+export function showArrayIngestModeToggle(spec: Partial<IngestionSpec>): boolean {
   const schemaMode = getSchemaMode(spec);
   if (schemaMode !== 'fixed') return false;
 
@@ -381,6 +399,10 @@ export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
 
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
+}
+
+export function isFixedFormatSource(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(deepGet(spec, 'spec.ioConfig.inputSource.type'), 'druid', 'delta');
 }
 
 export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
@@ -471,18 +493,37 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * This function cleans a spec that was returned by the server so that it can be re-opened in the data loader to  be
+ * submitted again.
  * @param spec - the spec to clean
- * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(
-  spec: Partial<IngestionSpec>,
-  allowSuspended?: boolean,
-): Partial<IngestionSpec> {
-  return allowKeys(
-    spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
-  ) as IngestionSpec;
+export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
+  const specSpec = spec.spec;
+
+  // For backwards compatible reasons the contents of `spec` (`dataSchema`, `ioConfig`, and `tuningConfig`)
+  // can be duplicated at the top level. This function removes these duplicates (if needed) so that there is no confusion
+  // which is the authoritative copy.
+  if (
+    specSpec &&
+    specSpec.dataSchema &&
+    specSpec.ioConfig &&
+    specSpec.tuningConfig &&
+    (spec as any).dataSchema &&
+    (spec as any).ioConfig &&
+    (spec as any).tuningConfig
+  ) {
+    spec = deleteKeys(spec, ['dataSchema', 'ioConfig', 'tuningConfig'] as any[]);
+  }
+
+  // Sometimes the dataSource can (redundantly) make it to the top level for some reason - delete it
+  if (
+    typeof specSpec?.dataSchema?.dataSource === 'string' &&
+    typeof (spec as any).dataSource === 'string'
+  ) {
+    spec = deleteKeys(spec, ['dataSource'] as any[]);
+  }
+
+  return deleteKeys(spec, ['groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {
@@ -580,7 +621,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -605,7 +646,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)">
             FileSystem#getPathMatcher
           </ExternalLink>
           .
@@ -659,7 +700,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -674,14 +715,12 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: FILTER_SUGGESTIONS,
           info: (
             <>
-              <ExternalLink
-                href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#local-input-source`}>
                 inputSource.filter
               </ExternalLink>
               <p>
                 A wildcard filter for files. See{' '}
-                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
+                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter">
                   here
                 </ExternalLink>{' '}
                 for format information. Files matching the filter criteria are considered for
@@ -723,8 +762,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           hideInMore: true,
           info: (
             <p>
-              The{' '}
-              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
+              The <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>filter</ExternalLink>{' '}
               to apply to the data as part of querying.
             </p>
           ),
@@ -784,7 +822,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#s3-input-source`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -947,7 +985,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/input-sources#azure-input-source`}
+                >
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1021,7 +1061,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
+                <ExternalLink
+                  href={`${getLink(
+                    'DOCS',
+                  )}/ingestion/input-sources#google-cloud-storage-input-source`}
+                >
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1042,17 +1086,13 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
-          info: (
-            <>
-              <p>A full path to the Delta Lake table.</p>
-            </>
-          ),
+          info: <p>A full path to the Delta Lake table.</p>,
         },
         {
           name: 'inputSource.filter',
           label: 'Delta filter',
           type: 'json',
-          defaultValue: {},
+          placeholder: '{"type": "=", "column": "name", "value": "foo"}',
           info: (
             <>
               <ExternalLink
@@ -1061,6 +1101,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
                 filter
               </ExternalLink>
               <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.snapshotVersion',
+          label: 'Delta snapshot version',
+          type: 'number',
+          placeholder: '(latest)',
+          info: (
+            <>
+              The snapshot version to read from the Delta table. By default, the latest snapshot is
+              read.
             </>
           ),
         },
@@ -1088,11 +1140,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder: 'kafka_broker_host:9092',
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1138,11 +1186,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1251,7 +1295,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak.html">
+              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak">
                 here
               </ExternalLink>
               .
@@ -1324,22 +1368,14 @@ export function getIoConfigTuningFormFields(
           label: 'Fetch timeout',
           type: 'number',
           defaultValue: 60000,
-          info: (
-            <>
-              <p>Timeout for fetching the object.</p>
-            </>
-          ),
+          info: <p>Timeout for fetching the object.</p>,
         },
         {
           name: 'inputSource.maxFetchRetry',
           label: 'Max fetch retry',
           type: 'number',
           defaultValue: 3,
-          info: (
-            <>
-              <p>Maximum retry for fetching the object.</p>
-            </>
-          ),
+          info: <p>Maximum retry for fetching the object.</p>,
         },
       ];
 
@@ -1374,14 +1410,12 @@ export function getIoConfigTuningFormFields(
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           required: true,
           info: (
-            <>
-              <p>
-                If a supervisor is managing a dataSource for the first time, it will obtain a set of
-                starting offsets from Kafka. This flag determines whether it retrieves the earliest
-                or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start
-                from where the previous segments ended so this flag will only be used on first run.
-              </p>
-            </>
+            <p>
+              If a supervisor is managing a dataSource for the first time, it will obtain a set of
+              starting offsets from Kafka. This flag determines whether it retrieves the earliest or
+              latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from
+              where the previous segments ended so this flag will only be used on first run.
+            </p>
           ),
         },
         {
@@ -1404,11 +1438,7 @@ export function getIoConfigTuningFormFields(
           type: 'duration',
           defaultValue: 'PT1H',
           info: (
-            <>
-              <p>
-                The length of time before tasks stop reading and begin publishing their segment.
-              </p>
-            </>
+            <p>The length of time before tasks stop reading and begin publishing their segment.</p>
           ),
         },
         {
@@ -1416,14 +1446,12 @@ export function getIoConfigTuningFormFields(
           type: 'number',
           defaultValue: 1,
           info: (
-            <>
-              <p>
-                The maximum number of reading tasks in a replica set. This means that the maximum
-                number of reading tasks will be <Code>taskCount * replicas</Code> and the total
-                number of tasks (reading + publishing) will be higher than this. See &apos;Capacity
-                Planning&apos; below for more details.
-              </p>
-            </>
+            <p>
+              The maximum number of reading tasks in a replica set. This means that the maximum
+              number of reading tasks will be <Code>taskCount * replicas</Code> and the total number
+              of tasks (reading + publishing) will be higher than this. See &apos;Capacity
+              Planning&apos; below for more details.
+            </p>
           ),
         },
         {
@@ -1431,13 +1459,11 @@ export function getIoConfigTuningFormFields(
           type: 'number',
           defaultValue: 1,
           info: (
-            <>
-              <p>
-                The number of replica sets, where 1 means a single set of tasks (no replication).
-                Replica tasks will always be assigned to different workers to provide resiliency
-                against process failure.
-              </p>
-            </>
+            <p>
+              The number of replica sets, where 1 means a single set of tasks (no replication).
+              Replica tasks will always be assigned to different workers to provide resiliency
+              against process failure.
+            </p>
           ),
         },
         {
@@ -1445,13 +1471,11 @@ export function getIoConfigTuningFormFields(
           type: 'duration',
           defaultValue: 'PT30M',
           info: (
-            <>
-              <p>
-                The length of time to wait before declaring a publishing task as failed and
-                terminating it. If this is set too low, your tasks may never publish. The publishing
-                clock for a task begins roughly after taskDuration elapses.
-              </p>
-            </>
+            <p>
+              The length of time to wait before declaring a publishing task as failed and
+              terminating it. If this is set too low, your tasks may never publish. The publishing
+              clock for a task begins roughly after taskDuration elapses.
+            </p>
           ),
         },
         {
@@ -1460,11 +1484,9 @@ export function getIoConfigTuningFormFields(
           defaultValue: 100,
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
-            <>
-              <p>
-                The length of time to wait for the kafka consumer to poll records, in milliseconds.
-              </p>
-            </>
+            <p>
+              The length of time to wait for the kafka consumer to poll records, in milliseconds.
+            </p>
           ),
         },
         {
@@ -1478,11 +1500,7 @@ export function getIoConfigTuningFormFields(
           name: 'startDelay',
           type: 'duration',
           defaultValue: 'PT5S',
-          info: (
-            <>
-              <p>The period to wait before the supervisor starts managing tasks.</p>
-            </>
-          ),
+          info: <p>The period to wait before the supervisor starts managing tasks.</p>,
         },
         {
           name: 'period',
@@ -1525,14 +1543,12 @@ export function getIoConfigTuningFormFields(
           type: 'string',
           placeholder: '(none)',
           info: (
-            <>
-              <p>
-                Configure tasks to reject messages with timestamps later than this period after the
-                task reached its taskDuration; for example if this is set to PT1H, the taskDuration
-                is set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with
-                timestamps later than 2016-01-01T14:00Z will be dropped.
-              </p>
-            </>
+            <p>
+              Configure tasks to reject messages with timestamps later than this period after the
+              task reached its taskDuration; for example if this is set to PT1H, the taskDuration is
+              set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with
+              timestamps later than 2016-01-01T14:00Z will be dropped.
+            </p>
           ),
         },
         {
@@ -1541,14 +1557,12 @@ export function getIoConfigTuningFormFields(
           defaultValue: false,
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
-            <>
-              <p>
-                Whether or not to allow gaps of missing offsets in the Kafka stream. This is
-                required for compatibility with implementations such as MapR Streams which does not
-                guarantee consecutive offsets. If this is false, an exception will be thrown if
-                offsets are not consecutive.
-              </p>
-            </>
+            <p>
+              Whether or not to allow gaps of missing offsets in the Kafka stream. This is required
+              for compatibility with implementations such as MapR Streams which does not guarantee
+              consecutive offsets. If this is false, an exception will be thrown if offsets are not
+              consecutive.
+            </p>
           ),
         },
       ];
@@ -1598,6 +1612,9 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
         (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
       return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
     }
+
+    case 'delta':
+      return inputSource.tablePath ? filenameFromPath(inputSource.tablePath) : undefined;
 
     case 'http':
       return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;
@@ -1881,7 +1898,9 @@ export function getSecondaryPartitionRelatedFormFields(
               <p>
                 This should be the first dimension in your schema which would make it first in the
                 sort order. As{' '}
-                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#why-partition`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/partitioning#partitioning-and-sorting`}
+                >
                   Partitioning and sorting are best friends!
                 </ExternalLink>
               </p>
@@ -2029,7 +2048,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
-    defaultValue: 1000000,
+    defaultValue: (spec: IngestionSpec) => (isStreamingSpec(spec) ? 150000 : 1000000),
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
@@ -2446,11 +2465,12 @@ export function fillInputFormatIfNeeded(
   sampleResponse: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
+  const specType = getSpecType(spec);
 
   return deepSet(
     spec,
     'spec.ioConfig.inputFormat',
-    getSpecType(spec) === 'kafka'
+    specType === 'kafka'
       ? guessKafkaInputFormat(
           filterMap(sampleResponse.data, l => l.input),
           typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',
@@ -2508,7 +2528,7 @@ export function guessSimpleInputFormat(
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType({ type: 'orc' });
     }
-    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec#Object+Container+Files
     if (sampleDatum.startsWith('Obj\x01')) {
       return inputFormatFromType({ type: 'avro_ocf' });
     }
@@ -2748,8 +2768,9 @@ function getColumnTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
+  forceSegmentSortByTime: boolean,
   schemaMode: SchemaMode,
-  arrayMode: ArrayMode,
+  arrayIngestMode: ArrayIngestMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
@@ -2759,6 +2780,15 @@ export function updateSchemaWithSample(
   );
 
   let newSpec = spec;
+
+  newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime');
+  if (forceSegmentSortByTime !== DEFAULT_FORCE_SEGMENT_SORT_BY_TIME) {
+    newSpec = deepSet(
+      newSpec,
+      'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+      forceSegmentSortByTime,
+    );
+  }
 
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -2786,8 +2816,9 @@ export function updateSchemaWithSample(
           sampleResponse,
           columnTypeHints,
           guessNumericStringsAsNumbers,
-          arrayMode === 'multi-values',
+          arrayIngestMode,
           rollup,
+          forceSegmentSortByTime ?? DEFAULT_FORCE_SEGMENT_SORT_BY_TIME ? 'ignore' : 'preserve',
         ),
       );
       break;

@@ -22,6 +22,7 @@ package org.apache.druid.query.expressions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -67,19 +68,6 @@ public class SleepExprTest extends InitializedNullHandlingTest
 
   private void assertExpr(final String expression)
   {
-    final Expr expr = Parser.parse(expression, exprMacroTable);
-    Assert.assertNull(expression, expr.eval(InputBindings.nilBindings()).value());
-
-    final Expr exprNoFlatten = Parser.parse(expression, exprMacroTable, false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), exprMacroTable);
-    Assert.assertNull(expr.stringify(), roundTrip.eval(InputBindings.nilBindings()).value());
-
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), exprMacroTable);
-    Assert.assertNull(expr.stringify(), roundTripFlatten.eval(InputBindings.nilBindings()).value());
-
-    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
-    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+    FunctionTest.assertExpr(expression, null, InputBindings.nilBindings(), exprMacroTable);
   }
 }

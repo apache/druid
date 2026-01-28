@@ -1,0 +1,144 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option java_package = "org.apache.druid.grpc.proto";
+
+import "google/protobuf/timestamp.proto";
+
+package druidGrpc;
+
+service Query {
+  rpc SubmitQuery (QueryRequest) returns (QueryResponse) {}
+}
+
+enum QueryType {
+  SQL = 0;
+  NATIVE = 1;
+}
+
+// Defines the format of the query results. Must be one of the
+// non-unknown formats.
+enum QueryResultFormat {
+  UNKNOWN_FORMAT = 0;  // Default value. An old server will see this value
+                       // (and fail the request) if a new client passes a new format.
+  CSV = 1;
+  // JSON_OBJECT = 2; -- Not yet
+  JSON_ARRAY = 3;
+  // JSON_OBJECT_LINES = 4; -- Not yet
+  JSON_ARRAY_LINES = 5;
+
+  // The protobuf formats also require that the protobufMessageName be set in
+  // the query request.
+  PROTOBUF_INLINE = 6;
+  PROTOBUF_RESPONSE = 7;
+}
+
+// Value for a query parameter. The value is essentially a variant of the
+// supported parameter types. The type chosen here must match (or be converable
+// to) the type of the corresponding expression in the SQL statement.
+message QueryParameter {
+  oneof value {
+    bool nullValue = 1;
+    string stringValue = 2;
+    sint64 longValue = 3;
+    double doubleValue = 4;
+    StringArray arrayValue = 5;
+  }
+}
+
+// Query pararameter value for string array properties. At present, string
+// arrays are primarily used by the MSQ engine, which is not yet available
+// via the gRPC API.
+message StringArray {
+  repeated string value = 1;
+}
+
+message QueryRequest {
+  string query = 1;
+  QueryResultFormat resultFormat = 2;
+  map<string, string> context = 3;
+  // Query parameters. If your query is SELECT * FROM foo WHERE x = ? AND y > ?
+  // Then you would include two parameters in the order in which the question
+  // marks lexically appear in the query.
+  repeated QueryParameter parameters = 4;
+  // The name of the Protobuf message to encode the response if the
+  // resultFormat is one of the PROTOBUF formats.
+  optional string protobufMessageName = 5;
+
+  // used only for native query
+  // columns to skip writing in the result, for example, it can used to skip writing
+  // time field in the result for timeseries query
+  repeated string skipColumns = 6;
+
+  // used only for native query
+  // columns which should be converted to Timestamp
+  repeated string timeColumns = 7;
+
+  QueryType queryType = 8;
+}
+
+// Unauthorized errors return as a StatusRuntimeException with
+// getStatus().getCode() == Status.Code.PERMISSION_DENIED
+enum QueryStatus {
+  UNKNOWN_STATUS = 0; // Default value which means "unknown failure". Older clients
+                      // will see this value if a future version adds a new failure
+                      // type.
+  OK = 1;
+  REQUEST_ERROR = 3;
+  INVALID_SQL = 4;
+  RUNTIME_ERROR = 5;
+}
+
+enum DruidType {
+  UNKNOWN_TYPE = 0; // Default value for unknown, or for future new values
+                    // as seen by old clients.
+  STRING = 1;
+  LONG = 2;
+  DOUBLE = 3;
+  FLOAT = 4;
+  STRING_ARRAY = 5;
+  LONG_ARRAY = 6;
+  DOUBLE_ARRAY = 7;
+  FLOAT_ARRAY = 8;
+  COMPLEX = 9;
+}
+
+message ColumnSchema {
+  string name = 1;
+  string sqlType = 2;
+  DruidType druidType = 3;
+}
+
+message QueryResponse {
+  string queryId = 1;
+  QueryStatus status = 2;
+
+  // Error message if the query fails. Not set if the query succeeds.
+  optional string errorMessage = 3;
+
+  // The schema of the returned results. This schema is redundant for the
+  // JSON and Protobuf formats. It can be used to generate column heads,
+  // and understand types, for the CSV result format.
+  repeated ColumnSchema columns = 4;
+
+  // The query response, encoded using the requested response format.
+  // Note that the entire response is placed into a single messages. As
+  // a result, this RPC is intended ONLY for queries that return small
+  // result sets. It will perform poorly (and consume excess memory) if
+  // used for large result sets.
+  optional bytes data = 5;
+}

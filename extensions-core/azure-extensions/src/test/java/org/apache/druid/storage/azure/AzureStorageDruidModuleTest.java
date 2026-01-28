@@ -257,27 +257,6 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testAccountUnset()
-  {
-    final Properties properties = initializePropertes();
-    properties.remove("druid.azure.account");
-
-    final ProvisionException exception = assertThrows(
-        ProvisionException.class,
-        () -> makeInjectorWithProperties(properties).getInstance(
-            Key.get(new TypeLiteral<AzureClientFactory>()
-            {
-            })
-        )
-    );
-
-    assertEquals(
-        "Set 'account' to the storage account that needs to be configured in the azure config. Please refer to azure documentation.",
-        exception.getCause().getMessage()
-    );
-  }
-
-  @Test
   public void testGetBlobStorageEndpointWithDefaultProperties()
   {
     Properties properties = initializePropertes();

@@ -1,10 +1,10 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`HeaderBar matches snapshot 1`] = `
-<Blueprint4.Navbar
+<Blueprint5.Navbar
   className="header-bar"
 >
-  <Blueprint4.NavbarGroup
+  <Blueprint5.NavbarGroup
     align="left"
   >
     <a
@@ -12,8 +12,8 @@ exports[`HeaderBar matches snapshot 1`] = `
     >
       <Memo(DruidLogo) />
     </a>
-    <Blueprint4.NavbarDivider />
-    <Blueprint4.AnchorButton
+    <Blueprint5.NavbarDivider />
+    <Blueprint5.AnchorButton
       active={true}
       className="header-entry"
       disabled={false}
@@ -22,12 +22,12 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Query"
     />
-    <Blueprint4.Popover2
+    <Blueprint5.Popover
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint4.Menu>
-          <Blueprint4.MenuItem
+        <Blueprint5.Menu>
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="#streaming-data-loader"
@@ -38,17 +38,21 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Streaming"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="#sql-data-loader"
             icon="clean"
             labelElement={
-              <Blueprint4.Tag
+              <Blueprint5.Tag
+                active={false}
+                fill={false}
+                large={false}
                 minimal={true}
+                round={false}
               >
                 multi-stage-query
-              </Blueprint4.Tag>
+              </Blueprint5.Tag>
             }
             multiline={false}
             popoverProps={{}}
@@ -56,7 +60,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Batch - SQL"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="#classic-batch-data-loader"
@@ -67,7 +71,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Batch - classic"
           />
-        </Blueprint4.Menu>
+        </Blueprint5.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -87,7 +91,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         active={false}
         className="header-entry"
         disabled={false}
@@ -95,9 +99,9 @@ exports[`HeaderBar matches snapshot 1`] = `
         minimal={true}
         text="Load data"
       />
-    </Blueprint4.Popover2>
-    <Blueprint4.NavbarDivider />
-    <Blueprint4.AnchorButton
+    </Blueprint5.Popover>
+    <Blueprint5.NavbarDivider />
+    <Blueprint5.AnchorButton
       active={false}
       className="header-entry"
       disabled={false}
@@ -106,7 +110,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Datasources"
     />
-    <Blueprint4.AnchorButton
+    <Blueprint5.AnchorButton
       active={false}
       className="header-entry"
       disabled={false}
@@ -115,7 +119,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Supervisors"
     />
-    <Blueprint4.AnchorButton
+    <Blueprint5.AnchorButton
       active={false}
       className="header-entry"
       disabled={false}
@@ -124,7 +128,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Tasks"
     />
-    <Blueprint4.AnchorButton
+    <Blueprint5.AnchorButton
       active={false}
       className="header-entry"
       disabled={false}
@@ -133,7 +137,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Segments"
     />
-    <Blueprint4.AnchorButton
+    <Blueprint5.AnchorButton
       active={false}
       className="header-entry"
       disabled={false}
@@ -142,12 +146,12 @@ exports[`HeaderBar matches snapshot 1`] = `
       minimal={true}
       text="Services"
     />
-    <Blueprint4.Popover2
+    <Blueprint5.Popover
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint4.Menu>
-          <Blueprint4.MenuItem
+        <Blueprint5.Menu>
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="#lookups"
@@ -158,20 +162,29 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Lookups"
           />
-          <Blueprint4.MenuDivider />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuDivider />
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="#explore"
-            icon="compass"
-            label="(experimental)"
+            icon="map"
+            labelElement={
+              <Blueprint5.Icon
+                autoLoad={true}
+                data-tooltip="Experimental"
+                icon="lab-test"
+                intent="warning"
+                tagName="span"
+              />
+            }
             multiline={false}
             popoverProps={{}}
             selected={false}
             shouldDismissPopover={true}
+            target="_blank"
             text="Explore"
           />
-        </Blueprint4.Menu>
+        </Blueprint5.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -191,131 +204,134 @@ exports[`HeaderBar matches snapshot 1`] = `
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         active={false}
         className="header-entry"
+        data-tooltip="More views"
         icon="more"
         minimal={true}
       />
-    </Blueprint4.Popover2>
-  </Blueprint4.NavbarGroup>
-  <Blueprint4.NavbarGroup
+    </Blueprint5.Popover>
+  </Blueprint5.NavbarGroup>
+  <Blueprint5.NavbarGroup
     align="right"
   >
     <Memo(RestrictedMode)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": true,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
       }
       onUnrestrict={[Function]}
     />
-    <Blueprint4.Popover2
+    <Blueprint5.Popover
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint4.Menu>
-          <Blueprint4.MenuItem
+        <Blueprint5.Menu>
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="pulse"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             text="Druid Doctor"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="settings"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             text="Coordinator dynamic config"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="wrench"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             text="Overlord dynamic config"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="compressed"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             text="Compaction dynamic config"
           />
-          <Blueprint4.MenuDivider />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
+            icon="console"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Web console config"
+          />
+          <Blueprint5.MenuDivider />
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="high-priority"
             multiline={false}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
-            text="Capabilty detection"
+            text="Capability detection"
           >
-            <Blueprint4.MenuItem
+            <Blueprint5.MenuItem
               active={false}
               disabled={false}
               multiline={false}
               onClick={[Function]}
               popoverProps={{}}
-              selected={false}
               shouldDismissPopover={true}
               text="Manually set Coordinator/Overlord mode"
             />
-            <Blueprint4.MenuItem
+            <Blueprint5.MenuItem
               active={false}
               disabled={false}
               multiline={false}
               onClick={[Function]}
               popoverProps={{}}
-              selected={false}
               shouldDismissPopover={true}
               text="Manually set Coordinator mode"
             />
-            <Blueprint4.MenuItem
+            <Blueprint5.MenuItem
               active={false}
               disabled={false}
               multiline={false}
               onClick={[Function]}
               popoverProps={{}}
-              selected={false}
               shouldDismissPopover={true}
               text="Manually set Overlord mode"
             />
-            <Blueprint4.MenuItem
+            <Blueprint5.MenuItem
               active={false}
               disabled={false}
               multiline={false}
               onClick={[Function]}
               popoverProps={{}}
-              selected={false}
               shouldDismissPopover={true}
               text="Manually set Router with no management proxy mode"
             />
-          </Blueprint4.MenuItem>
-        </Blueprint4.Menu>
+          </Blueprint5.MenuItem>
+        </Blueprint5.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -335,77 +351,73 @@ exports[`HeaderBar matches snapshot 1`] = `
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="header-entry"
+        data-tooltip="Settings"
         icon="cog"
         minimal={true}
       />
-    </Blueprint4.Popover2>
-    <Blueprint4.Popover2
+    </Blueprint5.Popover>
+    <Blueprint5.Popover
       boundary="clippingParents"
       captureDismiss={false}
       content={
-        <Blueprint4.Menu>
-          <Blueprint4.MenuItem
+        <Blueprint5.Menu>
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             icon="graph"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             text="About"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="https://druid.apache.org/docs/latest"
             icon="th"
             multiline={false}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="Docs"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="https://groups.google.com/forum/#!forum/druid-user"
             icon="user"
             multiline={false}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="User group"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="https://druid.apache.org/community/join-slack"
             icon="chat"
             multiline={false}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="Slack channel"
           />
-          <Blueprint4.MenuItem
+          <Blueprint5.MenuItem
             active={false}
             disabled={false}
             href="https://github.com/apache/druid"
             icon="git-branch"
             multiline={false}
             popoverProps={{}}
-            selected={false}
             shouldDismissPopover={true}
             target="_blank"
             text="GitHub"
           />
-        </Blueprint4.Menu>
+        </Blueprint5.Menu>
       }
       defaultIsOpen={false}
       disabled={false}
@@ -425,12 +437,13 @@ exports[`HeaderBar matches snapshot 1`] = `
       transitionDuration={300}
       usePortal={true}
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="header-entry"
+        data-tooltip="Help"
         icon="help"
         minimal={true}
       />
-    </Blueprint4.Popover2>
-  </Blueprint4.NavbarGroup>
-</Blueprint4.Navbar>
+    </Blueprint5.Popover>
+  </Blueprint5.NavbarGroup>
+</Blueprint5.Navbar>
 `;

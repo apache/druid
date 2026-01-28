@@ -86,10 +86,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       int desiredTaskCount = -1;
       try {
         desiredTaskCount = computeDesiredTaskCount(new ArrayList<>(lagMetricsQueue));
-
-        if (desiredTaskCount != -1) {
-          lagMetricsQueue.clear();
-        }
       }
       catch (Exception ex) {
         log.warn(ex, "Exception while computing desired task count for [%s]", dataSource);
@@ -100,6 +96,19 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       return desiredTaskCount;
     };
 
+    Runnable onSuccessfulScale = () -> {
+      LOCK.lock();
+      try {
+        lagMetricsQueue.clear();
+      }
+      catch (Exception ex) {
+        log.warn(ex, "Exception while clearing lags for [%s]", dataSource);
+      }
+      finally {
+        LOCK.unlock();
+      }
+    };
+
     lagComputationExec.scheduleAtFixedRate(
         computeAndCollectLag(),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), // wait for tasks to start up
@@ -107,16 +116,18 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction, emitter),
+        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
     );
     log.info(
-        "LagBasedAutoScaler will collect lag every [%d] millis and will keep [%d] data points for the last [%d] millis for dataSource [%s]",
-        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.size(),
-        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), dataSource
+        "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
+        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(),
+        lagMetricsQueue.maxSize(),
+        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(),
+        dataSource
     );
   }
 
@@ -169,7 +180,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
           }
           log.debug("Current lags for dataSource[%s] are [%s].", dataSource, lagMetricsQueue);
         } else {
-          log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);
+          log.debug("Supervisor[%s] is suspended, skipping lag collection", dataSource);
         }
       }
       catch (Exception e) {
@@ -183,19 +194,25 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
   /**
    * This method determines whether to do scale actions based on collected lag points.
-   * Current algorithm of scale is simple:
-   * First of all, compute the proportion of lag points higher/lower than scaleOutThreshold/scaleInThreshold, getting scaleOutThreshold/scaleInThreshold.
-   * Secondly, compare scaleOutThreshold/scaleInThreshold with triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold. P.S. Scale out action has higher priority than scale in action.
-   * Finaly, if scaleOutThreshold/scaleInThreshold is higher than triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold, scale out/in action would be triggered.
+   * The current algorithm of scale is straightforward:
+   * <ul>
+   * <li>First, compute the proportion of lag points higher/lower than {@code scaleOutThreshold/scaleInThreshold},
+   * getting {@code scaleInThreshold/scaleOutThreshold},.
+   * <li>Secondly, compare {@code scaleInThreshold/scaleOutThreshold} with
+   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}.
+   * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
+   * <li>Finally, if {@code scaleOutThreshold/scaleInThreshold}, is higher than
+   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}, scale out/in action would be triggered.
+   * </ul>
    *
-   * @param lags the lag metrics of Stream(Kafka/Kinesis)
-   * @return Integer. target number of tasksCount, -1 means skip scale action.
+   * @param lags the lag metrics of Stream (Kafka/Kinesis)
+   * @return Integer, target number of tasksCount. -1 means skip scale action.
    */
   private int computeDesiredTaskCount(List<Long> lags)
   {
-    // if supervisor is not suspended, ensure required tasks are running
+    // if the supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
-    log.debug("Computing desired task count for [%s], based on following lags : [%s]", dataSource, lags);
+    log.debug("Computing the desired task count for [%s], based on following lags : [%s]", dataSource, lags);
     int beyond = 0;
     int within = 0;
     int metricsCount = lags.size();
@@ -216,20 +233,19 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
     int desiredActiveTaskCount;
+    int partitionCount = supervisor.getPartitionCount();
+    if (partitionCount <= 0) {
+      log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+      return -1;
+    }
 
     if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
       // Do Scale out
       int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
 
-      int partitionCount = supervisor.getPartitionCount();
-      if (partitionCount <= 0) {
-        log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
-        return -1;
-      }
-
       int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMax) {
-        log.warn("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
+        log.debug("CurrentActiveTaskCount reached task count Max limit, skipping scale out action for dataSource [%s].",
             dataSource
         );
         emitter.emit(metricBuilder
@@ -248,8 +264,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
       // Do Scale in
       int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
-      if (currentActiveTaskCount == lagBasedAutoScalerConfig.getTaskCountMin()) {
-        log.warn("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource [%s].",
+      int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
+      if (currentActiveTaskCount == actualTaskCountMin) {
+        log.debug("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource[%s].",
             dataSource
         );
         emitter.emit(metricBuilder
@@ -260,7 +277,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
                          .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
         return -1;
       } else {
-        desiredActiveTaskCount = Math.max(taskCount, lagBasedAutoScalerConfig.getTaskCountMin());
+        desiredActiveTaskCount = Math.max(taskCount, actualTaskCountMin);
       }
       return desiredActiveTaskCount;
     }

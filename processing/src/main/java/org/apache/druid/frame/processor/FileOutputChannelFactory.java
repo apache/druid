@@ -32,6 +32,8 @@ import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -51,16 +53,19 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   private final File fileChannelsDirectory;
   private final int frameSize;
   private final ByteTracker byteTracker;
+  private final WireTransferableContext wireTransferableContext;
 
   public FileOutputChannelFactory(
       final File fileChannelsDirectory,
       final int frameSize,
-      @Nullable final ByteTracker byteTracker
+      @Nullable final ByteTracker byteTracker,
+      final WireTransferableContext wireTransferableContext
   )
   {
     this.fileChannelsDirectory = fileChannelsDirectory;
     this.frameSize = frameSize;
     this.byteTracker = byteTracker == null ? ByteTracker.unboundedTracker() : byteTracker;
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   @Override
@@ -80,15 +85,17 @@ public class FileOutputChannelFactory implements OutputChannelFactory
                       StandardOpenOption.WRITE
                   ),
                   ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
-                  byteTracker
+                  byteTracker,
+                  wireTransferableContext
               )
         );
 
+    final WireTransferable.ConcreteDeserializer deserializer = wireTransferableContext.concreteDeserializer();
     final Supplier<ReadableFrameChannel> readableChannelSupplier = Suppliers.memoize(
         () -> {
           try {
             final FrameFile frameFile = FrameFile.open(file, byteTracker, FrameFile.Flag.DELETE_ON_CLOSE);
-            return new ReadableFileFrameChannel(frameFile);
+            return new ReadableFileFrameChannel(frameFile, deserializer);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -118,9 +125,11 @@ public class FileOutputChannelFactory implements OutputChannelFactory
                       StandardOpenOption.WRITE
                   ),
                   ByteBuffer.allocate(Frame.compressionBufferSize(frameSize)),
-                  byteTracker
+                  byteTracker,
+                  wireTransferableContext
               )
         );
+    final WireTransferable.ConcreteDeserializer deserializer = wireTransferableContext.concreteDeserializer();
     Supplier<FrameFile> frameFileSupplier = Suppliers.memoize(
         () -> {
           try {
@@ -143,7 +152,8 @@ public class FileOutputChannelFactory implements OutputChannelFactory
             return new ReadableFileFrameChannel(
                 fileHandle,
                 fileHandle.getPartitionStartFrame(partitionNumber),
-                fileHandle.getPartitionStartFrame(partitionNumber + 1)
+                fileHandle.getPartitionStartFrame(partitionNumber + 1),
+                deserializer
             );
           }
 
@@ -166,5 +176,11 @@ public class FileOutputChannelFactory implements OutputChannelFactory
   public OutputChannel openNilChannel(final int partitionNumber)
   {
     return OutputChannel.nil(partitionNumber);
+  }
+
+  @Override
+  public boolean isBuffered()
+  {
+    return true;
   }
 }

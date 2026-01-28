@@ -30,8 +30,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -117,9 +117,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     List<QueryResultType> queries =
         jsonMapper.readValue(
             TestQueryHelper.class.getResourceAsStream(filePath),
-            new TypeReference<List<QueryResultType>>()
-            {
-            }
+            new TypeReference<>() {}
         );
 
     testQueries(url, queries);
@@ -127,25 +125,22 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public void testQueriesFromString(String url, String str) throws Exception
   {
-    LOG.info("Starting query tests using\n%s", str);
     List<QueryResultType> queries =
         jsonMapper.readValue(
             str,
-            new TypeReference<List<QueryResultType>>()
-            {
-            }
+            new TypeReference<>() {}
         );
     testQueries(url, queries);
   }
 
   private void testQueries(String url, List<QueryResultType> queries) throws Exception
   {
-    LOG.info("Running queries, url [%s]", url);
+    LOG.info("Testing [%d] queries from url[%s]", queries.size(), url);
 
-    boolean failed = false;
+    int queryIndex = 0;
     for (QueryResultType queryWithResult : queries) {
-      LOG.info("Running Query %s", queryWithResult.getQuery());
-      List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
+      List<Map<String, Object>> result =
+          queryClient.query(url, queryWithResult.getQuery(), queryWithResult.getDescription());
       QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
           result,
           queryWithResult.getExpectedResults(),
@@ -165,13 +160,13 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
             resultsComparison.getErrorMessage()
         );
       } else {
-        LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
+        LOG.info("Results Verified for Query[%d: %s]", queryIndex++, queryWithResult.getDescription());
       }
     }
   }
 
   @SuppressWarnings("unchecked")
-  public int countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
+  public long countRows(String dataSource, Interval interval, Function<String, AggregatorFactory> countAggregator)
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
@@ -180,7 +175,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
                                   .intervals(Collections.singletonList(interval))
                                   .build();
 
-    List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query);
+    List<Map<String, Object>> results = queryClient.query(getQueryURL(broker), query, "Get row count");
     if (results.isEmpty()) {
       return 0;
     } else {

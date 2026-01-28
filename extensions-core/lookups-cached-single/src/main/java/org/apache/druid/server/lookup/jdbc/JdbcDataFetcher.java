@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,10 +45,6 @@ import java.util.function.Supplier;
 
 public class JdbcDataFetcher implements DataFetcher<String, String>
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final Logger LOGGER = new Logger(JdbcDataFetcher.class);
   private static final int DEFAULT_STREAMING_FETCH_SIZE = 1000;
 
@@ -157,7 +152,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     if (pairs.isEmpty()) {
       return null;
     }
-    return NullHandling.nullToEmptyIfNeeded(pairs.get(0));
+    return pairs.get(0);
   }
 
   @Override

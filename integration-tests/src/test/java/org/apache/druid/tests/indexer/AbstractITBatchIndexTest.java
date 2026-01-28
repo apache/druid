@@ -38,9 +38,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -353,7 +353,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
 
     final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
+    LOG.info("Submitted task[%s]", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
     if (assertRunsSubTasks) {
@@ -444,19 +444,14 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
-        "Segment load check"
+        "Segments are loaded"
     );
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          List<DataSegment> segments = coordinator.getAvailableSegments(
-              dataSource + config.getExtraDatasourceNameSuffix()
-          );
-          int segmentCount = segments.size();
-          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
-
-          return segmentCount == numExpectedSegments;
-        },
-        "Segment count check"
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getAvailableSegments(
+            dataSource + config.getExtraDatasourceNameSuffix()
+        ).size(),
+        numExpectedSegments,
+        "Segment count"
     );
   }
 
@@ -464,28 +459,18 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
-        "Segment load check"
+        "Segments are loaded"
     );
-    ITRetryUtil.retryUntilTrue(
-        () -> {
-          List<DataSegment> segments = coordinator.getAvailableSegments(
-              dataSource + config.getExtraDatasourceNameSuffix()
-          );
-          int segmentCount = segments.size();
-          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
-
-          int tombstoneCount = 0;
-          for (DataSegment segment : segments) {
-            if (segment.isTombstone()) {
-              tombstoneCount++;
-            }
-          }
-
-          LOG.info("Current tombstone count: %d, expected: %d", tombstoneCount, numExpectedTombstones);
-
-          return segmentCount == numExpectedSegments && tombstoneCount == numExpectedTombstones;
-        },
-        "Segment count check"
+    ITRetryUtil.retryUntilEquals(
+        () -> coordinator.getAvailableSegments(dataSource + config.getExtraDatasourceNameSuffix()).size(),
+        numExpectedSegments,
+        "Segment count"
+    );
+    ITRetryUtil.retryUntilEquals(
+        () -> (int) coordinator.getAvailableSegments(dataSource + config.getExtraDatasourceNameSuffix())
+                               .stream().filter(DataSegment::isTombstone).count(),
+        numExpectedTombstones,
+        "Tombstone count"
     );
   }
 
@@ -498,22 +483,23 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
 
     final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for compaction task %s", taskID);
+    LOG.info("Submitted task[%s] for compaction", taskID);
     indexer.waitUntilTaskCompletes(taskID);
 
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Compaction"
+        "Segments are loaded after compaction"
     );
-    ITRetryUtil.retryUntilTrue(
+    ITRetryUtil.retryUntilEquals(
         () -> {
           final List<String> actualIntervals = coordinator.getSegmentIntervals(
               dataSource + config.getExtraDatasourceNameSuffix()
           );
           actualIntervals.sort(null);
-          return actualIntervals.equals(intervalsBeforeCompaction);
+          return actualIntervals;
         },
-        "Compaction interval check"
+        intervalsBeforeCompaction,
+        "Compacted intervals"
     );
   }
 

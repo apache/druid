@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
@@ -35,7 +36,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,15 +67,39 @@ public class TestHttpClient implements HttpClient
 
   private final Map<URL, SimpleServerManager> servers = new HashMap<>();
   private final ObjectMapper objectMapper;
+  @Nullable
+  private final ListenableFuture future;
+  private final long responseDelayMillis;
 
   public TestHttpClient(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
+    this.future = null;
+    this.responseDelayMillis = -1;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, ListenableFuture future)
+  {
+    this.objectMapper = objectMapper;
+    this.future = future;
+    this.responseDelayMillis = -1;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, long responseDelayMillis)
+  {
+    this.objectMapper = objectMapper;
+    this.future = null;
+    this.responseDelayMillis = responseDelayMillis;
   }
 
   public void addServerAndRunner(DruidServer server, SimpleServerManager serverManager)
   {
     servers.put(computeUrl(server), serverManager);
+  }
+
+  public void addUrlAndRunner(URL queryId, SimpleServerManager serverManager)
+  {
+    servers.put(queryId, serverManager);
   }
 
   @Nullable
@@ -136,11 +161,21 @@ public class TestHttpClient implements HttpClient
       response.setContent(
           HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
       );
+      if (responseDelayMillis > 0) {
+        Thread.sleep(responseDelayMillis);
+      }
       final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
-      return Futures.immediateFuture(finalClientResponse.getObj());
+      if (future != null) {
+        return future;
+      } else {
+        return Futures.immediateFuture(finalClientResponse.getObj());
+      }
     }
     catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }
@@ -179,9 +214,14 @@ public class TestHttpClient implements HttpClient
         };
       }
       if (isSegmentDropped) {
-        return new ReportTimelineMissingSegmentQueryRunner<>(
-            new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
-        );
+        return (queryPlus, responseContext) -> {
+          responseContext.addMissingSegments(
+              List.of(
+                  new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
+              )
+          );
+          return Sequences.empty();
+        };
       } else {
         return new SimpleQueryRunner(conglomerate, segment.getId(), queryableIndex);
       }

@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -42,10 +43,15 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      @Nullable SegmentFileMapper fileMapper
   )
   {
-    baseFloatBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
+    baseFloatBuffers = GenericIndexed.read(
+        fromBuffer,
+        DecompressingByteBufferObjectStrategy.of(byteOrder, strategy),
+        fileMapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }

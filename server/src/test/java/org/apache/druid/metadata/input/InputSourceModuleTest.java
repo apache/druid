@@ -79,7 +79,7 @@ public class InputSourceModuleTest
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);
     HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null), instance);
+    Assert.assertEquals(new HttpInputSourceConfig(null, null), instance);
     Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, instance.getAllowedProtocols());
   }
 

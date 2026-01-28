@@ -36,7 +36,7 @@ This topic contains configuration information for the Kafka indexing service sup
 
 ## Setup
 
-To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md) for more information.
+To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md) for more information.
 
 ## Supervisor spec configuration
 
@@ -120,11 +120,11 @@ For configuration properties shared across all streaming ingestion methods, refe
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`topic`|String|The Kafka topic to read from. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
+|`topic`|String|The Kafka topic to read from. Note that once this value is established for a supervisor, updating it is not supported. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
 |`topicPattern`|String|Multiple Kafka topics to read from, passed as a regex pattern. See [Ingest from multiple topics](#ingest-from-multiple-topics) for more information.|Yes if `topic` isn't set.||
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes. At the minimum, you must set the `bootstrap.servers` property to establish the initial connection to the Kafka cluster.||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
-|`useEarliestOffset`|Boolean|If a supervisor manages a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended. Druid only uses `useEarliestOffset` on the first run.|No|`false`|
+|`useEarliestOffset`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether the supervisor retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
 
 #### Ingest from multiple topics
@@ -132,6 +132,14 @@ For configuration properties shared across all streaming ingestion methods, refe
 :::info
 If you enable multi-topic ingestion for a datasource, downgrading to a version older than
 28.0.0 will cause the ingestion for that datasource to fail.
+:::
+
+:::info
+Migrating an existing supervisor to use `topicPattern` instead of `topic` is not supported. It is also not supported to change the `topicPattern` of an existing supervisor to a different regex pattern.
+You can force the migration by doing the following:
+1. Suspend the supervisor.
+2. Reset the offsets.
+3. Submit updated supervisor.
 :::
 
 You can ingest data from one or multiple topics.
@@ -143,41 +151,54 @@ Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want 
 
 #### Consumer properties
 
-Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumers, refer to the [Apache Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
+Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumer configuration and advanced use cases, refer to the [Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
 
-The `consumerProperties` object must contain a  `bootstrap.servers` property with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
-By default, `isolation.level` is set to `read_committed`.
+You must include `bootstrap.servers` in consumer properties with a list of Kafka brokers in the format `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
+In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static.
 
-If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`. If you need Druid to consume older versions of Kafka, make sure offsets are sequential, since there is no offset gap check in Druid.
+The `isolation.level` property in `consumerProperties` determines how Druid reads messages written transactionally.
+If you use older versions of Kafka servers without transaction support or you don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
+With `read_uncommitted`, which is the default setting, Druid reads all messages, including aborted transactional messages.
+Make sure offsets are sequential, since there is no offset gap check in Druid.
+For Druid to consume only committed transactional messages, set `isolation.level` to `read_committed`.
 
-If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
+If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 
-In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is not known upfront or is not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` secretly. You can provide configurations at runtime with a dynamic config provider implementation like the environment variable config provider that comes with Druid. For more information, see [Dynamic config provider](../operations/dynamic-config-provider.md).
+To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` confidentially. You can specify these settings in the `jaas.conf` login configuration file or in `consumerProperties` with `sasl.jaas.config`.
+To protect sensitive information, use the [environment variable dynamic config provider](../operations/dynamic-config-provider.md#environment-variable-dynamic-config-provider) to store credentials in system environment variables instead of plain text.
+Although you can also use the [password provider](../operations/password-provider.md) interface to specify SSL configuration for Kafka ingestion, consider using the dynamic config provider as this feature is deprecated.
 
-For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord and the Peon services:
+For example, when using SASL and SSL with Kafka, set the following environment variables for the Druid user on machines running the Overlord and Peon services. Replace the values to match your environment configurations.
 
 ```
-export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='admin_user' password='admin_password';"
+export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='accesskey' password='secret key';"
 export SSL_KEY_PASSWORD=mysecretkeypassword
 export SSL_KEYSTORE_PASSWORD=mysecretkeystorepassword
 export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
 ```
 
+When you define the consumer properties in the supervisor spec, use the dynamic config provider to refer to the environment variables:
+
 ```json
-"druid.dynamic.config.provider": {
-  "type": "environment",
-  "variables": {
-    "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
-    "ssl.key.password": "SSL_KEY_PASSWORD",
-    "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
-    "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+"consumerProperties": {
+  "bootstrap.servers": "localhost:9092",
+  "security.protocol": "SASL_SSL", 
+  "sasl.mechanism": "PLAIN", 
+  "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks",
+  "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks",
+  "druid.dynamic.config.provider": {
+    "type": "environment",
+    "variables": {
+      "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
+      "ssl.key.password": "SSL_KEY_PASSWORD",
+      "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
+      "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+    }
   }
 }
 ```
 
-Verify that you've changed the values for all configurations to match your own environment. In the Druid data loader interface, you can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab**. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
-
-You can provide SSL connections with [Password provider](../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
+When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
 #### Idle configuration
 
@@ -254,7 +275,6 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `json`
 * `kafka`
 * `avro_stream`
-* `avro_ocf`
 * `protobuf`
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
@@ -422,14 +442,12 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
-|`chatAsync`|Boolean|If `true`, use asynchronous communication with indexing tasks, and ignore the `chatThreads` parameter. If `false`, use synchronous communication in a thread pool of size `chatThreads`.|No|`true`|
-|`chatThreads`|Integer|The number of threads to use for communicating with indexing tasks. Ignored if `chatAsync` is `true`.|No|`min(10, taskCount * replicas)`|
 
 ## Deployment notes on Kafka partitions and Druid segments
 
 Druid assigns Kafka partitions to each Kafka indexing task. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following limits: `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
 
-The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on MiddleManager services.
+The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on Middle Manager services.
 
 The Kafka indexing service may still produce some small segments. For example, consider the following scenario:
 - Task duration is 4 hours.

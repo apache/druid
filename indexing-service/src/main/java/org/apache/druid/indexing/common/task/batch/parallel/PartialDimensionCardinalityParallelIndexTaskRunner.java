@@ -68,7 +68,7 @@ class PartialDimensionCardinalityParallelIndexTaskRunner
       ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
-    return new SubTaskSpec<PartialDimensionCardinalityTask>(
+    return new SubTaskSpec<>(
         id,
         groupId,
         supervisorTaskId,

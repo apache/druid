@@ -91,7 +91,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<List<DataSegment>>() {};
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -99,12 +99,6 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
         .retrieveUnusedSegmentsForInterval(dataSource, interval, versions, limit, maxUsedStatusLastUpdatedTime);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

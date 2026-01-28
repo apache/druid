@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { deepGet, EMPTY_ARRAY, oneOf, typeIsKnown } from '../../utils';
 import type { IngestionSpec } from '../ingestion-spec/ingestion-spec';
+
+import { FILTER_COMPLETIONS } from './filter-completions';
 
 export interface DruidFilter {
   readonly type: string;
@@ -166,11 +166,12 @@ export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
     type: 'json',
     height: '350px',
     placeholder: '{ "type": "true" }',
+    jsonCompletions: FILTER_COMPLETIONS,
     info: (
       <>
         <p>
           A Druid{' '}
-          <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>
             JSON filter expression
           </ExternalLink>{' '}
           to apply to the data.

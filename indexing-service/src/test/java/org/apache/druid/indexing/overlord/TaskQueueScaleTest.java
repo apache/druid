@@ -47,9 +47,13 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -103,11 +107,20 @@ public class TaskQueueScaleTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), jsonMapper, derbyConnectorRule.getConnector());
     final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            jsonMapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnectorRule.getConnector(),
+            new TestDruidLeaderSelector(),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
+        ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
 
     final TaskActionClientFactory unsupportedTaskActionFactory =
@@ -127,12 +140,13 @@ public class TaskQueueScaleTest
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
-        new TaskLockbox(taskStorage, storageCoordinator),
+        new GlobalTaskLockbox(taskStorage, storageCoordinator),
         new NoopServiceEmitter(),
         jsonMapper,
         new NoopTaskContextEnricher()
     );
 
+    storageCoordinator.start();
     taskQueue.start();
     closer.register(taskQueue::stop);
   }
@@ -312,7 +326,7 @@ public class TaskQueueScaleTest
       }
       if (!existingTask.getResult().isDone()) {
         exec.schedule(() -> {
-          existingTask.setResult(TaskStatus.failure("taskId", "stopped"));
+          existingTask.setResult(TaskStatus.failure(existingTask.getTaskId(), "stopped"));
           synchronized (knownTasks) {
             knownTasks.remove(taskid);
           }

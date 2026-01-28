@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -52,10 +52,8 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
       }
     }
 
-    // Otherwise this shouldn't have been called (due to isNull returning true).
-    assert NullHandling.replaceWithDefault();
-    //noinspection ConstantConditions assert statement above guarantees this is non null.
-    return NullHandling.defaultDoubleValue();
+    assert !isNull();
+    throw DruidException.defensive("Called getDouble on a non-numeric value");
   }
 
   @Override
@@ -71,10 +69,8 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
       }
     }
 
-    // Otherwise this shouldn't have been called (due to isNull returning true).
-    assert NullHandling.replaceWithDefault();
-    //noinspection ConstantConditions assert statement above guarantees this is non null.
-    return NullHandling.defaultFloatValue();
+    assert !isNull();
+    throw DruidException.defensive("Called getFloat on a non-numeric value");
   }
 
   @Override
@@ -90,10 +86,8 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
       }
     }
 
-    // Otherwise this shouldn't have been called (due to isNull returning true).
-    assert NullHandling.replaceWithDefault();
-    //noinspection ConstantConditions assert statement above guarantees this is non null.
-    return NullHandling.defaultLongValue();
+    assert !isNull();
+    throw DruidException.defensive("Called getLong on a non-numeric value");
   }
 
   @Override

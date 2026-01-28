@@ -107,7 +107,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
         value = "";
       }
     }
-    return org.apache.druid.common.config.NullHandling.emptyToNullIfNeeded(StringUtils.format(format, value));
+    return StringUtils.format(format, value);
   }
 
   @Override

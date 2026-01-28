@@ -70,19 +70,22 @@ public class DataSegmentAndIndexZipFilePath
   @Override
   public boolean equals(Object o)
   {
-    if (o instanceof DataSegmentAndIndexZipFilePath) {
-      DataSegmentAndIndexZipFilePath that = (DataSegmentAndIndexZipFilePath) o;
-      return segment.equals(((DataSegmentAndIndexZipFilePath) o).getSegment())
-          && tmpIndexZipFilePath.equals(that.getTmpIndexZipFilePath())
-          && finalIndexZipFilePath.equals(that.getFinalIndexZipFilePath());
+    if (this == o) {
+      return true;
     }
-    return false;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DataSegmentAndIndexZipFilePath that = (DataSegmentAndIndexZipFilePath) o;
+    return Objects.equals(segment, that.segment)
+           && Objects.equals(tmpIndexZipFilePath, that.tmpIndexZipFilePath)
+           && Objects.equals(finalIndexZipFilePath, that.finalIndexZipFilePath);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segment.getId(), tmpIndexZipFilePath);
+    return Objects.hash(segment, tmpIndexZipFilePath, finalIndexZipFilePath);
   }
 
   @Override

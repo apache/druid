@@ -19,7 +19,8 @@
 
 package org.apache.druid.java.util.metrics;
 
-import org.junit.Assert;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 public class JvmPidDiscovererTest
@@ -27,6 +28,9 @@ public class JvmPidDiscovererTest
   @Test
   public void getPid()
   {
-    Assert.assertNotNull(JvmPidDiscoverer.instance().getPid());
+    MatcherAssert.assertThat(
+        JvmPidDiscoverer.instance().getPid(),
+        Matchers.greaterThan(0L)
+    );
   }
 }

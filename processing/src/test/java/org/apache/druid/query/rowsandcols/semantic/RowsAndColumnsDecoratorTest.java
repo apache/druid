@@ -19,13 +19,12 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.ResultRow;
@@ -34,17 +33,21 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -215,6 +218,39 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
     }
   }
 
+  @Test
+  public void testDecoratorWithColumnBasedFrameRAC()
+  {
+    RowSignature siggy = RowSignature.builder()
+                                     .add("colA", ColumnType.LONG)
+                                     .add("colB", ColumnType.LONG)
+                                     .build();
+
+    Object[][] vals = new Object[][]{
+        {1L, 4L},
+        {2L, -4L},
+        {3L, 3L},
+        {4L, -3L},
+        {5L, 4L},
+        {6L, 82L},
+        {7L, -90L},
+        {8L, 4L},
+        {9L, 0L},
+        {10L, 0L}
+        };
+
+    MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+        )
+    );
+
+    ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+
+    validateDecorated(frc, siggy, vals, null, null, OffsetLimit.NONE, null);
+  }
+
   private void validateDecorated(
       RowsAndColumns base,
       RowSignature siggy,
@@ -242,7 +278,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       decor.addFilter(filter);
 
       final ArrayListSegment<Object[]> seggy = new ArrayListSegment<>(
-          SegmentId.dummy("dummy"),
           new ArrayList<>(Arrays.asList(originalVals)),
           columnName -> {
             int index = siggy.indexOf(columnName);
@@ -250,28 +285,21 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
           },
           siggy
       );
-      final Sequence<Cursor> cursors = seggy
-          .asStorageAdapter()
-          .makeCursors(
-              filter,
-              interval == null ? Intervals.ETERNITY : interval,
-              VirtualColumns.EMPTY,
-              Granularities.ALL,
-              false,
-              null
-          );
+      final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                            .setFilter(filter);
+      if (interval != null) {
+        builder.setInterval(interval);
+      }
+      try (final CursorHolder cursorHolder = seggy.as(CursorFactory.class).makeCursorHolder(builder.build())) {
+        final Cursor cursor = cursorHolder.asCursor();
 
-      vals = cursors.accumulate(
-          new ArrayList<>(),
-          (accumulated, in) -> {
-            final ColumnValueSelector idSupplier = in.getColumnSelectorFactory().makeColumnValueSelector("arrayIndex");
-            while (!in.isDone()) {
-              accumulated.add(originalVals[(int) idSupplier.getLong()]);
-              in.advance();
-            }
-            return accumulated;
-          }
-      );
+        vals = new ArrayList<>();
+        final ColumnValueSelector idSupplier = cursor.getColumnSelectorFactory().makeColumnValueSelector("arrayIndex");
+        while (!cursor.isDone()) {
+          vals.add(originalVals[(int) idSupplier.getLong()]);
+          cursor.advance();
+        }
+      }
     }
 
     if (ordering != null) {

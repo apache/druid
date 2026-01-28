@@ -17,7 +17,6 @@
  */
 
 import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
@@ -37,6 +36,8 @@ import {
 import { getLink } from '../../links';
 import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
+
+import { COMPACTION_CONFIG_COMPLETIONS } from './compaction-config-completions';
 
 import './compaction-config-dialog.scss';
 
@@ -83,7 +84,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       {compactionConfigHasLegacyInputSegmentSizeBytesSet(currentConfig) && (
         <Callout className="legacy-callout" intent={Intent.WARNING}>
           <p>
-            You current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
+            Your current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
             <Code>{formatBytesCompact(currentConfig.inputSegmentSizeBytes!)}</Code> it is
             recommended to unset this property.
           </p>
@@ -122,9 +123,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
                   </p>
                   <p>
                     For more information refer to the{' '}
-                    <ExternalLink
-                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                    >
+                    <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                       documentation
                     </ExternalLink>
                     .
@@ -133,7 +132,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
               }
             >
               <Switch
-                label="Use concurrent locks (experimental)"
+                label="Use concurrent locks"
                 checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
                 onChange={() => {
                   setCurrentConfig(
@@ -152,6 +151,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, COMPACTION_CONFIG_FIELDS)}
             height="100%"
+            jsonCompletions={COMPACTION_CONFIG_COMPLETIONS}
           />
         )}
       </div>
@@ -166,9 +166,12 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           {compactionConfig ? (
             <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
           ) : (
-            <Tooltip2 content="There is no compaction config currently set for this datasource">
-              <Button text="Delete" disabled intent={Intent.DANGER} />
-            </Tooltip2>
+            <Button
+              text="Delete"
+              disabled
+              intent={Intent.DANGER}
+              data-tooltip="There is no compaction config currently set for this datasource"
+            />
           )}
           <Button text="Close" onClick={onClose} />
           <Button

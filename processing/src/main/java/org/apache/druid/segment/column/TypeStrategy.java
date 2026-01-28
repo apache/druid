@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import it.unimi.dsi.fastutil.Hash;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 
 import java.nio.ByteBuffer;
@@ -41,8 +40,8 @@ import java.util.Comparator;
  * All implementations of this mechanism support reading and writing ONLY non-null values. To handle nulls inline with
  * your values, consider {@link NullableTypeStrategy}, which might be acceptable to use if you need to read and write
  * nullable values, AND, you have enough memory to burn a full byte for every value you want to store. It will store
- * values with a leading byte containing either {@link NullHandling#IS_NULL_BYTE} or
- * {@link NullHandling#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
+ * values with a leading byte containing either {@link TypeStrategies#IS_NULL_BYTE} or
+ * {@link TypeStrategies#IS_NOT_NULL_BYTE} as appropriate. If you have a lot of values to write and a lot of nulls,
  * consider alternative approaches to tracking your nulls instead.
  *
  * This mechanism allows using the natural {@link ByteBuffer#position()} and modify the underlying position as they
@@ -87,9 +86,13 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
   T read(ByteBuffer buffer);
 
   /**
-   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
-   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
-   * is *never* retained.
+   * Whether the {@link #read} methods return an object that may retain a reference to the underlying memory of the
+   * provided {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if,
+   * and only if, a reference is *never* retained.
+   * <p>
+   * If this method returns true, and the caller does not control the lifecycle of the underlying memory or cannot
+   * ensure that it will not change over the lifetime of the returned object, callers should copy the memory to a new
+   * location that they do control the lifecycle of and will be available for the duration of the returned object.
    */
   boolean readRetainsBufferReference();
 
@@ -193,6 +196,9 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    * c. {@link #compare(Object, Object)} must be consistent with equals. Apart from abiding by the definition of
    *    {@link Comparator#compare}, it must not return 0 for two objects that are not equals, and converse must also hold,
    *    i.e. if the value returned by compare is not zero, then the arguments must not be equal.
+   * <p>
+   * d. {@link #getClazz()} should return the Java class for the dimension represented by the type. This will be used by the
+   *    mapper to deserialize the object during tasks like broker-historical interaction and spilling to the disk.
    */
   default boolean groupable()
   {
@@ -213,6 +219,14 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    */
   @Override
   default boolean equals(T a, T b)
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
+  }
+
+  /**
+   * @see #groupable()
+   */
+  default Class<?> getClazz()
   {
     throw DruidException.defensive("Not implemented. Check groupable() first");
   }

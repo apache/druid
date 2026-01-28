@@ -20,14 +20,13 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
-import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -38,6 +37,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -97,18 +97,7 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
 
     // Push first segment
-    SegmentInsertAction firstSegmentInsertAction = new SegmentInsertAction(
-        ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(interval1)
-                       .version(lock1.getVersion())
-                       .size(0)
-                       .build()
-        ),
-        null
-    );
-    toolbox.getTaskActionClient().submit(firstSegmentInsertAction);
+    toolbox.getTaskActionClient().submit(createSegmentInsertAction(interval1, lock1.getVersion()));
 
     // Release first lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval1));
@@ -118,18 +107,7 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
 
     // Push second segment
-    SegmentInsertAction secondSegmentInsertAction = new SegmentInsertAction(
-        ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource("foo")
-                       .interval(interval2)
-                       .version(lock2.getVersion())
-                       .size(0)
-                       .build()
-        ),
-        null
-    );
-    toolbox.getTaskActionClient().submit(secondSegmentInsertAction);
+    toolbox.getTaskActionClient().submit(createSegmentInsertAction(interval2, lock2.getVersion()));
 
     // Release second lock
     toolbox.getTaskActionClient().submit(new LockReleaseAction(interval2));
@@ -140,5 +118,18 @@ public class RealtimeishTask extends AbstractTask
 
     // Exit
     return TaskStatus.success(getId());
+  }
+
+  private SegmentTransactionalInsertAction createSegmentInsertAction(Interval interval, String version)
+  {
+    final DataSegment segmentToInsert
+        = DataSegment.builder()
+                     .dataSource("foo")
+                     .interval(interval)
+                     .version(version)
+                     .size(0)
+                     .build();
+    return SegmentTransactionalInsertAction
+        .appendAction(Collections.singleton(segmentToInsert), null, null, null, null, null);
   }
 }

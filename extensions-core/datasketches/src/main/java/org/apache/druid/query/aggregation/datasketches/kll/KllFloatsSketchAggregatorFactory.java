@@ -158,7 +158,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   {
     return ColumnProcessors.makeVectorProcessor(
         getFieldName(),
-        new VectorColumnProcessorFactory<VectorAggregator>()
+        new VectorColumnProcessorFactory<>()
         {
           @Override
           public VectorAggregator makeSingleValueDimensionProcessor(

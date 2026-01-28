@@ -122,7 +122,7 @@ public class ExternalTableTest extends BaseExternTableTest
   {
     // Format is given without columns: it is validated
     CsvInputFormat format = new CsvInputFormat(
-        Collections.singletonList("a"), ";", false, false, 0);
+        Collections.singletonList("a"), ";", false, false, 0, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))
@@ -170,7 +170,8 @@ public class ExternalTableTest extends BaseExternTableTest
         "bob",
         new DefaultPasswordProvider("secret"),
         null,
-        new HttpInputSourceConfig(null)
+        null,
+        new HttpInputSourceConfig(null, null)
     );
     Map<String, Object> sourceMap = toMap(inputSource);
     sourceMap.remove("uris");
@@ -195,7 +196,8 @@ public class ExternalTableTest extends BaseExternTableTest
         "bob",
         new DefaultPasswordProvider("secret"),
         null,
-        new HttpInputSourceConfig(null)
+        null,
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("koala")
         .inputSource(toMap(inputSource))

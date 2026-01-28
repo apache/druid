@@ -153,4 +153,22 @@ public class KllDoublesSketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    AggregatorFactory sketch = new KllDoublesSketchAggregatorFactory("sketch", "x", 200, null);
+    AggregatorFactory sketch2 = new KllDoublesSketchAggregatorFactory("other", "x", 200, null);
+    AggregatorFactory sketch3 = new KllDoublesSketchAggregatorFactory("sketch", "x", 200, 1_000L);
+    AggregatorFactory sketch4 = new KllDoublesSketchAggregatorFactory("sketch", "y", 200, null);
+    AggregatorFactory sketch5 = new KllDoublesSketchAggregatorFactory("sketch", "x", 300, null);
+
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch3.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch3.substituteCombiningFactory(sketch));
+    Assert.assertNotNull(sketch2.substituteCombiningFactory(sketch));
+    Assert.assertNull(sketch.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch.substituteCombiningFactory(sketch4));
+    Assert.assertNull(sketch.substituteCombiningFactory(sketch5));
+  }
 }

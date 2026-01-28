@@ -54,6 +54,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -71,7 +72,7 @@ import java.util.UUID;
  */
 public class Druids
 {
-  public static final Function<String, DimensionSpec> DIMENSION_IDENTITY = new Function<String, DimensionSpec>()
+  public static final Function<String, DimensionSpec> DIMENSION_IDENTITY = new Function<>()
   {
     @Nullable
     @Override
@@ -824,9 +825,8 @@ public class Druids
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns = new ArrayList<>();
-    private Boolean legacy;
-    private ScanQuery.Order order;
-    private List<ScanQuery.OrderBy> orderBy;
+    private Order order;
+    private List<OrderBy> orderBy;
     private List<ColumnType> columnTypes = null;
 
     public ScanQuery build()
@@ -843,7 +843,6 @@ public class Druids
           orderBy,
           dimFilter,
           columns,
-          legacy,
           context,
           columnTypes
       );
@@ -861,7 +860,6 @@ public class Druids
           .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
-          .legacy(query.isLegacy())
           .context(query.getContext())
           .orderBy(query.getOrderBys())
           .columnTypes(query.getColumnTypes());
@@ -959,19 +957,13 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder legacy(Boolean legacy)
-    {
-      this.legacy = legacy;
-      return this;
-    }
-
-    public ScanQueryBuilder order(ScanQuery.Order order)
+    public ScanQueryBuilder order(Order order)
     {
       this.order = order;
       return this;
     }
 
-    public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
+    public ScanQueryBuilder orderBy(List<OrderBy> orderBys)
     {
       this.orderBy = orderBys;
       return this;
@@ -987,6 +979,12 @@ public class Druids
     {
       this.columnTypes = Arrays.asList(columnType);
       return this;
+    }
+
+    public ScanQueryBuilder columns(RowSignature sig)
+    {
+      return columnTypes(sig.getColumnTypes())
+          .columns(sig.getColumnNames());
     }
   }
 

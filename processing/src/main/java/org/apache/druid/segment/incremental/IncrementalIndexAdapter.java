@@ -22,12 +22,13 @@ package org.apache.druid.segment.incremental;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
@@ -46,13 +47,15 @@ import java.util.stream.Collectors;
 public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private final Interval dataInterval;
-  private final IncrementalIndex index;
+  private final IncrementalIndexRowSelector index;
   private final Map<String, DimensionAccessor> accessors;
+  private final BitmapFactory bitmapFactory;
 
-  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex index, BitmapFactory bitmapFactory)
+  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndexRowSelector index, BitmapFactory bitmapFactory)
   {
     this.dataInterval = dataInterval;
     this.index = index;
+    this.bitmapFactory = bitmapFactory;
 
     final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
     accessors = dimensions
@@ -73,7 +76,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
    * a null value.
    */
   private void processRows(
-      IncrementalIndex index,
+      IncrementalIndexRowSelector index,
       BitmapFactory bitmapFactory,
       List<IncrementalIndex.DimensionDesc> dimensions
   )
@@ -112,13 +115,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public int getNumRows()
   {
-    return index.size();
+    return index.numRows();
   }
 
   @Override
-  public List<String> getDimensionNames()
+  public List<String> getDimensionNames(final boolean includeTime)
   {
-    return index.getDimensionNames();
+    return index.getDimensionNames(includeTime);
   }
 
   @Override
@@ -151,17 +154,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
-    if (indexer instanceof NestedDataColumnIndexerV4) {
-      NestedDataColumnIndexerV4 nestedDataColumnIndexer = (NestedDataColumnIndexerV4) indexer;
-
-      return new NestedColumnMergable(
-          nestedDataColumnIndexer.getSortedValueLookups(),
-          nestedDataColumnIndexer.getFieldTypeInfo(),
-          true,
-          false,
-          null
-      );
-    }
 
     if (indexer instanceof AutoTypeColumnIndexer) {
       AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
@@ -180,6 +172,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public TransformableRowIterator getRows()
   {
     return new IncrementalIndexRowIterator(index);
+  }
+
+  @Override
+  public IndexableAdapter getProjectionAdapter(String projection)
+  {
+    if (index instanceof IncrementalIndex) {
+      IncrementalIndexRowSelector projectionSelector = ((IncrementalIndex) index).getProjection(projection);
+      return new IncrementalIndexAdapter(dataInterval, projectionSelector, bitmapFactory);
+    }
+    throw DruidException.defensive("projection inception");
   }
 
   @Override
@@ -225,7 +227,17 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Metadata getMetadata()
   {
-    return index.getMetadata();
+    if (index instanceof IncrementalIndex) {
+      IncrementalIndex incrementalIndex = (IncrementalIndex) index;
+      return incrementalIndex.getMetadata()
+                             .withDimensionOrder(
+                                 incrementalIndex.getDimensionOrder()
+                                                 .stream()
+                                                 .map(OrderBy::ascending)
+                                                 .collect(Collectors.toList())
+                             );
+    }
+    throw DruidException.defensive("cannot get metadata of projection");
   }
 
   static class MutableBitmapValues implements BitmapValues

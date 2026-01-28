@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.io.File;
 import java.util.Collections;
@@ -34,6 +35,9 @@ import java.util.stream.Collectors;
  */
 public class SegmentLoaderConfig
 {
+  @JacksonInject
+  private final RuntimeInfo runtimeInfo = new RuntimeInfo();
+
   @JsonProperty
   private List<StorageLocationConfig> locations = Collections.emptyList();
 
@@ -50,7 +54,7 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 6);
+  private int numLoadingThreads = Math.max(1, runtimeInfo.getAvailableProcessors() / 6);
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
@@ -66,6 +70,20 @@ public class SegmentLoaderConfig
 
   @JsonProperty
   private int statusQueueMaxSize = 100;
+
+  @JsonProperty("virtualStorage")
+  private boolean virtualStorage = false;
+
+  @JsonProperty("virtualStorageLoadThreads")
+  private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
+
+  /**
+   * When enabled, weakly-held cache entries are evicted immediately upon release of all holds, rather than
+   * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
+   * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
+   */
+  @JsonProperty("virtualStorageIsEphemeral")
+  private boolean virtualStorageIsEphemeral = false;
 
   private long combinedMaxSize = 0;
 
@@ -134,13 +152,38 @@ public class SegmentLoaderConfig
     return combinedMaxSize;
   }
 
-  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  public boolean isVirtualStorage()
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
-    return retVal;
+    return virtualStorage;
+  }
+
+  public int getVirtualStorageLoadThreads()
+  {
+    return virtualStorageLoadThreads;
+  }
+
+  public boolean isVirtualStorageEphemeral()
+  {
+    return virtualStorageIsEphemeral;
+  }
+
+  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
+  {
+    this.locations = Lists.newArrayList(locations);
+    return this;
+  }
+
+  /**
+   * Sets {@link #virtualStorage} and {@link #virtualStorageIsEphemeral}.
+   */
+  public SegmentLoaderConfig setVirtualStorage(
+      boolean virtualStorage,
+      boolean virtualStorageFabricEphemeral
+  )
+  {
+    this.virtualStorage = virtualStorage;
+    this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
+    return this;
   }
 
   /**
@@ -163,9 +206,20 @@ public class SegmentLoaderConfig
   {
     return "SegmentLoaderConfig{" +
            "locations=" + locations +
+           ", lazyLoadOnStart=" + lazyLoadOnStart +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
+           ", announceIntervalMillis=" + announceIntervalMillis +
+           ", numLoadingThreads=" + numLoadingThreads +
+           ", numBootstrapThreads=" + numBootstrapThreads +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnDownload=" + numThreadsToLoadSegmentsIntoPageCacheOnDownload +
+           ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
+           ", statusQueueMaxSize=" + statusQueueMaxSize +
+           ", virtualStorage=" + virtualStorage +
+           ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
+           ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
 }

@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -149,8 +148,6 @@ public class BoundFilter implements Filter
       BitmapColumnIndex rangeIndex
   )
   {
-
-
     final BitmapColumnIndex nullBitmap;
     final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
     if (nulls == null) {
@@ -164,6 +161,12 @@ public class BoundFilter implements Filter
       public ColumnIndexCapabilities getIndexCapabilities()
       {
         return rangeIndex.getIndexCapabilities().merge(nullBitmap.getIndexCapabilities());
+      }
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        return rangeIndex.estimatedComputeCost() + 1;
       }
 
       @Override
@@ -266,10 +269,10 @@ public class BoundFilter implements Filter
   {
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
-              || (NullHandling.isNullOrEquivalent(boundDimFilter.getLower()) && !boundDimFilter.isLowerStrict()))
+              || (boundDimFilter.getLower() == null && !boundDimFilter.isLowerStrict()))
              // lower bound allows null
              && (!boundDimFilter.hasUpperBound()
-                 || !NullHandling.isNullOrEquivalent(boundDimFilter.getUpper())
+                 || boundDimFilter.getUpper() != null
                  || !boundDimFilter.isUpperStrict()); // upper bound allows null
     }
     int lowerComparing = 1;

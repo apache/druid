@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -58,9 +57,9 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
-  public void write(@Nullable String objectToWrite) throws IOException
+  public int write(@Nullable String objectToWrite) throws IOException
   {
-    delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
+    return delegate.write(StringUtils.toUtf8Nullable(objectToWrite));
   }
 
   @Nullable
@@ -87,10 +86,10 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
     channel.write(ByteBuffer.wrap(new byte[]{encodingStrategy.getId()}));
-    delegate.writeTo(channel, smoosher);
+    delegate.writeTo(channel, fileBuilder);
   }
 }

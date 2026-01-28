@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,6 +37,8 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -60,9 +61,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-/**
- *
- */
 public class HttpLoadQueuePeonTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
@@ -75,26 +73,25 @@ public class HttpLoadQueuePeonTest
 
   private TestHttpClient httpClient;
   private HttpLoadQueuePeon httpLoadQueuePeon;
-  private BlockingExecutorService processingExecutor;
-  private BlockingExecutorService callbackExecutor;
-
-  private final List<DataSegment> processedSegments = new ArrayList<>();
+  private SegmentLoadingCapabilities segmentLoadingCapabilities;
 
   @Before
   public void setUp()
   {
+    segmentLoadingCapabilities = new SegmentLoadingCapabilities(1, 3);
     httpClient = new TestHttpClient();
-    processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
-    callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
-    processedSegments.clear();
-
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
         MAPPER,
         httpClient,
         new HttpLoadQueuePeonConfig(null, null, 10),
-        new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", processingExecutor, true),
-        callbackExecutor
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService(
+            "HttpLoadQueuePeonTest-%s",
+            httpClient.processingExecutor,
+            true
+        ),
+        httpClient.callbackExecutor
     );
     httpLoadQueuePeon.start();
   }
@@ -117,13 +114,12 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon
         .loadSegment(segments.get(3), SegmentAction.MOVE_TO, markSegmentProcessed(segments.get(3)));
 
-    // Send requests to server
-    processingExecutor.finishAllPendingTasks();
+    httpClient.sendRequestToServerAndHandleResponse();
     Assert.assertEquals(segments, httpClient.segmentsSentToServer);
 
     // Verify that all callbacks are executed
-    callbackExecutor.finishAllPendingTasks();
-    Assert.assertEquals(segments, processedSegments);
+    httpClient.executeCallbacks();
+    Assert.assertEquals(segments, httpClient.processedSegments);
   }
 
   @Test
@@ -170,8 +166,7 @@ public class HttpLoadQueuePeonTest
     Collections.shuffle(actions);
     actions.forEach(QueueAction::invoke);
 
-    // Send one batch of requests to the server
-    processingExecutor.finishAllPendingTasks();
+    httpClient.sendRequestToServerAndHandleResponse();
 
     // Verify that all segments are sent to the server in the expected order
     Assert.assertEquals(segmentsDay1, httpClient.segmentsSentToServer);
@@ -194,7 +189,7 @@ public class HttpLoadQueuePeonTest
     Collections.shuffle(segmentsDay2);
 
     // Assign segments to the actions in their order of priority
-    // Priority order: action (drop, priorityLoad, etc), then interval (new then old)
+    // Order: action (drop, priorityLoad, etc.), then interval (new then old)
     List<QueueAction> actions = Arrays.asList(
         QueueAction.of(segmentsDay2.get(0), s -> httpLoadQueuePeon.dropSegment(s, null)),
         QueueAction.of(segmentsDay1.get(0), s -> httpLoadQueuePeon.dropSegment(s, null)),
@@ -212,8 +207,7 @@ public class HttpLoadQueuePeonTest
     Collections.shuffle(actions);
     actions.forEach(QueueAction::invoke);
 
-    // Send one batch of requests to the server
-    processingExecutor.finishNextPendingTask();
+    httpClient.sendRequestToServerAndHandleResponse();
 
     // Verify that all segments are sent to the server in the expected order
     Assert.assertEquals(expectedSegmentOrder, httpClient.segmentsSentToServer);
@@ -230,7 +224,7 @@ public class HttpLoadQueuePeonTest
     Assert.assertTrue(cancelled);
     Assert.assertEquals(0, httpLoadQueuePeon.getSegmentsToLoad().size());
 
-    Assert.assertTrue(processedSegments.isEmpty());
+    Assert.assertTrue(httpClient.processedSegments.isEmpty());
   }
 
   @Test
@@ -244,7 +238,7 @@ public class HttpLoadQueuePeonTest
     Assert.assertTrue(cancelled);
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToDrop().isEmpty());
 
-    Assert.assertTrue(processedSegments.isEmpty());
+    Assert.assertTrue(httpClient.processedSegments.isEmpty());
   }
 
   @Test
@@ -254,8 +248,7 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
 
-    // Send the request to the server
-    processingExecutor.finishNextPendingTask();
+    httpClient.sendRequestToServer();
     Assert.assertTrue(httpClient.segmentsSentToServer.contains(segment));
 
     // Segment is still in queue but operation cannot be cancelled
@@ -263,8 +256,7 @@ public class HttpLoadQueuePeonTest
     boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
     Assert.assertFalse(cancelled);
 
-    // Handle response from server
-    processingExecutor.finishNextPendingTask();
+    httpClient.handleResponseFromServer();
 
     // Segment has been removed from queue
     Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().isEmpty());
@@ -272,8 +264,8 @@ public class HttpLoadQueuePeonTest
     Assert.assertFalse(cancelled);
 
     // Execute callbacks and verify segment is fully processed
-    callbackExecutor.finishAllPendingTasks();
-    Assert.assertTrue(processedSegments.contains(segment));
+    httpClient.executeCallbacks();
+    Assert.assertTrue(httpClient.processedSegments.contains(segment));
   }
 
   @Test
@@ -287,14 +279,83 @@ public class HttpLoadQueuePeonTest
     Assert.assertFalse(httpLoadQueuePeon.cancelOperation(segment));
   }
 
-  private LoadPeonCallback markSegmentProcessed(DataSegment segment)
+  @Test
+  public void testLoadRateIsZeroWhenNoLoadHasFinishedYet()
   {
-    return success -> processedSegments.add(segment);
+    httpLoadQueuePeon.loadSegment(segments.get(0), SegmentAction.LOAD, null);
+    httpClient.sendRequestToServer();
+    Assert.assertEquals(1, httpLoadQueuePeon.getSegmentsToLoad().size());
+    Assert.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
   }
 
-  private static class TestHttpClient implements HttpClient, DataSegmentChangeHandler
+  @Test
+  public void testLoadRateIsUnchangedByDrops() throws InterruptedException
   {
-    private final List<DataSegment> segmentsSentToServer = new ArrayList<>();
+    // Drop a segment after a small delay
+    final long millisTakenToDropSegment = 10;
+    httpLoadQueuePeon.dropSegment(segments.get(0), null);
+    httpClient.sendRequestToServer();
+    Thread.sleep(millisTakenToDropSegment);
+    httpClient.handleResponseFromServer();
+
+    // Verify that load rate is still zero
+    Assert.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
+  }
+
+  @Test
+  public void testLoadRateIsChangedWhenLoadSucceeds() throws InterruptedException
+  {
+    // Load a segment after a small delay
+    final long millisTakenToLoadSegment = 10;
+    httpLoadQueuePeon.loadSegment(segments.get(0), SegmentAction.LOAD, null);
+    httpClient.sendRequestToServer();
+    Thread.sleep(millisTakenToLoadSegment);
+    httpClient.handleResponseFromServer();
+
+    // Verify that load rate has been updated
+    long expectedRateKbps = (8 * segments.get(0).getSize()) / millisTakenToLoadSegment;
+    long observedRateKbps = httpLoadQueuePeon.getLoadRateKbps();
+    Assert.assertTrue(
+        observedRateKbps > expectedRateKbps / 2
+        && observedRateKbps <= expectedRateKbps
+    );
+  }
+
+  @Test
+  public void testBatchSize()
+  {
+    Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+
+    // Without a batch size runtime parameter
+    httpLoadQueuePeon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        httpClient,
+        new HttpLoadQueuePeonConfig(null, null, null),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService(
+            "HttpLoadQueuePeonTest-%s",
+            httpClient.processingExecutor,
+            true
+        ),
+        httpClient.callbackExecutor
+    );
+
+    Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
+  }
+
+  private LoadPeonCallback markSegmentProcessed(DataSegment segment)
+  {
+    return success -> httpClient.processedSegments.add(segment);
+  }
+
+  private class TestHttpClient implements HttpClient, DataSegmentChangeHandler
+  {
+    final BlockingExecutorService processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
+    final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
+    final List<DataSegment> processedSegments = new ArrayList<>();
+    final List<DataSegment> segmentsSentToServer = new ArrayList<>();
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
@@ -306,6 +367,7 @@ public class HttpLoadQueuePeonTest
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <Intermediate, Final> ListenableFuture<Final> go(
         Request request,
         HttpResponseHandler<Intermediate, Final> httpResponseHandler,
@@ -315,24 +377,33 @@ public class HttpLoadQueuePeonTest
       HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
+
       try {
+        if (request.getUrl().toString().contains("/loadCapabilities")) {
+          return (ListenableFuture<Final>) Futures.immediateFuture(
+              new ByteArrayInputStream(
+                  MAPPER.writerFor(SegmentLoadingCapabilities.class)
+                        .writeValueAsBytes(segmentLoadingCapabilities)
+              )
+          );
+        }
+
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
-            request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
-            {
-            }
+            request.getContent().array(),
+            HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
           cr.go(this, null);
           statuses.add(
-              new DataSegmentChangeResponse(cr, SegmentChangeStatus.SUCCESS)
+              new DataSegmentChangeResponse(cr, SegmentChangeStatus.success())
           );
         }
         return (ListenableFuture<Final>) Futures.immediateFuture(
             new ByteArrayInputStream(
                 MAPPER
-                    .writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                    .writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                     .writeValueAsBytes(statuses)
             )
         );
@@ -352,6 +423,27 @@ public class HttpLoadQueuePeonTest
     public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
     {
       segmentsSentToServer.add(segment);
+    }
+
+    void sendRequestToServerAndHandleResponse()
+    {
+      sendRequestToServer();
+      handleResponseFromServer();
+    }
+
+    void sendRequestToServer()
+    {
+      processingExecutor.finishNextPendingTask();
+    }
+
+    void handleResponseFromServer()
+    {
+      processingExecutor.finishAllPendingTasks();
+    }
+
+    void executeCallbacks()
+    {
+      callbackExecutor.finishAllPendingTasks();
     }
   }
 

@@ -20,16 +20,17 @@
 package org.apache.druid.timeline;
 
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Set;
 
 public class SegmentTimelineTest
 {
-
   @Test
   public void testIsOvershadowed()
   {
@@ -64,18 +65,35 @@ public class SegmentTimelineTest
     );
   }
 
+  @Test
+  public void testAddRemoveSegment()
+  {
+    final DataSegment segment = createSegment("2022-01-01/P1D", "v1", 0, 1);
+
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(Set.of());
+    timeline.add(segment);
+    Assert.assertEquals(1, timeline.getNumObjects());
+
+    timeline.remove(segment);
+    Assert.assertEquals(0, timeline.getNumObjects());
+    Assert.assertTrue(timeline.isEmpty());
+  }
+
   private DataSegment createSegment(String interval, String version, int partitionNum, int totalNumPartitions)
   {
-    return new DataSegment(
-        "wiki",
-        Intervals.of(interval),
-        version,
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        new NumberedShardSpec(partitionNum, totalNumPartitions),
-        0x9,
-        1L
-    );
+    return DataSegment.builder(SegmentId.of(
+                          TestDataSource.WIKI,
+                          Intervals.of(interval),
+                          version,
+                          new NumberedShardSpec(partitionNum, totalNumPartitions)
+                      ))
+                      .loadSpec(Collections.emptyMap())
+                      .dimensions(Collections.emptyList())
+                      .metrics(Collections.emptyList())
+                      .shardSpec(new NumberedShardSpec(partitionNum, totalNumPartitions))
+                      .binaryVersion(0x9)
+                      .size(1L)
+                      .totalRows(1)
+                      .build();
   }
 }

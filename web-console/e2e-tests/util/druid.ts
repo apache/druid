@@ -34,7 +34,7 @@ export const DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR = path.join(
   'tutorial',
 );
 
-export function runIndexTask(ingestionSpecPath: string, sedCommands: Array<string>) {
+export function runIndexTask(ingestionSpecPath: string, sedCommands: string[]) {
   const postIndexTask = path.join(DRUID_DIR, 'examples', 'bin', 'post-index-task');
   const sedCommandsString = sedCommands.map(sedCommand => `-e '${sedCommand}'`).join(' ');
   execSync(

@@ -30,7 +30,8 @@ sidebar_label: "Granularities"
  [SQL documentation](sql-scalar.md#date-and-time-functions).
 :::
 
-Granularity determines how to bucket data across the time dimension, or how to aggregate data by hour, day, minute, etc.
+Granularity determines how to bucket data across the time dimension, or how to aggregate data by hour, day, minute, etc and defines how it is stored.
+The granularity formats here apply also to `segmentGranularity` and `queryGranularity` in the `granularitySpec` section of the the [ingestion spec](../ingestion/ingestion-spec.md#granularityspec).
 
 For example, use time granularities in [native queries](querying.md) to bucket results by time, and in the `dataSchema` \\ [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec) section of ingestion specifications to segment incoming data.
 

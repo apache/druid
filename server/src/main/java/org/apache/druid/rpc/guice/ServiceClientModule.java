@@ -22,6 +22,9 @@ package org.apache.druid.rpc.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import org.apache.druid.client.broker.Broker;
+import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.broker.BrokerClientImpl;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
@@ -36,6 +39,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.DiscoveryServiceLocator;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceClientFactoryImpl;
 import org.apache.druid.rpc.ServiceLocator;
@@ -47,8 +51,8 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class ServiceClientModule implements DruidModule
 {
-  private static final int CONNECT_EXEC_THREADS = 4;
   private static final int CLIENT_MAX_ATTEMPTS = 6;
+  private static final int CONNECT_EXEC_THREADS = 4;
 
   @Override
   public void configure(Binder binder)
@@ -59,11 +63,9 @@ public class ServiceClientModule implements DruidModule
   @Provides
   @LazySingleton
   @EscalatedGlobal
-  public ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
-    final ScheduledExecutorService connectExec =
-        ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");
-    return new ServiceClientFactoryImpl(httpClient, connectExec);
+    return makeServiceClientFactory(httpClient);
   }
 
   @Provides
@@ -75,21 +77,27 @@ public class ServiceClientModule implements DruidModule
   }
 
   @Provides
-  @LazySingleton
-  public OverlordClient makeOverlordClient(
-      @Json final ObjectMapper jsonMapper,
+  @IndexingService
+  public ServiceClient makeServiceClientForOverlord(
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @IndexingService final ServiceLocator serviceLocator
   )
   {
-    return new OverlordClientImpl(
-        clientFactory.makeClient(
-            NodeRole.OVERLORD.getJsonName(),
-            serviceLocator,
-            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
-        ),
-        jsonMapper
+    return clientFactory.makeClient(
+        NodeRole.OVERLORD.getJsonName(),
+        serviceLocator,
+        StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
     );
+  }
+
+  @Provides
+  @LazySingleton
+  public OverlordClient makeOverlordClient(
+      @Json final ObjectMapper jsonMapper,
+      @IndexingService final ServiceClient serviceClient
+  )
+  {
+    return new OverlordClientImpl(serviceClient, jsonMapper);
   }
 
   @Provides
@@ -101,20 +109,65 @@ public class ServiceClientModule implements DruidModule
   }
 
   @Provides
-  @LazySingleton
-  public CoordinatorClient makeCoordinatorClient(
-      @Json final ObjectMapper jsonMapper,
+  @Coordinator
+  public ServiceClient makeServiceClientForCoordinator(
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @Coordinator final ServiceLocator serviceLocator
   )
   {
-    return new CoordinatorClientImpl(
-        clientFactory.makeClient(
-            NodeRole.COORDINATOR.getJsonName(),
-            serviceLocator,
-            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
-        ),
-        jsonMapper
+    return clientFactory.makeClient(
+        NodeRole.COORDINATOR.getJsonName(),
+        serviceLocator,
+        StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
     );
+  }
+
+  @Provides
+  @LazySingleton
+  public CoordinatorClient makeCoordinatorClient(
+      @Json final ObjectMapper jsonMapper,
+      @Coordinator final ServiceClient serviceClient
+  )
+  {
+    return new CoordinatorClientImpl(serviceClient, jsonMapper);
+  }
+
+  @Provides
+  @ManageLifecycle
+  @Broker
+  public ServiceLocator makeBrokerServiceLocator(final DruidNodeDiscoveryProvider discoveryProvider)
+  {
+    return new DiscoveryServiceLocator(discoveryProvider, NodeRole.BROKER);
+  }
+
+  @Provides
+  @Broker
+  public ServiceClient makeServiceClientForBroker(
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @Broker final ServiceLocator serviceLocator
+  )
+  {
+    return clientFactory.makeClient(
+        NodeRole.BROKER.getJsonName(),
+        serviceLocator,
+        StandardRetryPolicy.builder().maxAttempts(ServiceClientModule.CLIENT_MAX_ATTEMPTS).build()
+    );
+  }
+
+  @Provides
+  @LazySingleton
+  public BrokerClient makeBrokerClient(
+      @Json final ObjectMapper jsonMapper,
+      @Broker final ServiceClient serviceClient
+  )
+  {
+    return new BrokerClientImpl(serviceClient, jsonMapper);
+  }
+
+  public static ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  {
+    final ScheduledExecutorService connectExec =
+        ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");
+    return new ServiceClientFactoryImpl(httpClient, connectExec);
   }
 }

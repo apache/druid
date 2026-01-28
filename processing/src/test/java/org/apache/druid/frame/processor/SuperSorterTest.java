@@ -21,19 +21,15 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.ByteTracker;
-import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.channel.WritableFrameFileChannel;
-import org.apache.druid.frame.file.FrameFile;
-import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -42,24 +38,31 @@ import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
+import org.apache.druid.frame.processor.test.AlwaysAsyncPartitionedReadableFrameChannel;
+import org.apache.druid.frame.processor.test.AlwaysAsyncReadableFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -69,12 +72,13 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -83,7 +87,7 @@ public class SuperSorterTest
   private static final Logger log = new Logger(SuperSorterTest.class);
 
   /**
-   * Non-parameterized test cases that
+   * Non-parameterized test cases for specific scenarios.
    */
   public static class NonParameterizedCasesTest extends InitializedNullHandlingTest
   {
@@ -125,16 +129,91 @@ public class SuperSorterTest
           Collections.emptyList(),
           outputPartitionsFuture,
           exec,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          FrameProcessorDecorator.NONE,
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          FrameType.latestRowBased(),
+          2,
+          2,
+          SuperSorter.UNLIMITED,
+          null,
+          superSorterProgressTracker,
+          false
+      );
+
+      superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
+      final OutputChannels channels = superSorter.run().get();
+      Assert.assertEquals(1, channels.getAllChannels().size());
+
+      final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
+      Assert.assertTrue(channel.isFinished());
+      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      channel.close();
+    }
+
+    @Test
+    public void testSingleEmptyInputChannel_immediately_fileStorage() throws Exception
+    {
+      final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
+      inputChannel.writable().close();
+
+      final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
+
+      final File tempFolder = temporaryFolder.newFolder();
+      final SuperSorter superSorter = new SuperSorter(
+          Collections.singletonList(inputChannel.readable()),
+          FrameReader.create(RowSignature.empty()),
+          Collections.emptyList(),
+          Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
+          exec,
+          FrameProcessorDecorator.NONE,
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          FrameType.latestRowBased(),
           2,
           2,
           -1,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
-      superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
+      final OutputChannels channels = superSorter.run().get();
+      Assert.assertEquals(1, channels.getAllChannels().size());
+
+      final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
+      Assert.assertTrue(channel.isFinished());
+      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      channel.close();
+    }
+
+    @Test
+    public void testLimitHint() throws Exception
+    {
+      final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
+      inputChannel.writable().close();
+
+      final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
+
+      final File tempFolder = temporaryFolder.newFolder();
+      final SuperSorter superSorter = new SuperSorter(
+          Collections.singletonList(inputChannel.readable()),
+          FrameReader.create(RowSignature.empty()),
+          Collections.emptyList(),
+          Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
+          exec,
+          FrameProcessorDecorator.NONE,
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          FrameType.latestRowBased(),
+          2,
+          2,
+          3,
+          null,
+          superSorterProgressTracker,
+          false
+      );
+
       final OutputChannels channels = superSorter.run().get();
       Assert.assertEquals(1, channels.getAllChannels().size());
 
@@ -152,9 +231,19 @@ public class SuperSorterTest
   @RunWith(Parameterized.class)
   public static class ParameterizedCasesTest extends InitializedNullHandlingTest
   {
+    private static CursorFactory CURSOR_FACTORY;
+    private static RowSignature CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER;
+
+    /**
+     * Static cache of sorted versions of the {@link #CURSOR_FACTORY} dataset, to speed up tests.
+     * Cleared in {@link #tearDownClass()}.
+     */
+    private static final Map<ClusterBy, List<List<Object>>> SORTED_TEST_ROWS = new HashMap<>();
+
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+    private final FrameType outputFrameType;
     private final int maxRowsPerFrame;
     private final int maxBytesPerFrame;
     private final int numChannels;
@@ -162,23 +251,28 @@ public class SuperSorterTest
     private final int maxChannelsPerProcessor;
     private final int numThreads;
     private final boolean isComposedStorage;
+    private final boolean partitionsDeferred;
+    private final long limitHint;
 
-    private StorageAdapter adapter;
     private RowSignature signature;
     private FrameProcessorExecutor exec;
     private List<ReadableFrameChannel> inputChannels;
     private FrameReader frameReader;
 
     public ParameterizedCasesTest(
+        FrameType outputFrameType,
         int maxRowsPerFrame,
         int maxBytesPerFrame,
         int numChannels,
         int maxActiveProcessors,
         int maxChannelsPerProcessor,
         int numThreads,
-        boolean isComposedStorage
+        boolean isComposedStorage,
+        boolean partitionsDeferred,
+        long limitHint
     )
     {
+      this.outputFrameType = outputFrameType;
       this.maxRowsPerFrame = maxRowsPerFrame;
       this.maxBytesPerFrame = maxBytesPerFrame;
       this.numChannels = numChannels;
@@ -186,40 +280,56 @@ public class SuperSorterTest
       this.maxChannelsPerProcessor = maxChannelsPerProcessor;
       this.numThreads = numThreads;
       this.isComposedStorage = isComposedStorage;
+      this.partitionsDeferred = partitionsDeferred;
+      this.limitHint = limitHint;
     }
 
     @Parameterized.Parameters(
-        name = "maxRowsPerFrame = {0}, "
-               + "maxBytesPerFrame = {1}, "
-               + "numChannels = {2}, "
-               + "maxActiveProcessors = {3}, "
-               + "maxChannelsPerProcessor = {4}, "
-               + "numThreads = {5}, "
-               + "isComposedStorage = {6}"
+        name = "outputFrameType = {0}, "
+               + "maxRowsPerFrame = {1}, "
+               + "maxBytesPerFrame = {2}, "
+               + "numChannels = {3}, "
+               + "maxActiveProcessors = {4}, "
+               + "maxChannelsPerProcessor= {5}, "
+               + "numThreads = {6}, "
+               + "isComposedStorage = {7}, "
+               + "partitionsDeferred = {8}, "
+               + "limitHint = {9}"
     )
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
 
-      for (int maxRowsPerFrame : new int[]{Integer.MAX_VALUE, 50, 1}) {
-        for (int maxBytesPerFrame : new int[]{20000, 200000}) {
-          for (int numChannels : new int[]{1, 3}) {
-            for (int maxActiveProcessors : new int[]{1, 2, 4}) {
-              for (int maxChannelsPerProcessor : new int[]{2, 3, 8}) {
-                for (int numThreads : new int[]{1, 3}) {
-                  for (boolean isComposedStorage : new boolean[]{true, false}) {
-                    if (maxActiveProcessors >= maxChannelsPerProcessor) {
-                      constructors.add(
-                          new Object[]{
-                              maxRowsPerFrame,
-                              maxBytesPerFrame,
-                              numChannels,
-                              maxActiveProcessors,
-                              maxChannelsPerProcessor,
-                              numThreads,
-                              isComposedStorage
-                          }
-                      );
+      final FrameType[] rowBasedFrameTypes =
+          Arrays.stream(FrameType.values()).filter(FrameType::isRowBased).toArray(FrameType[]::new);
+
+      // Add some constructors for testing maxRowsPerFrame > 1. Later on, we'll add some for maxRowsPerFrame = 1.
+      for (FrameType outputFrameType : rowBasedFrameTypes) {
+        for (int maxRowsPerFrame : new int[]{Integer.MAX_VALUE, 50}) {
+          for (int maxBytesPerFrame : new int[]{20_000, 2_000_000}) {
+            for (int numChannels : new int[]{1, 3}) {
+              for (int maxActiveProcessors : new int[]{1, 3}) {
+                for (int maxChannelsPerProcessor : new int[]{2, 7}) {
+                  for (int numThreads : new int[]{1, 3}) {
+                    for (boolean isComposedStorage : new boolean[]{true, false}) {
+                      for (boolean partitionsDeferred : new boolean[]{true, false}) {
+                        for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
+                          constructors.add(
+                              new Object[]{
+                                  outputFrameType,
+                                  maxRowsPerFrame,
+                                  maxBytesPerFrame,
+                                  numChannels,
+                                  maxActiveProcessors,
+                                  maxChannelsPerProcessor,
+                                  numThreads,
+                                  isComposedStorage,
+                                  partitionsDeferred,
+                                  limitHint
+                              }
+                          );
+                        }
+                      }
                     }
                   }
                 }
@@ -229,7 +339,44 @@ public class SuperSorterTest
         }
       }
 
+      // Add some constructors for testing maxRowsPerFrame = 1. This isn't part of the full matrix since it's quite
+      // slow, but we still want to exercise it a bit.
+      for (boolean isComposedStorage : new boolean[]{true, false}) {
+        for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
+          constructors.add(
+              new Object[]{
+                  FrameType.latestRowBased(),
+                  1 /* maxRowsPerFrame */,
+                  20_000 /* maxBytesPerFrame */,
+                  3 /* numChannels */,
+                  2 /* maxActiveProcessors */,
+                  3 /* maxChannelsPerProcessor */,
+                  1 /* numThreads */,
+                  isComposedStorage,
+                  false /* partitionsDeferred */,
+                  limitHint
+              }
+          );
+        }
+      }
+
       return constructors;
+    }
+
+    @BeforeClass
+    public static void setUpClass()
+    {
+      CURSOR_FACTORY = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
+      CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER =
+          FrameSequenceBuilder.signatureWithRowNumber(CURSOR_FACTORY.getRowSignature());
+    }
+
+    @AfterClass
+    public static void tearDownClass()
+    {
+      CURSOR_FACTORY = null;
+      CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER = null;
+      SORTED_TEST_ROWS.clear();
     }
 
     @Before
@@ -238,7 +385,6 @@ public class SuperSorterTest
       exec = new FrameProcessorExecutor(
           MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, getClass().getSimpleName() + "[%d]"))
       );
-      adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
     }
 
     @After
@@ -264,19 +410,19 @@ public class SuperSorterTest
       }
 
       final FrameSequenceBuilder frameSequenceBuilder =
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(CURSOR_FACTORY)
                               .maxRowsPerFrame(maxRowsPerFrame)
                               .sortBy(clusterBy.getColumns())
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(maxBytesPerFrame)))
-                              .frameType(FrameType.ROW_BASED)
+                              .frameType(FrameType.latestRowBased())
                               .populateRowNumber();
 
-      inputChannels = makeFileChannels(frameSequenceBuilder.frames(), temporaryFolder.newFolder(), numChannels);
-      signature = frameSequenceBuilder.signature();
+      inputChannels = makeRoundRobinChannels(frameSequenceBuilder.frames(), numChannels);
+      signature = FrameWriters.sortableSignature(CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER, clusterBy.getColumns());
       frameReader = FrameReader.create(signature);
     }
 
-    private OutputChannels verifySuperSorter(
+    private void verifySuperSorter(
         final ClusterBy clusterBy,
         final ClusterByPartitions clusterByPartitions
     ) throws Exception
@@ -284,15 +430,19 @@ public class SuperSorterTest
       final File tempFolder = temporaryFolder.newFolder();
       final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
           ImmutableList.of(
-              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null),
-              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null)
+              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY)
           ),
           maxBytesPerFrame
-      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
-      final RowKeyReader keyReader = clusterBy.keyReader(signature);
+      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY);
+      final RowKeyReader keyReader = clusterBy.keyReader(signature, outputFrameType);
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
+
+      if (!partitionsDeferred) {
+        clusterByPartitionsFuture.set(clusterByPartitions);
+      }
 
       final SuperSorter superSorter = new SuperSorter(
           inputChannels,
@@ -300,25 +450,31 @@ public class SuperSorterTest
           clusterBy.getColumns(),
           clusterByPartitionsFuture,
           exec,
-          new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null),
-          outputChannelFactory,
+          FrameProcessorDecorator.NONE,
+          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null, FrameTestUtil.WT_CONTEXT_LEGACY)),
+          makeOutputChannelFactory(outputChannelFactory),
+          outputFrameType,
           maxActiveProcessors,
           maxChannelsPerProcessor,
-          -1,
+          limitHint,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
-      superSorter.setNoWorkRunnable(() -> clusterByPartitionsFuture.set(clusterByPartitions));
+      if (partitionsDeferred) {
+        superSorter.setNoWorkRunnable(() -> clusterByPartitionsFuture.set(clusterByPartitions));
+      }
+
       final OutputChannels outputChannels = superSorter.run().get();
       Assert.assertEquals(clusterByPartitions.size(), outputChannels.getAllChannels().size());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assert.assertEquals(Double.valueOf(1.0), superSorterProgressTracker.snapshot().getProgressDigest());
 
-      final int[] clusterByPartColumns = clusterBy.getColumns().stream().mapToInt(
+      final int[] clusterByColumns = clusterBy.getColumns().stream().mapToInt(
           part -> signature.indexOf(part.columnName())
       ).toArray();
 
-      final List<Sequence<List<Object>>> outputSequences = new ArrayList<>();
+      final List<List<Object>> readRows = new ArrayList<>();
       for (int partitionNumber : outputChannels.getPartitionNumbers()) {
         final ClusterByPartition partition = clusterByPartitions.get(partitionNumber);
         final ReadableFrameChannel outputChannel =
@@ -326,67 +482,55 @@ public class SuperSorterTest
 
         // Validate that everything in this channel is in the correct key range.
         FrameTestUtil.readRowsFromFrameChannel(
-            duplicateOutputChannel(outputChannel),
+            outputChannel,
             frameReader
         ).forEach(
             row -> {
-              final Object[] array = new Object[clusterByPartColumns.length];
+              final Object[] array = new Object[clusterByColumns.length];
 
               for (int i = 0; i < array.length; i++) {
-                array[i] = row.get(clusterByPartColumns[i]);
+                array[i] = row.get(clusterByColumns[i]);
               }
 
               final RowKey key = createKey(clusterBy, array);
 
-              Assert.assertTrue(
-                  StringUtils.format(
-                      "Key %s >= partition %,d start %s",
-                      keyReader.read(key),
-                      partitionNumber,
-                      partition.getStart() == null ? null : keyReader.read(partition.getStart())
-                  ),
-                  partition.getStart() == null || keyComparator.compare(key, partition.getStart()) >= 0
-              );
+              if (!(partition.getStart() == null || keyComparator.compare(key, partition.getStart()) >= 0)) {
+                // Defer formatting of error message until it's actually needed
+                Assert.fail(
+                    StringUtils.format(
+                        "Key %s >= partition %,d start %s",
+                        keyReader.read(key),
+                        partitionNumber,
+                        partition.getStart() == null ? null : keyReader.read(partition.getStart())
+                    )
+                );
+              }
 
-              Assert.assertTrue(
-                  StringUtils.format(
-                      "Key %s < partition %,d end %s",
-                      keyReader.read(key),
-                      partitionNumber,
-                      partition.getEnd() == null ? null : keyReader.read(partition.getEnd())
-                  ),
-                  partition.getEnd() == null || keyComparator.compare(key, partition.getEnd()) < 0
-              );
+              if (!(partition.getEnd() == null || keyComparator.compare(key, partition.getEnd()) < 0)) {
+                Assert.fail(
+                    StringUtils.format(
+                        "Key %s < partition %,d end %s",
+                        keyReader.read(key),
+                        partitionNumber,
+                        partition.getEnd() == null ? null : keyReader.read(partition.getEnd())
+                    )
+                );
+              }
+
+              readRows.add(row);
             }
-        );
-
-        outputSequences.add(
-            FrameTestUtil.readRowsFromFrameChannel(
-                duplicateOutputChannel(outputChannel),
-                frameReader
-            )
         );
       }
 
-      final Sequence<List<Object>> expectedRows = Sequences.sort(
-          FrameTestUtil.readRowsFromAdapter(adapter, signature, true),
-          Comparator.comparing(
-              row -> {
-                final Object[] array = new Object[clusterByPartColumns.length];
+      if (limitHint != SuperSorter.UNLIMITED) {
+        MatcherAssert.assertThat(readRows.size(), Matchers.greaterThanOrEqualTo(Ints.checkedCast(limitHint)));
+      }
 
-                for (int i = 0; i < array.length; i++) {
-                  array[i] = row.get(clusterByPartColumns[i]);
-                }
+      final Sequence<List<Object>> expectedRows =
+          Sequences.simple(getOrComputeSortedTestRows(clusterBy))
+                   .limit(limitHint == SuperSorter.UNLIMITED ? Long.MAX_VALUE : readRows.size());
 
-                return createKey(clusterBy, array);
-              },
-              keyComparator
-          )
-      );
-
-      FrameTestUtil.assertRowsEqual(expectedRows, Sequences.concat(outputSequences));
-
-      return outputChannels;
+      FrameTestUtil.assertRowsEqual(expectedRows, Sequences.simple(readRows));
     }
 
     @Test
@@ -418,34 +562,12 @@ public class SuperSorterTest
       setUpInputChannels(clusterBy);
 
       final RowKey zeroZero = createKey(clusterBy, 0L, 0L);
-      final OutputChannels outputChannels = verifySuperSorter(
+      verifySuperSorter(
           clusterBy,
           new ClusterByPartitions(
               ImmutableList.of(
                   new ClusterByPartition(null, zeroZero), // empty partition
                   new ClusterByPartition(zeroZero, null) // all data goes in here
-              )
-          )
-      );
-
-      // Verify that one of the partitions is actually empty.
-      Assert.assertEquals(
-          0,
-          countSequence(
-              FrameTestUtil.readRowsFromFrameChannel(
-                  Iterables.getOnlyElement(outputChannels.getChannelsForPartition(0)).getReadableChannel(),
-                  frameReader
-              )
-          )
-      );
-
-      // Verify that the other partition has all data in it.
-      Assert.assertEquals(
-          adapter.getNumRows(),
-          countSequence(
-              FrameTestUtil.readRowsFromFrameChannel(
-                  Iterables.getOnlyElement(outputChannels.getChannelsForPartition(1)).getReadableChannel(),
-                  frameReader
               )
           )
       );
@@ -650,35 +772,69 @@ public class SuperSorterTest
     private RowKey createKey(final ClusterBy clusterBy, final Object... objects)
     {
       final RowSignature keySignature = KeyTestUtils.createKeySignature(clusterBy.getColumns(), signature);
-      return KeyTestUtils.createKey(keySignature, objects);
+      return KeyTestUtils.createKey(keySignature, outputFrameType, objects);
+    }
+
+    /**
+     * Retrieve sorted test rows from {@link #SORTED_TEST_ROWS}, or else compute using
+     * {@link #computeSortedTestRows(ClusterBy)}.
+     */
+    private static List<List<Object>> getOrComputeSortedTestRows(final ClusterBy clusterBy)
+    {
+      return SORTED_TEST_ROWS.computeIfAbsent(clusterBy, SuperSorterTest.ParameterizedCasesTest::computeSortedTestRows);
+    }
+
+    /**
+     * Sort test rows from {@link TestIndex#getNoRollupMMappedTestIndex()} by the given {@link ClusterBy}.
+     */
+    private static List<List<Object>> computeSortedTestRows(final ClusterBy clusterBy)
+    {
+      final QueryableIndexCursorFactory cursorFactory =
+          new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
+      final RowSignature signature =
+          FrameWriters.sortableSignature(
+              FrameSequenceBuilder.signatureWithRowNumber(cursorFactory.getRowSignature()),
+              clusterBy.getColumns()
+          );
+      final RowSignature keySignature = KeyTestUtils.createKeySignature(clusterBy.getColumns(), signature);
+      final int[] clusterByColumns =
+          clusterBy.getColumns().stream().mapToInt(part -> signature.indexOf(part.columnName())).toArray();
+      final Comparator<RowKey> keyComparator = clusterBy.keyComparator(keySignature);
+
+      return Sequences.sort(
+          FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, true),
+          Comparator.comparing(
+              row -> {
+                final Object[] array = new Object[clusterByColumns.length];
+
+                for (int i = 0; i < array.length; i++) {
+                  array[i] = row.get(clusterByColumns[i]);
+                }
+
+                return KeyTestUtils.createKey(keySignature, FrameType.latestRowBased(), array);
+              },
+              keyComparator
+          )
+      ).toList();
     }
   }
 
-  private static List<ReadableFrameChannel> makeFileChannels(
+  /**
+   * Distribute frames round-robin to some number of channels.
+   */
+  private static List<ReadableFrameChannel> makeRoundRobinChannels(
       final Sequence<Frame> frames,
-      final File tmpDir,
       final int numChannels
   ) throws IOException
   {
-    final List<File> files = new ArrayList<>();
-    final List<WritableFrameChannel> writableChannels = new ArrayList<>();
+    final List<BlockingQueueFrameChannel> channels = new ArrayList<>(numChannels);
 
     for (int i = 0; i < numChannels; i++) {
-      final File file = new File(tmpDir, StringUtils.format("channel-%d", i));
-      files.add(file);
-      writableChannels.add(
-          new WritableFrameFileChannel(
-              FrameFileWriter.open(
-                  Channels.newChannel(Files.newOutputStream(file.toPath())),
-                  null,
-                  ByteTracker.unboundedTracker()
-              )
-          )
-      );
+      channels.add(new BlockingQueueFrameChannel(2000) /* enough even for 1 row per frame; dataset has < 2000 rows */);
     }
 
     frames.forEach(
-        new Consumer<Frame>()
+        new Consumer<>()
         {
           private int i;
 
@@ -686,7 +842,7 @@ public class SuperSorterTest
           public void accept(final Frame frame)
           {
             try {
-              writableChannels.get(i % writableChannels.size()).write(frame);
+              channels.get(i % channels.size()).writable().write(frame);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -699,25 +855,56 @@ public class SuperSorterTest
 
     final List<ReadableFrameChannel> retVal = new ArrayList<>();
 
-    for (int i = 0; i < writableChannels.size(); i++) {
-      WritableFrameChannel writableChannel = writableChannels.get(i);
-      writableChannel.close();
-      retVal.add(new ReadableFileFrameChannel(FrameFile.open(files.get(i), null)));
+    for (final BlockingQueueFrameChannel channel : channels) {
+      channel.writable().close();
+      retVal.add(new AlwaysAsyncReadableFrameChannel(channel.readable()));
     }
 
     return retVal;
   }
 
-  private static ReadableFrameChannel duplicateOutputChannel(final ReadableFrameChannel channel)
+  /**
+   * Wraps an underlying {@link OutputChannelFactory} in one that uses {@link AlwaysAsyncReadableFrameChannel}
+   * for all of its readable channels. This helps catch bugs due to improper usage of {@link ReadableFrameChannel}
+   * methods that enable async reads.
+   */
+  private static OutputChannelFactory makeOutputChannelFactory(final OutputChannelFactory baseFactory)
   {
-    return new ReadableFileFrameChannel(((ReadableFileFrameChannel) channel).newFrameFileReference());
-  }
+    return new OutputChannelFactory() {
+      @Override
+      public OutputChannel openChannel(int partitionNumber) throws IOException
+      {
+        final OutputChannel channel = baseFactory.openChannel(partitionNumber);
+        return OutputChannel.pair(
+            channel.getWritableChannel(),
+            channel.getFrameMemoryAllocator(),
+            () -> new AlwaysAsyncReadableFrameChannel(channel.getReadableChannelSupplier().get()),
+            channel.getPartitionNumber()
+        );
+      }
 
-  private static <T> long countSequence(final Sequence<T> sequence)
-  {
-    return sequence.accumulate(
-        0L,
-        (accumulated, in) -> accumulated + 1
-    );
+      @Override
+      public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
+      {
+        final PartitionedOutputChannel channel = baseFactory.openPartitionedChannel(name, deleteAfterRead);
+        return PartitionedOutputChannel.pair(
+            channel.getWritableChannel(),
+            channel.getFrameMemoryAllocator(),
+            () -> new AlwaysAsyncPartitionedReadableFrameChannel(channel.getReadableChannelSupplier().get())
+        );
+      }
+
+      @Override
+      public OutputChannel openNilChannel(int partitionNumber)
+      {
+        return baseFactory.openNilChannel(partitionNumber);
+      }
+
+      @Override
+      public boolean isBuffered()
+      {
+        return baseFactory.isBuffered();
+      }
+    };
   }
 }

@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -36,17 +36,18 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.DruidLiteral;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -59,6 +60,7 @@ public class MultiValueStringOperatorConversions
 {
   public static final SqlOperatorConversion CONTAINS = new Contains();
   public static final SqlOperatorConversion OVERLAP = new Overlap();
+
 
   public static class Append extends ArrayAppendOperatorConversion
   {
@@ -78,10 +80,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Append()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayAppendOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -103,10 +104,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Prepend()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayPrependOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -131,14 +131,14 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Concat()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayConcatOperatorConversion.FUNCTION_NAME);
     }
   }
 
   /**
+   * Extends {@link ArrayContainsOperatorConversion} to get the filter conversion behavior.
    * Private: use singleton {@link #CONTAINS}.
    */
   private static class Contains extends ArrayContainsOperatorConversion
@@ -162,57 +162,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Contains()
     {
-      return SQL_FUNCTION;
-    }
-
-    @Override
-    protected String getFilterExpression(List<DruidExpression> druidExpressions)
-    {
-      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
-    }
-
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      return OperatorConversions.convertCall(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(druidExpressions)
-          )
-      );
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpressionWithPostAggOperands(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode,
-        PostAggregatorVisitor postAggregatorVisitor
-    )
-    {
-      return OperatorConversions.convertCallWithPostAggOperands(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          operands -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(operands)
-          ),
-          postAggregatorVisitor
-      );
+      super(SQL_FUNCTION, "mv_contains");
     }
   }
 
@@ -234,10 +186,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Offset()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayOffsetOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -259,10 +210,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Ordinal()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArrayOrdinalOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -295,10 +245,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Slice()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, ArraySliceOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -317,10 +266,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeNullable(SqlTypeName.VARCHAR)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public StringToMultiString()
     {
-      return SQL_FUNCTION;
+      super(SQL_FUNCTION, StringToArrayOperatorConversion.FUNCTION_NAME);
     }
   }
 
@@ -357,6 +305,7 @@ public class MultiValueStringOperatorConversions
   }
 
   /**
+   * Extends {@link ArrayOverlapOperatorConversion} to get the filter conversion behavior.
    * Private: use singleton {@link #OVERLAP}.
    */
   private static class Overlap extends ArrayOverlapOperatorConversion
@@ -380,60 +329,9 @@ public class MultiValueStringOperatorConversions
         .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
-    @Override
-    public SqlOperator calciteOperator()
+    public Overlap()
     {
-      return SQL_FUNCTION;
-    }
-
-    @Override
-    protected String getFilterExpression(List<DruidExpression> druidExpressions)
-    {
-      return super.getFilterExpression(harmonizeNullsMvdArg0OperandList(druidExpressions));
-    }
-
-    @Override
-    public DruidExpression toDruidExpression(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode
-    )
-    {
-      return OperatorConversions.convertCall(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          druidExpressions -> {
-            final List<DruidExpression> newArgs = harmonizeNullsMvdArg0OperandList(druidExpressions);
-            return DruidExpression.ofFunctionCall(
-                Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-                getDruidFunctionName(),
-                newArgs
-            );
-          }
-      );
-    }
-
-    @Nullable
-    @Override
-    public DruidExpression toDruidExpressionWithPostAggOperands(
-        PlannerContext plannerContext,
-        RowSignature rowSignature,
-        RexNode rexNode,
-        PostAggregatorVisitor postAggregatorVisitor
-    )
-    {
-      return OperatorConversions.convertCallWithPostAggOperands(
-          plannerContext,
-          rowSignature,
-          rexNode,
-          operands -> DruidExpression.ofFunctionCall(
-              Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-              getDruidFunctionName(),
-              harmonizeNullsMvdArg0OperandList(operands)
-          ),
-          postAggregatorVisitor
-      );
+      super(SQL_FUNCTION, "mv_overlap");
     }
   }
 
@@ -491,9 +389,11 @@ public class MultiValueStringOperatorConversions
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new ListFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0).getSimpleExtraction().toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 literals,
                 isAllowList()
             )
@@ -502,10 +402,175 @@ public class MultiValueStringOperatorConversions
         // if the join expression VC registry is present, it means that this expression is part of a join condition
         // and since that's the case, create virtual column here itself for optimized usage in join matching
         if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry().getOrCreateVirtualColumnForExpression(
-              druidExpression,
-              ColumnType.STRING
-          );
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
+          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+        }
+
+        return druidExpression;
+      }
+
+      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
+    }
+  }
+
+  public static class RegexFilter implements SqlOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_REGEX")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "'MV_FILTER_REGEX(string, pattern)'",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.family(SqlTypeFamily.CHARACTER)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlFunction calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      final String pattern = RexLiteral.stringValue(call.getOperands().get(1));
+      if (pattern == null) {
+        return null;
+      }
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "filter((x) -> regexp_like(x, " + DruidExpression.stringLiteral(pattern) + "), " + args.get(0).getExpression() + ")";
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            builder,
+            druidExpressions,
+            (name, outputType, parser, self) -> new RegexFilteredVirtualColumn(
+                name,
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                pattern
+            )
+        );
+
+        // If in a join context, create the VC immediately
+        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
+          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+        }
+
+        return druidExpression;
+      }
+
+      return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
+    }
+  }
+
+  public static class PrefixFilter implements SqlOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder("MV_FILTER_PREFIX")
+        .operandTypeChecker(
+            OperandTypes.sequence(
+                "'MV_FILTER_PREFIX(string, prefix)'",
+                OperandTypes.or(
+                    OperandTypes.family(SqlTypeFamily.ARRAY),
+                    OperandTypes.family(SqlTypeFamily.STRING)
+                ),
+                OperandTypes.family(SqlTypeFamily.CHARACTER)
+            )
+        )
+        .functionCategory(SqlFunctionCategory.STRING)
+        .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
+        .build();
+
+    @Override
+    public SqlFunction calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      final RexCall call = (RexCall) rexNode;
+      final List<DruidExpression> druidExpressions = Expressions.toDruidExpressions(
+          plannerContext,
+          rowSignature,
+          call.getOperands()
+      );
+
+      if (druidExpressions == null || druidExpressions.size() != 2) {
+        return null;
+      }
+
+      RexNode prefixNode = call.getOperands().get(1);
+      if (!(prefixNode instanceof RexLiteral)) {
+        return null;
+      }
+      DruidLiteral prefixLiteral = Expressions.calciteLiteralToDruidLiteral(plannerContext, prefixNode);
+      if (prefixLiteral == null || prefixLiteral.value() == null) {
+        return null;
+      }
+      String prefix = (String) prefixLiteral.value();
+      final DruidExpression.ExpressionGenerator builder = (args) ->
+          "filter((x) -> substring(x, 0, " + prefix.length() + ") == " + DruidExpression.stringLiteral(prefix) + ", " + args.get(0).getExpression() + ")";
+
+      if (druidExpressions.get(0).isSimpleExtraction()) {
+        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+            builder,
+            druidExpressions,
+            (name, outputType, parser, self) -> new PrefixFilteredVirtualColumn(
+                name,
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                prefix
+            )
+        );
+
+        // If in a join context, create the VC immediately
+        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                                   .getOrCreateVirtualColumnForExpression(
+                                                       druidExpression,
+                                                       ColumnType.STRING
+                                                   );
           return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
         }
 
@@ -574,27 +639,6 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-
-  private static List<DruidExpression> harmonizeNullsMvdArg0OperandList(List<DruidExpression> druidExpressions)
-  {
-    final List<DruidExpression> newArgs;
-    if (druidExpressions.get(0).isDirectColumnAccess()) {
-      // rewrite first argument to wrap with mv_harmonize_nulls function
-      newArgs = Lists.newArrayListWithCapacity(2);
-      newArgs.add(
-          0,
-          DruidExpression.ofFunctionCall(
-              druidExpressions.get(0).getDruidType(),
-              "mv_harmonize_nulls",
-              Collections.singletonList(druidExpressions.get(0))
-          )
-      );
-      newArgs.add(1, druidExpressions.get(1));
-    } else {
-      newArgs = druidExpressions;
-    }
-    return newArgs;
-  }
 
   private MultiValueStringOperatorConversions()
   {

@@ -20,6 +20,7 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotatedField;
@@ -45,15 +46,19 @@ import javax.validation.Validator;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
 /**
+ *
  */
 public class JsonConfigurator
 {
@@ -125,8 +130,14 @@ public class JsonConfigurator
     try {
       if (defaultClass != null && jsonMap.isEmpty()) {
         // No configs were provided. Don't use the jsonMapper; instead create a default instance of the default class
-        // using the no-arg constructor. We know it exists because verifyClazzIsConfigurable checks for it.
-        config = defaultClass.getConstructor().newInstance();
+        // using the JsonCreator annotated factory method or no-arg constructor.
+        // We know it exists because verifyClazzIsConfigurable checks for it.
+        Optional<Method> factoryMethod = findJsonCreatorFactoryMethod(defaultClass);
+        if (factoryMethod.isPresent()) {
+          config = (T) factoryMethod.get().invoke(null);
+        } else {
+          config = defaultClass.getConstructor().newInstance();
+        }
       } else {
         config = jsonMapper.convertValue(jsonMap, clazz);
       }
@@ -189,7 +200,7 @@ public class JsonConfigurator
       throw new ProvisionException(
           Iterables.transform(
               messages,
-              new Function<String, Message>()
+              new Function<>()
               {
                 @Override
                 public Message apply(String input)
@@ -236,7 +247,7 @@ public class JsonConfigurator
       // to configure ParametrizedUriEmitterConfig object. So skipping xxx=yyy key-value pair when configuring Emitter
       // doesn't make any difference. That is why we just log this situation, instead of throwing an exception.
       log.info(
-          "Skipping %s property: one of it's prefixes is also used as a property key. Prefix: %s",
+          "Skipping property [%s]: one of it's prefixes [%s] is also used as a property key.",
           originalProperty,
           propertyPrefix
       );
@@ -256,7 +267,9 @@ public class JsonConfigurator
   {
     if (defaultClass != null) {
       try {
-        defaultClass.getConstructor();
+        if (findJsonCreatorFactoryMethod(defaultClass).isEmpty()) {
+          defaultClass.getConstructor();
+        }
       }
       catch (NoSuchMethodException e) {
         throw new ProvisionException(
@@ -282,5 +295,16 @@ public class JsonConfigurator
         );
       }
     }
+  }
+
+  private static <T> Optional<Method> findJsonCreatorFactoryMethod(Class<T> clazz)
+  {
+    return Arrays.stream(clazz.getMethods())
+                 .filter(m -> m.getAnnotation(JsonCreator.class) != null
+                              && m.getParameterCount() == 0
+                              && m.getReturnType()
+                                  .equals(clazz))
+                 .findFirst();
+
   }
 }

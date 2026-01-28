@@ -25,13 +25,18 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public final class Intervals
 {
   public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
+  private static final DateTimeFormatter FAST_ISO_UTC_FORMATTER =
+      ISODateTimeFormat.dateTime().withChronology(ISOChronology.getInstanceUTC());
 
   public static Interval utc(long startInstant, long endInstant)
   {
@@ -53,9 +58,69 @@ public final class Intervals
     return of(StringUtils.format(format, formatArgs));
   }
 
-  public static boolean isEmpty(Interval interval)
+  /**
+   * A performance-optimized method for parsing a Joda-Time {@link Interval} from a string.
+   * This method is significantly faster than the standard {@link Intervals#of(String)} for the following
+   * group of offsets:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z"</li>
+   *   <li>"2022-01-01T00:00:00.000+05:30/2022-01-01T01:00:00.000+05:30"</li>
+   *   <li>"2022-01-01T00:00:00.000+0530/2022-01-01T01:00:00.000+0530"</li>
+   * </ol>
+   * <p>
+   * If the input string does not match the format, it will fall back to the more flexible but
+   * slower {@link Intervals#of(String)} parser. If you are dealing with any Intervals format examples below,
+   * consider using {@link Intervals#of(String)} instead:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z" (without millis)</li>
+   *   <li>"2022-01-01/2022-01-02" (Date only)</li>
+   *   <li>"2022-01-01T12:00:00.000Z/PT6H" (Periods in start / end)</li>
+   * </ol>
+   *
+   * Currently, this method is only used in {@link org.apache.druid.timeline.SegmentId}.
+   */
+  public static Interval fromString(String serializedInterval)
   {
-    return interval.getStart().equals(interval.getEnd());
+    if (canDeserializeIntervalOptimallyFromString(serializedInterval)) {
+      Interval interval = tryOptimizedIntervalDeserialization(serializedInterval);
+
+      if (interval != null) {
+        return interval;
+      }
+    }
+
+    return Intervals.of(serializedInterval);
+  }
+
+  private static boolean canDeserializeIntervalOptimallyFromString(String serializedInterval)
+  {
+    // Optimized version does not deal well with Periods.
+    if (serializedInterval.contains("P")) {
+      return false;
+    }
+
+    final int slashIndex = serializedInterval.indexOf('/');
+    return (slashIndex > 0 && slashIndex < serializedInterval.length() - 1);
+  }
+
+  /**
+   * @return null if the input format cannot be parsed with optimized strategy, else return the Interval.
+   */
+  @Nullable
+  private static Interval tryOptimizedIntervalDeserialization(final String serializedInterval)
+  {
+    final int slashIndex = serializedInterval.indexOf('/');
+    final String startStr = serializedInterval.substring(0, slashIndex);
+    final String endStr = serializedInterval.substring(slashIndex + 1);
+
+    try {
+      final long startMillis = FAST_ISO_UTC_FORMATTER.parseMillis(startStr);
+      final long endMillis = FAST_ISO_UTC_FORMATTER.parseMillis(endStr);
+      return Intervals.utc(startMillis, endMillis);
+    }
+    catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   /**
@@ -101,6 +166,26 @@ public final class Intervals
     }
 
     return null;
+  }
+
+  /**
+   * @return List of intervals which when added to the given interval create
+   * {@link Intervals#ETERNITY}.
+   */
+  public static List<Interval> complementOf(Interval interval)
+  {
+    if (isEternity(interval)) {
+      return List.of();
+    } else if (DateTimes.MIN.equals(interval.getStart())) {
+      return List.of(new Interval(interval.getEnd(), DateTimes.MAX));
+    } else if (DateTimes.MAX.equals(interval.getEnd())) {
+      return List.of(new Interval(DateTimes.MIN, interval.getStart()));
+    } else {
+      return List.of(
+          new Interval(DateTimes.MIN, interval.getStart()),
+          new Interval(interval.getEnd(), DateTimes.MAX)
+      );
+    }
   }
 
   private Intervals()

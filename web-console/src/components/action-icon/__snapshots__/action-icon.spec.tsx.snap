@@ -3,8 +3,7 @@
 exports[`ActionIcon matches snapshot 1`] = `
 <span
   aria-hidden="true"
-  class="bp4-icon bp4-icon-clipboard action-icon"
-  icon="clipboard"
+  class="bp5-icon bp5-icon-clipboard action-icon"
 >
   <svg
     data-icon="clipboard"

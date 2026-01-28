@@ -36,6 +36,12 @@ public final class SimpleImmutableBitmapIndex extends SimpleBitmapColumnIndex
   }
 
   @Override
+  public int estimatedComputeCost()
+  {
+    return 0;
+  }
+
+  @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapDimensionValue(bitmap);

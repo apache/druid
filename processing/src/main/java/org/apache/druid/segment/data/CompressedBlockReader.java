@@ -56,7 +56,12 @@ public final class CompressedBlockReader implements Closeable
   private static final ByteBuffer NULL_VALUE = ByteBuffer.wrap(new byte[0]);
   public static final byte VERSION = 0x01;
 
-  public static Supplier<CompressedBlockReader> fromByteBuffer(ByteBuffer buffer, ByteOrder byteOrder)
+  public static Supplier<CompressedBlockReader> fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder compressionOrder,
+      ByteOrder valueOrder,
+      boolean copyValuesOnRead
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -71,25 +76,27 @@ public final class CompressedBlockReader implements Closeable
       final int numBlocks = buffer.getInt();
       final int offsetsSize = numBlocks * Integer.BYTES;
       // buffer is at start of ending offsets
-      final ByteBuffer offsets = buffer.asReadOnlyBuffer().order(byteOrder);
+      final ByteBuffer offsets = buffer.asReadOnlyBuffer().order(compressionOrder);
       offsets.limit(offsets.position() + offsetsSize);
-      final IntBuffer offsetView = offsets.slice().order(byteOrder).asIntBuffer();
+      final IntBuffer offsetView = offsets.slice().order(compressionOrder).asIntBuffer();
       final int compressedSize = offsetView.get(numBlocks - 1);
 
       // move to start of compressed data
       buffer.position(buffer.position() + offsetsSize);
-      final ByteBuffer compressedData = buffer.asReadOnlyBuffer().order(byteOrder);
+      final ByteBuffer compressedData = buffer.asReadOnlyBuffer().order(compressionOrder);
       compressedData.limit(compressedData.position() + compressedSize);
       buffer.position(buffer.position() + compressedSize);
 
-      final ByteBuffer compressedDataView = compressedData.slice().order(byteOrder);
+      final ByteBuffer compressedDataView = compressedData.slice().order(compressionOrder);
       return () -> new CompressedBlockReader(
           compression,
           numBlocks,
           blockSize,
+          copyValuesOnRead,
           offsetView.asReadOnlyBuffer(),
-          compressedDataView.asReadOnlyBuffer().order(byteOrder),
-          byteOrder
+          compressedDataView.asReadOnlyBuffer().order(compressionOrder),
+          compressionOrder,
+          valueOrder
       );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
@@ -97,6 +104,7 @@ public final class CompressedBlockReader implements Closeable
 
   private final CompressionStrategy.Decompressor decompressor;
 
+  private final boolean copyValuesOnRead;
   private final int numBlocks;
   private final int div;
   private final int rem;
@@ -114,23 +122,26 @@ public final class CompressedBlockReader implements Closeable
       CompressionStrategy compressionStrategy,
       int numBlocks,
       int blockSize,
+      boolean copyValuesOnRead,
       IntBuffer endOffsetsBuffer,
       ByteBuffer compressedDataBuffer,
-      ByteOrder byteOrder
+      ByteOrder compressionByteOrder,
+      ByteOrder valueByteOrder
   )
   {
     this.decompressor = compressionStrategy.getDecompressor();
+    this.copyValuesOnRead = copyValuesOnRead;
     this.numBlocks = numBlocks;
     this.div = Integer.numberOfTrailingZeros(blockSize);
     this.rem = blockSize - 1;
     this.endOffsetsBuffer = endOffsetsBuffer;
     this.compressedDataBuffer = compressedDataBuffer;
     this.closer = Closer.create();
-    this.decompressedDataBufferHolder = CompressedPools.getByteBuf(byteOrder);
+    this.decompressedDataBufferHolder = CompressedPools.getByteBuf(compressionByteOrder);
     closer.register(decompressedDataBufferHolder);
     this.decompressedDataBuffer = decompressedDataBufferHolder.get();
     this.decompressedDataBuffer.clear();
-    this.byteOrder = byteOrder;
+    this.byteOrder = valueByteOrder;
   }
 
   /**
@@ -169,18 +180,25 @@ public final class CompressedBlockReader implements Closeable
     if (size == 0) {
       return NULL_VALUE;
     }
-
     final int startBlockOffset = loadBlock(startOffset);
     final int startBlockNumber = currentBlockNumber;
     decompressedDataBuffer.position(startBlockOffset);
-    // patch together value from n underlying compressed pages
+    // possibly patch together value from n underlying compressed pages
     if (size < decompressedDataBuffer.remaining()) {
-      // sweet, same buffer, we can slice out a view directly to the value
-      final ByteBuffer dupe = decompressedDataBuffer.duplicate().order(byteOrder);
-      dupe.position(startBlockOffset).limit(startBlockOffset + size);
-      return dupe.slice().order(byteOrder);
+      // sweet, same buffer
+      if (copyValuesOnRead) {
+        // caller specified copyValuesOnRead, so copy the memory to a heap byte array
+        final byte[] bytes = new byte[size];
+        decompressedDataBuffer.get(bytes, 0, size);
+        return ByteBuffer.wrap(bytes).order(byteOrder);
+      } else {
+        // if we don't need to copy, we can return the buffer directly with position and limit set
+        final ByteBuffer dupe = decompressedDataBuffer.duplicate().order(byteOrder);
+        dupe.position(startBlockOffset).limit(startBlockOffset + size);
+        return dupe;
+      }
     } else {
-      // spans multiple blocks, copy on heap
+      // spans multiple blocks, always copy on heap
       final byte[] bytes = new byte[size];
       int bytesRead = 0;
       int block = startBlockNumber;

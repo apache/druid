@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -127,7 +127,9 @@ public class SupervisorStateManager
    */
   public synchronized void maybeSetState(State proposedState)
   {
-    if (BasicState.STOPPING.equals(this.supervisorState)) {
+    if (BasicState.STOPPING.equals(this.supervisorState) || BasicState.STOPPING.equals(proposedState)) {
+      // STOPPING takes precedence over all other states
+      supervisorState = BasicState.STOPPING;
       return;
     }
 
@@ -155,11 +157,10 @@ public class SupervisorStateManager
       return;
     }
 
-    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) or IDLE state but haven't had a successful run
+    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) but haven't had a successful run
     // yet, refuse to switch and prefer the more specific states used for first run (CONNECTING_TO_STREAM,
     // DISCOVERING_INITIAL_TASKS, CREATING_TASKS, etc.)
-    if ((healthySteadyState.equals(proposedState) || BasicState.IDLE.equals(proposedState))
-        && !atLeastOneSuccessfulRun) {
+    if (healthySteadyState.equals(proposedState) && !atLeastOneSuccessfulRun) {
       return;
     }
 

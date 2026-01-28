@@ -22,7 +22,6 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -38,7 +37,7 @@ public class ColumnAnalysis
 
   public static <T> Builder<T> builder()
   {
-    return new Builder<T>();
+    return new Builder<>();
   }
 
   public static ColumnAnalysis error(String reason)
@@ -187,11 +186,6 @@ public class ColumnAnalysis
     Comparable newMin = choose(minValue, rhs.minValue, false);
     Comparable newMax = choose(maxValue, rhs.maxValue, true);
 
-    // min and max are currently set for only string columns
-    if (typeSignature.equals(ColumnType.STRING)) {
-      newMin = NullHandling.nullToEmptyIfNeeded((String) newMin);
-      newMax = NullHandling.nullToEmptyIfNeeded((String) newMax);
-    }
     return builder().withType(typeSignature)
                     .withTypeName(type)
                     .hasMultipleValues(multipleValues)

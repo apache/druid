@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -36,6 +37,14 @@ public interface AppenderatorConfig extends TuningConfig
   int getMaxPendingPersists();
 
   boolean isSkipBytesInMemoryOverheadCheck();
+
+  /**
+   * @return true if locks should be released after segments have been handed off to Historicals.
+   */
+  default boolean isReleaseLocksOnHandoff()
+  {
+    return false;
+  }
 
   default int getNumPersistThreads()
   {
@@ -74,6 +83,6 @@ public interface AppenderatorConfig extends TuningConfig
 
   default int getMaxColumnsToMerge()
   {
-    return -1;
+    return IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE;
   }
 }

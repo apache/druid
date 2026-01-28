@@ -1,0 +1,589 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C7_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_float) AS col
+FROM test_array
+WHERE a_float<>ARRAY[0.1,
+                     0.2,
+                     NULL];
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C8_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[2]' RETURNING decimal array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C9_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][2]' RETURNING decimal array)
+HAVING try_parse_json(json_value(a_nested, '$[7][2]' RETURNING decimal array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C10_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_str) AS col
+FROM test_array
+WHERE a_str<>ARRAY['S1',
+                   'S2',
+                   NULL];
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C11_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[3]' RETURNING varchar array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C12_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][3]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][3]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C13_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_null) AS col
+FROM test_array
+WHERE a_null<>ARRAY[NULL,
+                    NULL,
+                    NULL];
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C14_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[4]' RETURNING varchar array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C15_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][4]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][4]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C16_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_empty) AS col
+FROM test_array
+WHERE a_empty<>ARRAY['FILLER'];
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C17_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[5]' RETURNING varchar array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C18_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][5]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][5]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C19_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_mixed) AS col
+FROM test_array
+WHERE a_mixed<>ARRAY['true',
+                     '1',
+                     '0.1',
+                     'S1',
+                     NULL];
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C20_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[6]' RETURNING varchar array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C21_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][6]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][6]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C22_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(a_nested) AS col
+FROM test_array
+WHERE a_nested<>ARRAY['FILLER'];
+Cannot apply '<>' to arguments of type '<COMPLEX<JSON>> <>
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C23_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7]' RETURNING varchar array);
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B7_C24_D1
+#-------------------------------------------------------------------------
+SELECT try_parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array
+GROUP BY json_value(a_nested, '$[7][7]' RETURNING varchar array)
+HAVING try_parse_json(json_value(a_nested, '$[7][7]' RETURNING varchar array)) IS NOT NULL;
+Cannot apply 'TRY_PARSE_JSON' to arguments of type 'TRY_PARSE_JSON(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C1_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_bool) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C2_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C3_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,0,null] |
+| [1,0,null] |
+| [null,0,1] |
+| [null,0,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C4_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_int) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C5_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C6_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
++------------+
+| col        |
++------------+
+| [1,2,null] |
+| [1,2,null] |
+| [null,2,1] |
+| [null,2,1] |
++------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C7_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_float) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C8_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C9_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
++----------------+
+| col            |
++----------------+
+| [0.1,0.2,null] |
+| [0.1,0.2,null] |
+| [null,0.2,0.1] |
+| [null,0.2,0.1] |
++----------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C10_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_str) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C11_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C12_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| ["S1","S2",null] |
+| ["S1","S2",null] |
+| [null,"S2","S1"] |
+| [null,"S2","S1"] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C13_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_null) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C14_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C15_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------+
+| col              |
++------------------+
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
+| [null,null,null] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C16_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_empty) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C17_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C18_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C19_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_mixed) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C20_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C21_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+FROM test_array;
++------------------------------+
+| col                          |
++------------------------------+
+| ["true","1","0.1","S1",null] |
+| ["true","1","0.1","S1",null] |
+| [null,"S1","0.1","1","true"] |
+| [null,"S1","0.1","1","true"] |
++------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C22_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(a_nested) AS col
+FROM test_array;
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| col                                                                                                                                                                                                                                                                                                                           |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true],[[null,false,true],[null,2,1],[null,0.2,0.1],[null,"S2","S1"],[null,null,null],[],[null,"S1",0.1,1,true]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
+| [[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null],[[true,false,null],[1,2,null],[0.1,0.2,null],["S1","S2",null],[null,null,null],[],[true,1,0.1,"S1",null]]]] |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C23_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_json_funcs TEST_ID: A1_B8_C24_D1
+#-------------------------------------------------------------------------
+SELECT to_json_string(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
+

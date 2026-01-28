@@ -39,10 +39,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -51,7 +52,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public class OverlordResourceTestClient
 {
@@ -146,9 +146,7 @@ public class OverlordResourceTestClient
       LOG.debug("Index status response" + response.getContent());
       TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<TaskStatusResponse>()
-          {
-          }
+          new TypeReference<>() {}
       );
       return taskStatusResponse.getStatus();
     }
@@ -235,9 +233,7 @@ public class OverlordResourceTestClient
         LOG.debug("Tasks %s response %s", identifier, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<TaskResponseObject>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -256,9 +252,7 @@ public class OverlordResourceTestClient
         LOG.debug("Task %s response %s", taskId, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<TaskPayloadResponse>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (ISE e) {
@@ -334,13 +328,13 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     try {
-      String jsonBody = jsonMapper.writeValueAsString(minTaskPriority);
+      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
 
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals"))
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals/v2"))
               .setContent(
                   "application/json",
                   StringUtils.toUtf8(jsonBody)
@@ -349,9 +343,7 @@ public class OverlordResourceTestClient
       ).get();
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, List<Interval>>>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -359,32 +351,18 @@ public class OverlordResourceTestClient
     }
   }
 
-  public void waitUntilTaskCompletes(final String taskID)
+  public void waitUntilTaskCompletes(final String taskId)
   {
-    waitUntilTaskCompletes(taskID, ITRetryUtil.DEFAULT_RETRY_SLEEP, ITRetryUtil.DEFAULT_RETRY_COUNT);
-  }
-
-  public void waitUntilTaskCompletes(final String taskID, final long millisEach, final int numTimes)
-  {
-    ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.FAILED) {
-              LOG.error("Task failed: %s", taskID);
-              LOG.error("Message: %s", getTaskErrorMessage(taskID));
-              throw new ISE("Indexer task FAILED");
-            }
-            return status == TaskState.SUCCESS;
+    ITRetryUtil.retryUntilEquals(
+        () -> {
+          TaskState status = getTaskStatus(taskId).getStatusCode();
+          if (status == TaskState.FAILED) {
+            throw new ISE("Task[%s] failed with error[%s]", taskId, getTaskErrorMessage(taskId));
           }
+          return status;
         },
-        true,
-        millisEach,
-        numTimes,
-        taskID
+        TaskState.SUCCESS,
+        StringUtils.format("Status of task[%s]", taskId)
     );
   }
 
@@ -394,25 +372,20 @@ public class OverlordResourceTestClient
   }
 
 
-  public void waitUntilTaskFails(final String taskID, final long millisEach, final int numTimes)
+  public void waitUntilTaskFails(final String taskId, final long millisEach, final int numTimes)
   {
-    ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            TaskState status = getTaskStatus(taskID).getStatusCode();
-            if (status == TaskState.SUCCESS) {
-              throw new ISE("Indexer task SUCCEED");
-            }
-            return status == TaskState.FAILED;
+    ITRetryUtil.retryUntilEquals(
+        () -> {
+          TaskState status = getTaskStatus(taskId).getStatusCode();
+          if (status == TaskState.SUCCESS) {
+            throw new ISE("Task[%s] has SUCCEEDED. It was expected to fail.", taskId);
           }
+          return status;
         },
-        true,
+        TaskState.FAILED,
         millisEach,
         numTimes,
-        taskID
+        StringUtils.format("Status of task[%s]", taskId)
     );
   }
 
@@ -541,6 +514,13 @@ public class OverlordResourceTestClient
 
   public SupervisorStateManager.BasicState getSupervisorStatus(String id)
   {
+    final String state = (String) getFullSupervisorStatus(id).get("state");
+    LOG.debug("Supervisor id[%s] has state [%s]", id, state);
+    return SupervisorStateManager.BasicState.valueOf(state);
+  }
+
+  public Map<String, Object> getFullSupervisorStatus(String id)
+  {
     try {
       StatusResponseHolder response = httpClient.go(
           new Request(
@@ -564,13 +544,10 @@ public class OverlordResourceTestClient
           response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
 
-      Map<String, Object> payload = jsonMapper.convertValue(
+      return jsonMapper.convertValue(
           responseData.get("payload"),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      String state = (String) payload.get("state");
-      LOG.debug("Supervisor id[%s] has state [%s]", id, state);
-      return SupervisorStateManager.BasicState.valueOf(state);
     }
     catch (ISE e) {
       throw e;
@@ -757,9 +734,7 @@ public class OverlordResourceTestClient
         );
       }
       List<Object> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<Object>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
       return responseData;
     }

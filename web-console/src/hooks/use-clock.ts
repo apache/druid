@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+
+import { useInterval } from './use-interval';
 
 function getNowToSecond(): Date {
   const now = new Date();
@@ -24,18 +26,12 @@ function getNowToSecond(): Date {
   return now;
 }
 
-export function useClock() {
+export function useClock(updateInterval = 1000) {
   const [now, setNow] = useState<Date>(getNowToSecond);
 
-  useEffect(() => {
-    const checkInterval = setInterval(() => {
-      setNow(getNowToSecond());
-    }, 1000);
-
-    return () => {
-      clearInterval(checkInterval);
-    };
-  }, []);
+  useInterval(() => {
+    setNow(getNowToSecond());
+  }, updateInterval);
 
   return now;
 }

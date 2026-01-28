@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.audit.AuditInfo;
@@ -27,7 +28,9 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.policy.Policy;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -42,22 +46,22 @@ import java.util.Set;
  */
 public class AuthorizationUtils
 {
+  public static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
+      ResourceType.DATASOURCE
+  );
+
   /**
-   * Check a resource-action using the authorization fields from the request.
-   *
-   * Otherwise, if the resource-actions is authorized, return ACCESS_OK.
-   *
-   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
-   *
-   * If this attribute is already set when this function is called, an exception is thrown.
+   * Performs authorization check on a single resource-action based on the authentication fields from the request.
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
    *
    * @param request          HTTP request to be authorized
    * @param resourceAction   A resource identifier and the action to be taken the resource.
    * @param authorizerMapper The singleton AuthorizerMapper instance
-   *
-   * @return ACCESS_OK or the failed Access object returned by the Authorizer that checked the request.
+   * @return AuthorizationResult containing allow/deny access to the resource action, along with policy restrictions.
    */
-  public static Access authorizeResourceAction(
+  public static AuthorizationResult authorizeResourceAction(
       final HttpServletRequest request,
       final ResourceAction resourceAction,
       final AuthorizerMapper authorizerMapper
@@ -71,12 +75,30 @@ public class AuthorizationUtils
   }
 
   /**
+   * Verifies that the user has unrestricted access to perform the required
+   * action on the given datasource.
+   *
+   * @throws ForbiddenException if the user does not have unrestricted access to
+   * perform the required action on the given datasource.
+   */
+  public static void verifyUnrestrictedAccessToDatasource(
+      final HttpServletRequest req,
+      String datasource,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    ResourceAction resourceAction = createDatasourceResourceAction(datasource, req);
+    AuthorizationResult authResult = authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
+  }
+
+  /**
    * Returns the authentication information for a request.
    *
    * @param request http request
-   *
    * @return authentication result
-   *
    * @throws IllegalStateException if the request was not authenticated
    */
   public static AuthenticationResult authenticationResultFromRequest(final HttpServletRequest request)
@@ -96,6 +118,7 @@ public class AuthorizationUtils
    * Extracts the identity from the authentication result if set as an atrribute
    * of this request.
    */
+  @Nullable
   public static String getAuthenticatedIdentity(HttpServletRequest request)
   {
     final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
@@ -145,19 +168,15 @@ public class AuthorizationUtils
   }
 
   /**
-   * Check a list of resource-actions to be performed by the identity represented by authenticationResult.
-   *
-   * If one of the resource-actions fails the authorization check, this method returns the failed
-   * Access object from the check.
-   *
-   * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
+   * Performs authorization check on a list of resource-actions based on the authenticationResult.
+   * <p>
+   * If one of the resource-actions denys access, returns deny access immediately.
    *
    * @param authenticationResult Authentication result representing identity of requester
    * @param resourceActions      An Iterable of resource-actions to authorize
-   *
-   * @return ACCESS_OK or the Access object from the first failed check
+   * @return AuthorizationResult containing allow/deny access to the resource actions, along with policy restrictions.
    */
-  public static Access authorizeAllResourceActions(
+  public static AuthorizationResult authorizeAllResourceActions(
       final AuthenticationResult authenticationResult,
       final Iterable<ResourceAction> resourceActions,
       final AuthorizerMapper authorizerMapper
@@ -170,6 +189,7 @@ public class AuthorizationUtils
 
     // this method returns on first failure, so only successful Access results are kept in the cache
     final Set<ResourceAction> resultCache = new HashSet<>();
+    final Map<String, Optional<Policy>> policyFilters = new HashMap<>();
 
     for (ResourceAction resourceAction : resourceActions) {
       if (resultCache.contains(resourceAction)) {
@@ -181,54 +201,82 @@ public class AuthorizationUtils
           resourceAction.getAction()
       );
       if (!access.isAllowed()) {
-        return access;
+        return AuthorizationResult.deny(access.getMessage());
       } else {
         resultCache.add(resourceAction);
+        if (shouldApplyPolicy(resourceAction.getResource(), resourceAction.getAction())) {
+          // For every table read, we check on the policy returned from authorizer and add it to the map.
+          final String resourceName = resourceAction.getResource().getName();
+          final Optional<Policy> prevPolicy =
+              policyFilters.put(resourceName, access.getPolicy());
+          if (prevPolicy != null) {
+            // Shouldn't have two policies for the same resource name, because only tables have policies and
+            // each table should only be processed one time. If it does happen, throw a defensive exception.
+            throw DruidException.defensive(
+                "Cannot have two policies on the same resourceName[%s]: policyA[%s], policyB[%s]",
+                resourceName,
+                prevPolicy,
+                access.getPolicy()
+            );
+          }
+        } else if (access.getPolicy().isPresent()) {
+          throw DruidException.defensive(
+              "Policy should only present when reading a table, but was present for a different kind of resource action [%s]",
+              resourceAction
+          );
+        } else {
+          // Not a read table action, access doesn't have a filter, do nothing.
+        }
       }
     }
 
-    return Access.OK;
+    return AuthorizationResult.allowWithRestriction(policyFilters);
   }
 
   /**
-   * Check a list of resource-actions to be performed as a result of an HTTP request.
-   *
-   * If one of the resource-actions fails the authorization check, this method returns the failed
-   * Access object from the check.
-   *
-   * Otherwise, return ACCESS_OK if all resource-actions were successfully authorized.
-   *
-   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
-   *
-   * If this attribute is already set when this function is called, an exception is thrown.
+   * Whether a {@link Policy} from {@link Access#getPolicy()} should apply to the provided resource-action pair.
+   * As mentioned in the javadoc for {@link Access#getPolicy()}, policies only apply to reading tables.
+   */
+  public static boolean shouldApplyPolicy(Resource resource, Action action)
+  {
+    return Action.READ.equals(action) && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resource.getType());
+  }
+
+
+  /**
+   * Performs authorization check on a list of resource-actions based on the authentication fields from the request.
+   * <p>
+   * If one of the resource-actions denys access, returns deny access immediately.
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
    *
    * @param request         HTTP request to be authorized
    * @param resourceActions An Iterable of resource-actions to authorize
-   *
-   * @return ACCESS_OK or the Access object from the first failed check
+   * @return AuthorizationResult containing allow/deny access to the resource actions, along with policy restrictions.
    */
-  public static Access authorizeAllResourceActions(
+  public static AuthorizationResult authorizeAllResourceActions(
       final HttpServletRequest request,
       final Iterable<ResourceAction> resourceActions,
       final AuthorizerMapper authorizerMapper
   )
   {
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
-      return Access.OK;
+      return AuthorizationResult.ALLOW_NO_RESTRICTION;
     }
 
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
       throw new ISE("Request already had authorization check.");
     }
 
-    Access access = authorizeAllResourceActions(
+    AuthorizationResult authResult = authorizeAllResourceActions(
         authenticationResultFromRequest(request),
         resourceActions,
         authorizerMapper
     );
 
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, access.isAllowed());
-    return access;
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authResult.allowBasicAccess());
+    return authResult;
   }
 
   /**
@@ -249,28 +297,22 @@ public class AuthorizationUtils
   }
 
   /**
-   * Filter a collection of resources by applying the resourceActionGenerator to each resource, return an iterable
-   * containing the filtered resources.
-   *
-   * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
-   *
-   * If every resource-action in the iterable is authorized, the resource will be added to the filtered resources.
-   *
-   * If there is an authorization failure for one of the resource-actions, the resource will not be
-   * added to the returned filtered resources..
-   *
-   * If the resourceActionGenerator returns null for a resource, that resource will not be added to the filtered
-   * resources.
-   *
-   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
-   *
-   * If this attribute is already set when this function is called, an exception is thrown.
+   * Return an iterable of authorized resources, by filtering the input resources with authorization checks based on the
+   * authentication fields from the request. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
+   * </li>
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
    *
    * @param request                 HTTP request to be authorized
    * @param resources               resources to be processed into resource-actions
    * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
    * @param authorizerMapper        authorizer mapper
-   *
    * @return Iterable containing resources that were authorized
    */
   public static <ResType> Iterable<ResType> filterAuthorizedResources(
@@ -305,24 +347,18 @@ public class AuthorizationUtils
   }
 
   /**
-   * Filter a collection of resources by applying the resourceActionGenerator to each resource, return an iterable
-   * containing the filtered resources.
-   *
-   * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
-   *
-   * If every resource-action in the iterable is authorized, the resource will be added to the filtered resources.
-   *
-   * If there is an authorization failure for one of the resource-actions, the resource will not be
-   * added to the returned filtered resources..
-   *
-   * If the resourceActionGenerator returns null for a resource, that resource will not be added to the filtered
-   * resources.
+   * Return an iterable of authorized resources, by filtering the input resources with authorization checks based on
+   * authenticationResult. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
    *
    * @param authenticationResult    Authentication result representing identity of requester
    * @param resources               resources to be processed into resource-actions
    * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
    * @param authorizerMapper        authorizer mapper
-   *
    * @return Iterable containing resources that were authorized
    */
   public static <ResType> Iterable<ResType> filterAuthorizedResources(
@@ -338,7 +374,7 @@ public class AuthorizationUtils
     }
 
     final Map<ResourceAction, Access> resultCache = new HashMap<>();
-    final Iterable<ResType> filteredResources = Iterables.filter(
+    return Iterables.filter(
         resources,
         resource -> {
           final Iterable<ResourceAction> resourceActions = resourceActionGenerator.apply(resource);
@@ -364,28 +400,25 @@ public class AuthorizationUtils
           return true;
         }
     );
-
-    return filteredResources;
   }
 
   /**
-   * Given a map of resource lists, filter each resources list by applying the resource action generator to each
-   * item in each resource list.
-   *
-   * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
-   *
-   * If a resource list is null or has no authorized items after filtering, it will not be included in the returned
-   * map.
-   *
-   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
-   *
-   * If this attribute is already set when this function is called, an exception is thrown.
+   * Return a map of authorized resources, by filtering the input resources with authorization checks based on the
+   * authentication fields from the request. This method does:
+   * <li>
+   * For every resource, resourceActionGenerator generates an Iterable of ResourceAction or null.
+   * <li>
+   * If null, continue with next resource. If any resource-action in the iterable has deny-access, continue with next
+   * resource. Only when every resource-action has allow-access, add the resource to the result.
+   * </li>
+   * <p>
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request. If this attribute is already set
+   * when this function is called, an exception is thrown.
    *
    * @param request                 HTTP request to be authorized
    * @param unfilteredResources     Map of resource lists to be filtered
    * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
    * @param authorizerMapper        authorizer mapper
-   *
    * @return Map containing lists of resources that were authorized
    */
   public static <KeyType, ResType> Map<KeyType, List<ResType>> filterAuthorizedResources(
@@ -421,7 +454,7 @@ public class AuthorizationUtils
           )
       );
 
-      if (filteredList.size() > 0) {
+      if (!filteredList.isEmpty()) {
         filteredResources.put(
             entry.getKey(),
             filteredList
@@ -434,10 +467,63 @@ public class AuthorizationUtils
   }
 
   /**
+   * Filters the given datasource-related resources on the basis of datasource
+   * permissions.
+   *
+   * @return List of resources to which the user has access, based on whether
+   * the user has access to the underlying datasource or not.
+   */
+  public static <T> List<T> filterByAuthorizedDatasources(
+      final HttpServletRequest request,
+      List<T> resources,
+      Function<T, String> getDatasource,
+      AuthorizerMapper authorizerMapper
+  )
+  {
+    final Function<T, Iterable<ResourceAction>> raGenerator =
+        entry -> List.of(createDatasourceResourceAction(getDatasource.apply(entry), request));
+
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            request,
+            resources,
+            raGenerator,
+            authorizerMapper
+        )
+    );
+  }
+
+  private static ResourceAction createDatasourceResourceAction(
+      String dataSource,
+      HttpServletRequest request
+  )
+  {
+    switch (request.getMethod()) {
+      case "GET":
+      case "HEAD":
+        return AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSource);
+      default:
+        return AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR.apply(dataSource);
+    }
+  }
+
+  /**
+   * Creates a {@link ResourceAction} to {@link Action#READ read} an
+   * {@link ResourceType#EXTERNAL external} resource.
+   */
+  public static ResourceAction createExternalResourceReadAction(String resourceName)
+  {
+    return new ResourceAction(
+        new Resource(resourceName, ResourceType.EXTERNAL),
+        Action.READ
+    );
+  }
+
+  /**
    * This method constructs a 'superuser' set of permissions composed of {@link Action#READ} and {@link Action#WRITE}
    * permissions for all known {@link ResourceType#knownTypes()} for any {@link Authorizer} implementation which is
    * built on pattern matching with a regex.
-   *
+   * <p>
    * Note that if any {@link Resource} exist that use custom types not registered with
    * {@link ResourceType#registerResourceType}, those permissions will not be included in this list and will need to
    * be added manually.
@@ -474,20 +560,4 @@ public class AuthorizationUtils
       Action.WRITE
   );
 
-  /**
-   * Function for the common pattern of generating a resource-action for reading from a view, using the
-   * view name.
-   */
-  public static final Function<String, ResourceAction> VIEW_READ_RA_GENERATOR = input -> new ResourceAction(
-      new Resource(input, ResourceType.VIEW),
-      Action.READ
-  );
-
-  /**
-   * Function for the pattern of generating a {@link ResourceAction} for reading from a given {@link Resource}
-   */
-  public static final Function<Resource, ResourceAction> RESOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
-      input,
-      Action.READ
-  );
 }

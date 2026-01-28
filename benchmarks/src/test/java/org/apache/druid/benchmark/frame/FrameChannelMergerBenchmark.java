@@ -21,8 +21,8 @@ package org.apache.druid.benchmark.frame;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -37,7 +37,7 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -45,12 +45,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -84,8 +84,7 @@ import java.util.stream.Collectors;
 public class FrameChannelMergerBenchmark
 {
   static {
-    NullHandling.initializeForTests();
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final String KEY = "key";
@@ -203,6 +202,7 @@ public class FrameChannelMergerBenchmark
   private final List<KeyColumn> sortKey = ImmutableList.of(new KeyColumn(KEY, KeyOrder.ASCENDING));
 
   private List<List<Frame>> channelFrames;
+  private ListeningExecutorService innerExec;
   private FrameProcessorExecutor exec;
   private List<BlockingQueueFrameChannel> channels;
 
@@ -210,7 +210,7 @@ public class FrameChannelMergerBenchmark
    * Create {@link #numChannels} channels in {@link #channels}, with {@link #numRows} total rows split across the
    * channels according to {@link ChannelDistribution}. Each channel is individually sorted, as required
    * by {@link FrameChannelMerger}.
-   *
+   * <p>
    * Rows are fixed-length at {@link #rowLength} with fixed-length keys at {@link #keyLength}. Keys are generated
    * by {@link KeyGenerator}.
    */
@@ -226,7 +226,7 @@ public class FrameChannelMergerBenchmark
     frameReader = FrameReader.create(signature);
 
     exec = new FrameProcessorExecutor(
-        MoreExecutors.listeningDecorator(
+        innerExec = MoreExecutors.listeningDecorator(
             Execs.singleThreaded(StringUtils.encodeForFormat(getClass().getSimpleName()))
         )
     );
@@ -268,7 +268,6 @@ public class FrameChannelMergerBenchmark
       final List<NonnullPair<Comparable, String>> rows = channelRows.get(channelNumber);
       final RowBasedSegment<NonnullPair<Comparable, String>> segment =
           new RowBasedSegment<>(
-              SegmentId.dummy("__dummy"),
               Sequences.simple(rows),
               columnName -> {
                 if (KEY.equals(columnName)) {
@@ -284,9 +283,9 @@ public class FrameChannelMergerBenchmark
               signature
           );
       final Sequence<Frame> frameSequence =
-          FrameSequenceBuilder.fromAdapter(segment.asStorageAdapter())
+          FrameSequenceBuilder.fromCursorFactory(segment.as(CursorFactory.class))
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
-                              .frameType(FrameType.ROW_BASED)
+                              .frameType(FrameType.latestRowBased())
                               .frames();
       final List<Frame> channelFrameList = channelFrames.get(channelNumber);
       frameSequence.forEach(channelFrameList::add);
@@ -298,7 +297,7 @@ public class FrameChannelMergerBenchmark
    * Create {@link #numChannels} channels in {@link #channels}, with {@link #numRows} total rows split across the
    * channels according to {@link ChannelDistribution}. Each channel is individually sorted, as required
    * by {@link FrameChannelMerger}.
-   *
+   * <p>
    * Rows are fixed-length at {@link #rowLength} with fixed-length keys at {@link #keyLength}. Keys are generated
    * by {@link KeyGenerator}.
    */
@@ -335,8 +334,8 @@ public class FrameChannelMergerBenchmark
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    exec.getExecutorService().shutdownNow();
-    if (!exec.getExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
+    innerExec.shutdownNow();
+    if (!innerExec.awaitTermination(1, TimeUnit.MINUTES)) {
       throw new ISE("Could not terminate executor after 1 minute");
     }
   }
@@ -352,10 +351,11 @@ public class FrameChannelMergerBenchmark
         frameReader,
         outputChannel.writable(),
         FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+            FrameType.latestRowBased(),
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
-            sortKey
+            sortKey,
+            false
         ),
         sortKey,
         null,
@@ -367,7 +367,7 @@ public class FrameChannelMergerBenchmark
     while (!outputChannel.readable().isFinished()) {
       FutureUtils.getUnchecked(outputChannel.readable().readabilityFuture(), false);
       if (outputChannel.readable().canRead()) {
-        final Frame frame = outputChannel.readable().read();
+        final Frame frame = outputChannel.readable().readFrame();
         blackhole.consume(frame);
       }
     }

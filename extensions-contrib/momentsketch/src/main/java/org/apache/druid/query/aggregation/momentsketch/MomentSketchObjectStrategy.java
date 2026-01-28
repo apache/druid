@@ -59,4 +59,10 @@ public class MomentSketchObjectStrategy implements ObjectStrategy<MomentSketchWr
   {
     return MomentSketchAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    return false;
+  }
 }

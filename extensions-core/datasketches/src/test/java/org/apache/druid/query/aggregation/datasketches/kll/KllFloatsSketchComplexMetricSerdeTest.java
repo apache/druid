@@ -102,6 +102,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
   {
     final KllFloatsSketchComplexMetricSerde serde = new KllFloatsSketchComplexMetricSerde();
     final ObjectStrategy<KllFloatsSketch> objectStrategy = serde.getObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
 
     KllFloatsSketch sketch = KllFloatsSketch.newHeapInstance();
     sketch.update(1.1f);

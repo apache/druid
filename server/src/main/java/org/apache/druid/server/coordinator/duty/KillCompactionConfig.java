@@ -22,13 +22,13 @@ package org.apache.druid.server.coordinator.duty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.ConfigManager;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
@@ -49,17 +49,17 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   private static final Logger log = new Logger(KillCompactionConfig.class);
   private static final int UPDATE_NUM_RETRY = 5;
 
-  private final SegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final IndexerMetadataStorageCoordinator storageCoordinator;
   private final CoordinatorConfigManager configManager;
 
   public KillCompactionConfig(
       MetadataCleanupConfig config,
-      SegmentsMetadataManager sqlSegmentsMetadataManager,
+      IndexerMetadataStorageCoordinator storageCoordinator,
       CoordinatorConfigManager configManager
   )
   {
     super("compaction configs", config, Stats.Kill.COMPACTION_CONFIGS);
-    this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
+    this.storageCoordinator = storageCoordinator;
     this.configManager = configManager;
   }
 
@@ -82,27 +82,26 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   /**
    * Creates a new compaction config by deleting entries for inactive datasources.
    */
-  private CoordinatorCompactionConfig deleteConfigsForInactiveDatasources(
-      CoordinatorCompactionConfig current
+  private DruidCompactionConfig deleteConfigsForInactiveDatasources(
+      DruidCompactionConfig current
   )
   {
     // If current compaction config is empty then there is nothing to do
-    if (CoordinatorCompactionConfig.empty().equals(current)) {
-      log.info("Nothing to do as compaction config is already empty.");
+    if (DruidCompactionConfig.empty().equals(current)) {
       return current;
     }
 
     // Get all active datasources
     // Note that we get all active datasources after getting compaction config to prevent race condition if new
     // datasource and config are added.
-    Set<String> activeDatasources = sqlSegmentsMetadataManager.retrieveAllDataSourceNames();
+    Set<String> activeDatasources = storageCoordinator.retrieveAllDatasourceNames();
     final Map<String, DataSourceCompactionConfig> updated = current
         .getCompactionConfigs()
         .stream()
         .filter(dataSourceCompactionConfig -> activeDatasources.contains(dataSourceCompactionConfig.getDataSource()))
         .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
 
-    return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values()));
+    return current.withDatasourceConfigs(ImmutableList.copyOf(updated.values()));
   }
 
   /**
@@ -116,7 +115,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
 
     ConfigManager.SetResult result = configManager.getAndUpdateCompactionConfig(
         current -> {
-          final CoordinatorCompactionConfig updated = deleteConfigsForInactiveDatasources(current);
+          final DruidCompactionConfig updated = deleteConfigsForInactiveDatasources(current);
           int numCurrentConfigs = current.getCompactionConfigs() == null ? 0 : current.getCompactionConfigs().size();
           int numUpdatedConfigs = updated.getCompactionConfigs() == null ? 0 : updated.getCompactionConfigs().size();
           compactionConfigRemoved.set(Math.max(0, numCurrentConfigs - numUpdatedConfigs));
@@ -134,7 +133,6 @@ public class KillCompactionConfig extends MetadataCleanupDuty
     if (result.isOk()) {
       return compactionConfigRemoved.get();
     } else if (result.isRetryable()) {
-      log.debug("Retrying KillCompactionConfig duty");
       throw new RetryableException(result.getException());
     } else {
       log.error(result.getException(), "Failed to kill compaction configurations");

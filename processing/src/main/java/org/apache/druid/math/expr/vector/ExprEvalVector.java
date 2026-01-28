@@ -29,34 +29,17 @@ import javax.annotation.Nullable;
  *
  * The generic parameter T should be the native java array type of the vector result (long[], Object[], etc.)
  */
-public abstract class ExprEvalVector<T>
+public interface ExprEvalVector<T>
 {
-  final T values;
+  ExpressionType getType();
+
+  T values();
   @Nullable
-  final boolean[] nulls;
+  boolean[] getNullVector();
 
-  public ExprEvalVector(T values, @Nullable boolean[] nulls)
-  {
-    this.values = values;
-    this.nulls = nulls;
-  }
+  long[] getLongVector();
+  double[] getDoubleVector();
+  Object[] getObjectVector();
 
-  public T values()
-  {
-    return values;
-  }
-
-  @Nullable
-  public boolean[] getNullVector()
-  {
-    return nulls;
-  }
-
-  public abstract ExpressionType getType();
-
-  public abstract long[] getLongVector();
-
-  public abstract double[] getDoubleVector();
-
-  public abstract Object[] getObjectVector();
+  boolean elementAsBoolean(int index);
 }

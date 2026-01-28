@@ -20,7 +20,6 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
@@ -47,8 +46,13 @@ public interface ColumnarDoubles extends Closeable
 
   default void get(double[] out, int start, int length)
   {
+    get(out, 0, start, length);
+  }
+
+  default void get(double[] out, int offset, int start, int length)
+  {
     for (int i = 0; i < length; i++) {
-      out[i] = get(i + start);
+      out[offset + i] = get(i + start);
     }
   }
 
@@ -123,14 +127,14 @@ public interface ColumnarDoubles extends Closeable
         public double getDouble()
         {
           //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
-          assert NullHandling.replaceWithDefault() || !isNull();
+          assert !isNull();
           return ColumnarDoubles.this.get(offset.getOffset());
         }
 
         @Override
         public double getDouble(int offset)
         {
-          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
+          assert !nullValueBitmap.get(offset);
           return ColumnarDoubles.this.get(offset);
         }
 

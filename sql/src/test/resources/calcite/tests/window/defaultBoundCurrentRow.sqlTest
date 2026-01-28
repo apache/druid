@@ -1,0 +1,66 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    dim2,
+    count(*) OVER (partition by dim2 ORDER BY dim1 ROWS UNBOUNDED PRECEDING),
+    count(*) OVER (partition by dim2 ORDER BY dim1 ROWS 1 PRECEDING),
+    count(*) OVER (partition by dim2 ORDER BY dim1 ROWS CURRENT ROW),
+    count(*) OVER (partition by dim2 ORDER BY dim1 ROWS 1 FOLLOWING),
+    count(*) OVER W
+  FROM numfoo
+  WHERE dim2 IN ('a', 'abc')
+  GROUP BY dim2, dim1
+  WINDOW W AS (partition by dim2 ORDER BY dim1 ROWS UNBOUNDED FOLLOWING)
+
+expectedOperators:
+  - {"type":"naiveSort","columns":[{"column":"d1","direction":"ASC"},{"column":"d0","direction":"ASC"}]}
+  - { type: "naivePartition", partitionColumns: [ "d1" ] }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame:
+          type: "rows"
+          upperOffset: 0
+      aggregations:
+        - { type: "count", name: "w0" }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame:
+          type: "rows"
+          lowerOffset: -1
+          upperOffset: 0
+      aggregations:
+        - { type: "count", name: "w1" }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame:
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 0
+      aggregations:
+        - { type: "count", name: "w2" }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame:
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 1
+      aggregations:
+        - { type: "count", name: "w3" }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame:
+          type: "rows"
+          lowerOffset: 0
+      aggregations:
+        - { type: "count", name: "w4" }
+
+expectedResults:
+  - ["a",1,1,1,2,2]
+  - ["a",2,2,1,1,1]
+  - ["abc",1,1,1,1,1]

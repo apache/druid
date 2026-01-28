@@ -102,6 +102,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
   {
     final KllDoublesSketchComplexMetricSerde serde = new KllDoublesSketchComplexMetricSerde();
     final ObjectStrategy<KllDoublesSketch> objectStrategy = serde.getObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
 
     KllDoublesSketch sketch = KllDoublesSketch.newHeapInstance();
     sketch.update(1.1);

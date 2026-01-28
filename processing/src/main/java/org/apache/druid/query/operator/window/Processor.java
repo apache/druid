@@ -31,6 +31,8 @@ import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
+import java.util.List;
+
 /**
  * A Processor is a bit of logic that processes a single RowsAndColumns object to produce a new RowsAndColumns
  * object.  Generally speaking, it is used to add or alter columns in a batch-oriented fashion.
@@ -80,4 +82,9 @@ public interface Processor
    * @return boolean identifying if these processors should be considered equivalent to each other.
    */
   boolean validateEquivalent(Processor otherProcessor);
+
+  /**
+   * @return List of output column names for the Processor.
+   */
+  List<String> getOutputColumnNames();
 }

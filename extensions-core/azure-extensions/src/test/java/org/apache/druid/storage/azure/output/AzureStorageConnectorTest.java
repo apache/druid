@@ -195,7 +195,7 @@ public class AzureStorageConnectorTest
   public void testListDir() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
-    EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyInt()))
+    EasyMock.expect(azureStorage.listBlobs(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyInt(), EasyMock.anyInt()))
             .andReturn(ImmutableList.of(PREFIX + "/x/y/z/" + TEST_FILE, PREFIX + "/p/q/r/" + TEST_FILE));
     EasyMock.replay(azureStorage);
     List<String> ret = Lists.newArrayList(storageConnector.listDir(""));

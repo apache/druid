@@ -1,0 +1,160 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`MenuBoolean matches snapshot false 1`] = `
+<li
+  class="bp5-submenu"
+  role="none"
+>
+  <span
+    class="bp5-popover-target"
+    role="menuitem"
+    tabindex="0"
+  >
+    <a
+      aria-haspopup="menu"
+      class="bp5-menu-item menu-tristate"
+      label="false"
+      role="none"
+      tabindex="-1"
+    >
+      <div
+        class="bp5-text-overflow-ellipsis bp5-fill"
+      >
+        hello
+      </div>
+      <span
+        class="bp5-menu-item-label"
+      >
+        false
+      </span>
+      <span
+        class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
+      >
+        <svg
+          data-icon="caret-right"
+          height="16"
+          role="img"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <title>
+            Open sub menu
+          </title>
+          <path
+            d="M220 160C220 163 218.6 165.6 216.6 167.4L216.6 167.4L136.6 237.4L136.6 237.4C134.8 239 132.6 240 130 240C124.4 240 120 235.6 120 230V90C120 84.4 124.4 80 130 80C132.6 80 134.8 81 136.6 82.6C136.6 82.6 136.6 82.6 136.6 82.6L216.6 152.6L216.6 152.6C218.6 154.4 220 157 220 160z"
+            fill-rule="evenodd"
+            style="transform-origin: center;"
+            transform="scale(0.05, -0.05) translate(-160, -160)"
+          />
+        </svg>
+      </span>
+    </a>
+  </span>
+</li>
+`;
+
+exports[`MenuBoolean matches snapshot no undefined 1`] = `
+<li
+  class="bp5-submenu"
+  role="none"
+>
+  <span
+    class="bp5-popover-target"
+    role="menuitem"
+    tabindex="0"
+  >
+    <a
+      aria-haspopup="menu"
+      class="bp5-menu-item menu-tristate"
+      label="false"
+      role="none"
+      tabindex="-1"
+    >
+      <div
+        class="bp5-text-overflow-ellipsis bp5-fill"
+      >
+        hello
+      </div>
+      <span
+        class="bp5-menu-item-label"
+      >
+        false
+      </span>
+      <span
+        class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
+      >
+        <svg
+          data-icon="caret-right"
+          height="16"
+          role="img"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <title>
+            Open sub menu
+          </title>
+          <path
+            d="M220 160C220 163 218.6 165.6 216.6 167.4L216.6 167.4L136.6 237.4L136.6 237.4C134.8 239 132.6 240 130 240C124.4 240 120 235.6 120 230V90C120 84.4 124.4 80 130 80C132.6 80 134.8 81 136.6 82.6C136.6 82.6 136.6 82.6 136.6 82.6L216.6 152.6L216.6 152.6C218.6 154.4 220 157 220 160z"
+            fill-rule="evenodd"
+            style="transform-origin: center;"
+            transform="scale(0.05, -0.05) translate(-160, -160)"
+          />
+        </svg>
+      </span>
+    </a>
+  </span>
+</li>
+`;
+
+exports[`MenuBoolean matches snapshot undefined 1`] = `
+<li
+  class="bp5-submenu"
+  role="none"
+>
+  <span
+    class="bp5-popover-target"
+    role="menuitem"
+    tabindex="0"
+  >
+    <a
+      aria-haspopup="menu"
+      class="bp5-menu-item menu-tristate"
+      label="Auto (true)"
+      role="none"
+      tabindex="-1"
+    >
+      <div
+        class="bp5-text-overflow-ellipsis bp5-fill"
+      >
+        hello
+      </div>
+      <span
+        class="bp5-menu-item-label"
+      >
+        Auto (true)
+      </span>
+      <span
+        class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
+      >
+        <svg
+          data-icon="caret-right"
+          height="16"
+          role="img"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <title>
+            Open sub menu
+          </title>
+          <path
+            d="M220 160C220 163 218.6 165.6 216.6 167.4L216.6 167.4L136.6 237.4L136.6 237.4C134.8 239 132.6 240 130 240C124.4 240 120 235.6 120 230V90C120 84.4 124.4 80 130 80C132.6 80 134.8 81 136.6 82.6C136.6 82.6 136.6 82.6 136.6 82.6L216.6 152.6L216.6 152.6C218.6 154.4 220 157 220 160z"
+            fill-rule="evenodd"
+            style="transform-origin: center;"
+            transform="scale(0.05, -0.05) translate(-160, -160)"
+          />
+        </svg>
+      </span>
+    </a>
+  </span>
+</li>
+`;

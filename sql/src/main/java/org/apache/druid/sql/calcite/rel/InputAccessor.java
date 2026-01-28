@@ -29,6 +29,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -96,7 +97,7 @@ public class InputAccessor
     if (argIndex < inputFieldCount) {
       RexInputRef inputRef = RexInputRef.of(argIndex, inputRelRowType);
       RexNode constant = predicates.constantMap.get(inputRef);
-      if (constant != null) {
+      if (constant != null && RexUtil.isLiteral(constant, false)) {
         return constant;
       }
       if (flattenedProject != null) {

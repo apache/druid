@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -42,7 +43,7 @@ public class JsonInputFormatTest
   @Test
   public void testSerde() throws IOException
   {
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = new DefaultObjectMapper();
     final JsonInputFormat format = new JsonInputFormat(
         new JSONPathSpec(
             true,

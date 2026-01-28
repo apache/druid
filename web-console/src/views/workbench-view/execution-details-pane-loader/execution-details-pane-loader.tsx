@@ -19,14 +19,27 @@
 import React from 'react';
 
 import { Loader } from '../../../components';
-import type { Execution } from '../../../druid-models';
+import { Execution } from '../../../druid-models';
 import { getTaskExecution } from '../../../helpers';
 import { useInterval, useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { QueryState } from '../../../utils';
 import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionDetailsPane } from '../execution-details-pane/execution-details-pane';
 
+async function getDartExecution(sqlQueryId: string, signal: AbortSignal): Promise<Execution> {
+  const { data } = await Api.instance.get(
+    `/druid/v2/sql/queries/${Api.encodePath(sqlQueryId)}/reports`,
+    { signal },
+  );
+
+  if (!data.report) throw new Error('Query not started yet');
+
+  return Execution.fromDartReport(data.report).changeSqlQuery(data.query.sql);
+}
+
 export interface ExecutionDetailsPaneLoaderProps {
+  type: 'task' | 'dart';
   id: string;
   initTab?: ExecutionDetailsTab;
   initExecution?: Execution;
@@ -36,21 +49,25 @@ export interface ExecutionDetailsPaneLoaderProps {
 export const ExecutionDetailsPaneLoader = React.memo(function ExecutionDetailsPaneLoader(
   props: ExecutionDetailsPaneLoaderProps,
 ) {
-  const { id, initTab, initExecution, goToTask } = props;
+  const { type, id, initTab, initExecution, goToTask } = props;
 
   const [executionState, queryManager] = useQueryManager<string, Execution>({
-    processQuery: (id: string) => {
-      return getTaskExecution(id);
-    },
     initQuery: initExecution ? undefined : id,
     initState: initExecution ? new QueryState({ data: initExecution }) : undefined,
+    processQuery: (id, signal) => {
+      if (type === 'task') {
+        return getTaskExecution(id, undefined, signal);
+      } else {
+        return getDartExecution(id, signal);
+      }
+    },
   });
 
   useInterval(() => {
     const execution = executionState.data;
     if (!execution) return;
     if (execution.isWaitingForQuery()) {
-      queryManager.runQuery(execution.id);
+      queryManager.rerunLastQuery();
     }
   }, 1000);
 

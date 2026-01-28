@@ -217,7 +217,8 @@ public class QueryTestRunner
     {
       final QueryTestBuilder builder = builder();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .context(builder.queryContext)
+                                                .systemDefaultContext(Map.of())
+                                                .queryContext(builder.queryContext)
                                                 .sqlParameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
@@ -263,10 +264,6 @@ public class QueryTestRunner
       BaseCalciteQueryTest.log.info("SQL: %s", builder.sql);
 
       final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
-      final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .sqlParameters(builder.parameters)
-                                                .auth(builder.authenticationResult)
-                                                .build();
 
       final List<String> vectorizeValues = new ArrayList<>();
       vectorizeValues.add("false");
@@ -275,7 +272,15 @@ public class QueryTestRunner
       }
 
       for (final String vectorize : vectorizeValues) {
-        final Map<String, Object> theQueryContext = new HashMap<>(builder.queryContext);
+        // Need to create sqlQuery inside the loop, because SqlQueryPlus can only be used once
+        final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
+                                                  .sqlParameters(builder.parameters)
+                                                  .auth(builder.authenticationResult)
+                                                  .systemDefaultContext(Map.of())
+                                                  .queryContext(builder.queryContext)
+                                                  .build();
+
+        final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
         theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
         theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
 
@@ -285,7 +290,7 @@ public class QueryTestRunner
 
         results.add(runQuery(
             sqlStatementFactory,
-            sqlQuery.withContext(theQueryContext),
+            sqlQuery.withContext(Map.of(), theQueryContext),
             vectorize
         ));
       }
@@ -356,15 +361,12 @@ public class QueryTestRunner
   public static class VerifyResults implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
-    protected final boolean verifyRowSignature;
 
     public VerifyResults(
-        BaseExecuteQuery execStep,
-        boolean verifyRowSignature
+        BaseExecuteQuery execStep
     )
     {
       this.execStep = execStep;
-      this.verifyRowSignature = verifyRowSignature;
     }
 
     @Override
@@ -386,9 +388,7 @@ public class QueryTestRunner
       }
 
       QueryTestBuilder builder = execStep.builder();
-      if (verifyRowSignature) {
-        builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      }
+      builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
       builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
@@ -448,19 +448,21 @@ public class QueryTestRunner
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+        Query<?> expectedQuery = expectedQueries.get(i);
+        Query<?> actualQuery = recordedQueries.get(i);
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
+            expectedQuery,
+            actualQuery
         );
 
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
+          final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
           Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
@@ -629,12 +631,15 @@ public class QueryTestRunner
       // times. Pick the first failure as that emulates the original code flow
       // where the first exception ended the test.
       for (QueryResults queryResults : execStep.results()) {
-        if (queryResults.exception == null) {
-          continue;
-        }
-
         // Delayed exception checking to let other verify steps run before running vectorized checks
         if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
+          if (queryResults.exception == null) {
+            Assert.fail(
+                "Expected vectorized execution to fail, but it did not. "
+                + "Please remove cannotVectorize() from this test case."
+            );
+          }
+
           MatcherAssert.assertThat(
               queryResults.exception,
               CoreMatchers.allOf(
@@ -644,7 +649,7 @@ public class QueryTestRunner
                   )
               )
           );
-        } else {
+        } else if (queryResults.exception != null) {
           throw queryResults.exception;
         }
       }
@@ -664,9 +669,9 @@ public class QueryTestRunner
     if (iqTestInfo != null) {
       QTestCase qt = new QTestCase(iqTestInfo);
       Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
-          .putAll(builder.getQueryContext())
-          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
-          .build();
+                                                           .putAll(builder.getQueryContext())
+                                                           .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+                                                           .build();
       for (Entry<String, Object> entry : queryContext.entrySet()) {
         qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
       }
@@ -744,7 +749,7 @@ public class QueryTestRunner
       if (builder.expectedResultsVerifier != null) {
         // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
         // would be {TASK:STRING} instead of the expected results signature
-        verifySteps.add(new VerifyResults(finalExecStep, !config.isRunningMSQ()));
+        verifySteps.add(new VerifyResults(finalExecStep));
       }
 
       if (!builder.customVerifications.isEmpty()) {
@@ -774,8 +779,11 @@ public class QueryTestRunner
 
   public QueryResults resultsOnly()
   {
-    ExecuteQuery execStep = (ExecuteQuery) runSteps.get(0);
-    execStep.run();
+    for (QueryRunStep runStep : runSteps) {
+      runStep.run();
+    }
+
+    BaseExecuteQuery execStep = (BaseExecuteQuery) runSteps.get(runSteps.size() - 1);
     return execStep.results().get(0);
   }
 }

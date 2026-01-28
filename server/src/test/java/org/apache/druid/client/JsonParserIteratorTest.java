@@ -254,7 +254,7 @@ public class JsonParserIteratorTest
     @Test
     public void testTimeoutWhileCallingFuture()
     {
-      Future<InputStream> future = new AbstractFuture<InputStream>()
+      Future<InputStream> future = new AbstractFuture<>()
       {
         @Override
         public InputStream get(long timeout, TimeUnit unit)

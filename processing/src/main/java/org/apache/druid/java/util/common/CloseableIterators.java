@@ -59,7 +59,7 @@ public class CloseableIterators
 
   public static <T> CloseableIterator<T> wrap(Iterator<T> innerIterator, @Nullable Closeable closeable)
   {
-    return new CloseableIterator<T>()
+    return new CloseableIterator<>()
     {
       private boolean closed;
 

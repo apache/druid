@@ -17,13 +17,18 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { compact, deepGet, deepSet, oneOf, oneOfKnown, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
+
+import {
+  AVRO_BYTES_DECODER_COMPLETIONS,
+  FEATURE_SPEC_COMPLETIONS,
+  PROTO_BYTES_DECODER_COMPLETIONS,
+} from './input-format-completions';
 
 export interface InputFormat {
   readonly type: string;
@@ -60,23 +65,36 @@ const KNOWN_TYPES = [
   'avro_stream',
   'protobuf',
   'regex',
-  'kafka',
   'javascript',
+  'kafka',
+  'kinesis',
 ];
+
 function generateInputFormatFields(streaming: boolean) {
   return compact([
     {
       name: 'type',
       label: 'Input format',
       type: 'string',
-      suggestions: KNOWN_TYPES,
+      suggestions: [
+        'json',
+        'csv',
+        'tsv',
+        'parquet',
+        'orc',
+        'avro_ocf',
+        'avro_stream',
+        'protobuf',
+        'regex',
+        'javascript',
+      ],
       required: true,
       info: (
         <>
           <p>The parser used to parse the data.</p>
           <p>
             For more information see{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
               the documentation
             </ExternalLink>
             .
@@ -89,6 +107,7 @@ function generateInputFormatFields(streaming: boolean) {
       label: 'JSON parser features',
       type: 'json',
       defined: typeIsKnown(KNOWN_TYPES, 'json'),
+      jsonCompletions: FEATURE_SPEC_COMPLETIONS,
       info: (
         <>
           <p>
@@ -237,6 +256,7 @@ function generateInputFormatFields(streaming: boolean) {
       defined: typeIsKnown(KNOWN_TYPES, 'avro_stream'),
       required: true,
       placeholder: `{ type: "schema_repo", ... }`,
+      jsonCompletions: AVRO_BYTES_DECODER_COMPLETIONS,
       info: (
         <>
           <p>Specifies how to decode bytes to Avro record.</p>
@@ -267,6 +287,7 @@ function generateInputFormatFields(streaming: boolean) {
       defined: typeIsKnown(KNOWN_TYPES, 'protobuf'),
       required: true,
       placeholder: `{ ... }`,
+      jsonCompletions: PROTO_BYTES_DECODER_COMPLETIONS,
       info: <>Specifies how to decode bytes to Protobuf record.</>,
     },
     {
@@ -329,7 +350,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         <p>The parser used to parse the key of the Kafka message.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
             the documentation
           </ExternalLink>
           .
@@ -606,12 +627,35 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   },
 ];
 
+export const KINESIS_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
+  {
+    name: 'timestampColumnName',
+    label: 'Kinesis timestamp column name',
+    type: 'string',
+    defaultValue: 'kinesis.timestamp',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis timestamp.`,
+  },
+  {
+    name: 'partitionKeyColumnName',
+    label: 'Kinesis partition key column name',
+    type: 'string',
+    defaultValue: 'kinesis.partitionKey',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis partition key. This field is useful when ingesting data from multiple partitions into the same datasource.`,
+  },
+];
+
 export function issueWithInputFormat(inputFormat: InputFormat | undefined): string | undefined {
   return AutoForm.issueWithModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS);
 }
 
+export function isKafkaOrKinesis(type: string | undefined): type is 'kafka' | 'kinesis' {
+  return type === 'kafka' || type === 'kinesis';
+}
+
 export function inputFormatCanProduceNestedData(inputFormat: InputFormat): boolean {
-  if (inputFormat.type === 'kafka') {
+  if (isKafkaOrKinesis(inputFormat.type)) {
     return Boolean(
       inputFormat.valueFormat && inputFormatCanProduceNestedData(inputFormat.valueFormat),
     );

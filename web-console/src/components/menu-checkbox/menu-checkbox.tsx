@@ -20,7 +20,6 @@ import type { MenuItemProps } from '@blueprintjs/core';
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React from 'react';
 
 import { checkedCircleIcon } from '../../utils';
 

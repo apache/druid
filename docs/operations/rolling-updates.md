@@ -30,7 +30,7 @@ following order:
 2. Middle Manager and Indexer (if any)
 3. Broker
 4. Router
-5. Overlord (Note that you can upgrade the Overlord before any MiddleManager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
+5. Overlord (Note that you can upgrade the Overlord before any Middle Manager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
 6. Coordinator ( or merged Coordinator+Overlord )
 
 If you need to do a rolling downgrade, reverse the order and start with the Coordinator processes.
@@ -70,14 +70,14 @@ Middle Managers can be gracefully terminated using the "disable" API. This works
 even tasks that are not restorable.
 
 To prepare a Middle Manager for update, send a POST request to
-`<MiddleManager_IP:PORT>/druid/worker/v1/disable`. The Overlord will now no longer send tasks to
+`<Middle_Manager_IP:PORT>/druid/worker/v1/disable`. The Overlord will now no longer send tasks to
 this Middle Manager. Tasks that have already started will run to completion. Current state can be checked
-using `<MiddleManager_IP:PORT>/druid/worker/v1/enabled` .
+using `<Middle_Manager_IP:PORT>/druid/worker/v1/enabled` .
 
-To view all existing tasks, send a GET request to `<MiddleManager_IP:PORT>/druid/worker/v1/tasks`.
+To view all existing tasks, send a GET request to `<Middle_Manager_IP:PORT>/druid/worker/v1/tasks`.
 When this list is empty, you can safely update the Middle Manager. After the Middle Manager starts
 back up, it is automatically enabled again. You can also manually enable Middle Managers by POSTing
-to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
+to `<Middle_Manager_IP:PORT>/druid/worker/v1/enable`.
 
 ### Autoscaling-based replacement
 

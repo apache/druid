@@ -1,0 +1,120 @@
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+-- empty input
+SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
+	SUM(CASE WHEN l1 = -1 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=-1) FROM numfoo where l1 < -1;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      0 |      0 | true   |        |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+-- 0=-1,0
+SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
+	SUM(CASE WHEN l1 = -1 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=-1) FROM numfoo where l1 < 3;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      0 |      1 | false  |        |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+
+-- 0=0,0
+SELECT COUNT(1)FILTER(WHERE l1=0),COUNT(1)FILTER(WHERE l1!=0),MIN(l2) is null,
+	SUM(CASE WHEN l1 = 0 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=0) FROM numfoo where l1 < 3;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      1 |      0 | false  |      0 |      0 |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+-- 7=7,null
+SELECT COUNT(1)FILTER(WHERE l1=7),COUNT(1)FILTER(WHERE l1!=7),MIN(l2) is null,
+	SUM(CASE WHEN l1 = 7 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=7) FROM numfoo where 0 < l1 and l1 < 10;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      1 |      0 | true   |        |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+LogicalProject(EXPR$0=[$0], EXPR$1=[$1], EXPR$2=[IS NULL($2)], EXPR$3=[$3], EXPR$4=[$4])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM($3)], EXPR$4=[SUM($2) FILTER $0])
+    LogicalProject($f1=[IS TRUE(=($0, 7))], $f2=[IS TRUE(<>($0, 7))], l2=[$1], $f4=[CASE(=($0, 7), $1, 0:BIGINT)])
+      LogicalFilter(condition=[SEARCH($0, Sarg[(0..10)])])
+        LogicalProject(l1=[$11], l2=[$12])
+          LogicalTableScan(table=[[druid, numfoo]])
+
+!druidPlan
+
+!set extendedFilteredSumRewrite false
+!use druidtest://?numMergeBuffers=3
+
+
+-- empty input
+SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
+	SUM(CASE WHEN l1 = -1 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=-1) FROM numfoo where l1 < -1;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      0 |      0 | true   |        |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+-- 0=-1,0
+SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
+	SUM(CASE WHEN l1 = -1 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=-1) FROM numfoo where l1 < 3;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      0 |      1 | false  |      0 |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+
+-- 0=0,0
+SELECT COUNT(1)FILTER(WHERE l1=0),COUNT(1)FILTER(WHERE l1!=0),MIN(l2) is null,
+	SUM(CASE WHEN l1 = 0 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=0) FROM numfoo where l1 < 3;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      1 |      0 | false  |      0 |      0 |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+-- 7=7,null
+SELECT COUNT(1)FILTER(WHERE l1=7),COUNT(1)FILTER(WHERE l1!=7),MIN(l2) is null,
+	SUM(CASE WHEN l1 = 7 THEN l2 ELSE 0 END),SUM(l2) FILTER(WHERE l1=7) FROM numfoo where 0 < l1 and l1 < 10;
++--------+--------+--------+--------+--------+
+| EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++--------+--------+--------+--------+--------+
+|      1 |      0 | true   |        |        |
++--------+--------+--------+--------+--------+
+(1 row)
+
+!ok
+
+LogicalProject(EXPR$0=[$0], EXPR$1=[$1], EXPR$2=[IS NULL($2)], EXPR$3=[$3], EXPR$4=[$4])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM($3)], EXPR$4=[SUM($2) FILTER $0])
+    LogicalProject($f1=[IS TRUE(=($0, 7))], $f2=[IS TRUE(<>($0, 7))], l2=[$1], $f4=[CASE(=($0, 7), $1, 0:BIGINT)])
+      LogicalFilter(condition=[SEARCH($0, Sarg[(0..10)])])
+        LogicalProject(l1=[$11], l2=[$12])
+          LogicalTableScan(table=[[druid, numfoo]])
+
+!druidPlan

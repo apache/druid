@@ -23,9 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 import java.util.ArrayList;
 import java.util.List;

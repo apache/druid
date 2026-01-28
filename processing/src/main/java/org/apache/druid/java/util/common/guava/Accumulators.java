@@ -27,7 +27,7 @@ public class Accumulators
 {
   public static <ListType extends List<T>, T> Accumulator<ListType, T> list()
   {
-    return new Accumulator<ListType, T>()
+    return new Accumulator<>()
     {
       @Override
       public ListType accumulate(ListType accumulated, T in)

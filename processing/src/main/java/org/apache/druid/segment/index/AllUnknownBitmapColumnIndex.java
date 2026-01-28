@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.index;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
@@ -30,12 +31,18 @@ import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
  */
 public class AllUnknownBitmapColumnIndex implements BitmapColumnIndex
 {
-  private final ColumnIndexSelector selector;
+  private final BitmapFactory bitmapFactory;
+  private final int numRows;
 
+  public AllUnknownBitmapColumnIndex(BitmapFactory bitmapFactory, int numRows)
+  {
+    this.bitmapFactory = bitmapFactory;
+    this.numRows = numRows;
+  }
 
   public AllUnknownBitmapColumnIndex(ColumnIndexSelector indexSelector)
   {
-    this.selector = indexSelector;
+    this(indexSelector.getBitmapFactory(), indexSelector.getNumRows());
   }
 
   @Override
@@ -45,14 +52,19 @@ public class AllUnknownBitmapColumnIndex implements BitmapColumnIndex
   }
 
   @Override
+  public int estimatedComputeCost()
+  {
+    return 0;
+  }
+
+  @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     if (includeUnknown) {
       return bitmapResultFactory.wrapAllTrue(
-          selector.getBitmapFactory()
-                  .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows())
+          bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), numRows)
       );
     }
-    return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
+    return bitmapResultFactory.wrapAllFalse(bitmapFactory.makeEmptyImmutableBitmap());
   }
 }

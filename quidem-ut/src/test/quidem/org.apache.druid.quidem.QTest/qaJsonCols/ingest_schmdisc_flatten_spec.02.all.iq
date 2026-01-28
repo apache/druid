@@ -1,0 +1,752 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_flatten_spec
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G50
+#-------------------------------------------------------------------------
+SELECT json_query(t_obj, '$.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G51
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G52
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_obj, '$.a_array[0].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G53
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G54
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G55
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G56
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G57
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G58
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G59
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G60
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G61
+#-------------------------------------------------------------------------
+SELECT json_query(t_array, '$.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G62
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G63
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G64
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_array, '$.a_array[0].a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G65
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_str1, '$.') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G66
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_int1, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G67
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_float1, '$.') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G68
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_bool1, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G69
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_null1, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G70
+#-------------------------------------------------------------------------
+SELECT json_query(t_empty_obj, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G71
+#-------------------------------------------------------------------------
+SELECT json_query(t_empty_array, '$.') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G72
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_str1 = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G73
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_int1 = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G74
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_float1 = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G75
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_bool1 = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G76
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_null1 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G77
+#-------------------------------------------------------------------------
+SELECT t_empty_obj
+FROM test_json_cols;
++-------------+
+| t_empty_obj |
++-------------+
+|             |
+| {}          |
++-------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G78
+#-------------------------------------------------------------------------
+SELECT t_empty_array
+FROM test_json_cols;
++---------------+
+| t_empty_array |
++---------------+
+|               |
+| []            |
++---------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G79
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_str2, '$.') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G80
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_int2, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G81
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_num_float2, '$.') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G82
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_bool2, '$.') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G83
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_null2, '$.') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G84
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_str2 = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G85
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_int2 = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G86
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_num_float2 = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G87
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_bool2 = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G88
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE t_null2 IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G89
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_str') = 'A';
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G90
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_num_int') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G91
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_num_float') = 0.1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G92
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_bool') = 1;
++---+
+| c |
++---+
+| 1 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G93
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_null') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G94
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_empty_obj') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G95
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_empty_array') c
+FROM test_json_cols;
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G96
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_empty_obj_nested') c
+FROM test_json_cols;
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G97
+#-------------------------------------------------------------------------
+SELECT json_query(t_new, '$.c1.a_obj.a_empty_array_nested') c
+FROM test_json_cols;
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G98
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(t_new, '$.c1.a_obj.a_obj.a_str') IS NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_schmdisc_flatten_spec TEST_ID: G99
+#-------------------------------------------------------------------------
+SELECT sum(cnt) s
+FROM test_json_cols;
++---+
+| s |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+

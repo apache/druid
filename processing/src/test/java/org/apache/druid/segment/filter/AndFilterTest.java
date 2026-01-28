@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -34,8 +33,11 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,19 +59,25 @@ public class AndFilterTest extends BaseFilterTest
       )
   );
 
+  private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
+                                                                .add("dim0", ColumnType.STRING)
+                                                                .add("dim1", ColumnType.STRING)
+                                                                .add("dim2", ColumnType.STRING)
+                                                                .build();
+
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "0")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "0")).get(0)
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "0", "a"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "0", null),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "0", "b"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "0", null),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "0", "c"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "0", null)
   );
 
   public AndFilterTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -174,6 +182,30 @@ public class AndFilterTest extends BaseFilterTest
             new NotDimFilter(new SelectorDimFilter("dim1", "0", null))
         ))),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
+    );
+  }
+
+  @Test
+  public void testNotAndWithNulls()
+  {
+    assertFilterMatches(
+        new AndDimFilter(
+            ImmutableList.of(
+                TrueDimFilter.instance(),
+                new SelectorDimFilter("dim2", "c", null)
+            )
+        ),
+        ImmutableList.of("4")
+    );
+    assertFilterMatches(
+        new NotDimFilter(
+            new AndDimFilter(ImmutableList.of(
+                TrueDimFilter.instance(),
+                new SelectorDimFilter("dim2", "c", null)
+            )
+            )
+        ),
+        ImmutableList.of("0", "2")
     );
   }
 

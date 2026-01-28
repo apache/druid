@@ -135,7 +135,7 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient expectedBlobServiceClient = azureClientFactory.getBlobServiceClient(AzureAccountConfig.DEFAULT_MAX_TRIES, ACCOUNT);
+    BlobServiceClient expectedBlobServiceClient = azureClientFactory.getBlobServiceClient(3, ACCOUNT);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     assertEquals(expectedBlobServiceClient, blobServiceClient);
   }
@@ -148,7 +148,7 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     config.setEndpointSuffix(endpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
@@ -164,7 +164,7 @@ public class AzureClientFactoryTest
     config.setKey("key");
     config.setEndpointSuffix(endpointSuffix);
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
@@ -178,7 +178,7 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + storageAccountEndpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + storageAccountEndpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
@@ -203,7 +203,7 @@ public class AzureClientFactoryTest
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
     final AzureClientFactory localAzureClientFactory = new AzureClientFactory(config);
     final URL expectedAccountUrl = new URL(
-        AzureAccountConfig.DEFAULT_PROTOCOL,
+        "https",
         ACCOUNT + "." + storageAccountEndpointSuffix,
         ""
     );

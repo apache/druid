@@ -24,12 +24,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -121,12 +121,29 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     if (selector.isNull()) {
-      nullRowsBitmap.add(rowCount);
-      writer.add(0L);
+      serializeNull();
     } else {
-      writer.add(selector.getLong());
+      serializeValue(selector.getLong());
     }
-    rowCount++;
+  }
+
+  /**
+   * Serializes a null value at the rowCount position, and increments the current rowCount.
+   */
+  public void serializeNull() throws IOException
+  {
+    nullRowsBitmap.add(rowCount);
+    writer.add(0L);
+    ++rowCount;
+  }
+
+  /**
+   * Serializes a value of val at the rowCount position, and increments the current rowCount.
+   */
+  public void serializeValue(long val) throws IOException
+  {
+    writer.add(val);
+    ++rowCount;
   }
 
   @Override
@@ -140,12 +157,12 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     SerializerUtils.writeInt(channel, Ints.checkedCast(writer.getSerializedSize()));
-    writer.writeTo(channel, smoosher);
+    writer.writeTo(channel, fileBuilder);
     if (!nullRowsBitmap.isEmpty()) {
-      nullValueBitmapWriter.writeTo(channel, smoosher);
+      nullValueBitmapWriter.writeTo(channel, fileBuilder);
     }
   }
 }

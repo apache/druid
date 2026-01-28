@@ -21,24 +21,36 @@ package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
+import org.apache.druid.sql.calcite.parser.StatementAndSetContext;
+import org.apache.druid.sql.calcite.planner.CalcitePlanner;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Captures the inputs to a SQL execution request: the statement,the context,
- * parameters, and the authorization result. Pass this around rather than the
- * quad of items. The request can evolve: the context and parameters can be
- * filled in later as needed.
+ * Captures the inputs to a SQL execution request: the statement (as a string),
+ * the parsed statement, the context, parameters, and the authorization result.
+ * The request can evolve: the context and parameters can be filled in later
+ * as needed.
  * <p>
  * SQL requests come from a variety of sources in a variety of formats. Use
  * the {@link Builder} class to create an instance from the information
  * available at each point in the code.
+ * <p>
+ * Each instance of SqlQueryPlus can only be used once, because {@link #sqlNode}
+ * is a mutable data structure, modified during {@link CalcitePlanner#validate}.
+ * If you need to use one again, call {@link #freshCopy()} to create a fresh
+ * copy with a new {@link SqlNode}.
  * <p>
  * The query context has a complex lifecycle. The copy here is immutable:
  * it is the set of values which the user requested. Planning will
@@ -50,24 +62,36 @@ import java.util.Map;
 public class SqlQueryPlus
 {
   private final String sql;
-  private final Map<String, Object> queryContext;
+  @Nullable
+  private final SqlNode sqlNode;
+  private boolean allowSetStatements;
+  private final Map<String, Object> stmtContext;
+  private final Set<String> authContextKeys;
   private final List<TypedValue> parameters;
   private final AuthenticationResult authResult;
 
-  public SqlQueryPlus(
+  private SqlQueryPlus(
       String sql,
-      Map<String, Object> queryContext,
+      SqlNode sqlNode,
+      boolean allowSetStatements,
+      Map<String, Object> stmtContext,
+      Set<String> authContextKeys,
       List<TypedValue> parameters,
       AuthenticationResult authResult
   )
   {
     this.sql = Preconditions.checkNotNull(sql);
-    this.queryContext = queryContext == null
-        ? Collections.emptyMap()
-        : Collections.unmodifiableMap(new HashMap<>(queryContext));
+    this.sqlNode = sqlNode;
+    this.allowSetStatements = allowSetStatements;
+    this.stmtContext = stmtContext == null
+                       ? Collections.emptyMap()
+                       : Collections.unmodifiableMap(stmtContext);
+    this.authContextKeys = authContextKeys == null
+                           ? Collections.emptySet()
+                           : Collections.unmodifiableSet(authContextKeys);
     this.parameters = parameters == null
-        ? Collections.emptyList()
-        : parameters;
+                      ? Collections.emptyList()
+                      : parameters;
     this.authResult = Preconditions.checkNotNull(authResult);
   }
 
@@ -81,19 +105,28 @@ public class SqlQueryPlus
     return new Builder().sql(sql);
   }
 
-  public static Builder builder(SqlQuery sqlQuery)
-  {
-    return new Builder().query(sqlQuery);
-  }
-
   public String sql()
   {
     return sql;
   }
 
+  public SqlNode sqlNode()
+  {
+    if (sqlNode == null) {
+      throw DruidException.defensive("sqlNode not set");
+    }
+
+    return sqlNode;
+  }
+
   public Map<String, Object> context()
   {
-    return queryContext;
+    return stmtContext;
+  }
+
+  public Set<String> authContextKeys()
+  {
+    return authContextKeys;
   }
 
   public List<TypedValue> parameters()
@@ -106,19 +139,67 @@ public class SqlQueryPlus
     return authResult;
   }
 
-  public SqlQueryPlus withContext(Map<String, Object> context)
+  public SqlQueryPlus withContext(Map<String, Object> defaultContext, Map<String, Object> userProvidedContext)
   {
-    return new SqlQueryPlus(sql, context, parameters, authResult);
+    return new SqlQueryPlus(
+        sql,
+        sqlNode,
+        allowSetStatements,
+        QueryContexts.override(defaultContext, userProvidedContext),
+        userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
+        parameters,
+        authResult
+    );
   }
 
   public SqlQueryPlus withParameters(List<TypedValue> parameters)
   {
-    return new SqlQueryPlus(sql, queryContext, parameters, authResult);
+    return new SqlQueryPlus(
+        sql,
+        sqlNode,
+        allowSetStatements,
+        stmtContext,
+        authContextKeys,
+        parameters,
+        authResult
+    );
+  }
+
+  /**
+   * Returns a copy of this instance where everything is shared, except the {@link #sqlNode}, which is re-parsed from
+   * the SQL statement.
+   */
+  public SqlQueryPlus freshCopy()
+  {
+    return new SqlQueryPlus(
+        sql,
+        DruidSqlParser.parse(sql, allowSetStatements).getMainStatement(),
+        allowSetStatements,
+        stmtContext,
+        authContextKeys,
+        parameters,
+        authResult
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SqlQueryPlus{" +
+           "sql='" + sql + '\'' +
+           ", sqlNode=" + sqlNode +
+           ", allowSetStatements=" + allowSetStatements +
+           ", stmtContext=" + stmtContext +
+           ", authContextKeys=" + authContextKeys +
+           ", parameters=" + parameters +
+           ", authResult=" + authResult +
+           '}';
   }
 
   public static class Builder
   {
     private String sql;
+    private Map<String, Object> systemDefaultContext;
     private Map<String, Object> queryContext;
     private List<TypedValue> parameters;
     private AuthenticationResult authResult;
@@ -129,15 +210,19 @@ public class SqlQueryPlus
       return this;
     }
 
-    public Builder query(SqlQuery sqlQuery)
+    /**
+     * Sets the system-wide default contexts. This context is used to fill in missing values and doesn't go thorough authorization check.
+     */
+    public Builder systemDefaultContext(Map<String, Object> systemDefaultContext)
     {
-      this.sql = sqlQuery.getQuery();
-      this.queryContext = sqlQuery.getContext();
-      this.parameters = sqlQuery.getParameterList();
+      this.systemDefaultContext = systemDefaultContext;
       return this;
     }
 
-    public Builder context(Map<String, Object> queryContext)
+    /**
+     * Sets the user-provided query context. This context is used for authorization checks.
+     */
+    public Builder queryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
       return this;
@@ -161,11 +246,51 @@ public class SqlQueryPlus
       return this;
     }
 
+    /**
+     * Parses the provided {@link #sql} and builds a {@link SqlQueryPlus} with SET statements folded into the
+     * context, and with the parsed SQL in {@link #sqlNode}.
+     * <p>
+     * When using this method, the {@link #sqlNode()} must only be run through validation once. (The validator
+     * mutates the {@link SqlNode}).
+     */
     public SqlQueryPlus build()
+    {
+      final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
+      final Map<String, Object> userProvidedContext = statementAndSetContext.getSetContext().isEmpty()
+                                                      ? queryContext
+                                                      : QueryContexts.override(
+                                                          queryContext,
+                                                          statementAndSetContext.getSetContext()
+                                                      );
+      final Map<String, Object> stmtContext = systemDefaultContext == null
+                                              ? userProvidedContext
+                                              : QueryContexts.override(systemDefaultContext, userProvidedContext);
+      return new SqlQueryPlus(
+          sql,
+          statementAndSetContext.getMainStatement(),
+          true,
+          stmtContext,
+          userProvidedContext == null ? Set.of() : userProvidedContext.keySet(),
+          parameters,
+          authResult
+      );
+    }
+
+    /**
+     * Builds a {@link SqlQueryPlus} with no {@link SqlNode} and with {@link #allowSetStatements} set to false.
+     * This is done for JDBC becauase it can runs each {@link SqlQueryPlus} multiple times, and it needs to keep
+     * re-parsing and re-validating the query on each run.
+     * <p>
+     * When using this method, you must create a copy with {@link #freshCopy()} prior to calling {@link #sqlNode()}.
+     */
+    public SqlQueryPlus buildJdbc()
     {
       return new SqlQueryPlus(
           sql,
-          queryContext,
+          null,
+          false,
+          QueryContexts.override(systemDefaultContext, queryContext),
+          queryContext == null ? Set.of() : queryContext.keySet(),
           parameters,
           authResult
       );

@@ -177,7 +177,7 @@ public class PartitionHolderCompletenessTest
                                              .size(1)
                                              .build();
     final PartitionChunk<DataSegment> partitionChunk = new TombstonePartitionedChunk<>(tombstone);
-    final PartitionHolder<DataSegment> partitionHolder = new PartitionHolder<DataSegment>(partitionChunk);
+    final PartitionHolder<DataSegment> partitionHolder = new PartitionHolder<>(partitionChunk);
     Assert.assertFalse(partitionHolder.hasData());
   }
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
 import javax.annotation.Nullable;
@@ -31,15 +30,15 @@ import java.nio.ByteBuffer;
 public class NilVectorAggregator implements VectorAggregator
 {
   private static final NilVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
-      NullHandling.defaultDoubleValue()
+      null
   );
 
   private static final NilVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
-      NullHandling.defaultFloatValue()
+      null
   );
 
   private static final NilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
-      NullHandling.defaultLongValue()
+      null
   );
 
   /**

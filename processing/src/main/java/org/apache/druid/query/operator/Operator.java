@@ -68,7 +68,7 @@ public interface Operator
    * to indicate its degree of readiness for more data to be received.
    * <p>
    * If a Receiver returns a {@link Signal#PAUSE} signal, then if there is processing left to do, then it is expected
-   * that a non-null "continuation" object nwill be returned.  This allows for flow control to be returned to the
+   * that a non-null "continuation" object will be returned.  This allows for flow control to be returned to the
    * caller to, e.g., process another Operator or just exert backpressure.  In this case, when the controller wants to
    * resume, it must call this method again and include the continuation object that it received.
    * <p>
@@ -99,7 +99,7 @@ public interface Operator
    * if there is any state that an Operator requires to be able to resume its processing, then it is expected that the
    * Operator will cast the object back to an instance of the type that it had originally returned.
    *
-   * @param receiver a receiver that will receiver data
+   * @param receiver a receiver that will receive data
    * @return null if processing is complete, non-null if the Receiver returned a {@link Signal#PAUSE} signal
    */
   @Nullable
@@ -126,7 +126,7 @@ public interface Operator
      */
     STOP,
     /**
-     * Inidcates that the downstream processing should pause its pushing of results and instead return a
+     * Indicates that the downstream processing should pause its pushing of results and instead return a
      * continuation object that encapsulates whatever state is required to resume processing.  When this signal is
      * received, Operators that are generating data might choose to exert backpressure or otherwise pause their
      * processing efforts until called again with the returned continuation object.

@@ -194,7 +194,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
   {
     // Define an inline table
     CsvInputFormat format = new CsvInputFormat(
-        Collections.singletonList("a"), ";", false, false, 0);
+        Collections.singletonList("a"), ";", false, false, 0, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a,b\nc,d")))
         .inputFormat(formatToMap(format))

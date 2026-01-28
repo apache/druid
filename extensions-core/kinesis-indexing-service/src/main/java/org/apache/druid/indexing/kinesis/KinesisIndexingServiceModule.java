@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.name.Names;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.data.input.kinesis.KinesisInputFormat;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
@@ -50,7 +51,8 @@ public class KinesisIndexingServiceModule implements DruidModule
                 new NamedType(KinesisIndexTaskIOConfig.class, SCHEME),
                 new NamedType(KinesisSupervisorTuningConfig.class, SCHEME),
                 new NamedType(KinesisSupervisorSpec.class, SCHEME),
-                new NamedType(KinesisSamplerSpec.class, SCHEME)
+                new NamedType(KinesisSamplerSpec.class, SCHEME),
+                new NamedType(KinesisInputFormat.class, SCHEME)
             )
     );
   }

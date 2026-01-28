@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -32,10 +33,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
@@ -158,46 +157,45 @@ public class DetermineHashedPartitionsJobTest
     }
 
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
-        new DataSchema(
-            "test_schema",
-            HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                new StringInputRowParser(
-                    new DelimitedParseSpec(
-                        new TimestampSpec("ts", null, null),
-                        new DimensionsSpec(
-                            DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                                "market",
-                                "quality",
-                                "placement",
-                                "placementish"
-                            ))
-                        ),
-                        "\t",
-                        null,
-                        Arrays.asList(
-                            "ts",
-                            "market",
-                            "quality",
-                            "placement",
-                            "placementish",
-                            "index"
-                        ),
-                        false,
-                        0
-                    ),
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
-            new UniformGranularitySpec(
-                segmentGranularity,
-                Granularities.NONE,
-                intervals
-            ),
-            null,
-            HadoopDruidIndexerConfig.JSON_MAPPER
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_schema")
+                  .withParserMap(HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                      new StringInputRowParser(
+                          new DelimitedParseSpec(
+                              new TimestampSpec("ts", null, null),
+                              new DimensionsSpec(
+                                  DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                      "market",
+                                      "quality",
+                                      "placement",
+                                      "placementish"
+                                  ))
+                              ),
+                              "\t",
+                              null,
+                              Arrays.asList(
+                                  "ts",
+                                  "market",
+                                  "quality",
+                                  "placement",
+                                  "placementish",
+                                  "index"
+                              ),
+                              false,
+                              0
+                          ),
+                          null
+                      ),
+                      Map.class
+                  ))
+                  .withAggregators(new DoubleSumAggregatorFactory("index", "index"))
+                  .withGranularity(new UniformGranularitySpec(
+                      segmentGranularity,
+                      Granularities.NONE,
+                      intervals
+                  ))
+                  .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                  .build(),
         new HadoopIOConfig(
             ImmutableMap.of(
                 "paths",
@@ -216,7 +214,6 @@ public class DetermineHashedPartitionsJobTest
             null,
             null,
             null,
-            false,
             false,
             false,
             false,
@@ -249,7 +246,7 @@ public class DetermineHashedPartitionsJobTest
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(
         expectedNumTimeBuckets,
-        shardSpecs.entrySet().size()
+        shardSpecs.size()
     );
     int i = 0;
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : shardSpecs.entrySet()) {

@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.NoopDataSource;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -52,6 +54,16 @@ public class UnionDataSourceTest
       )
   );
 
+  private final UnionDataSource tableAndInlineUniondataSource = new UnionDataSource(
+      ImmutableList.of(
+          new TableDataSource("foo"),
+          InlineDataSource.fromIterable(
+              Collections.emptyList(),
+              RowSignature.empty()
+          )
+      )
+  );
+
   @Test
   public void test_constructor_empty()
   {
@@ -60,6 +72,26 @@ public class UnionDataSourceTest
 
     //noinspection ResultOfObjectAllocationIgnored
     new UnionDataSource(Collections.emptyList());
+  }
+
+  @Test
+  public void test_isCompatible()
+  {
+    TableDataSource tableDataSource = new TableDataSource("foo");
+    InlineDataSource inlineDataSource = InlineDataSource.fromIterable(Collections.emptyList(), RowSignature.empty());
+
+    Assert.assertTrue(UnionDataSource.isCompatibleDataSource(tableDataSource));
+    Assert.assertTrue(UnionDataSource.isCompatibleDataSource(inlineDataSource));
+    Assert.assertFalse(UnionDataSource.isCompatibleDataSource(new NoopDataSource()));
+  }
+
+  @Test
+  public void test_isTableBased()
+  {
+    Assert.assertTrue(unionDataSource.isTableBased());
+    Assert.assertTrue(unionDataSourceWithDuplicates.isTableBased());
+
+    Assert.assertFalse(tableAndInlineUniondataSource.isTableBased());
   }
 
   @Test
@@ -108,7 +140,7 @@ public class UnionDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(unionDataSource.isConcrete());
+    Assert.assertTrue(unionDataSource.isProcessable());
   }
 
   @Test
@@ -131,7 +163,7 @@ public class UnionDataSourceTest
     //noinspection unchecked
     Assert.assertEquals(
         new UnionDataSource(newDataSources),
-        unionDataSource.withChildren((List) newDataSources)
+        unionDataSource.withChildren(newDataSources)
     );
   }
 

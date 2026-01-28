@@ -20,9 +20,12 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -33,24 +36,33 @@ import java.util.Map;
 
 /**
  * Direct interface to memory mapped segments. Not a public API for extensions; site specific queries should be
- * using {@link StorageAdapter}.
+ * using {@link CursorFactory}.
  *
- * @see QueryableIndexStorageAdapter for query path adapter
+ * @see QueryableIndexCursorFactory for query path adapter
  * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
 public interface QueryableIndex extends Closeable, ColumnInspector
 {
   Interval getDataInterval();
   int getNumRows();
+  /**
+   * List of dimensions, not including {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   Indexed<String> getAvailableDimensions();
   BitmapFactory getBitmapFactoryForDimensions();
-  @Nullable Metadata getMetadata();
+  @Nullable
+  Metadata getMetadata();
+
+  /**
+   * Map of column name to {@link DimensionHandler}, whose contents and iteration order matches
+   * {@link #getAvailableDimensions()}.
+   */
   Map<String, DimensionHandler> getDimensionHandlers();
 
   List<String> getColumnNames();
 
   @Nullable
-  ColumnHolder getColumnHolder(String columnName);
+  BaseColumnHolder getColumnHolder(String columnName);
 
   @Override
   @Nullable
@@ -64,10 +76,27 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   }
 
   /**
+   * Returns the ordering of rows in this index.
+   */
+  List<OrderBy> getOrdering();
+
+  /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.
    * @throws IOException if an exception was thrown closing the index
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
+
+  @Nullable
+  default QueryableProjection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
+  {
+    return null;
+  }
+
+  @Nullable
+  default QueryableIndex getProjectionQueryableIndex(String name)
+  {
+    return null;
+  }
 }

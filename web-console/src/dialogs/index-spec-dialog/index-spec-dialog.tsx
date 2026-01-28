@@ -24,6 +24,8 @@ import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
 import type { IndexSpec } from '../../druid-models';
 import { INDEX_SPEC_FIELDS } from '../../druid-models';
 
+import { INDEX_SPEC_COMPLETIONS } from './index-spec-completions';
+
 import './index-spec-dialog.scss';
 
 export interface IndexSpecDialogProps {
@@ -71,6 +73,7 @@ export const IndexSpecDialog = React.memo(function IndexSpecDialog(props: IndexS
             setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, INDEX_SPEC_FIELDS)}
             height="100%"
+            jsonCompletions={INDEX_SPEC_COMPLETIONS}
           />
         )}
       </div>

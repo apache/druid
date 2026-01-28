@@ -20,13 +20,14 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.row.ConstantFrameRowPointer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Class for reading rows in the same format as used by {@link org.apache.druid.frame.FrameType#ROW_BASED}.
+ * Class for reading rows in the same format as used by {@link FrameType#isRowBased()}.
  *
  * Stateless and immutable.
  *

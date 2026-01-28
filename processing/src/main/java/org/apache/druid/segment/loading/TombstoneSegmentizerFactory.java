@@ -21,25 +21,23 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.NoopQueryableIndex;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
-import java.util.List;
-import java.util.Map;
 
 public class TombstoneSegmentizerFactory implements SegmentizerFactory
 {
@@ -62,77 +60,16 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
     // Create a no-op queryable index that indicates that it was created from a tombstone...then the
     // server manager will use the information to short-circuit and create a no-op query runner for
     // it since it has no data:
-    final QueryableIndex queryableIndex =
-        new QueryableIndex()
-        {
-          @Override
-          public Interval getDataInterval()
-          {
-            return tombstone.getInterval();
-          }
-
-          @Override
-          public int getNumRows()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Indexed<String> getAvailableDimensions()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public BitmapFactory getBitmapFactoryForDimensions()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Nullable
-          @Override
-          public Metadata getMetadata()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public Map<String, DimensionHandler> getDimensionHandlers()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public void close()
-          {
-
-          }
-
-          @Override
-          public List<String> getColumnNames()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Nullable
-          @Override
-          public ColumnHolder getColumnHolder(String columnName)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-        };
-
-    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex)
+    final QueryableIndex queryableIndex = new NoopQueryableIndex()
     {
       @Override
-      public boolean isFromTombstone()
+      public Interval getDataInterval()
       {
-        return true;
+        return tombstone.getInterval();
       }
     };
 
-    Segment segmentObject = new Segment()
+    final Segment segmentObject = new Segment()
     {
       @Override
       public SegmentId getId()
@@ -143,20 +80,53 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
       @Override
       public Interval getDataInterval()
       {
-        return asQueryableIndex().getDataInterval();
+        return tombstone.getInterval();
       }
 
       @Nullable
       @Override
-      public QueryableIndex asQueryableIndex()
+      public <T> T as(@Nonnull Class<T> clazz)
       {
-        return queryableIndex;
+        if (CursorFactory.class.equals(clazz)) {
+          return (T) new CursorFactory()
+          {
+            @Override
+            public CursorHolder makeCursorHolder(CursorBuildSpec spec)
+            {
+              return new CursorHolder()
+              {
+                @Nullable
+                @Override
+                public Cursor asCursor()
+                {
+                  return null;
+                }
+              };
+            }
+
+            @Override
+            public RowSignature getRowSignature()
+            {
+              return RowSignature.empty();
+            }
+
+            @Override
+            @Nullable
+            public ColumnCapabilities getColumnCapabilities(String column)
+            {
+              return null;
+            }
+          };
+        } else if (QueryableIndex.class.equals(clazz)) {
+          return (T) queryableIndex;
+        }
+        return null;
       }
 
       @Override
-      public StorageAdapter asStorageAdapter()
+      public boolean isTombstone()
       {
-        return storageAdapter;
+        return true;
       }
 
       @Override

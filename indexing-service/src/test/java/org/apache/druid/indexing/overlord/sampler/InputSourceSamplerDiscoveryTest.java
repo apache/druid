@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -57,88 +56,17 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   private InputSourceSampler inputSourceSampler = new InputSourceSampler(OBJECT_MAPPER);
 
   @Test
-  public void testDiscoveredTypesNonStrictBooleans()
-  {
-
-    try {
-      ExpressionProcessing.initializeForStrictBooleansTests(false);
-      final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-      final SamplerResponse response = inputSourceSampler.sample(
-          inputSource,
-          new JsonInputFormat(null, null, null, null, null),
-          new DataSchema(
-              "test",
-              new TimestampSpec("t", null, null),
-              DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-              null,
-              null,
-              null
-          ),
-          null
-      );
-
-      Assert.assertEquals(6, response.getNumRowsRead());
-      Assert.assertEquals(5, response.getNumRowsIndexed());
-      Assert.assertEquals(6, response.getData().size());
-      Assert.assertEquals(
-          ImmutableList.of(
-              new StringDimensionSchema("string"),
-              new LongDimensionSchema("long"),
-              new DoubleDimensionSchema("double"),
-              new StringDimensionSchema("bool"),
-              new StringDimensionSchema("variant"),
-              new AutoTypeColumnSchema("array", null),
-              new AutoTypeColumnSchema("nested", null)
-          ),
-          response.getLogicalDimensions()
-      );
-
-      Assert.assertEquals(
-          ImmutableList.of(
-              new AutoTypeColumnSchema("string", null),
-              new AutoTypeColumnSchema("long", null),
-              new AutoTypeColumnSchema("double", null),
-              new AutoTypeColumnSchema("bool", null),
-              new AutoTypeColumnSchema("variant", null),
-              new AutoTypeColumnSchema("array", null),
-              new AutoTypeColumnSchema("nested", null)
-          ),
-          response.getPhysicalDimensions()
-      );
-      Assert.assertEquals(
-          RowSignature.builder()
-                      .addTimeColumn()
-                      .add("string", ColumnType.STRING)
-                      .add("long", ColumnType.LONG)
-                      .add("double", ColumnType.DOUBLE)
-                      .add("bool", ColumnType.STRING)
-                      .add("variant", ColumnType.STRING)
-                      .add("array", ColumnType.LONG_ARRAY)
-                      .add("nested", ColumnType.NESTED_DATA)
-                      .build(),
-          response.getLogicalSegmentSchema()
-      );
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
-  }
-
-  @Test
   public void testDiscoveredTypesStrictBooleans()
   {
     final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),
-        new DataSchema(
-            "test",
-            new TimestampSpec("t", null, null),
-            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-            null,
-            null,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                  .build(),
         null
     );
 
@@ -152,21 +80,21 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new LongDimensionSchema("bool"),
             new StringDimensionSchema("variant"),
-            new AutoTypeColumnSchema("array", null),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("array"),
+            AutoTypeColumnSchema.of("nested")
         ),
         response.getLogicalDimensions()
     );
 
     Assert.assertEquals(
         ImmutableList.of(
-            new AutoTypeColumnSchema("string", null),
-            new AutoTypeColumnSchema("long", null),
-            new AutoTypeColumnSchema("double", null),
-            new AutoTypeColumnSchema("bool", null),
-            new AutoTypeColumnSchema("variant", null),
-            new AutoTypeColumnSchema("array", null),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("string"),
+            AutoTypeColumnSchema.of("long"),
+            AutoTypeColumnSchema.of("double"),
+            AutoTypeColumnSchema.of("bool"),
+            AutoTypeColumnSchema.of("variant"),
+            AutoTypeColumnSchema.of("array"),
+            AutoTypeColumnSchema.of("nested")
         ),
         response.getPhysicalDimensions()
     );
@@ -189,14 +117,12 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   public void testTypesClassicDiscovery()
   {
     final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-    final DataSchema dataSchema = new DataSchema(
-        "test",
-        new TimestampSpec("t", null, null),
-        DimensionsSpec.builder().build(),
-        null,
-        null,
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .build();
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),
@@ -248,23 +174,20 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   public void testTypesNoDiscoveryExplicitSchema()
   {
     final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-    final DataSchema dataSchema = new DataSchema(
-        "test",
-        new TimestampSpec("t", null, null),
-        DimensionsSpec.builder().setDimensions(
-            ImmutableList.of(new StringDimensionSchema("string"),
-                             new LongDimensionSchema("long"),
-                             new DoubleDimensionSchema("double"),
-                             new StringDimensionSchema("bool"),
-                             new AutoTypeColumnSchema("variant", null),
-                             new AutoTypeColumnSchema("array", null),
-                             new AutoTypeColumnSchema("nested", null)
-            )
-        ).build(),
-        null,
-        null,
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(
+                      new StringDimensionSchema("string"),
+                      new LongDimensionSchema("long"),
+                      new DoubleDimensionSchema("double"),
+                      new StringDimensionSchema("bool"),
+                      AutoTypeColumnSchema.of("variant"),
+                      AutoTypeColumnSchema.of("array"),
+                      AutoTypeColumnSchema.of("nested")
+                  )
+                  .build();
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),

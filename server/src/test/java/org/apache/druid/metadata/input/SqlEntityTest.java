@@ -68,7 +68,7 @@ public class SqlEntityTest
     File tmpFile = File.createTempFile("testQueryResults", "");
     InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
         VALID_SQL,
-        testUtils.getDerbyFirehoseConnector(),
+        testUtils.getDerbyInputSourceConnector(),
         mapper,
         true,
         tmpFile
@@ -95,7 +95,7 @@ public class SqlEntityTest
         IOException.class,
         () -> SqlEntity.openCleanableFile(
             INVALID_SQL,
-            testUtils.getDerbyFirehoseConnector(),
+            testUtils.getDerbyInputSourceConnector(),
             mapper,
             true,
             tmpFile

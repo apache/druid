@@ -23,8 +23,10 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -69,8 +71,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 /**
  * {@link NestedCommonFormatColumn} for single type array columns, and mixed type columns. If {@link #variantTypes}
@@ -80,6 +84,9 @@ import java.util.TreeMap;
 public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<VariantColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(VariantColumn.class);
+
   private final TStringDictionary stringDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
@@ -90,6 +97,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   private final ExpressionType logicalExpressionType;
   @Nullable
   private final FieldTypeInfo.TypeSet variantTypes;
+  private final BitmapFactory bitmapFactory;
   private final int adjustLongId;
   private final int adjustDoubleId;
   private final int adjustArrayId;
@@ -102,7 +110,8 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       ColumnarInts encodedValueColumn,
       ImmutableBitmap nullValueBitmap,
       ColumnType logicalType,
-      @Nullable Byte variantTypeSetByte
+      @Nullable Byte variantTypeSetByte,
+      BitmapFactory bitmapFactory
   )
   {
     this.stringDictionary = stringDictionary;
@@ -113,13 +122,11 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     this.nullValueBitmap = nullValueBitmap;
     this.logicalExpressionType = ExpressionType.fromColumnTypeStrict(logicalType);
     this.variantTypes = variantTypeSetByte == null ? null : new FieldTypeInfo.TypeSet(variantTypeSetByte);
+    this.bitmapFactory = bitmapFactory;
     // use the variant type bytes if set, in current code the logical type should have been computed via this same means
     // however older versions of the code had a bug which could incorrectly classify mixed types as nested data
     if (variantTypeSetByte != null) {
-      ColumnType theType = null;
-      for (ColumnType type : FieldTypeInfo.convertToSet(variantTypeSetByte)) {
-        theType = ColumnType.leastRestrictiveType(theType, type);
-      }
+      ColumnType theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(variantTypeSetByte));
       if (theType != null) {
         // sign bit is used to indicate empty arrays, this
         if (variantTypeSetByte < 0 && !theType.isArray()) {
@@ -164,7 +171,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public Indexed<Object[]> getArrayDictionary()
   {
-    Iterable<Object[]> arrays = () -> new Iterator<Object[]>()
+    Iterable<Object[]> arrays = () -> new Iterator<>()
     {
       final Iterator<int[]> delegate = arrayDictionary.iterator();
 
@@ -203,7 +210,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
         throw new IAE("Unknown id [%s]", id);
       }
     };
-    return new Indexed<Object[]>()
+    return new Indexed<>()
     {
       @Override
       public int size()
@@ -610,7 +617,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
       private int nullMark = -1;
@@ -1007,5 +1014,14 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     {
       return offset.getCurrentVectorSize();
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

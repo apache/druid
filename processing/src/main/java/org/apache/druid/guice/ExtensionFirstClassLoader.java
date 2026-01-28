@@ -24,7 +24,6 @@ import com.google.common.collect.Iterators;
 
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -32,13 +31,13 @@ import java.util.List;
 /**
  * The ClassLoader that gets used when druid.extensions.useExtensionClassloaderFirst = true.
  */
-public class ExtensionFirstClassLoader extends URLClassLoader
+public class ExtensionFirstClassLoader extends StandardURLClassLoader
 {
   private final ClassLoader druidLoader;
 
-  public ExtensionFirstClassLoader(final URL[] urls, final ClassLoader druidLoader)
+  public ExtensionFirstClassLoader(final URL[] urls, final ClassLoader druidLoader, final List<ClassLoader> extensionDependencyClassLoaders)
   {
-    super(urls, null);
+    super(urls, null, extensionDependencyClassLoaders);
     this.druidLoader = Preconditions.checkNotNull(druidLoader, "druidLoader");
   }
 
@@ -60,8 +59,13 @@ public class ExtensionFirstClassLoader extends URLClassLoader
           clazz = findClass(name);
         }
         catch (ClassNotFoundException e) {
-          // Try the Druid classloader. Will throw ClassNotFoundException if the class can't be loaded.
-          return druidLoader.loadClass(name);
+          try {
+            clazz = loadClassFromExtensionDependencies(name);
+          }
+          catch (ClassNotFoundException e2) {
+            // Try the Druid classloader. Will throw ClassNotFoundException if the class can't be loaded.
+            clazz = druidLoader.loadClass(name);
+          }
         }
       }
 
@@ -76,13 +80,18 @@ public class ExtensionFirstClassLoader extends URLClassLoader
   @Override
   public URL getResource(final String name)
   {
-    final URL resourceFromExtension = super.getResource(name);
+    URL resourceFromExtension = super.getResource(name);
 
     if (resourceFromExtension != null) {
       return resourceFromExtension;
-    } else {
-      return druidLoader.getResource(name);
     }
+
+    resourceFromExtension = getResourceFromExtensionsDependencies(name);
+    if (resourceFromExtension != null) {
+      return resourceFromExtension;
+    }
+
+    return druidLoader.getResource(name);
   }
 
   @Override
@@ -90,6 +99,7 @@ public class ExtensionFirstClassLoader extends URLClassLoader
   {
     final List<URL> urls = new ArrayList<>();
     Iterators.addAll(urls, Iterators.forEnumeration(super.getResources(name)));
+    addExtensionResources(name, urls);
     Iterators.addAll(urls, Iterators.forEnumeration(druidLoader.getResources(name)));
     return Iterators.asEnumeration(urls.iterator());
   }

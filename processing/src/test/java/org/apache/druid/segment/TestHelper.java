@@ -43,7 +43,9 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -67,6 +69,11 @@ public class TestHelper
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
+  public static IndexMergerV9 getTestIndexMergerV9(ObjectMapper jsonMapper, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexMergerV9(jsonMapper, getTestIndexIO(jsonMapper), segmentWriteOutMediumFactory, true);
+  }
+
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, ColumnConfig columnConfig)
   {
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(columnConfig), segmentWriteOutMediumFactory, true);
@@ -80,6 +87,16 @@ public class TestHelper
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
   {
     return new IndexIO(JSON_MAPPER, columnConfig);
+  }
+
+  public static IndexIO getTestIndexIO(ObjectMapper jsonMapper, ColumnConfig columnConfig)
+  {
+    return new IndexIO(jsonMapper, columnConfig);
+  }
+
+  public static IndexIO getTestIndexIO(ObjectMapper jsonMapper)
+  {
+    return new IndexIO(jsonMapper, ColumnConfig.SELECTION_SIZE);
   }
 
   public static AnnotationIntrospector makeAnnotationIntrospector()
@@ -380,7 +397,9 @@ public class TestHelper
 
       final Object actualValue = actualMap.get(key);
 
-      if (expectedValue != null && expectedValue.getClass().isArray()) {
+      if ((expectedValue != null && actualValue == null) || (expectedValue == null && actualValue != null)) {
+        Assert.assertEquals(StringUtils.format("%s: key[%s]", msg, key), expectedValue, actualValue);
+      } else if (expectedValue != null && expectedValue.getClass().isArray()) {
         Assert.assertArrayEquals((Object[]) expectedValue, (Object[]) actualValue);
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
@@ -432,6 +451,9 @@ public class TestHelper
           );
         }
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        if (actualValue == null) {
+          Assert.fail(message + ": failed because expected numeric value is actually null");
+        }
         Assert.assertEquals(
             message,
             ((Number) expectedValue).doubleValue(),
@@ -492,5 +514,13 @@ public class TestHelper
     catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static DataSegment toSimpleDataSegment(Segment segment, ShardSpec shardSpec)
+  {
+    return DataSegment.builder(segment.getId())
+                      .shardSpec(shardSpec)
+                      .size(0)
+                      .build();
   }
 }

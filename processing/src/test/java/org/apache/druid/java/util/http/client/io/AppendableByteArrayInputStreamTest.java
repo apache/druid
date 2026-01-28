@@ -158,7 +158,7 @@ public class AppendableByteArrayInputStreamTest
     Assert.assertEquals(5, in.available());
 
     Future<byte[]> bytesFuture = Executors.newSingleThreadExecutor().submit(
-        new Callable<byte[]>()
+        new Callable<>()
         {
           @Override
           public byte[] call() throws Exception
@@ -218,7 +218,7 @@ public class AppendableByteArrayInputStreamTest
     in.add(new byte[]{});
     in.add(new byte[]{1});
     in.add(new byte[]{});
-    final AtomicReference<IOException> exceptionThrown = new AtomicReference<IOException>();
+    final AtomicReference<IOException> exceptionThrown = new AtomicReference<>();
     final CountDownLatch latch = new CountDownLatch(1);
     Executors.newSingleThreadExecutor().submit(
         new Callable()

@@ -22,10 +22,12 @@ package org.apache.druid.indexing.kafka.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,6 +53,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final KafkaConfigOverrides configOverrides;
   private final String topic;
   private final String topicPattern;
+  private final boolean emitTimeLagMetrics;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -62,6 +65,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
+      @Nullable @JsonProperty("lagAggregator") LagAggregator lagAggregator,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
@@ -72,7 +76,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics
   )
   {
     super(
@@ -88,6 +93,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
+        Configs.valueOrDefault(lagAggregator, LagAggregator.DEFAULT),
         lateMessageRejectionStartDateTime,
         idleConfig,
         stopTaskCount
@@ -102,6 +108,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
+    this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
   }
 
   /**
@@ -149,6 +156,15 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public boolean isMultiTopic()
   {
     return topicPattern != null;
+  }
+
+  /**
+   * @return true if supervisor needs to publish the time lag.
+   */
+  @JsonProperty
+  public boolean isEmitTimeLagMetrics()
+  {
+    return emitTimeLagMetrics;
   }
 
   @Override

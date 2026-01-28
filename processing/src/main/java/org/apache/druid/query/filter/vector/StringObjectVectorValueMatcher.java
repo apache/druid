@@ -58,7 +58,7 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if ((value == null && includeUnknown) || Objects.equals(value, vector[rowNum])) {
+          if ((vector[rowNum] == null && includeUnknown) || Objects.equals(value, vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

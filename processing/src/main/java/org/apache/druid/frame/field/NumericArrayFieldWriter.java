@@ -20,13 +20,11 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -106,17 +104,23 @@ public class NumericArrayFieldWriter implements FieldWriter
   /**
    * Returns the writer for ARRAY<FLOAT>
    */
-  public static NumericArrayFieldWriter getFloatArrayFieldWriter(final ColumnValueSelector selector)
+  public static NumericArrayFieldWriter getFloatArrayFieldWriter(
+      final ColumnValueSelector selector,
+      final FrameType frameType
+  )
   {
-    return new NumericArrayFieldWriter(selector, FloatFieldWriter::forArray);
+    return new NumericArrayFieldWriter(selector, s -> FloatFieldWriter.forArray(s, frameType));
   }
 
   /**
    * Returns the writer for ARRAY<DOUBLE>
    */
-  public static NumericArrayFieldWriter getDoubleArrayFieldWriter(final ColumnValueSelector selector)
+  public static NumericArrayFieldWriter getDoubleArrayFieldWriter(
+      final ColumnValueSelector selector,
+      final FrameType frameType
+  )
   {
-    return new NumericArrayFieldWriter(selector, DoubleFieldWriter::forArray);
+    return new NumericArrayFieldWriter(selector, s -> DoubleFieldWriter.forArray(s, frameType));
   }
 
   public NumericArrayFieldWriter(final ColumnValueSelector selector, NumericFieldWriterFactory writerFactory)
@@ -128,7 +132,7 @@ public class NumericArrayFieldWriter implements FieldWriter
   @Override
   public long writeTo(WritableMemory memory, long position, long maxSize)
   {
-    Object row = selector.getObject();
+    final Object[] row = (Object[]) selector.getObject();
     if (row == null) {
       int requiredSize = Byte.BYTES;
       if (requiredSize > maxSize) {
@@ -137,44 +141,32 @@ public class NumericArrayFieldWriter implements FieldWriter
       memory.putByte(position, NULL_ROW);
       return requiredSize;
     } else {
-
-      List<? extends Number> list = FrameWriterUtils.getNumericArrayFromObject(row);
-
-      if (list == null) {
-        int requiredSize = Byte.BYTES;
-        if (requiredSize > maxSize) {
-          return -1;
-        }
-        memory.putByte(position, NULL_ROW);
-        return requiredSize;
-      }
-
       // Create a columnValueSelector to write the individual elements re-using the NumericFieldWriter
       AtomicInteger index = new AtomicInteger(0);
-      ColumnValueSelector<Number> columnValueSelector = new ColumnValueSelector<Number>()
+      ColumnValueSelector<Number> columnValueSelector = new ColumnValueSelector<>()
       {
         @Override
         public double getDouble()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.doubleValue() : 0d;
+          assert n != null;
+          return n.doubleValue();
         }
 
         @Override
         public float getFloat()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.floatValue() : 0f;
+          assert n != null;
+          return n.floatValue();
         }
 
         @Override
         public long getLong()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.longValue() : 0L;
+          assert n != null;
+          return n.longValue();
         }
 
         @Override
@@ -186,12 +178,6 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
-          // Arrays preserve the individual element's nullity when they are written and read.
-          // Therefore, when working with SQL incompatible mode, [7, null] won't change to [7, 0] when written to and
-          // read from the underlying serialization (as compared with the primitives). Therefore,
-          // even when NullHandling.replaceWithDefault() is true we need to write null as is, and not convert it to their
-          // default value when writing the array. Therefore, the check is `getObject() == null` ignoring the value of
-          // `NullHandling.replaceWithDefaul()`.
           return getObject() == null;
         }
 
@@ -199,7 +185,7 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public Number getObject()
         {
-          return list.get(index.get());
+          return (Number) row[index.get()];
         }
 
         @Override
@@ -215,7 +201,7 @@ public class NumericArrayFieldWriter implements FieldWriter
       // Next [(1 + Numeric Size) x Number of elements of array] bytes are reserved for the elements of the array and
       //  their null markers
       // Last byte is reserved for array termination
-      int requiredSize = Byte.BYTES + (writer.getNumericSizeBytes() + Byte.BYTES) * list.size() + Byte.BYTES;
+      int requiredSize = Byte.BYTES + (writer.getNumericSizeBytes() + Byte.BYTES) * row.length + Byte.BYTES;
 
       if (requiredSize > maxSize) {
         return -1;
@@ -225,7 +211,7 @@ public class NumericArrayFieldWriter implements FieldWriter
       memory.putByte(position + offset, NON_NULL_ROW);
       offset += Byte.BYTES;
 
-      for (; index.get() < list.size(); index.incrementAndGet()) {
+      for (; index.get() < row.length; index.incrementAndGet()) {
         writer.writeTo(
             memory,
             position + offset,

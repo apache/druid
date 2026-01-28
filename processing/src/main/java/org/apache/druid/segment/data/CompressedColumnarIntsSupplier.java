@@ -25,10 +25,10 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -102,10 +102,10 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
-    baseIntBuffers.writeTo(channel, smoosher);
+    baseIntBuffers.writeTo(channel, fileBuilder);
   }
 
   @VisibleForTesting
@@ -114,29 +114,10 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
     return baseIntBuffers;
   }
 
-  public static CompressedColumnarIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
-      return new CompressedColumnarIntsSupplier(
-          totalSize,
-          sizePer,
-          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
-          compression
-      );
-    }
-
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
   public static CompressedColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order,
-      SmooshedFileMapper mapper
+      SegmentFileMapper mapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -173,12 +154,12 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
         buffer.remaining(),
         chunkFactor,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   final IntBuffer myBuffer = buffer.asReadOnlyBuffer();
                   final ByteBuffer retVal = compression
@@ -241,12 +222,12 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
         list.size(),
         chunkFactor,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   private final ByteBuffer retVal = compression
                       .getCompressor()

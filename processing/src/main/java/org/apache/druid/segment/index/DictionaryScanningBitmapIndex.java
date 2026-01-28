@@ -49,6 +49,12 @@ public abstract class DictionaryScanningBitmapIndex extends SimpleImmutableBitma
     this.scaleThreshold = scaleThreshold;
   }
 
+  @Override
+  public int estimatedComputeCost()
+  {
+    return this.dictionarySize;
+  }
+
   @Nullable
   @Override
   public final <T> T computeBitmapResult(

@@ -37,7 +37,7 @@ public class SequentialDistribution extends EnumeratedDistribution
   public SequentialDistribution(Integer start, Integer end, List<Object> enumeratedValues)
   {
     // just pass in some bogus probability mass function, we won't be using it
-    super(Collections.singletonList(new Pair<Object, Double>(null, 1.0)));
+    super(Collections.singletonList(new Pair<>(null, 1.0)));
     this.start = start;
     this.end = end;
     this.enumeratedValues = enumeratedValues;

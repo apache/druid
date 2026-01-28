@@ -20,12 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * Nested field writer for mixed type scalar or array columns of {@link NestedDataColumnSerializer}.
@@ -36,11 +31,11 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       DictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
   }
 
 
@@ -86,12 +81,5 @@ public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedField
     } else {
       return globalDictionaryIdLookup.lookupString(String.valueOf(value));
     }
-  }
-
-  @Override
-  void writeColumnTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-  {
-    writeLongAndDoubleColumnLength(channel, 0, 0);
-    encodedValueSerializer.writeTo(channel, smoosher);
   }
 }

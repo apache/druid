@@ -24,9 +24,12 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -35,7 +38,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,11 +62,10 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("range or single_dim partitionsSpec required");
 
-    ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
-        .forceGuaranteedRollup(false)
-        .partitionsSpec(new DynamicPartitionsSpec(null, null))
+    ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forParallelIndexTask()
+        .withPartitionsSpec(new DynamicPartitionsSpec(null, null))
         .build();
-
     new PartialRangeSegmentGenerateTaskBuilder()
         .tuningConfig(tuningConfig)
         .build();
@@ -77,8 +78,11 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
     exception.expectMessage("range or single_dim partitionsSpec required");
 
     PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
-    ParallelIndexTuningConfig tuningConfig =
-        new ParallelIndexTestingFactory.TuningConfigBuilder().partitionsSpec(partitionsSpec).build();
+    ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forParallelIndexTask()
+        .withForceGuaranteedRollup(true)
+        .withPartitionsSpec(partitionsSpec)
+        .build();
 
     new PartialRangeSegmentGenerateTaskBuilder()
         .tuningConfig(tuningConfig)
@@ -123,16 +127,20 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   public void hasCorrectPrefixForAutomaticId()
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
-    Assert.assertThat(task.getId(), Matchers.startsWith(PartialRangeSegmentGenerateTask.TYPE));
+    Assert.assertTrue(task.getId().startsWith(PartialRangeSegmentGenerateTask.TYPE));
   }
 
   private static class PartialRangeSegmentGenerateTaskBuilder
   {
     private static final InputSource INPUT_SOURCE = new InlineInputSource("data");
-    private static final InputFormat INPUT_FORMAT = ParallelIndexTestingFactory.getInputFormat();
+    private static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
 
-    private ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
-        .partitionsSpec(new ParallelIndexTestingFactory.SingleDimensionPartitionsSpecBuilder().build())
+    private ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forParallelIndexTask()
+        .withForceGuaranteedRollup(true)
+        .withPartitionsSpec(
+            new DimensionRangePartitionsSpec(null, 1000, Collections.singletonList("dim"), false)
+        )
         .build();
     private DataSchema dataSchema =
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS);

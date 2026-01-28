@@ -24,7 +24,6 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
@@ -54,7 +53,7 @@ public class StaticPathSpecTest
     Job job = new Job();
     StaticPathSpec pathSpec = new StaticPathSpec("/a/c,/a/b/{c,d}", null);
 
-    DataSchema schema = new DataSchema("ds", null, new AggregatorFactory[0], null, null, jsonMapper);
+    DataSchema schema = DataSchema.builder().withDataSource("ds").withObjectMapper(jsonMapper).build();
     HadoopIOConfig io = new HadoopIOConfig(null, null, null);
     pathSpec.addInputPaths(new HadoopDruidIndexerConfig(new HadoopIngestionSpec(schema, io, null)), job);
 

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { shallow } from '../../utils/shallow-renderer';
 
 import { LoadDataView } from './load-data-view';
@@ -27,8 +25,7 @@ describe('LoadDataView', () => {
     const loadDataView = shallow(
       <LoadDataView
         mode="streaming"
-        goToSupervisor={() => {}}
-        goToTasks={() => {}}
+        goToView={() => {}}
         openSupervisorSubmit={() => {}}
         openTaskSubmit={() => {}}
       />,
@@ -40,8 +37,7 @@ describe('LoadDataView', () => {
     const loadDataView = shallow(
       <LoadDataView
         mode="batch"
-        goToSupervisor={() => {}}
-        goToTasks={() => {}}
+        goToView={() => {}}
         openSupervisorSubmit={() => {}}
         openTaskSubmit={() => {}}
       />,

@@ -37,6 +37,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -75,7 +76,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, granularity);
+    super(dataSource, querySegmentSpec, context, granularity);
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
     Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
@@ -171,9 +172,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        Collections.singletonList(dimensionSpec),
-        aggregatorSpecs,
-        Collections.emptyList()
+        Collections.singletonList(dimensionSpec.getDimension()),
+        aggregatorSpecs
     );
   }
 
@@ -183,6 +183,17 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       selector.setHasExtractionFn(true);
     }
     topNMetricSpec.initTopNAlgorithmSelector(selector);
+  }
+
+  @Override
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
+  {
+    return RowSignature.builder()
+                       .addTimeColumn()
+                       .addDimensions(Collections.singletonList(getDimensionSpec()))
+                       .addAggregators(getAggregatorSpecs(), finalization)
+                       .addPostAggregators(getPostAggregatorSpecs())
+                       .build();
   }
 
   @Override

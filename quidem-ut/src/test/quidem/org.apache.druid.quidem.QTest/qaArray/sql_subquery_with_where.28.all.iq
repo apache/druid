@@ -1,0 +1,991 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B15_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float,
+       count(*) cnt
+FROM t1
+WHERE a_float>json_value(a_nested, '$[7][2]' RETURNING decimal array)
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C1
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C2
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2]);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C4
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2])
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C5
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C6
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2])
+SELECT a_float
+FROM t1;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2])
+SELECT a_float,
+       count(*) cnt
+FROM t1
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B16_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float,
+       count(*) cnt
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C1
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C2
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        NULL]);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C4
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        NULL])
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C5
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C6
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        NULL])
+SELECT a_float
+FROM t1;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        NULL])
+SELECT a_float,
+       count(*) cnt
+FROM t1
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL];
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
++------------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B17_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float,
+       count(*) cnt
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     NULL]
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
++------------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C1
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3];
++---------+
+| a_float |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C2
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM test_array
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3]
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        0.3]);
++---------+
+| a_float |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C4
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        0.3])
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C5
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3];
++---------+
+| a_float |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C6
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3]
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        0.3])
+SELECT a_float
+FROM t1;
++---------+
+| a_float |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=ARRAY[0.1,
+                        0.2,
+                        0.3])
+SELECT a_float,
+       count(*) cnt
+FROM t1
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3];
++---------+
+| a_float |
++---------+
++---------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B18_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float,
+       count(*) cnt
+FROM t1
+WHERE a_float>=ARRAY[0.1,
+                     0.2,
+                     0.3]
+GROUP BY a_float;
++---------+-----+
+| a_float | cnt |
++---------+-----+
++---------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C1
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM test_array
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C2
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM test_array
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array)
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array));
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C4
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array))
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C5
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C6
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array)
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array))
+SELECT a_float
+FROM t1;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array))
+SELECT a_float,
+       count(*) cnt
+FROM t1
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float
+FROM t1
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B19_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float,
+       count(*) cnt
+FROM t1
+WHERE a_float>=json_value(a_nested, '$[2]' RETURNING decimal array)
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C1
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM test_array
+WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C2
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM test_array
+WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array)
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C3
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array));
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C4
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array))
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C5
+#-------------------------------------------------------------------------
+SELECT a_float
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C6
+#-------------------------------------------------------------------------
+SELECT a_float,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array)
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array))
+SELECT a_float
+FROM t1;
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array))
+SELECT a_float,
+       count(*) cnt
+FROM t1
+GROUP BY a_float;
++------------------+-----+
+| a_float          | cnt |
++------------------+-----+
+| [0.1, 0.2, null] |   2 |
+| [null, 0.2, 0.1] |   2 |
++------------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A3_B20_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_float
+FROM t1
+WHERE a_float>=json_value(a_nested, '$[7][2]' RETURNING decimal array);
++------------------+
+| a_float          |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
+

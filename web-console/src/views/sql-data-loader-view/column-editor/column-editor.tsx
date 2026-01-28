@@ -24,12 +24,12 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { QueryResult } from '@druid-toolkit/query';
-import { F, SqlExpression, SqlFunction, SqlType } from '@druid-toolkit/query';
+import type { QueryResult } from 'druid-query-toolkit';
+import { F, SqlExpression, SqlFunction, SqlType } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -187,7 +187,7 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
         );
 
         typeButton = (
-          <Popover2
+          <Popover
             position={Position.BOTTOM_LEFT}
             minimal
             content={
@@ -252,7 +252,7 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
               }`}
               rightIcon={IconNames.CARET_DOWN}
             />
-          </Popover2>
+          </Popover>
         );
       }
     }

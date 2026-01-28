@@ -47,13 +47,46 @@ You can specify the following optional properties:
 
 For example:
 
-```
+```json
 "tuningConfig": {
   "indexSpec": {
     "stringDictionaryEncoding": {
       "type":"frontCoded",
       "bucketSize": 4,
       "formatVersion": 0
+    }
+  }
+}
+```
+
+For SQL based ingestion, you can add the `indexSpec` to your query context.
+In the Web Console, select *Edit context* from the context from the *Engine:* menu and enter the `indexSpec`. For example:
+
+```json
+{
+...
+"indexSpec": {
+  "stringDictionaryEncoding": {
+  "type": "frontCoded",
+  "bucketSize": 4,
+  "formatVersion": 1
+  }
+}
+}
+```
+
+For API calls to the SQL-based ingestion API, include the `indexSpec` in the context in the request payload. For example:
+
+```json
+{
+"query": ...
+"context": {
+  "maxNumTasks": 3
+  "indexSpec": {
+  "stringDictionaryEncoding": {
+    "type": "frontCoded",
+    "bucketSize": 4,
+    "formatVersion": 1}
     }
   }
 }

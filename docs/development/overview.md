@@ -53,8 +53,17 @@ Most of the coordination logic for (real-time) ingestion is in the Druid indexin
 
 ## Real-time Ingestion
 
-Druid loads data through `FirehoseFactory.java` classes. Firehoses often wrap other firehoses, where, similar to the design of the
-query runners, each firehose adds a layer of logic, and the persist and hand-off logic is in `RealtimePlumber.java`.
+Druid streaming tasks are based on the 'seekable stream' classes such as `SeekableStreamSupervisor.java`,
+`SeekableStreamIndexTask.java`, and `SeekableStreamIndexTaskRunner.java`. The data processing happens through
+`StreamAppenderator.java`, and the persist and hand-off logic is in `StreamAppenderatorDriver.java`.
+
+## Native Batch Ingestion
+
+Druid native batch ingestion main task types are based on `AbstractBatchTask.java` and `AbstractBatchSubtask.java`.
+Parallel processing uses `ParallelIndexSupervisorTask.java`, which spawns subtasks to perform various operations such
+as data analysis and partitioning depending on the task specification. Segment generation happens in
+`SinglePhaseSubTask.java`, `PartialHashSegmentGenerateTask.java`, or `PartialRangeSegmentGenerateTask.java` through
+`BatchAppenderator`, and the persist and hand-off logic is in `BatchAppenderatorDriver.java`.
 
 ## Hadoop-based Batch Ingestion
 

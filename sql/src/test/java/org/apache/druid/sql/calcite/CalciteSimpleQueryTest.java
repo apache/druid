@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -72,15 +71,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", 2L},
-            new Object[]{timestamp("2000-01-01"), "a", 1L},
-            new Object[]{timestamp("2001-01-01"), "", 1L},
-            new Object[]{timestamp("2001-01-01"), "a", 1L},
-            new Object[]{timestamp("2001-01-01"), "abc", 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{timestamp("2000-01-01"), null, 1L},
             new Object[]{timestamp("2000-01-01"), "", 1L},
             new Object[]{timestamp("2000-01-01"), "a", 1L},
@@ -120,15 +111,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, timestamp("2000-01-01"), 1L},
             new Object[]{null, timestamp("2001-01-01"), 1L},
             new Object[]{"", timestamp("2000-01-01"), 1L},
@@ -169,13 +152,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, timestamp("2001-01-01"), 1L},
             new Object[]{"a", timestamp("2001-01-01"), 1L},
             new Object[]{"abc", timestamp("2001-01-01"), 1L}
@@ -214,13 +191,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"a", timestamp("2000-01-01"), 1L},
             new Object[]{"a", timestamp("2001-01-01"), 1L},
             new Object[]{"abc", timestamp("2001-01-01"), 1L}
@@ -264,15 +235,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", 2L},
-            new Object[]{timestamp("2001-01-01"), "", 1L},
-            new Object[]{timestamp("2000-01-01"), "a", 1L},
-            new Object[]{timestamp("2001-01-01"), "a", 1L},
-            new Object[]{timestamp("2001-01-01"), "abc", 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{timestamp("2000-01-01"), null, 1L},
             new Object[]{timestamp("2001-01-01"), null, 1L},
             new Object[]{timestamp("2000-01-01"), "", 1L},
@@ -319,15 +282,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{timestamp("2001-01-01"), "abc", 1L},
-            new Object[]{timestamp("2000-01-01"), "a", 1L},
-            new Object[]{timestamp("2001-01-01"), "a", 1L},
-            new Object[]{timestamp("2000-01-01"), "", 2L},
-            new Object[]{timestamp("2001-01-01"), "", 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{timestamp("2001-01-01"), "abc", 1L},
             new Object[]{timestamp("2000-01-01"), "a", 1L},
             new Object[]{timestamp("2001-01-01"), "a", 1L},
@@ -376,15 +331,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, timestamp("2000-01-01"), 1L},
             new Object[]{"", timestamp("2000-01-01"), 1L},
             new Object[]{"a", timestamp("2000-01-01"), 1L},
@@ -433,15 +380,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L},
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, timestamp("2001-01-01"), 1L},
             new Object[]{"a", timestamp("2001-01-01"), 1L},
             new Object[]{"abc", timestamp("2001-01-01"), 1L},
@@ -491,15 +430,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"a", timestamp("2000-01-01"), 1L},
             new Object[]{"", timestamp("2000-01-01"), 1L},
             new Object[]{null, timestamp("2000-01-01"), 1L},
@@ -549,15 +480,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", timestamp("2001-01-01"), 1L},
-            new Object[]{"", timestamp("2000-01-01"), 2L},
-            new Object[]{"a", timestamp("2001-01-01"), 1L},
-            new Object[]{"a", timestamp("2000-01-01"), 1L},
-            new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, timestamp("2001-01-01"), 1L},
             new Object[]{null, timestamp("2000-01-01"), 1L},
             new Object[]{"", timestamp("2000-01-01"), 1L},
@@ -609,16 +532,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"abc", timestamp("2001-01-01"), "def", 1L},
-            new Object[]{"a", timestamp("2001-01-01"), "1", 1L},
-            new Object[]{"a", timestamp("2000-01-01"), "", 1L},
-            new Object[]{"", timestamp("2001-01-01"), "abc", 1L},
-            new Object[]{"", timestamp("2000-01-01"), "10.1", 1L},
-            new Object[]{"", timestamp("2000-01-01"), "2", 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"abc", timestamp("2001-01-01"), "def", 1L},
             new Object[]{"a", timestamp("2001-01-01"), "1", 1L},
             new Object[]{"a", timestamp("2000-01-01"), "", 1L},
@@ -670,11 +584,9 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                     .setContext(QUERY_CONTEXT_DEFAULT)
                     .build()))
         .expectedResults(
-            useDefault ? ImmutableList.of(
-                new Object[]{"#ar.wikipedia", "", "", "", "", ""},
-                new Object[] {"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
-            : ImmutableList.of(
-                new Object[] {"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
+            ImmutableList.of(
+                new Object[] {"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"}
+            )
         )
         .run();
   }

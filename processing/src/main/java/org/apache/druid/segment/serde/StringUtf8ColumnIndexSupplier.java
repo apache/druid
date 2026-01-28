@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -81,17 +80,9 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
       Indexed<ByteBuffer> dict = utf8Dictionary.get();
       Indexed<ImmutableBitmap> singleThreadedBitmaps = bitmaps.singleThreaded();
 
-      if (NullHandling.mustCombineNullAndEmptyInDictionary(dict)) {
-        dict = CombineFirstTwoEntriesIndexed.returnNull(dict);
-        singleThreadedBitmaps = CombineFirstTwoEntriesIndexed.unionBitmaps(bitmapFactory, singleThreadedBitmaps);
-      } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(dict)) {
-        dict = new ReplaceFirstValueWithNullIndexed<>(dict);
-      }
-
       if (clazz.equals(NullValueIndex.class)) {
         final BitmapColumnIndex nullIndex;
-        final ByteBuffer firstValue = dict.get(0);
-        if (NullHandling.isNullOrEquivalent(firstValue)) {
+        if (dict.get(0) == null) {
           ImmutableBitmap bitmap = singleThreadedBitmaps.get(0);
           nullIndex = new SimpleImmutableBitmapIndex(bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap);
         } else {

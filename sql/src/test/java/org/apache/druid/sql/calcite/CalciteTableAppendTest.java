@@ -44,20 +44,18 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .dataSource(CalciteTests.DATASOURCE1)
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("dim1", "v0")
+                    .columnTypes(ColumnType.STRING, ColumnType.STRING)
                     .context(QUERY_CONTEXT_DEFAULT)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .virtualColumns(
-                        expressionVirtualColumn("v0", "null", null)
-                    )
-                    .legacy(false)
+                    .virtualColumns(expressionVirtualColumn("v0", "null", ColumnType.STRING))
                     .build(),
                 Druids.newScanQueryBuilder()
                     .dataSource(CalciteTests.DATASOURCE3)
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("dim1", "dim4")
+                    .columnTypes(ColumnType.STRING, ColumnType.STRING)
                     .context(QUERY_CONTEXT_DEFAULT)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .build()
             )
         )
@@ -84,17 +82,17 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   public void testAppend2()
   {
     testBuilder()
-        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
+        .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo')) u")
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
                     unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("d1", "dim1", "dim4", "f1")
+                .columns("dim1", "dim4", "dbl1", "f1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.FLOAT)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -126,18 +124,18 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   public void testAppendSameTableMultipleTimes()
   {
     testBuilder()
-        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
+        .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
                     unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3, CalciteTests.DATASOURCE1)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("d1", "dim1", "dim4", "f1")
+                .columns("dim1", "dim4", "dbl1", "f1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.FLOAT)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .filters(equality("dim1", "2", ColumnType.STRING))
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -163,9 +161,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1")
+                .columnTypes(ColumnType.STRING)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -194,9 +192,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim3")
+                .columnTypes(ColumnType.STRING)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(

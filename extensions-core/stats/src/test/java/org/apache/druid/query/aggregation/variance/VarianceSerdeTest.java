@@ -35,6 +35,7 @@ public class VarianceSerdeTest
     Random r = ThreadLocalRandom.current();
     VarianceAggregatorCollector holder = new VarianceAggregatorCollector();
     ObjectStrategy strategy = new VarianceSerde().getObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
     Assert.assertEquals(VarianceAggregatorCollector.class, strategy.getClazz());
 
     for (int i = 0; i < 100; i++) {

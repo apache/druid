@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -57,11 +57,11 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
 
-  private final QueryRunner<SegmentAnalysis> runner;
+  private final TestQueryRunner<SegmentAnalysis> runner;
   private final boolean mmap;
 
   public SegmentMetadataUnionQueryTest(
-      QueryRunner<SegmentAnalysis> runner,
+      TestQueryRunner<SegmentAnalysis> runner,
       boolean mmap
   )
   {
@@ -72,7 +72,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder()
   {
-    final ArrayList<QueryRunner<SegmentAnalysis>> runners = QueryRunnerTestHelper.mapQueryRunnersToMerge(
+    final ArrayList<TestQueryRunner<SegmentAnalysis>> runners = QueryRunnerTestHelper.mapQueryRunnersToMerge(
         FACTORY,
         ImmutableList.of(
             QueryRunnerTestHelper.makeQueryRunner(
@@ -109,7 +109,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    mmap ? 43524 : 43056,
+                    43524,
                     1,
                     "preferred",
                     "preferred",
@@ -117,8 +117,9 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        mmap ? 805380 : 803324,
+        805380,
         4836,
+        null,
         null,
         null,
         null,

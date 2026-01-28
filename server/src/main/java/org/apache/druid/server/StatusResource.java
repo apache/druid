@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
@@ -40,7 +40,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -48,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  *
@@ -58,17 +58,20 @@ public class StatusResource
   private final Properties properties;
   private final DruidServerConfig druidServerConfig;
   private final ExtensionsLoader extnLoader;
+  private final RuntimeInfo runtimeInfo;
 
   @Inject
   public StatusResource(
       final Properties properties,
       final DruidServerConfig druidServerConfig,
-      final ExtensionsLoader extnLoader
+      final ExtensionsLoader extnLoader,
+      final RuntimeInfo runtimeInfo
   )
   {
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
     this.extnLoader = extnLoader;
+    this.runtimeInfo = runtimeInfo;
   }
 
   @GET
@@ -79,7 +82,10 @@ public class StatusResource
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
     Set<String> hiddenProperties = druidServerConfig.getHiddenProperties();
-    return filterHiddenProperties(hiddenProperties, allProperties);
+    Map<String, String> filtered = filterHiddenProperties(hiddenProperties, allProperties);
+
+    //    Return the properties in sorted order
+    return new TreeMap<>(filtered);
   }
 
   /**
@@ -114,7 +120,7 @@ public class StatusResource
       @Context final HttpServletRequest req
   )
   {
-    return new Status(extnLoader.getLoadedModules());
+    return new Status(extnLoader.getLoadedModules(), runtimeInfo);
   }
 
   /**
@@ -135,16 +141,16 @@ public class StatusResource
     final List<ModuleVersion> modules;
     final Memory memory;
 
-    public Status(Collection<DruidModule> modules)
+    public Status(Collection<DruidModule> modules, RuntimeInfo runtimeInfo)
     {
       this.version = getDruidVersion();
       this.modules = getExtensionVersions(modules);
-      this.memory = new Memory(JvmUtils.getRuntimeInfo());
+      this.memory = new Memory(runtimeInfo);
     }
 
     private String getDruidVersion()
     {
-      return Status.class.getPackage().getImplementationVersion();
+      return GuavaUtils.firstNonNull(Status.class.getPackage().getImplementationVersion(), "unknown");
     }
 
     @JsonProperty

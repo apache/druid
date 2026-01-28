@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
@@ -37,23 +37,27 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -67,6 +71,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -79,12 +84,13 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
-            new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+            new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER),
+            true
         )
     );
   }
 
-  private final QueryRunner runner;
+  private final TestQueryRunner<Result<TimeBoundaryResultValue>> runner;
   private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
@@ -92,7 +98,7 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
   private static Segment segment1;
 
   public TimeBoundaryQueryRunnerTest(
-      QueryRunner runner
+      TestQueryRunner<Result<TimeBoundaryResultValue>> runner
   )
   {
     this.runner = runner;
@@ -150,26 +156,32 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     CharSource v_0112 = CharSource.wrap(StringUtils.join(V_0112, "\n"));
     CharSource v_0113 = CharSource.wrap(StringUtils.join(V_0113, "\n"));
 
-    IncrementalIndex index0 = TestIndex.loadIncrementalIndex(newIndex("2011-01-12T00:00:00.000Z"), v_0112);
-    IncrementalIndex index1 = TestIndex.loadIncrementalIndex(newIndex("2011-01-14T00:00:00.000Z"), v_0113);
+    IncrementalIndex index0 = TestIndex.loadIncrementalIndexFromTsvCharSource(newIndex("2011-01-12T00:00:00.000Z"), v_0112);
+    IncrementalIndex index1 = TestIndex.loadIncrementalIndexFromTsvCharSource(newIndex("2011-01-14T00:00:00.000Z"), v_0113);
 
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
+    final DataSegment dataSegment0 = TestHelper.toSimpleDataSegment(segment0, new NumberedShardSpec(0, 1));
+    final DataSegment dataSegment1 = TestHelper.toSimpleDataSegment(segment1, new NumberedShardSpec(0, 1));
+    Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders = Map.of(
+        dataSegment0, ReferenceCountedSegmentProvider.of(segment0),
+        dataSegment1, ReferenceCountedSegmentProvider.of(segment1)
+    );
 
-    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(
+    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
         StringComparators.LEXICOGRAPHIC);
     timeline.add(
         index0.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+        new SingleElementPartitionChunk<>(dataSegment0)
     );
     timeline.add(
         index1.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+        new SingleElementPartitionChunk<>(dataSegment1)
     );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, referenceProviders, FACTORY);
   }
 
   @Test
@@ -272,7 +284,6 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     final QueryRunner<Result<TimeBoundaryResultValue>> theRunner =
         new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER).createRunner(
             new RowBasedSegment<>(
-                SegmentId.dummy("dummy"),
                 Sequences.simple(inlineDataSource.getRows()),
                 inlineDataSource.rowAdapter(),
                 inlineDataSource.getRowSignature()

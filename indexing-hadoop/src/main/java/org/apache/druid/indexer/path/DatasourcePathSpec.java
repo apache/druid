@@ -128,7 +128,7 @@ public class DatasourcePathSpec implements PathSpec
     DatasourceIngestionSpec updatedIngestionSpec = ingestionSpec;
     if (updatedIngestionSpec.getDimensions() == null) {
       List<String> dims;
-      if (config.getParser().getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
+      if (config.getParser().getParseSpec().getDimensionsSpec().hasFixedDimensions()) {
         dims = config.getParser().getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
         Set<String> dimSet = Sets.newHashSet(

@@ -19,7 +19,6 @@
 import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
-import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -41,8 +40,9 @@ import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../.
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
+  getApiArray,
   getDruidErrorMessage,
-  hasPopoverOpen,
+  hasOverlayOpen,
   isLookupsUninitialized,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -50,6 +50,7 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilters } from '../../utils/table-filters';
 
 import './lookups-view.scss';
 
@@ -88,8 +89,8 @@ export interface LookupEditInfo {
 }
 
 export interface LookupsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
 }
 
 export interface LookupsViewState {
@@ -123,16 +124,17 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const tiersResp = await Api.instance.get(
+      processQuery: async (_, signal) => {
+        const tiersResp = await getApiArray(
           '/druid/coordinator/v1/lookups/config?discover=true',
+          signal,
         );
         const tiers =
-          tiersResp.data && tiersResp.data.length > 0
-            ? tiersResp.data.sort(tierNameCompare)
-            : [DEFAULT_LOOKUP_TIER];
+          tiersResp.length > 0 ? tiersResp.sort(tierNameCompare) : [DEFAULT_LOOKUP_TIER];
 
-        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
+          signal,
+        });
         const lookupData = lookupResp.data;
 
         const lookupEntries: LookupEntry[] = [];
@@ -330,16 +332,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function FilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      );
+    };
   }
 
   private renderLookupsTable() {
@@ -350,11 +352,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
-        <div className="init-div">
+        <div className="init-pane">
           <Button
             icon={IconNames.BUILD}
             text="Initialize lookups"
             onClick={() => void this.initializeLookup()}
+            large
+            intent={Intent.PRIMARY}
           />
         </div>
       );
@@ -366,8 +370,8 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         loading={lookupEntriesAndTiersState.loading}
         noDataText={lookupEntriesAndTiersState.getErrorMessage() || 'No lookups'}
         filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
         defaultSorted={[{ id: 'lookup_name', desc: false }]}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -382,6 +386,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             width: 200,
             Cell: ({ value, original }) => (
               <TableClickableCell
+                tooltip="Show detail"
                 onClick={() => this.onDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -464,6 +469,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                     this.onDetail(original);
                   }}
                   actions={lookupActions}
+                  menuTitle={lookupId}
                 />
               );
             },
@@ -504,7 +510,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         <ViewControlBar label="Lookups">
           <RefreshButton
             onRefresh={auto => {
-              if (auto && hasPopoverOpen()) return;
+              if (auto && hasOverlayOpen()) return;
               this.lookupsQueryManager.rerunLastQuery(auto);
             }}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}

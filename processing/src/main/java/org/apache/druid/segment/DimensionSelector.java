@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -162,7 +161,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
 
   static DimensionSelector constant(@Nullable final String value)
   {
-    if (NullHandling.isNullOrEquivalent(value)) {
+    if (value == null) {
       return nilSelector();
     } else {
       return new ConstantDimensionSelector(value);
@@ -263,7 +262,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public ValueMatcher makeValueMatcher(@Nullable String value)
       {
-        if (NullHandling.isNullOrEquivalent(value)) {
+        if (value == null) {
           return ValueMatchers.allTrue();
         }
         return ValueMatchers.allUnknown();
@@ -314,7 +313,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public int lookupId(@Nullable String name)
       {
-        return NullHandling.isNullOrEquivalent(name) ? 0 : -1;
+        return name == null ? 0 : -1;
       }
 
       @Nullable
@@ -339,7 +338,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public boolean isNull()
       {
-        return NullHandling.sqlCompatible();
+        return true;
       }
     }
   }

@@ -20,6 +20,7 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -58,12 +59,8 @@ import java.util.function.BinaryOperator;
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
   private static final byte SEARCH_QUERY = 0x15;
-  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
-  {
-  };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
-  {
-  };
+  private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<>() {};
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>() {};
 
   private final SearchQueryConfig config;
   private final SearchQueryMetricsFactory queryMetricsFactory;
@@ -96,7 +93,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public Comparator<Result<SearchResultValue>> createResultComparator(Query<Result<SearchResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+    return ResultGranularTimestampComparator.create(query.getGranularity(), false);
   }
 
   @Override
@@ -125,8 +122,17 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(final SearchQuery query)
   {
+    return getCacheStrategy(query, null);
+  }
 
-    return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()
+  @Override
+  public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(
+      final SearchQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
+  {
+
+    return new CacheStrategy<>()
     {
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
@@ -136,7 +142,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                                                   : Collections.emptyList();
 
       @Override
-      public boolean isCacheable(SearchQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(SearchQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         return true;
       }
@@ -169,7 +175,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       @Override
       public Function<Result<SearchResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<Result<SearchResultValue>, Object>()
+        return new Function<>()
         {
           @Override
           public Object apply(Result<SearchResultValue> input)
@@ -184,7 +190,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       @Override
       public Function<Object, Result<SearchResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<SearchResultValue>>()
+        return new Function<>()
         {
           @Override
           @SuppressWarnings("unchecked")
@@ -332,7 +338,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withLimit(config.getMaxSearchLimit())), responseContext),
-          new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
+          new Function<>()
           {
             @Override
             public Result<SearchResultValue> apply(Result<SearchResultValue> input)
@@ -340,17 +346,17 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
               if (isBySegment) {
                 BySegmentSearchResultValue value = (BySegmentSearchResultValue) input.getValue();
 
-                return new Result<SearchResultValue>(
+                return new Result<>(
                     input.getTimestamp(),
                     new BySegmentSearchResultValue(
                         Lists.transform(
                             value.getResults(),
-                            new Function<Result<SearchResultValue>, Result<SearchResultValue>>()
+                            new Function<>()
                             {
                               @Override
                               public Result<SearchResultValue> apply(@Nullable Result<SearchResultValue> input)
                               {
-                                return new Result<SearchResultValue>(
+                                return new Result<>(
                                     input.getTimestamp(),
                                     new SearchResultValue(
                                         Lists.newArrayList(
@@ -370,7 +376,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                 );
               }
 
-              return new Result<SearchResultValue>(
+              return new Result<>(
                   input.getTimestamp(),
                   new SearchResultValue(
                       Lists.newArrayList(

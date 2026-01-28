@@ -19,144 +19,24 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 final class FunctionalExpr
 {
   // phony class to enable maven to track the compilation of this class
-}
-
-@SuppressWarnings("ClassName")
-class LambdaExpr implements Expr
-{
-  private final ImmutableList<IdentifierExpr> args;
-  private final Expr expr;
-
-  LambdaExpr(List<IdentifierExpr> args, Expr expr)
-  {
-    this.args = ImmutableList.copyOf(args);
-    this.expr = expr;
-  }
-
-  @Override
-  public String toString()
-  {
-    return StringUtils.format("(%s -> %s)", args, expr);
-  }
-
-  int identifierCount()
-  {
-    return args.size();
-  }
-
-  @Nullable
-  public String getIdentifier()
-  {
-    Preconditions.checkState(args.size() < 2, "LambdaExpr has multiple arguments, use getIdentifiers");
-    if (args.size() == 1) {
-      return args.get(0).toString();
-    }
-    return null;
-  }
-
-  public List<String> getIdentifiers()
-  {
-    return args.stream().map(IdentifierExpr::toString).collect(Collectors.toList());
-  }
-
-  public List<String> stringifyIdentifiers()
-  {
-    return args.stream().map(IdentifierExpr::stringify).collect(Collectors.toList());
-  }
-
-  ImmutableList<IdentifierExpr> getIdentifierExprs()
-  {
-    return args;
-  }
-
-  public Expr getExpr()
-  {
-    return expr;
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return expr.canVectorize(inspector);
-  }
-
-  @Override
-  public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
-  {
-    return expr.asVectorProcessor(inspector);
-  }
-
-  @Override
-  public ExprEval eval(ObjectBinding bindings)
-  {
-    return expr.eval(bindings);
-  }
-
-  @Override
-  public String stringify()
-  {
-    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(stringifyIdentifiers()), expr.stringify());
-  }
-
-  @Override
-  public Expr visit(Shuttle shuttle)
-  {
-    List<IdentifierExpr> newArgs =
-        args.stream().map(arg -> (IdentifierExpr) shuttle.visit(arg)).collect(Collectors.toList());
-    Expr newBody = expr.visit(shuttle);
-    return shuttle.visit(new LambdaExpr(newArgs, newBody));
-  }
-
-  @Override
-  public BindingAnalysis analyzeInputs()
-  {
-    final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
-    BindingAnalysis bodyDetails = expr.analyzeInputs();
-    return bodyDetails.removeLambdaArguments(lambdaArgs);
-  }
-
-  @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
-  {
-    return expr.getOutputType(inspector);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    LambdaExpr that = (LambdaExpr) o;
-    return Objects.equals(args, that.args) &&
-           Objects.equals(expr, that.expr);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(args, expr);
-  }
 }
 
 /**
@@ -201,8 +81,8 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (ExpressionValidationException e) {
-      // ExpressionValidationException already contain function name
+    catch (ExpressionValidationException | ExpressionProcessingException e) {
+      // Already contain function name
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e, e.getMessage());
@@ -232,6 +112,33 @@ class FunctionExpr implements Expr
     return function.asVectorProcessor(inspector, args);
   }
 
+  @Nullable
+  @Override
+  public ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
+  {
+    final ColumnIndexSupplier indexSupplier = function.asSingleThreaded(args, columnIndexSelector)
+                                                      .asColumnIndexSupplier(columnIndexSelector, outputType, args);
+    if (indexSupplier != null) {
+      return indexSupplier;
+    }
+    return Expr.super.asColumnIndexSupplier(columnIndexSelector, outputType);
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector)
+  {
+    final BitmapColumnIndex functionIndex = function.asSingleThreaded(args, selector)
+                                                    .asBitmapColumnIndex(selector, args);
+    if (functionIndex != null) {
+      return functionIndex;
+    }
+    return Expr.super.asBitmapColumnIndex(selector);
+  }
+
   @Override
   public String stringify()
   {
@@ -247,15 +154,11 @@ class FunctionExpr implements Expr
   @Override
   public BindingAnalysis analyzeInputs()
   {
-    BindingAnalysis accumulator = new BindingAnalysis();
-
-    for (Expr arg : args) {
-      accumulator = accumulator.with(arg);
-    }
-    return accumulator.withScalarArguments(function.getScalarInputs(args))
-                      .withArrayArguments(function.getArrayInputs(args))
-                      .withArrayInputs(function.hasArrayInputs())
-                      .withArrayOutput(function.hasArrayOutput());
+    return BindingAnalysis.collectExprs(args)
+                          .withScalarArguments(function.getScalarInputs(args))
+                          .withArrayArguments(function.getArrayInputs(args))
+                          .withArrayInputs(function.hasArrayInputs())
+                          .withArrayOutput(function.hasArrayOutput());
   }
 
   @Override
@@ -313,20 +216,16 @@ class ApplyFunctionExpr implements Expr
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
     ImmutableList.Builder<BindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
-    BindingAnalysis accumulator = new BindingAnalysis();
     for (Expr arg : argsExpr) {
-      BindingAnalysis argDetails = arg.analyzeInputs();
-      argBindingDetailsBuilder.add(argDetails);
-      accumulator = accumulator.with(argDetails);
+      argBindingDetailsBuilder.add(arg.analyzeInputs());
     }
 
     lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
-
-    bindingAnalysis = accumulator.with(lambdaBindingAnalysis)
-                                 .withArrayArguments(function.getArrayInputs(argsExpr))
-                                 .withArrayInputs(true)
-                                 .withArrayOutput(function.hasArrayOutput(lambdaExpr));
     argsBindingAnalyses = argBindingDetailsBuilder.build();
+    bindingAnalysis = BindingAnalysis.collect(argBindingDetailsBuilder.add(lambdaBindingAnalysis).build())
+                                     .withArrayArguments(function.getArrayInputs(argsExpr))
+                                     .withArrayInputs(true)
+                                     .withArrayOutput(function.hasArrayOutput(lambdaExpr));
   }
 
   @Override
@@ -344,9 +243,7 @@ class ApplyFunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, lambdaExpr, argsExpr) &&
-           lambdaExpr.canVectorize(inspector) &&
-           argsExpr.stream().allMatch(expr -> expr.canVectorize(inspector));
+    return function.canVectorize(inspector, lambdaExpr, argsExpr);
   }
 
   @Override

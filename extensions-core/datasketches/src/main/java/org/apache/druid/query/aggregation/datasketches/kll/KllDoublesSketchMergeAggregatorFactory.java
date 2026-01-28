@@ -59,7 +59,7 @@ public class KllDoublesSketchMergeAggregatorFactory extends KllDoublesSketchAggr
   {
     final ColumnValueSelector<KllDoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpAggregator<KllDoublesSketch>(KllDoublesSketchOperations.EMPTY_SKETCH);
+      return new KllSketchNoOpAggregator<>(KllDoublesSketchOperations.EMPTY_SKETCH);
     }
     return getMergeAggregator(selector);
   }
@@ -69,7 +69,7 @@ public class KllDoublesSketchMergeAggregatorFactory extends KllDoublesSketchAggr
   {
     final ColumnValueSelector<KllDoublesSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpBufferAggregator<KllDoublesSketch>(KllDoublesSketchOperations.EMPTY_SKETCH);
+      return new KllSketchNoOpBufferAggregator<>(KllDoublesSketchOperations.EMPTY_SKETCH);
     }
     return getMergeBufferAggregator(selector);
   }

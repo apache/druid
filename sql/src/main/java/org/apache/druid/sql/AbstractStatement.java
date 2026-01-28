@@ -21,8 +21,8 @@ package org.apache.druid.sql;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
@@ -36,6 +36,7 @@ import java.io.Closeable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -62,7 +63,12 @@ public abstract class AbstractStatement implements Closeable
   protected final SqlExecutionReporter reporter;
 
   /**
-   * Copy of the query context provided by the user. This copy is modified during
+   * Immutable set of query context keys needs to be authorization checked.
+   */
+  protected final Set<String> authContextKeys;
+
+  /**
+   * Mutable copy of the query context provided by the user, can be modified during
    * planning. Modifications are possible up to the point where the context is passed
    * to a native query. At that point, the context becomes immutable and can be changed
    * only by copying the entire native query.
@@ -81,18 +87,15 @@ public abstract class AbstractStatement implements Closeable
     this.sqlToolbox = sqlToolbox;
     this.reporter = new SqlExecutionReporter(this, remoteAddress);
     this.queryPlus = queryPlus;
+    this.authContextKeys = queryPlus.authContextKeys();
     this.queryContext = new HashMap<>(queryPlus.context());
-
+    sqlToolbox.engine.initContextMap(this.queryContext);
     // "bySegment" results are never valid to use with SQL because the result format is incompatible
     // so, overwrite any user specified context to avoid exceptions down the line
-
     if (this.queryContext.remove(QueryContexts.BY_SEGMENT_KEY) != null) {
       log.warn("'bySegment' results are not supported for SQL queries, ignoring query context parameter");
     }
     this.queryContext.putIfAbsent(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
-    for (Map.Entry<String, Object> entry : sqlToolbox.defaultQueryConfig.getContext().entrySet()) {
-      this.queryContext.putIfAbsent(entry.getKey(), entry.getValue());
-    }
   }
 
   public String sqlQueryId()
@@ -137,11 +140,11 @@ public abstract class AbstractStatement implements Closeable
    */
   protected void authorize(
       final DruidPlanner planner,
-      final Function<Set<ResourceAction>, Access> authorizer
+      final Function<Set<ResourceAction>, AuthorizationResult> authorizer
   )
   {
     Set<String> securedKeys = this.sqlToolbox.plannerFactory.getAuthConfig()
-        .contextKeysToAuthorize(queryPlus.context().keySet());
+        .contextKeysToAuthorize(plannerContext.authContextKeys());
     Set<ResourceAction> contextResources = new HashSet<>();
     securedKeys.forEach(key -> contextResources.add(
         new ResourceAction(new Resource(key, ResourceType.QUERY_CONTEXT), Action.WRITE)
@@ -150,16 +153,16 @@ public abstract class AbstractStatement implements Closeable
     // Authentication is done by the planner using the function provided
     // here. The planner ensures that this step is done before planning.
     authResult = planner.authorize(authorizer, contextResources);
-    if (!authResult.authorizationResult.isAllowed()) {
-      throw new ForbiddenException(authResult.authorizationResult.toMessage());
+    if (!authResult.authorizationResult.allowBasicAccess()) {
+      log.info("Query[%s] forbidden due to reason[%s]", sqlQueryId(), authResult.authorizationResult.getErrorMessage());
+      throw new ForbiddenException(authResult.authorizationResult.getErrorMessage());
     }
   }
 
   /**
-   * Resource authorizer based on the authentication result
-   * provided earlier.
+   * Returns an authorizer that can provide authorization result given a set of required resource actions and authentication result.
    */
-  protected Function<Set<ResourceAction>, Access> authorizer()
+  protected Function<Set<ResourceAction>, AuthorizationResult> authorizer()
   {
     return resourceActions ->
       AuthorizationUtils.authorizeAllResourceActions(
@@ -175,12 +178,12 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return authResult.sqlResourceActions;
+    return Objects.requireNonNull(authResult.sqlResourceActions);
   }
 
   public Set<ResourceAction> allResources()
   {
-    return authResult.allResourceActions;
+    return Objects.requireNonNull(authResult.allResourceActions);
   }
 
   public SqlQueryPlus query()

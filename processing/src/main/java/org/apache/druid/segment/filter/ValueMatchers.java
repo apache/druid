@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -90,11 +89,10 @@ public class ValueMatchers
       final boolean hasMultipleValues
   )
   {
-    final String constant = NullHandling.emptyToNullIfNeeded(value);
     final ConstantMatcherType matcherType = toConstantMatcherTypeIfPossible(
         selector,
         hasMultipleValues,
-        constant == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(constant)
+        value == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(value)
     );
     if (matcherType != null) {
       return matcherType.asValueMatcher();
@@ -393,7 +391,7 @@ public class ValueMatchers
               return true;
             }
             for (int i = 0; i < size; i++) {
-              if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(i)))) {
+              if (selector.lookupName(row.get(i)) == null) {
                 return true;
               }
             }

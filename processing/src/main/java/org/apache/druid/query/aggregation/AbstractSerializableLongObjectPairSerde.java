@@ -42,7 +42,7 @@ public abstract class AbstractSerializableLongObjectPairSerde<T extends Serializ
   @Override
   public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor<Object>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<T> extractedClass()

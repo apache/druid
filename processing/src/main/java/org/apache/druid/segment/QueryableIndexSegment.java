@@ -19,25 +19,35 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.query.rowsandcols.concrete.QueryableIndexRowsAndColumns;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
+ *
  */
 public class QueryableIndexSegment implements Segment
 {
+  private static final Map<Class<?>, Function<QueryableIndexSegment, ?>> AS_MAP = SemanticUtils
+      .makeAsMap(QueryableIndexSegment.class);
+
   private final QueryableIndex index;
-  private final QueryableIndexStorageAdapter storageAdapter;
+  private final QueryableIndexCursorFactory cursorFactory;
+  private final TimeBoundaryInspector timeBoundaryInspector;
   private final SegmentId segmentId;
 
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
     this.index = index;
-    this.storageAdapter = new QueryableIndexStorageAdapter(index);
+    this.timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
+    this.cursorFactory = new QueryableIndexCursorFactory(index, timeBoundaryInspector);
     this.segmentId = segmentId;
   }
 
@@ -54,18 +64,6 @@ public class QueryableIndexSegment implements Segment
   }
 
   @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return index;
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return storageAdapter;
-  }
-
-  @Override
   public void close()
   {
     // this is kinda nasty because it actually unmaps the files and stuff too
@@ -77,10 +75,41 @@ public class QueryableIndexSegment implements Segment
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
   {
-    if (CloseableShapeshifter.class.equals(clazz)) {
-      return (T) new QueryableIndexRowsAndColumns(index);
+    final Function<QueryableIndexSegment, ?> fn = AS_MAP.get(clazz);
+    if (fn != null) {
+      final T fnApply = (T) fn.apply(this);
+      if (fnApply != null) {
+        return fnApply;
+      }
     }
 
-    return Segment.super.as(clazz);
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) cursorFactory;
+    } else if (QueryableIndex.class.equals(clazz)) {
+      return (T) index;
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) timeBoundaryInspector;
+    } else if (Metadata.class.equals(clazz)) {
+      return (T) index.getMetadata();
+    } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+      return (T) new QueryableIndexPhysicalSegmentInspector(index);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(true);
+    }
+
+    return null;
+  }
+
+  @Override
+  public String getDebugString()
+  {
+    return getClass().getSimpleName() + ":" + segmentId;
+  }
+
+  @SemanticCreator
+  @SuppressWarnings("unused")
+  public CloseableShapeshifter toCloseableShapeshifter()
+  {
+    return new QueryableIndexRowsAndColumns(index);
   }
 }

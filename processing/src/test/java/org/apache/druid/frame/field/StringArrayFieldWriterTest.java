@@ -20,7 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -50,7 +50,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
-  public BaseObjectColumnValueSelector<List<String>> selector;
+  public BaseObjectColumnValueSelector<Object[]> selector;
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
@@ -59,7 +59,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringArrayFieldWriter(selector);
+    fieldWriter = new StringArrayFieldWriter(selector, false);
   }
 
   @After
@@ -101,7 +101,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   @Test
   public void testMultiValueStringContainingNulls()
   {
-    doTest(Arrays.asList("foo", NullHandling.emptyToNullIfNeeded(""), "bar", null));
+    doTest(Arrays.asList("foo", "", "bar", null));
   }
 
   private void doTest(@Nullable final List<String> values)
@@ -115,7 +115,8 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
 
   private void mockSelector(@Nullable final List<String> values)
   {
-    Mockito.when(selector.getObject()).thenReturn(values);
+    final Object[] arr = values == null ? null : values.toArray();
+    Mockito.when(selector.getObject()).thenReturn(arr);
   }
 
   private long writeToMemory(final FieldWriter writer)
@@ -138,7 +139,8 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
     final byte[] bytes = new byte[(int) written];
     memory.getByteArray(MEMORY_POSITION, bytes, 0, (int) written);
 
-    final FieldReader fieldReader = FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY);
+    final FieldReader fieldReader =
+        FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY, FrameType.latestRowBased());
     final ColumnValueSelector<?> selector =
         fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 

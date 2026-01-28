@@ -81,7 +81,7 @@ public class BucketExtractionFn implements ExtractionFn
     try {
       return bucket(Double.parseDouble(value));
     }
-    catch (NumberFormatException | NullPointerException ex) {
+    catch (NumberFormatException ex) {
       return null;
     }
   }

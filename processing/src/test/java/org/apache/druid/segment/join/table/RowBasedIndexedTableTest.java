@@ -20,13 +20,11 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -47,12 +45,6 @@ public class RowBasedIndexedTableTest
 
   public RowBasedIndexedTable<Map<String, Object>> countriesTable;
   public RowBasedIndexedTable<Map<String, Object>> regionsTable;
-
-  @BeforeClass
-  public static void setUpStatic()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Before
   public void setUp() throws IOException

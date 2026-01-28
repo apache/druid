@@ -1,0 +1,340 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=DartComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A150
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.doesntexist') IS NULL;
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A151
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_str') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A152
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_num_int') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A153
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_num_float') IS NOT NULL;
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A154
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_null') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A155
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.doesntexist') IS NOT NULL;
++---+
+| c |
++---+
+| 0 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A156
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT json_value(c1, '$.a_obj.a_str')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A157
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM
+  (SELECT ALL json_value(c1, '$.a_obj.a_str')
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A158
+#-------------------------------------------------------------------------
+SELECT count(mycol) c
+FROM
+  (SELECT json_value(c1, '$.a_obj.a_str') mycol
+   FROM test_json_cols);
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A159
+#-------------------------------------------------------------------------
+SELECT DISTINCT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols;
++---+
+| c |
++---+
+| A |
+|   |
++---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A160
+#-------------------------------------------------------------------------
+SELECT mycol,
+       count(*) c
+FROM
+  (SELECT json_value(c1, '$.a_obj.a_str') mycol
+   FROM test_json_cols)
+GROUP BY mycol;
++-------+---+
+| mycol | c |
++-------+---+
+| A     | 2 |
+|       | 2 |
++-------+---+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A161
+#-------------------------------------------------------------------------
+SELECT mycol,
+       count(*) c
+FROM
+  (SELECT c1,
+          json_value(c1, '$.a_obj.a_str') mycol
+   FROM test_json_cols)
+GROUP BY mycol
+HAVING mycol = 'A';
++-------+---+
+| mycol | c |
++-------+---+
+| A     | 2 |
++-------+---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A162
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols
+WHERE json_value(c1, '$.a_obj.a_str') = json_value(c2, '$.a_obj.a_str');
++---+
+| c |
++---+
+| 2 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A163
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+INNER JOIN test_json_cols t2 ON json_value(t1.c1, '$.a_obj.a_str') = json_value(t2.c1, '$.a_obj.a_str');
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A164
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1
+LEFT JOIN test_json_cols t2 ON json_value(t1.c1, '$.a_obj.a_str') = json_value(t2.c1, '$.a_obj.a_str');
++---+
+| c |
++---+
+| 6 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A165
+#-------------------------------------------------------------------------
+SELECT count(*) c
+FROM test_json_cols t1,
+     test_json_cols t2
+WHERE json_value(t1.c1, '$.a_obj.a_str') = json_value(t2.c1, '$.a_obj.a_str');
++---+
+| c |
++---+
+| 4 |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A166
+#-------------------------------------------------------------------------
+SELECT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+ORDER BY __time;
++---+
+| c |
++---+
+| A |
+| A |
+|   |
+|   |
++---+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A167
+#-------------------------------------------------------------------------
+SELECT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+LIMIT 1;
++---+
+| c |
++---+
+| A |
++---+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A168
+#-------------------------------------------------------------------------
+SELECT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+OFFSET 1;
++---+
+| c |
++---+
+| A |
+|   |
+|   |
++---+
+(3 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A169
+#-------------------------------------------------------------------------
+SELECT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols
+UNION ALL
+SELECT json_value(c1, '$.a_obj.a_str') c
+FROM test_json_cols;
+Query could not be planned
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_func_json_value TEST_ID: A170
+#-------------------------------------------------------------------------
+
+SELECT json_value(c1, '$.a_obj.a_str')
+FROM test_json_cols;
++--------+
+| EXPR$0 |
++--------+
+| A      |
+| A      |
+|        |
+|        |
++--------+
+(4 rows)
+
+!ok
+
+LogicalProject(EXPR$0=[CAST(JSON_VALUE_VARCHAR($10, '$.a_obj.a_str')):VARCHAR(2000)])
+  LogicalTableScan(table=[[druid, test_json_cols]])
+
+!druidPlan
+

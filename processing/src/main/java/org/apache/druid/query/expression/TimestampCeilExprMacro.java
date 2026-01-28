@@ -27,6 +27,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -63,7 +66,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     TimestampCeilExpr(final TimestampCeilExprMacro macro, final List<Expr> args)
     {
       super(macro, args);
-      this.granularity = getGranularity(args, InputBindings.nilBindings());
+      this.granularity = getGranularity(this, args, InputBindings.nilBindings());
     }
 
     @Nonnull
@@ -73,7 +76,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
       ExprEval eval = args.get(0).eval(bindings);
       if (eval.isNumericNull()) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       long argTime = eval.asLong();
       long bucketStartTime = granularity.bucketStart(argTime);
@@ -88,6 +91,29 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          argTime -> {
+            long bucketStartTime = granularity.bucketStart(argTime);
+            if (argTime == bucketStartTime) {
+              return bucketStartTime;
+            }
+            return granularity.increment(bucketStartTime);
+          }
+      );
+
+      return (ExprVectorProcessor<T>) processor;
     }
 
     @Override
@@ -113,9 +139,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static PeriodGranularity getGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
+  private static PeriodGranularity getGranularity(
+      final Expr expr,
+      final List<Expr> args,
+      final Expr.ObjectBinding bindings
+  )
   {
     return ExprUtils.toPeriodGranularity(
+        expr,
         args.get(1),
         args.size() > 2 ? args.get(2) : null,
         args.size() > 3 ? args.get(3) : null,
@@ -135,7 +166,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final PeriodGranularity granularity = getGranularity(args, bindings);
+      final PeriodGranularity granularity = getGranularity(this, args, bindings);
       long argTime = args.get(0).eval(bindings).asLong();
       long bucketStartTime = granularity.bucketStart(argTime);
       if (argTime == bucketStartTime) {

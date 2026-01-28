@@ -21,28 +21,31 @@ package org.apache.druid.segment.vector;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.ColumnCache;
-import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
+import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.ColumnSelector;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.nested.NestedDataComplexColumn;
+import org.apache.druid.segment.nested.NestedVectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSelectorFactory
 {
   private final VirtualColumns virtualColumns;
-  private final QueryableIndex index;
   private final ReadableVectorOffset offset;
-  private final ColumnCache columnCache;
+  private final ColumnSelector columnSelector;
 
   // Shared selectors are useful, since they cache vectors internally, and we can avoid recomputation if the same
   // selector is used by more than one part of a query.
@@ -52,16 +55,14 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   private final Map<String, VectorObjectSelector> objectSelectorCache;
 
   public QueryableIndexVectorColumnSelectorFactory(
-      final QueryableIndex index,
       final ReadableVectorOffset offset,
-      final ColumnCache columnCache,
+      final ColumnSelector columnSelector,
       final VirtualColumns virtualColumns
   )
   {
-    this.index = index;
     this.offset = offset;
     this.virtualColumns = virtualColumns;
-    this.columnCache = columnCache;
+    this.columnSelector = columnSelector;
     this.singleValueDimensionSelectorCache = new HashMap<>();
     this.multiValueDimensionSelectorCache = new HashMap<>();
     this.valueSelectorCache = new HashMap<>();
@@ -82,19 +83,10 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
     }
     Function<DimensionSpec, MultiValueDimensionVectorSelector> mappingFunction = spec -> {
       if (virtualColumns.exists(spec.getDimension())) {
-        MultiValueDimensionVectorSelector dimensionSelector = virtualColumns.makeMultiValueDimensionVectorSelector(
-            dimensionSpec,
-            columnCache,
-            offset
-        );
-        if (dimensionSelector == null) {
-          return virtualColumns.makeMultiValueDimensionVectorSelector(dimensionSpec, this);
-        } else {
-          return dimensionSelector;
-        }
+        return virtualColumns.makeMultiValueDimensionVectorSelector(dimensionSpec, this, columnSelector, offset);
       }
 
-      final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
+      final ColumnHolder holder = columnSelector.getColumnHolder(spec.getDimension());
       if (holder == null
           || holder.getCapabilities().isDictionaryEncoded().isFalse()
           || !holder.getCapabilities().is(ValueType.STRING)
@@ -106,8 +98,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
       }
 
       @SuppressWarnings("unchecked")
-      final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
-          columnCache.getColumn(spec.getDimension());
+      final DictionaryEncodedColumn<String> dictionaryEncodedColumn =
+          (DictionaryEncodedColumn<String>) holder.getColumn();
 
       // dictionaryEncodedColumn is not null because of holder null check above
       assert dictionaryEncodedColumn != null;
@@ -137,20 +129,12 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
     }
 
     Function<DimensionSpec, SingleValueDimensionVectorSelector> mappingFunction = spec -> {
-      if (virtualColumns.exists(spec.getDimension())) {
-        SingleValueDimensionVectorSelector dimensionSelector = virtualColumns.makeSingleValueDimensionVectorSelector(
-            dimensionSpec,
-            columnCache,
-            offset
-        );
-        if (dimensionSelector == null) {
-          return virtualColumns.makeSingleValueDimensionVectorSelector(dimensionSpec, this);
-        } else {
-          return dimensionSelector;
-        }
+      final String name = spec.getDimension();
+      if (virtualColumns.exists(name)) {
+        return virtualColumns.makeSingleValueDimensionVectorSelector(dimensionSpec, this, columnSelector, offset);
       }
 
-      final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
+      final ColumnHolder holder = columnSelector.getColumnHolder(name);
       if (holder == null
           || !holder.getCapabilities().isDictionaryEncoded().isTrue()
           || !holder.getCapabilities().is(ValueType.STRING)) {
@@ -160,17 +144,21 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
 
       if (holder.getCapabilities().hasMultipleValues().isMaybeTrue()) {
         // Asking for a single-value dimension selector on a multi-value column gets you an error.
-        throw new ISE("Column[%s] is multi-value, do not ask for a single-value selector", spec.getDimension());
+        throw new ISE("Column[%s] is multi-value, do not ask for a single-value selector", name);
       }
 
-      final BaseColumn column = columnCache.getColumn(spec.getDimension());
+      final BaseColumn column = (BaseColumn) holder.getColumn(); // if not VirtualColumn, must be BaseColumn.
       final SingleValueDimensionVectorSelector selector;
       if (column instanceof DictionaryEncodedColumn) {
         selector = ((DictionaryEncodedColumn<?>) column).makeSingleValueDimensionVectorSelector(offset);
-      } else if (column instanceof NestedDataComplexColumn) {
-        selector = ((NestedDataComplexColumn) column).makeSingleValueDimensionVectorSelector(Collections.emptyList(), offset);
       } else {
-        selector = NilVectorSelector.create(offset);
+        final NestedVectorColumnSelectorFactory nestedColumnSelectorFactory =
+            column.as(NestedVectorColumnSelectorFactory.class);
+        if (nestedColumnSelectorFactory != null) {
+          selector = nestedColumnSelectorFactory.makeSingleValueDimensionVectorSelector(List.of(), this, offset);
+        } else {
+          selector = NilVectorSelector.create(offset);
+        }
       }
 
       return spec.decorate(selector);
@@ -192,17 +180,13 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   {
     Function<String, VectorValueSelector> mappingFunction = name -> {
       if (virtualColumns.exists(columnName)) {
-        VectorValueSelector selector = virtualColumns.makeVectorValueSelector(columnName, columnCache, offset);
-        if (selector == null) {
-          return virtualColumns.makeVectorValueSelector(columnName, this);
-        } else {
-          return selector;
-        }
+        return virtualColumns.makeVectorValueSelector(columnName, this, columnSelector, offset);
       }
-      final BaseColumn column = columnCache.getColumn(name);
-      if (column == null) {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(name);
+      if (columnHolder == null) {
         return NilVectorSelector.create(offset);
       } else {
+        final BaseColumn column = (BaseColumn) columnHolder.getColumn(); // if not VirtualColumn, must be BaseColumn.
         return column.makeVectorValueSelector(offset);
       }
     };
@@ -222,17 +206,13 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   {
     Function<String, VectorObjectSelector> mappingFunction = name -> {
       if (virtualColumns.exists(columnName)) {
-        VectorObjectSelector selector = virtualColumns.makeVectorObjectSelector(columnName, columnCache, offset);
-        if (selector == null) {
-          return virtualColumns.makeVectorObjectSelector(columnName, this);
-        } else {
-          return selector;
-        }
+        return virtualColumns.makeVectorObjectSelector(columnName, this, columnSelector, offset);
       }
-      final BaseColumn column = columnCache.getColumn(name);
-      if (column == null) {
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(name);
+      if (columnHolder == null) {
         return NilVectorSelector.create(offset);
       } else {
+        final BaseColumn column = (BaseColumn) columnHolder.getColumn(); // if not VirtualColumn, must be BaseColumn.
         return column.makeVectorObjectSelector(offset);
       }
     };
@@ -247,10 +227,36 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
     return columnValueSelector;
   }
 
+  @Override
+  public GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String column,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    GroupByVectorColumnSelector retVal = null;
+
+    // Allow virtual columns to control their own grouping behavior.
+    final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(column);
+    if (virtualColumn != null) {
+      retVal = virtualColumn.makeGroupByVectorColumnSelector(column, this, deferExpressionDimensions);
+    }
+
+    // Generic case: use GroupByVectorColumnProcessorFactory.instance() to build selectors for primitive types.
+    if (retVal == null) {
+      retVal = ColumnProcessors.makeVectorProcessor(
+          column,
+          GroupByVectorColumnProcessorFactory.instance(),
+          this
+      );
+    }
+
+    return retVal;
+  }
+
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(final String columnName)
   {
-    return virtualColumns.getColumnCapabilitiesWithFallback(columnCache, columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnSelector, columnName);
   }
 }

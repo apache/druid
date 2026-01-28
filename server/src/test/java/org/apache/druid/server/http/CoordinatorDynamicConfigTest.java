@@ -20,7 +20,9 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.utils.JvmUtils;
@@ -28,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Set;
 
 public class CoordinatorDynamicConfigTest
@@ -41,8 +44,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -53,7 +54,9 @@ public class CoordinatorDynamicConfigTest
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
                      + "  \"pauseCoordination\": false,\n"
-                     + "  \"replicateAfterLoadTimeout\": false\n"
+                     + "  \"replicateAfterLoadTimeout\": false,\n"
+                     + "  \"turboLoadingNodes\":[\"host1\", \"host3\"],\n"
+                     + "  \"cloneServers\":{\"host5\": \"host6\"}\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -67,10 +70,10 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    ImmutableSet<String> turboLoadingNodes = ImmutableSet.of("host1", "host3");
+    ImmutableMap<String, String> cloneServers = ImmutableMap.of("host5", "host6");
     assertConfig(
         actual,
-        1,
-        1,
         1,
         1,
         1,
@@ -79,11 +82,12 @@ public class CoordinatorDynamicConfigTest
         whitelist,
         0.15,
         2,
-        false,
         1,
         decommissioning,
         false,
-        false
+        false,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -93,17 +97,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -113,17 +116,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withPauseCoordination(true).build(actual);
@@ -133,17 +135,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
-        false
+        false,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withReplicateAfterLoadTimeout(true).build(actual);
@@ -153,17 +154,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -173,17 +173,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(0.1).build(actual);
@@ -193,17 +192,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoadingNodes,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withMaxKillTaskSlots(5).build(actual);
@@ -213,17 +211,37 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
+        2,
+        whitelist,
+        0.1,
+        5,
+        1,
+        ImmutableSet.of("host1"),
+        true,
+        true,
+        turboLoadingNodes,
+        cloneServers
+    );
+
+    actual = CoordinatorDynamicConfig.builder()
+                                     .withTurboLoadingNodes(ImmutableSet.of("host3"))
+                                     .withCloneServers(ImmutableMap.of("host3", "host4")).build(actual);
+    assertConfig(
+        actual,
+        1,
+        1,
         1,
         1,
         2,
         whitelist,
         0.1,
         5,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        ImmutableSet.of("host3"),
+        ImmutableMap.of("host3", "host4")
     );
   }
 
@@ -247,8 +265,6 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         10,
         null,
@@ -261,6 +277,8 @@ public class CoordinatorDynamicConfigTest
         true,
         false,
         false,
+        null,
+        ImmutableSet.of("host1"),
         null
     );
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
@@ -270,8 +288,6 @@ public class CoordinatorDynamicConfigTest
   public void testConstructorWithSpecificDataSourcesToKillShouldNotKillUnusedSegmentsInAllDatasources()
   {
     CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
-        1,
-        1,
         1,
         1,
         1,
@@ -287,6 +303,8 @@ public class CoordinatorDynamicConfigTest
         true,
         false,
         false,
+        null,
+        ImmutableSet.of("host1"),
         null
     );
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
@@ -297,14 +315,14 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"turboLoadingNodes\": [\"host3\",\"host4\"],\n"
+                     + "  \"cloneServers\": {\"host3\":\"host4\", \"host5\":\"host6\"}\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -318,10 +336,10 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    ImmutableSet<String> turboLoading = ImmutableSet.of("host3", "host4");
+    ImmutableMap<String, String> cloneServers = ImmutableMap.of("host3", "host4", "host5", "host6");
     assertConfig(
         actual,
-        1,
-        1,
         1,
         1,
         1,
@@ -330,11 +348,12 @@ public class CoordinatorDynamicConfigTest
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         decommissioning,
         false,
-        false
+        false,
+        turboLoading,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -344,17 +363,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading,
+        cloneServers
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -364,17 +382,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading,
+        cloneServers
     );
   }
 
@@ -383,8 +400,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -408,17 +423,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         ImmutableSet.of("test1", "test2"),
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of(),
+        ImmutableMap.of()
     );
   }
 
@@ -427,8 +441,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -452,17 +464,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         decommissioning,
         false,
-        false
+        false,
+        ImmutableSet.of(),
+        ImmutableMap.of()
     );
   }
 
@@ -471,8 +482,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -492,17 +501,16 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         ImmutableSet.of(),
         0.1,
         Integer.MAX_VALUE,
-        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of(),
+        ImmutableMap.of()
     );
   }
 
@@ -514,8 +522,6 @@ public class CoordinatorDynamicConfigTest
     assertConfig(
         defaultConfig,
         900000,
-        524288000,
-        100,
         100,
         15,
         500,
@@ -523,11 +529,12 @@ public class CoordinatorDynamicConfigTest
         emptyList,
         0.1,
         Integer.MAX_VALUE,
-        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
         false,
-        false
+        false,
+        ImmutableSet.of(),
+        ImmutableMap.of()
     );
   }
 
@@ -542,8 +549,6 @@ public class CoordinatorDynamicConfigTest
     assertConfig(
         config,
         900000,
-        524288000,
-        100,
         100,
         15,
         500,
@@ -551,11 +556,12 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("DATASOURCE"),
         0.1,
         Integer.MAX_VALUE,
-        false,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of(),
+        ImmutableMap.of()
     );
   }
 
@@ -569,27 +575,20 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig.Builder(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ).build(current)
+        CoordinatorDynamicConfig.builder().build(current)
     );
+  }
+
+  @Test
+  public void testTurboLoadingNodes()
+  {
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig
+        .builder()
+        .withTurboLoadingNodes(ImmutableSet.of("localhost:8083"))
+        .build();
+
+    Assert.assertEquals(SegmentLoadingMode.NORMAL, config.getLoadingModeForServer("localhost:8082"));
+    Assert.assertEquals(SegmentLoadingMode.TURBO, config.getLoadingModeForServer("localhost:8083"));
   }
 
   @Test
@@ -604,8 +603,6 @@ public class CoordinatorDynamicConfigTest
   private void assertConfig(
       CoordinatorDynamicConfig config,
       long expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
-      long expectedMergeBytesLimit,
-      int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
       int expectedReplicantLifetime,
       int expectedReplicationThrottleLimit,
@@ -613,19 +610,18 @@ public class CoordinatorDynamicConfigTest
       Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
       Double expectedKillTaskSlotRatio,
       @Nullable Integer expectedMaxKillTaskSlots,
-      boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioningNodes,
       boolean pauseCoordination,
-      boolean replicateAfterLoadTimeout
+      boolean replicateAfterLoadTimeout,
+      Set<String> turboLoadingNodes,
+      Map<String, String> cloneServers
   )
   {
     Assert.assertEquals(
         expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         config.getMarkSegmentAsUnusedDelayMillis()
     );
-    Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
-    Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
@@ -640,10 +636,21 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
+    Assert.assertEquals(turboLoadingNodes, config.getTurboLoadingNodes());
+    Assert.assertEquals(cloneServers, config.getCloneServers());
   }
 
   private static int getDefaultNumBalancerThreads()
   {
     return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(CoordinatorDynamicConfig.class)
+                  .withIgnoredFields("validDebugDimensions")
+                  .usingGetClass()
+                  .verify();
   }
 }

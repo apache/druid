@@ -28,7 +28,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import java.io.Closeable;
 
-public interface BaseColumn extends Closeable
+public interface BaseColumn extends SelectableColumn, Closeable
 {
   ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset);
 

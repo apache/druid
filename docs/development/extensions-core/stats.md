@@ -62,12 +62,12 @@ You can use the variance and standard deviation aggregation functions in the SEL
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`VAR_POP(expr)`|Computes variance population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
-|`VAR_SAMP(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
-|`VARIANCE(expr)`|Computes variance sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
-|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
-|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
-|`STDDEV(expr)`|Computes standard deviation sample of `expr`.|`null` or `0` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode)|
+|`VAR_POP(expr)`|Computes variance population of `expr`.|`null`|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`.|`null`|
+|`VARIANCE(expr)`|Computes variance sample of `expr`.|`null`|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`.|`null`|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`.|`null`|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`.|`null`|
 
 ### Pre-aggregating variance at ingestion time
 

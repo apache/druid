@@ -610,7 +610,6 @@ public class BasicAuthorizerResource
     return resourceHandler.getCachedGroupMappingMaps(authorizerName);
   }
 
-
   /**
    * Listen for update notifications for the user auth storage
    * @deprecated  path /listen/{authorizerName} is to replaced by /listen/users/{authorizerName}
@@ -629,6 +628,7 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
+
     return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
@@ -647,6 +647,7 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
+
     return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
@@ -665,6 +666,7 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
+
     return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
   }
 

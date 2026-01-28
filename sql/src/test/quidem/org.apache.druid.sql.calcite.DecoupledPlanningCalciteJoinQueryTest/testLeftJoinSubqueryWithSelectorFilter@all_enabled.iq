@@ -1,5 +1,5 @@
-# testLeftJoinSubqueryWithSelectorFilter@all_enabled case-crc:74a61554
-# quidem testcase reason: EQUIV_PLAN
+# testLeftJoinSubqueryWithSelectorFilter@all_enabled case-crc:0644d80d
+# quidem testcase reason: IMPROVED_PLAN
 !set computeInnerJoinCostAsFilter false
 !set debug true
 !set defaultTimeout 300000
@@ -25,20 +25,22 @@ WHERE l1.k = 'abc'
 (1 row)
 
 !ok
-LogicalJoin(condition=[AND(=($0, $1), =($1, 'abc'))], joinType=[inner])
+LogicalJoin(condition=[=($0, $1)], joinType=[inner])
   LogicalProject(dim1=[$1])
     LogicalTableScan(table=[[druid, foo]])
-  LogicalAggregate(group=[{0}])
-    LogicalProject(k=[||($0, '')])
-      LogicalTableScan(table=[[lookup, lookyloo]])
+  LogicalFilter(condition=[=($0, 'abc')])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(k=[||($0, '')])
+        LogicalTableScan(table=[[lookup, lookyloo]])
 
 !logicalPlan
-DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
+DruidJoin(condition=[=($0, $1)], joinType=[inner])
   DruidProject(dim1=[$1], druid=[logical])
     DruidTableScan(table=[[druid, foo]], druid=[logical])
-  DruidAggregate(group=[{0}], druid=[logical])
-    DruidProject(k=[||($0, '')], druid=[logical])
-      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+  DruidFilter(condition=[=($0, 'abc')])
+    DruidAggregate(group=[{0}], druid=[logical])
+      DruidProject(k=[||($0, '')], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
 
 !druidPlan
 {
@@ -76,13 +78,23 @@ DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
           "outputName" : "d0",
           "outputType" : "STRING"
         } ],
+        "having" : {
+          "type" : "filter",
+          "filter" : {
+            "type" : "equals",
+            "column" : "d0",
+            "matchValueType" : "STRING",
+            "matchValue" : "abc"
+          },
+          "finalize" : true
+        },
         "limitSpec" : {
           "type" : "NoopLimitSpec"
         }
       }
     },
     "rightPrefix" : "j0.",
-    "condition" : "((\"dim1\" == \"j0.d0\") && ('abc' == \"j0.d0\"))",
+    "condition" : "(\"dim1\" == \"j0.d0\")",
     "joinType" : "INNER"
   },
   "intervals" : {
@@ -91,10 +103,10 @@ DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "j0.d0" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

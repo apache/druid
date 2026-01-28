@@ -113,7 +113,7 @@ public class CombiningSequence<T> implements Sequence<T>
       final CombiningYieldingAccumulator<OutType, T> combiningAccumulator
   )
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       private Yielder<T> myYielder = yielder;
       private CombiningYieldingAccumulator<OutType, T> accum = combiningAccumulator;

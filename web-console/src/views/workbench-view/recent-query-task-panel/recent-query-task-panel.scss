@@ -37,6 +37,9 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
     padding: 8px 10px;
     user-select: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 
     .close-button {
       position: absolute;

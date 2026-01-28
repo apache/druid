@@ -24,10 +24,9 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
+import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.server.SegmentManager;
 
 import java.util.Iterator;
@@ -71,12 +70,11 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
     return getOnlyIndexedTable(dataSource).filter(IndexedTable::isCacheable).map(IndexedTable::computeCacheKey);
   }
 
-  private Optional<ReferenceCountingIndexedTable> getOnlyIndexedTable(DataSource dataSource)
+  private Optional<ReferenceCountedIndexedTableProvider> getOnlyIndexedTable(DataSource dataSource)
   {
     GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
-    DataSourceAnalysis analysis = dataSource.getAnalysis();
-    return segmentManager.getIndexedTables(analysis).flatMap(tables -> {
-      Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
+    return segmentManager.getIndexedTables(broadcastDataSource).flatMap(tables -> {
+      Iterator<ReferenceCountedIndexedTableProvider> tableIterator = tables.iterator();
       if (!tableIterator.hasNext()) {
         return Optional.empty();
       }

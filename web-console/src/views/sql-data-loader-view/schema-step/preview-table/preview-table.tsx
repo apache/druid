@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Icon } from '@blueprintjs/core';
+import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { SqlAlias, SqlFunction, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
@@ -78,7 +77,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
   const { queryResult, onQueryAction, columnFilter, selectedColumnIndex, onEditColumn } = props;
   const [showValue, setShowValue] = useState<string>();
 
-  const parsedQuery: SqlQuery = queryResult.sqlQuery!;
+  const parsedQuery = queryResult.sqlQuery;
   if (!parsedQuery) return null;
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -139,7 +138,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             Header() {
               return (
                 <div className="header-wrapper" onClick={() => onEditColumn(i)}>
-                  <div className="output-name" title={columnToSummary(column)}>
+                  <div className="output-name" data-tooltip={columnToSummary(column)}>
                     {icon && <Icon className="type-icon" icon={icon} size={12} />}
                     {h}
                     {hasFilterOnHeader(h, i) && (
@@ -158,7 +157,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
               const value = row.value;
               return (
                 <div>
-                  <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                  <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                     {numericColumnBraces[i] ? (
                       <BracedText
                         className="table-padding"
@@ -169,7 +168,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover2>
+                  </Popover>
                 </div>
               );
             },

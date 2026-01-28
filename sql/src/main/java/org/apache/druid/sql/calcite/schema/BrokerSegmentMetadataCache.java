@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
@@ -28,15 +27,18 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -51,7 +53,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Broker-side cache of segment metadata that combines segments to build
@@ -174,6 +175,16 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   /**
+   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled
+   * else if there are segments or datasources to be refreshed.
+   */
+  @Override
+  protected boolean shouldRefresh()
+  {
+    return centralizedDatasourceSchemaConfig.isEnabled() || super.shouldRefresh();
+  }
+
+  /**
    * Refreshes the set of segments in two steps:
    * <ul>
    *  <li>Polls the coordinator for the datasource schema.</li>
@@ -196,6 +207,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
     final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
 
+    // this is the complete set of datasources polled from the Coordinator
+    final Set<String> polledDatasources = queryDataSources();
+
+    dataSourcesToQuery.addAll(polledDatasources);
+
     log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
 
     // Fetch datasource information from the Coordinator
@@ -206,6 +222,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
+    emitMetricForSkippedSegments(segmentsToRefresh, polledDataSourceMetadata);
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
@@ -227,22 +244,32 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
 
-      if (centralizedDatasourceSchemaConfig.isEnabled()) {
-        // this is a hacky way to ensure refresh is executed even if there are no new segments to refresh
-        // once, CentralizedDatasourceSchema feature is GA, brokers should simply poll schema for all datasources
-        dataSourcesNeedingRebuild.addAll(segmentMetadataInfo.keySet());
-      } else {
-        dataSourcesNeedingRebuild.clear();
-      }
-      log.debug("DatasourcesNeedingRebuild are [%s]", dataSourcesNeedingRebuild);
+      dataSourcesNeedingRebuild.clear();
     }
-
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
+        emitMetric(
+            Metric.DATASOURCE_REMOVED,
+            1,
+            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
+        continue;
+      }
+
+      if (rowSignature.getColumnNames().isEmpty()) {
+        // this case could arise when metadata refresh is disabled on broker
+        // and a new datasource is added
+        log.info("datasource [%s] schema has not been initialized yet, "
+                 + "check coordinator logs if this message is persistent.", dataSource);
+        // this is a harmless call
+        tables.remove(dataSource);
+        emitMetric(
+            Metric.DATASOURCE_REMOVED,
+            1,
+            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
         continue;
       }
 
@@ -251,32 +278,67 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     }
   }
 
+  private void emitMetricForSkippedSegments(
+      Set<SegmentId> segmentsToRefresh,
+      Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata
+  )
+  {
+    final Map<String, Integer> datasourceToNumSegmentsSkipped = new HashMap<>();
+
+    for (SegmentId segmentId : segmentsToRefresh) {
+      if (polledDataSourceMetadata.containsKey(segmentId.getDataSource())) {
+        datasourceToNumSegmentsSkipped.merge(segmentId.getDataSource(), 1, Integer::sum);
+      }
+    }
+
+    datasourceToNumSegmentsSkipped.forEach(
+        (dataSource, count) ->
+            emitMetric(
+                Metric.BROKER_SEGMENTS_SKIPPED_REFRESH,
+                count,
+                new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+            )
+    );
+  }
+
   @Override
   protected void removeSegmentAction(SegmentId segmentId)
   {
     // noop, no additional action needed when segment is removed.
   }
 
+  private Set<String> queryDataSources()
+  {
+    Set<String> dataSources = new HashSet<>();
+
+    try {
+      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourcesWithUsedSegments(), true);
+      if (polled != null) {
+        dataSources.addAll(polled);
+      }
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to query datasources from the Coordinator.");
+    }
+
+    return dataSources;
+  }
+
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     List<DataSourceInformation> dataSourceInformations = null;
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "metadatacache/schemaPoll/count", 1));
     try {
       dataSourceInformations = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true);
     }
     catch (Exception e) {
       log.debug(e, "Failed to query datasource information from the Coordinator.");
-      emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/schemaPoll/failed", 1));
+      emitMetric(Metric.BROKER_POLL_FAILED, 1);
     }
 
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "metadatacache/schemaPoll/time",
-        stopwatch.elapsed(TimeUnit.MILLISECONDS)));
+    emitMetric(Metric.BROKER_POLL_DURATION_MILLIS, stopwatch.millisElapsed());
 
     final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 

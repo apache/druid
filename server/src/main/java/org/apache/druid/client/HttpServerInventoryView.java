@@ -86,14 +86,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
   public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF =
-      new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {};
+      new TypeReference<>() {};
 
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
-  private final ConcurrentMap<ServerRemovedCallback, Executor> serverCallbacks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new ConcurrentHashMap<>();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
   private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
@@ -286,7 +286,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   }
 
   @Override
-  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+  public void registerServerCallback(Executor exec, ServerCallback callback)
   {
     if (lifecycleLock.isStarted()) {
       throw new ISE("Lifecycle has already started.");
@@ -347,18 +347,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  private void runServerRemovedCallbacks(final DruidServer server)
+  private void runServerCallbacks(final Function<ServerCallback, CallbackAction> fn)
   {
-    for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverCallbacks.entrySet()) {
+    for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverCallbacks.remove(entry.getKey());
-              }
+          () -> {
+            if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
+              serverCallbacks.remove(entry.getKey());
             }
           }
       );
@@ -421,12 +416,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   void serverAdded(DruidServer server)
   {
     synchronized (servers) {
-      DruidServerHolder holder = servers.get(server.getName());
-      if (holder == null) {
+      DruidServerHolder existing = servers.get(server.getName());
+      if (existing == null) {
         log.info("Server[%s] appeared.", server.getName());
-        holder = new DruidServerHolder(server);
-        servers.put(server.getName(), holder);
-        holder.start();
+        final DruidServerHolder newHolder = new DruidServerHolder(server);
+        servers.put(server.getName(), newHolder);
+        runServerCallbacks(callback -> callback.serverAdded(newHolder.druidServer));
+        newHolder.start();
       } else {
         log.info("Server[%s] already exists.", server.getName());
       }
@@ -440,7 +436,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       if (holder != null) {
         log.info("Server[%s] disappeared.", server.getName());
         holder.stop();
-        runServerRemovedCallbacks(holder.druidServer);
+        runServerCallbacks(callback -> callback.serverRemoved(holder.druidServer));
       } else {
         log.info("Ignoring remove notification for unknown server[%s].", server.getName());
       }
@@ -583,7 +579,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     private ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest> createSyncListener()
     {
-      return new ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest>()
+      return new ChangeRequestHttpSyncer.Listener<>()
       {
         @Override
         public void fullSync(List<DataSegmentChangeRequest> changes)
@@ -641,7 +637,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           DataSegment theSegment = DataSegmentInterner.intern(segment);
           druidServer.addDataSegment(theSegment);
           runSegmentCallbacks(
-              new Function<SegmentCallback, CallbackAction>()
+              new Function<>()
               {
                 @Override
                 public CallbackAction apply(SegmentCallback input)
@@ -665,7 +661,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     {
       if (druidServer.removeDataSegment(segment.getId()) != null) {
         runSegmentCallbacks(
-            new Function<SegmentCallback, CallbackAction>()
+            new Function<>()
             {
               @Override
               public CallbackAction apply(SegmentCallback input)

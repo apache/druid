@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
@@ -366,6 +368,38 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * Check to see if we can make a 'combining' factory of this aggregator that is suitable to process input from a
+   * selector of values produced by the other {@link AggregatorFactory} representing pre-aggregated data. Typically,
+   * this means that this and the other aggregator have the same inputs ({@link #requiredFields()}, and the same
+   * options for how the data was constructed into the intermediary type. If suitable, this method returns a
+   * 'combining' aggregator factory of this aggregator to use to process the pre-aggregated data which was produced by
+   * the other aggregator.
+   * <p>
+   * This method is used indirectly in service of checking if a
+   * {@link org.apache.druid.segment.projections.QueryableProjection} can be used instead of the base table during
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolder(CursorBuildSpec)}, which checks if this
+   * aggregator can be substituted for its combining aggregator if and only if there exists a column that a cursor can
+   * read which was created by an aggregator that satisfies this method. In other words, this aggregator is the 'query'
+   * aggregator defined on the {@link CursorBuildSpec}, the argument to this method is the aggregator which created
+   * some column whose selectors are available to the cursor. If all aggregators on the {@link CursorBuildSpec} can be
+   * paired with aggregators from the underlying table in the cursor factory, then
+   * {@link CursorHolder#isPreAggregated()} will be set to true indicating that query engines should use this
+   * substituted aggregator instead of the original aggregators.
+   *
+   * @param preAggregated {@link AggregatorFactory} which produced the partially aggregated values which are
+   *                      available in a selector
+   * @return a "combining" {@link AggregatorFactory} to use with the pre-aggregated selector data
+   */
+  @Nullable
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (equals(preAggregated.withName(getName()))) {
+      return getCombiningFactory();
+    }
+    return null;
+  }
+
+  /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
    * returns merged AggregatorFactory[] (for the metadata for merged segment).
    * Null is returned if it is not possible to do the merging for any of the following reason.
@@ -409,20 +443,20 @@ public abstract class AggregatorFactory implements Cacheable
               mergedAggregators.put(name, aggregator.getMergingFactory(other));
             }
             catch (AggregatorFactoryNotMergeableException ex) {
+              // Aggregator with the same name can't be merged, log it and return null early
               log.warn(ex, "failed to merge aggregator factories");
-              mergedAggregators = null;
-              break;
+              return null;
             }
           } else {
             mergedAggregators.put(name, aggregator);
           }
         }
       } else {
-        mergedAggregators = null;
-        break;
+        // one of the segments being merged has unknown aggregators, return null early
+        return null;
       }
     }
 
-    return mergedAggregators == null ? null : mergedAggregators.values().toArray(new AggregatorFactory[0]);
+    return mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }

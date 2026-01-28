@@ -22,10 +22,12 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -76,13 +78,26 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());
   }
 
-  public static CompressedColumnarFloatsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  /**
+   * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
+   * {@link SegmentFileMapper}.
+   *
+   * @param buffer     primary buffer to read from
+   * @param order      byte order
+   * @param fileMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                   a single-file column. Generally, this should only be null in tests, not production code.
+   */
+  public static CompressedColumnarFloatsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      @Nullable SegmentFileMapper fileMapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -99,7 +114,8 @@ public class CompressedColumnarFloatsSupplier implements Supplier<ColumnarFloats
           sizePer,
           buffer.asReadOnlyBuffer(),
           order,
-          compression
+          compression,
+          fileMapper
       );
       return new CompressedColumnarFloatsSupplier(
           totalSize,

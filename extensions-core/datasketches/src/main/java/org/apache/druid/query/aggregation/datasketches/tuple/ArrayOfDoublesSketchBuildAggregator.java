@@ -50,7 +50,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   private final int nominalEntries;
   private final boolean canLookupUtf8;
   private final boolean canCacheById;
-  private final LinkedHashMap<Integer, Object> stringCache = new LinkedHashMap<Integer, Object>()
+  private final LinkedHashMap<Integer, Object> stringCache = new LinkedHashMap<>()
   {
     @Override
     protected boolean removeEldestEntry(Map.Entry eldest)

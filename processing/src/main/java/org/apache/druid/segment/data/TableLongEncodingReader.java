@@ -88,4 +88,10 @@ public class TableLongEncodingReader implements CompressionFactory.LongEncodingR
   {
     return new TableLongEncodingReader(buffer.duplicate(), table, bitsPerValue);
   }
+
+  @Override
+  public CompressionFactory.LongEncodingStrategy getStrategy()
+  {
+    return CompressionFactory.LongEncodingStrategy.AUTO;
+  }
 }

@@ -20,8 +20,14 @@
 package org.apache.druid.spectator.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.netflix.spectator.api.histogram.PercentileBuckets;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -32,6 +38,9 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -42,13 +51,17 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,6 +72,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -714,6 +728,251 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
       // Should be within 18%
       Assert.assertEquals(expectedPercentile, resultPercentile, error18pcnt);
     }
+  }
+
+  @Test
+  public void testBuildingAndCountingHistogramsIncrementalIndex() throws Exception
+  {
+    List<String> dimensions = Collections.singletonList("d");
+    int n = 10;
+    DateTime startOfDay = DateTimes.of("2000-01-01");
+    List<InputRow> inputRows = new ArrayList<>(n);
+    for (int i = 1; i <= n; i++) {
+      String val = String.valueOf(i * 1.0d);
+
+      inputRows.add(new MapBasedInputRow(
+          startOfDay.plusMinutes(i),
+          dimensions,
+          ImmutableMap.of("x", i, "d", val)
+      ));
+    }
+
+    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
+        inputRows.iterator(),
+        new NoopInputRowParser(null),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new SpectatorHistogramAggregatorFactory("histogram", "x")
+        },
+        0,
+        Granularities.NONE,
+        100,
+        false
+    );
+
+    ImmutableList<Segment> segments = ImmutableList.of(
+        new IncrementalIndexSegment(index, SegmentId.dummy("test")),
+        helper.persistIncrementalIndex(index, null)
+    );
+
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource("test")
+        .setGranularity(Granularities.HOUR)
+        .setInterval("1970/2050")
+        .setAggregatorSpecs(
+            new DoubleSumAggregatorFactory("doubleSum", "histogram")
+        ).build();
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segments, query);
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    // Check timestamp
+    Assert.assertEquals(startOfDay.getMillis(), results.get(0).get(0));
+    // Check doubleSum
+    Assert.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
+  }
+
+  @Test
+  public void testPercentilePostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"percentileSpectatorHistogram\", \"name\": \"p50\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
+            + ", \"percentile\": \"50.0\"}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and percentile values
+    Assert.assertNotNull("Row [0] should have non-null percentile", results.get(0).get(2));
+    Assert.assertNotNull("Row [1] should have non-null percentile", results.get(1).get(2));
+    Assert.assertNotNull("Row [2] should have non-null percentile", results.get(2).get(2));
+
+    // Last three rows have null histograms, so percentile should also be null
+    Assert.assertNull("Row [3] should have null percentile when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null percentile when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null percentile when histogram is null", results.get(5).get(2));
+  }
+
+  @Test
+  public void testPercentilesPostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"percentilesSpectatorHistogram\", \"name\": \"percentiles\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
+            + ", \"percentiles\": [25.0, 50.0, 75.0]}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and percentiles arrays
+    Assert.assertNotNull("Row [0] should have non-null percentiles array", results.get(0).get(2));
+    Assert.assertTrue("Row [0] percentiles should be double array", results.get(0).get(2) instanceof double[]);
+    Assert.assertNotNull("Row [1] should have non-null percentiles array", results.get(1).get(2));
+    Assert.assertTrue("Row [1] percentiles should be double array", results.get(1).get(2) instanceof double[]);
+    Assert.assertNotNull("Row [2] should have non-null percentiles array", results.get(2).get(2));
+    Assert.assertTrue("Row [2] percentiles should be double array", results.get(2).get(2) instanceof double[]);
+
+    // Last three rows have null histograms, so percentiles should also be null
+    Assert.assertNull("Row [3] should have null percentiles when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null percentiles when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null percentiles when histogram is null", results.get(5).get(2));
+  }
+
+  @Test
+  public void testCountPostAggregator() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0,
+        Granularities.NONE,
+        10,
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimenions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_cost_histogram\"}}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    // The merged histogram has 9 total observations (1+1+3+3+1 from the buckets)
+    Assert.assertEquals(9L, results.get(0).get(1));
+  }
+
+  @Test
+  public void testCountPostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0,
+        Granularities.NONE,
+        10,
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and count values
+    // Product A: 1 observation
+    Assert.assertEquals(1L, results.get(0).get(2));
+    // Product B: 6 observations (1+3+2 from buckets at indices 30, 40, 50)
+    Assert.assertEquals(6L, results.get(1).get(2));
+    // Product C: 2 observations (1+1 from buckets at indices 50, 20000)
+    Assert.assertEquals(2L, results.get(2).get(2));
+
+    // Last three rows have null histograms, so count should also be null
+    Assert.assertNull("Row [3] should have null count when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null count when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null count when histogram is null", results.get(5).get(2));
   }
 
   private static void assertResultsMatch(List<ResultRow> results, int rowNum, String expectedProduct)

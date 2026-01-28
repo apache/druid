@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { CompactionConfigs } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet, pluralIfNeeded, queryDruidSql } from '../../utils';
 import { postToSampler } from '../../utils/sampler';
@@ -277,12 +278,15 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
   // Check SQL
   // -------------------------------------
   {
-    name: 'Verify that SQL works',
+    name: 'Verify that native SQL works',
     check: async controls => {
       // Make sure that we can run the simplest query
       let sqlResult: any[];
       try {
-        sqlResult = await queryDruidSql({ query: `SELECT 1 + 1 AS "two"` });
+        sqlResult = await queryDruidSql({
+          query: `SELECT 1 + 1 AS "two"`,
+          context: { engine: 'native' },
+        });
       } catch (e) {
         controls.addIssue(
           `Could not query SQL ensure that "druid.sql.enable" is set to "true" and that there is a Broker service running. Got: ${e.message}`,
@@ -309,6 +313,7 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
 FROM sys.servers
 WHERE "server_type" = 'historical'
 ORDER BY "fill" DESC`,
+          context: { engine: 'native' },
         });
         // Note: for some reason adding ` AND "curr_size" * 100.0 / "max_size" > 90` to the filter does not work as of this writing Apr 8, 2024
       } catch (e) {
@@ -366,6 +371,7 @@ FROM (
 )
 GROUP BY 1
 ORDER BY "num_bad_time_chunks"`,
+          context: { engine: 'native' },
         });
       } catch (e) {
         return;
@@ -373,10 +379,11 @@ ORDER BY "num_bad_time_chunks"`,
 
       if (sqlResult.length) {
         // Grab the auto-compaction definitions and ignore dataSources that already have auto-compaction
-        let compactionResult: any;
+        let compactionResult: CompactionConfigs;
         try {
-          compactionResult = (await Api.instance.get('/druid/coordinator/v1/config/compaction'))
-            .data;
+          compactionResult = (
+            await Api.instance.get('/druid/indexer/v1/compaction/config/datasources')
+          ).data;
         } catch (e) {
           controls.addIssue(`Could not get compaction config. Something is wrong.`);
           return;

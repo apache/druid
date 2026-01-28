@@ -45,7 +45,7 @@ public class TimeAndDimsParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new Parser<String, Object>()
+    return new Parser<>()
     {
       @Override
       public Map<String, Object> parseToMap(String input)

@@ -52,7 +52,7 @@ public class ResourcePoolTest
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     EasyMock.replay(resourceFactory);
-    pool = new ResourcePool<String, String>(
+    pool = new ResourcePool<>(
         resourceFactory,
         new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
         eagerInitialization
@@ -418,7 +418,7 @@ public class ResourcePoolTest
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
-    pool = new ResourcePool<String, String>(
+    pool = new ResourcePool<>(
         resourceFactory,
         new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10)),
         true

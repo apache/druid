@@ -36,6 +36,7 @@ public class SketchHolderObjectStrategyTest
   public void testSafeRead()
   {
     SketchHolderObjectStrategy objectStrategy = new SketchHolderObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
     Union union = (Union) SetOperation.builder().setNominalEntries(1024).build(Family.UNION);
     union.update(1234L);
 

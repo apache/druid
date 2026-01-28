@@ -38,7 +38,7 @@ import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -88,7 +88,7 @@ public class BatchServerInventoryViewTest
   private TestingCluster testingCluster;
   private CuratorFramework cf;
   private ObjectMapper jsonMapper;
-  private Announcer announcer;
+  private NodeAnnouncer nodeAnnouncer;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
   private DataSegmentServerAnnouncer serverAnnouncer;
   private Set<DataSegment> testSegments;
@@ -116,11 +116,8 @@ public class BatchServerInventoryViewTest
 
     jsonMapper = TestHelper.makeJsonMapper();
 
-    announcer = new Announcer(
-        cf,
-        Execs.directExecutor()
-    );
-    announcer.start();
+    nodeAnnouncer = new NodeAnnouncer(cf, Execs.directExecutor());
+    nodeAnnouncer.start();
 
     DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "id",
@@ -144,7 +141,7 @@ public class BatchServerInventoryViewTest
     serverAnnouncer = new CuratorDataSegmentServerAnnouncer(
         serverMetadata,
         zkPathsConfig,
-        announcer,
+        nodeAnnouncer,
         jsonMapper
     );
     serverAnnouncer.announce();
@@ -160,7 +157,7 @@ public class BatchServerInventoryViewTest
           }
         },
         zkPathsConfig,
-        announcer,
+        nodeAnnouncer,
         jsonMapper
     );
 
@@ -197,7 +194,7 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
@@ -225,7 +222,7 @@ public class BatchServerInventoryViewTest
     batchServerInventoryView.stop();
     filteredBatchServerInventoryView.stop();
     serverAnnouncer.unannounce();
-    announcer.stop();
+    nodeAnnouncer.stop();
     cf.close();
     testingCluster.stop();
   }
@@ -324,7 +321,7 @@ public class BatchServerInventoryViewTest
             )
         )
         .andAnswer(
-            new IAnswer<ServerView.CallbackAction>()
+            new IAnswer<>()
             {
               @Override
               public ServerView.CallbackAction answer()
@@ -342,7 +339,7 @@ public class BatchServerInventoryViewTest
     filteredBatchServerInventoryView.registerSegmentCallback(
         Execs.directExecutor(),
         callback,
-        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
@@ -425,7 +422,10 @@ public class BatchServerInventoryViewTest
   public void testSameTimeZnode() throws Exception
   {
     final int numThreads = INITIAL_SEGMENTS / 10;
-    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, "BatchServerInventoryViewTest-%d"));
+    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+        numThreads,
+        "BatchServerInventoryViewTest-%d"
+    ));
 
     segmentAnnouncer.announceSegments(testSegments);
 
@@ -443,7 +443,7 @@ public class BatchServerInventoryViewTest
       final int ii = i;
       futures.add(
           executor.submit(
-              new Callable<BatchDataSegmentAnnouncer>()
+              new Callable<>()
               {
                 @Override
                 public BatchDataSegmentAnnouncer call()
@@ -474,10 +474,10 @@ public class BatchServerInventoryViewTest
                           return TEST_BASE_PATH;
                         }
                       },
-                      announcer,
+                      nodeAnnouncer,
                       jsonMapper
                   );
-                  List<DataSegment> segments = new ArrayList<DataSegment>();
+                  List<DataSegment> segments = new ArrayList<>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
                       segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));

@@ -19,13 +19,14 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 public class NoopOshiSysMonitor extends OshiSysMonitor
 {
   public NoopOshiSysMonitor()
   {
-    super();
+    super(new OshiSysMonitorConfig(ImmutableList.of()));
   }
 
   @Override

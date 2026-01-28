@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Exprs;
 
 public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorProcessor<TOutput>
 {
@@ -31,26 +30,33 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
     this.delegate = delegate;
   }
 
-  public static <T> ExprVectorProcessor<T> cast(ExprVectorProcessor<?> delegate, ExpressionType type)
+  public static <T> ExprVectorProcessor<T> cast(
+      ExprVectorProcessor<?> castInput,
+      ExpressionType castToType
+  )
   {
     final ExprVectorProcessor<?> caster;
-    if (delegate.getOutputType().equals(type)) {
-      caster = delegate;
+    final ExpressionType inputType = castInput.getOutputType();
+    if (inputType.equals(castToType)) {
+      caster = castInput;
     } else {
-      switch (type.getType()) {
-        case STRING:
-          caster = new CastToStringVectorProcessor(delegate);
-          break;
+      switch (castToType.getType()) {
         case LONG:
-          caster = new CastToLongVectorProcessor(delegate);
+          caster = new CastToLongVectorProcessor(castInput);
           break;
         case DOUBLE:
-          caster = new CastToDoubleVectorProcessor(delegate);
+          caster = new CastToDoubleVectorProcessor(castInput);
           break;
         default:
-          throw Exprs.cannotVectorize();
+          caster = new CastToObjectVectorProcessor(castInput, castToType);
       }
     }
     return (ExprVectorProcessor<T>) caster;
+  }
+
+  @Override
+  public int maxVectorSize()
+  {
+    return delegate.maxVectorSize();
   }
 }

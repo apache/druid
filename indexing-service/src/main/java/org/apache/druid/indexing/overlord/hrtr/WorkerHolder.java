@@ -62,15 +62,14 @@ public class WorkerHolder
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerHolder.class);
 
-  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>>()
-  {
-  };
+  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
 
 
   private final Worker worker;
   private Worker disabledWorker;
 
   protected final AtomicBoolean disabled;
+  private final AtomicBoolean syncedAtleastOnce = new AtomicBoolean(false);
 
   // Known list of tasks running/completed on this worker.
   protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
@@ -301,9 +300,18 @@ public class WorkerHolder
     }
   }
 
+  /**
+   * Whether this worker has been synced successfully atleast once.
+   */
   public boolean isInitialized()
   {
-    return syncer.isInitialized();
+    // Do not use syncer.isInitialized() as it becomes true only after the first
+    // fullSync() or deltaSync() callback has completed. But the callback itself
+    // wakes up the HttpRemoteTaskRunner.pendingTaskExecutionLoop() which checks
+    // if this WorkerHolder is initialized before assigning tasks to it.
+    // If not initialized, execution loop goes to sleep for 1 minute thus delaying
+    // task assignment.
+    return syncedAtleastOnce.get();
   }
 
   public boolean isEnabled()
@@ -318,7 +326,7 @@ public class WorkerHolder
 
   public ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> createSyncListener()
   {
-    return new ChangeRequestHttpSyncer.Listener<WorkerHistoryItem>()
+    return new ChangeRequestHttpSyncer.Listener<>()
     {
       @Override
       public void fullSync(List<WorkerHistoryItem> changes)
@@ -441,9 +449,11 @@ public class WorkerHolder
           }
         }
 
+        syncedAtleastOnce.set(true);
         if (isWorkerDisabled != disabled.get()) {
           disabled.set(isWorkerDisabled);
           log.info("Worker[%s] disabled set to [%s].", worker.getHost(), isWorkerDisabled);
+          listener.stateChanged(!isWorkerDisabled, WorkerHolder.this);
         }
       }
     };
@@ -452,5 +462,7 @@ public class WorkerHolder
   public interface Listener
   {
     void taskAddedOrUpdated(TaskAnnouncement announcement, WorkerHolder workerHolder);
+
+    void stateChanged(boolean enabled, WorkerHolder workerHolder);
   }
 }

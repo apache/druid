@@ -22,7 +22,6 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -90,7 +89,6 @@ public class LookupJoinable implements Joinable
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
       final boolean remainderNeeded,
-      boolean descending,
       Closer closer
   )
   {
@@ -110,9 +108,6 @@ public class LookupJoinable implements Joinable
       } else {
         nonMatchingValues = new HashSet<>();
         nonMatchingValues.add(null);
-        if (NullHandling.replaceWithDefault()) {
-          nonMatchingValues.add(NullHandling.defaultStringValue());
-        }
       }
 
       // size() of Sets.difference is slow; avoid it.
@@ -178,7 +173,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     // nothing to close for lookup joinables, they are managed externally and have no per query accounting of usage
     return Optional.of(() -> {});

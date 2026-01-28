@@ -239,12 +239,16 @@ public class BlockingExecutorService implements ExecutorService
 
     private void executeNow()
     {
+      if (future.isDone()) {
+        return;
+      }
+
       try {
         T result = callable.call();
         future.complete(result);
       }
       catch (Exception e) {
-        throw new ISE("Error while executing task", e);
+        throw new ISE(e, "Error[%s] while executing task", e.getMessage());
       }
     }
   }

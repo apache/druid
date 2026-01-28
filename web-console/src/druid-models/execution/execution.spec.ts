@@ -129,7 +129,6 @@ describe('Execution', () => {
                     ],
                     "type": "intervals",
                   },
-                  "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
                   "virtualColumns": [
@@ -171,7 +170,6 @@ describe('Execution', () => {
                 "waitUntilSegmentsLoad": true,
               },
               "sqlResultsContext": {
-                "serializeComplexValues": true,
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },
@@ -255,7 +253,6 @@ describe('Execution', () => {
               ],
               "type": "intervals",
             },
-            "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
             "virtualColumns": [
@@ -472,7 +469,6 @@ describe('Execution', () => {
                         ],
                         "type": "intervals",
                       },
-                      "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
                       "virtualColumns": [
@@ -625,13 +621,13 @@ describe('Execution', () => {
             {
               "id": 0,
               "numRows": 2,
-              "sizeInBytes": 116,
+              "sizeInBytes": 150,
             },
           ],
-          "duration": 29168,
+          "duration": 7183,
           "engine": "sql-msq-task",
           "error": undefined,
-          "id": "query-ad84d20a-c331-4ee9-ac59-83024e369cf1",
+          "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349",
           "nativeQuery": undefined,
           "queryContext": undefined,
           "result": _QueryResult {
@@ -666,8 +662,453 @@ describe('Execution', () => {
           },
           "segmentStatus": undefined,
           "sqlQuery": undefined,
-          "stages": undefined,
-          "startTime": 2023-07-05T21:33:19.147Z,
+          "stages": Stages {
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
+                      6525055,
+                    ],
+                    "files": [
+                      1,
+                    ],
+                    "rows": [
+                      24433,
+                    ],
+                    "totalFiles": [
+                      1,
+                    ],
+                    "type": "channel",
+                  },
+                  "output": {
+                    "bytes": [
+                      2335,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "shuffle": {
+                    "bytes": [
+                      2131,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "sortProgress": {
+                    "levelToMergedBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "levelToTotalBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "progressDigest": 1,
+                    "totalMergersForUltimateLevel": 1,
+                    "totalMergingLevels": 3,
+                    "type": "sortProgress",
+                  },
+                },
+              },
+              "1": {
+                "0": {
+                  "input0": {
+                    "bytes": [
+                      2131,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "output": {
+                    "bytes": [
+                      2998,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "shuffle": {
+                    "bytes": [
+                      2794,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "sortProgress": {
+                    "levelToMergedBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "levelToTotalBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "progressDigest": 1,
+                    "totalMergersForUltimateLevel": 1,
+                    "totalMergingLevels": 3,
+                    "type": "sortProgress",
+                  },
+                },
+              },
+              "2": {
+                "0": {
+                  "input0": {
+                    "bytes": [
+                      2794,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      51,
+                    ],
+                    "type": "channel",
+                  },
+                  "output": {
+                    "bytes": [
+                      150,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      2,
+                    ],
+                    "type": "channel",
+                  },
+                  "shuffle": {
+                    "bytes": [
+                      142,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      2,
+                    ],
+                    "type": "channel",
+                  },
+                  "sortProgress": {
+                    "levelToMergedBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "levelToTotalBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": 1,
+                    },
+                    "progressDigest": 1,
+                    "totalMergersForUltimateLevel": 1,
+                    "totalMergingLevels": 3,
+                    "type": "sortProgress",
+                  },
+                },
+              },
+            },
+            "stages": [
+              {
+                "definition": {
+                  "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_0",
+                  "input": [
+                    {
+                      "dataSource": "wikipedia",
+                      "intervals": [
+                        "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
+                      ],
+                      "type": "table",
+                    },
+                  ],
+                  "maxWorkerCount": 1,
+                  "processor": {
+                    "query": {
+                      "aggregations": [
+                        {
+                          "name": "a0",
+                          "type": "count",
+                        },
+                      ],
+                      "context": {
+                        "__resultFormat": "array",
+                        "__user": "allowAll",
+                        "executionMode": "async",
+                        "finalize": true,
+                        "maxNumTasks": 2,
+                        "maxParseExceptions": 0,
+                        "queryId": "45f1dafd-8a52-4eb7-9a6c-77840cddd349",
+                        "sqlOuterLimit": 1001,
+                        "sqlQueryId": "45f1dafd-8a52-4eb7-9a6c-77840cddd349",
+                        "sqlStringifyArrays": false,
+                      },
+                      "dataSource": {
+                        "inputNumber": 0,
+                        "type": "inputNumber",
+                      },
+                      "dimensions": [
+                        {
+                          "dimension": "channel",
+                          "outputName": "d0",
+                          "outputType": "STRING",
+                          "type": "default",
+                        },
+                      ],
+                      "granularity": {
+                        "type": "all",
+                      },
+                      "intervals": {
+                        "intervals": [
+                          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
+                        ],
+                        "type": "intervals",
+                      },
+                      "limitSpec": {
+                        "columns": [
+                          {
+                            "dimension": "a0",
+                            "dimensionOrder": {
+                              "type": "numeric",
+                            },
+                            "direction": "descending",
+                          },
+                        ],
+                        "limit": 2,
+                        "type": "default",
+                      },
+                      "queryType": "groupBy",
+                    },
+                    "type": "groupByPreShuffle",
+                  },
+                  "shuffleSpec": {
+                    "aggregate": true,
+                    "clusterBy": {
+                      "columns": [
+                        {
+                          "columnName": "d0",
+                          "order": "ASCENDING",
+                        },
+                      ],
+                    },
+                    "partitions": 1,
+                    "type": "maxCount",
+                  },
+                  "signature": [
+                    {
+                      "name": "d0",
+                      "type": "STRING",
+                    },
+                    {
+                      "name": "a0",
+                      "type": "LONG",
+                    },
+                  ],
+                },
+                "duration": 3384,
+                "output": "localStorage",
+                "partitionCount": 1,
+                "phase": "FINISHED",
+                "shuffle": "globalSort",
+                "sort": true,
+                "stageNumber": 0,
+                "startTime": "2024-07-27T02:39:24.713Z",
+                "workerCount": 1,
+              },
+              {
+                "definition": {
+                  "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_1",
+                  "input": [
+                    {
+                      "stage": 0,
+                      "type": "stage",
+                    },
+                  ],
+                  "maxWorkerCount": 1,
+                  "processor": {
+                    "query": {
+                      "aggregations": [
+                        {
+                          "name": "a0",
+                          "type": "count",
+                        },
+                      ],
+                      "context": {
+                        "__resultFormat": "array",
+                        "__user": "allowAll",
+                        "executionMode": "async",
+                        "finalize": true,
+                        "maxNumTasks": 2,
+                        "maxParseExceptions": 0,
+                        "queryId": "45f1dafd-8a52-4eb7-9a6c-77840cddd349",
+                        "sqlOuterLimit": 1001,
+                        "sqlQueryId": "45f1dafd-8a52-4eb7-9a6c-77840cddd349",
+                        "sqlStringifyArrays": false,
+                      },
+                      "dataSource": {
+                        "inputNumber": 0,
+                        "type": "inputNumber",
+                      },
+                      "dimensions": [
+                        {
+                          "dimension": "channel",
+                          "outputName": "d0",
+                          "outputType": "STRING",
+                          "type": "default",
+                        },
+                      ],
+                      "granularity": {
+                        "type": "all",
+                      },
+                      "intervals": {
+                        "intervals": [
+                          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
+                        ],
+                        "type": "intervals",
+                      },
+                      "limitSpec": {
+                        "columns": [
+                          {
+                            "dimension": "a0",
+                            "dimensionOrder": {
+                              "type": "numeric",
+                            },
+                            "direction": "descending",
+                          },
+                        ],
+                        "limit": 2,
+                        "type": "default",
+                      },
+                      "queryType": "groupBy",
+                    },
+                    "type": "groupByPostShuffle",
+                  },
+                  "shuffleSpec": {
+                    "clusterBy": {
+                      "columns": [
+                        {
+                          "columnName": "a0",
+                          "order": "DESCENDING",
+                        },
+                        {
+                          "columnName": "__boost",
+                          "order": "ASCENDING",
+                        },
+                      ],
+                    },
+                    "partitions": 1,
+                    "type": "maxCount",
+                  },
+                  "signature": [
+                    {
+                      "name": "a0",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "__boost",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "d0",
+                      "type": "STRING",
+                    },
+                  ],
+                },
+                "duration": 26,
+                "output": "localStorage",
+                "partitionCount": 1,
+                "phase": "FINISHED",
+                "shuffle": "globalSort",
+                "sort": true,
+                "stageNumber": 1,
+                "startTime": "2024-07-27T02:39:28.089Z",
+                "workerCount": 1,
+              },
+              {
+                "definition": {
+                  "id": "query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_2",
+                  "input": [
+                    {
+                      "stage": 1,
+                      "type": "stage",
+                    },
+                  ],
+                  "maxWorkerCount": 1,
+                  "processor": {
+                    "limit": 2,
+                    "type": "limit",
+                  },
+                  "shuffleSpec": {
+                    "clusterBy": {
+                      "columns": [
+                        {
+                          "columnName": "a0",
+                          "order": "DESCENDING",
+                        },
+                        {
+                          "columnName": "__boost",
+                          "order": "ASCENDING",
+                        },
+                      ],
+                    },
+                    "partitions": 1,
+                    "type": "maxCount",
+                  },
+                  "signature": [
+                    {
+                      "name": "a0",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "__boost",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "d0",
+                      "type": "STRING",
+                    },
+                  ],
+                },
+                "duration": 12,
+                "output": "localStorage",
+                "partitionCount": 1,
+                "phase": "FINISHED",
+                "shuffle": "globalSort",
+                "sort": true,
+                "stageNumber": 2,
+                "startTime": "2024-07-27T02:39:28.112Z",
+                "workerCount": 1,
+              },
+            ],
+          },
+          "startTime": 2024-07-27T02:39:22.230Z,
           "status": "SUCCESS",
           "usageInfo": undefined,
           "warnings": undefined,
@@ -682,32 +1123,395 @@ describe('Execution', () => {
           "capacityInfo": undefined,
           "destination": undefined,
           "destinationPages": undefined,
-          "duration": 11217,
+          "duration": 6954,
           "engine": "sql-msq-task",
           "error": {
             "error": {
               "category": "UNCATEGORIZED",
               "context": {
-                "message": "java.io.UncheckedIOException: /",
+                "maxWarnings": "2",
+                "rootErrorCode": "CannotParseExternalData",
               },
               "error": "druidException",
-              "errorCode": "UnknownError",
-              "errorMessage": "java.io.UncheckedIOException: /",
+              "errorCode": "TooManyWarnings",
+              "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
               "persona": "USER",
             },
-            "taskId": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+            "taskId": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4",
           },
-          "id": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+          "id": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4",
           "nativeQuery": undefined,
           "queryContext": undefined,
           "result": undefined,
           "segmentStatus": undefined,
           "sqlQuery": undefined,
-          "stages": undefined,
-          "startTime": 2023-07-05T21:40:39.986Z,
+          "stages": Stages {
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
+                      7658,
+                    ],
+                    "files": [
+                      1,
+                    ],
+                    "rows": [
+                      10,
+                    ],
+                    "totalFiles": [
+                      1,
+                    ],
+                    "type": "channel",
+                  },
+                  "output": {
+                    "bytes": [
+                      712,
+                    ],
+                    "frames": [
+                      1,
+                    ],
+                    "rows": [
+                      10,
+                    ],
+                    "type": "channel",
+                  },
+                  "sortProgress": {
+                    "levelToMergedBatches": {},
+                    "levelToTotalBatches": {
+                      "0": 1,
+                      "1": 1,
+                      "2": -1,
+                    },
+                    "progressDigest": 0,
+                    "totalMergersForUltimateLevel": -1,
+                    "totalMergingLevels": 3,
+                    "type": "sortProgress",
+                  },
+                  "warnings": {
+                    "CannotParseExternalData": 3,
+                    "type": "warnings",
+                  },
+                },
+              },
+            },
+            "stages": [
+              {
+                "definition": {
+                  "id": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4_0",
+                  "input": [
+                    {
+                      "inputFormat": {
+                        "type": "json",
+                      },
+                      "inputSource": {
+                        "type": "http",
+                        "uris": [
+                          "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
+                        ],
+                      },
+                      "signature": [
+                        {
+                          "name": "timestamp",
+                          "type": "STRING",
+                        },
+                        {
+                          "name": "agent_type",
+                          "type": "STRING",
+                        },
+                      ],
+                      "type": "external",
+                    },
+                  ],
+                  "maxWorkerCount": 1,
+                  "processor": {
+                    "query": {
+                      "columnTypes": [
+                        "STRING",
+                        "LONG",
+                      ],
+                      "columns": [
+                        "agent_type",
+                        "v0",
+                      ],
+                      "context": {
+                        "__resultFormat": "array",
+                        "__timeColumn": "v0",
+                        "__user": "allowAll",
+                        "executionMode": "async",
+                        "finalize": false,
+                        "finalizeAggregations": false,
+                        "groupByEnableMultiValueUnnesting": false,
+                        "maxNumTasks": 2,
+                        "maxParseExceptions": 2,
+                        "queryId": "ea3e36df-ad67-4870-b136-f5616b17d9c4",
+                        "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                        "sqlInsertSegmentGranularity": ""DAY"",
+                        "sqlQueryId": "ea3e36df-ad67-4870-b136-f5616b17d9c4",
+                        "sqlReplaceTimeChunks": "all",
+                        "sqlStringifyArrays": false,
+                        "waitUntilSegmentsLoad": true,
+                      },
+                      "dataSource": {
+                        "inputFormat": {
+                          "type": "json",
+                        },
+                        "inputSource": {
+                          "type": "http",
+                          "uris": [
+                            "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
+                          ],
+                        },
+                        "signature": [
+                          {
+                            "name": "timestamp",
+                            "type": "STRING",
+                          },
+                          {
+                            "name": "agent_type",
+                            "type": "STRING",
+                          },
+                        ],
+                        "type": "external",
+                      },
+                      "granularity": {
+                        "type": "all",
+                      },
+                      "intervals": {
+                        "intervals": [
+                          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
+                        ],
+                        "type": "intervals",
+                      },
+                      "legacy": false,
+                      "queryType": "scan",
+                      "resultFormat": "compactedList",
+                      "virtualColumns": [
+                        {
+                          "expression": "timestamp_parse("timestamp",null,'UTC')",
+                          "name": "v0",
+                          "outputType": "LONG",
+                          "type": "expression",
+                        },
+                      ],
+                    },
+                    "type": "scan",
+                  },
+                  "shuffleCheckHasMultipleValues": true,
+                  "shuffleSpec": {
+                    "clusterBy": {
+                      "bucketByCount": 1,
+                      "columns": [
+                        {
+                          "columnName": "__bucket",
+                          "order": "ASCENDING",
+                        },
+                        {
+                          "columnName": "__boost",
+                          "order": "ASCENDING",
+                        },
+                      ],
+                    },
+                    "targetSize": 3000000,
+                    "type": "targetSize",
+                  },
+                  "signature": [
+                    {
+                      "name": "__bucket",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "__boost",
+                      "type": "LONG",
+                    },
+                    {
+                      "name": "agent_type",
+                      "type": "STRING",
+                    },
+                    {
+                      "name": "v0",
+                      "type": "LONG",
+                    },
+                  ],
+                },
+                "duration": 4056,
+                "output": "localStorage",
+                "phase": "FAILED",
+                "shuffle": "globalSort",
+                "sort": true,
+                "stageNumber": 0,
+                "startTime": "2024-07-26T18:05:02.399Z",
+                "workerCount": 1,
+              },
+              {
+                "definition": {
+                  "id": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4_1",
+                  "input": [
+                    {
+                      "stage": 0,
+                      "type": "stage",
+                    },
+                  ],
+                  "maxWorkerCount": 1,
+                  "processor": {
+                    "columnMappings": [
+                      {
+                        "outputColumn": "__time",
+                        "queryColumn": "v0",
+                      },
+                      {
+                        "outputColumn": "agent_type",
+                        "queryColumn": "agent_type",
+                      },
+                    ],
+                    "dataSchema": {
+                      "dataSource": "kttm-blank-lines",
+                      "dimensionsSpec": {
+                        "dimensionExclusions": [
+                          "__time",
+                        ],
+                        "dimensions": [
+                          {
+                            "createBitmapIndex": true,
+                            "multiValueHandling": "SORTED_ARRAY",
+                            "name": "agent_type",
+                            "type": "string",
+                          },
+                        ],
+                        "includeAllDimensions": false,
+                        "useSchemaDiscovery": false,
+                      },
+                      "granularitySpec": {
+                        "intervals": [
+                          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
+                        ],
+                        "queryGranularity": {
+                          "type": "none",
+                        },
+                        "rollup": false,
+                        "type": "arbitrary",
+                      },
+                      "metricsSpec": [],
+                      "timestampSpec": {
+                        "column": "__time",
+                        "format": "millis",
+                        "missingValue": null,
+                      },
+                      "transformSpec": {
+                        "filter": null,
+                        "transforms": [],
+                      },
+                    },
+                    "tuningConfig": {
+                      "maxNumWorkers": 1,
+                      "maxRowsInMemory": 100000,
+                      "rowsPerSegment": 3000000,
+                    },
+                    "type": "segmentGenerator",
+                  },
+                  "signature": [],
+                },
+                "stageNumber": 1,
+              },
+            ],
+          },
+          "startTime": 2024-07-26T18:04:59.873Z,
           "status": "FAILED",
           "usageInfo": undefined,
-          "warnings": undefined,
+          "warnings": [
+            {
+              "error": {
+                "errorCode": "CannotParseExternalData",
+                "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
+              },
+              "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)
+        	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:80)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+        	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:94)
+        	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
+        	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
+        	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
+        	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:374)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:334)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:273)
+        	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:88)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:157)
+        	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
+        	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+        	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+        	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:838)
+        	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+        	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+        	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+        	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+        	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+        	at java.base/java.lang.Thread.run(Thread.java:840)
+        Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
+         at [Source: (byte[])""; line: 1, column: 0]
+        	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
+        	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+        	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+        	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3609)
+        	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
+        	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
+        	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
+        	... 24 more
+        ",
+              "host": "localhost:8101",
+              "stageNumber": 0,
+              "taskId": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4-worker0_0",
+            },
+            {
+              "error": {
+                "errorCode": "CannotParseExternalData",
+                "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
+              },
+              "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)
+        	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:80)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+        	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+        	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:94)
+        	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
+        	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
+        	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
+        	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:374)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:334)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:273)
+        	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:88)
+        	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:157)
+        	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
+        	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+        	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+        	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:838)
+        	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+        	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+        	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+        	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+        	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+        	at java.base/java.lang.Thread.run(Thread.java:840)
+        Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
+         at [Source: (byte[])""; line: 1, column: 0]
+        	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
+        	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+        	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+        	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3609)
+        	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
+        	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
+        	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
+        	... 24 more
+        ",
+              "host": "localhost:8101",
+              "stageNumber": 0,
+              "taskId": "query-ea3e36df-ad67-4870-b136-f5616b17d9c4-worker0_0",
+            },
+          ],
         }
       `);
     });

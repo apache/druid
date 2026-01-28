@@ -155,7 +155,8 @@ public class JobHelper
     for (String jarFilePath : jarFiles) {
 
       final File jarFile = new File(jarFilePath);
-      if (jarFile.getName().endsWith(".jar")) {
+      // Keep Druid jetty jars out of the classpath. They are not runnable in the < 17 hadoop java runtime
+      if (jarFile.getName().endsWith(".jar") && !jarFile.getName().contains("jetty")) {
         try {
           RetryUtils.retry(
               () -> {
@@ -179,7 +180,7 @@ public class JobHelper
 
   public static Predicate<Throwable> shouldRetryPredicate()
   {
-    return new Predicate<Throwable>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(Throwable input)

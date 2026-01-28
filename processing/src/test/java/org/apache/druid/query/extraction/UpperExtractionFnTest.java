@@ -20,7 +20,6 @@
 package org.apache.druid.query.extraction;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,9 +33,9 @@ public class UpperExtractionFnTest
   public void testApply()
   {
     Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
-    Assert.assertEquals(null, extractionFn.apply(null));
-    Assert.assertEquals(null, extractionFn.apply((Object) null));
+    Assert.assertEquals("", extractionFn.apply(""));
+    Assert.assertNull(extractionFn.apply(null));
+    Assert.assertNull(extractionFn.apply((Object) null));
     Assert.assertEquals("1", extractionFn.apply(1));
   }
 

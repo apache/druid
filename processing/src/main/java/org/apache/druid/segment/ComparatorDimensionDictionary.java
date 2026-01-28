@@ -140,7 +140,7 @@ public class ComparatorDimensionDictionary<T>
 
   public ComparatorSortedDimensionDictionary<T> sort()
   {
-    return new ComparatorSortedDimensionDictionary<T>(idToValue, comparator, idToValue.size());
+    return new ComparatorSortedDimensionDictionary<>(idToValue, comparator, idToValue.size());
   }
 
   /**

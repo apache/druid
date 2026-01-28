@@ -231,10 +231,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -429,10 +426,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -537,10 +531,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -735,10 +726,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -973,10 +961,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -1171,10 +1156,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -1610,10 +1592,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "ioConfig": {
                         "topic": "social_media",
                         "inputFormat": {
-                            "type": "json",
-                            "keepNullColumns": false,
-                            "assumeNewlineDelimited": false,
-                            "useJsonNodeReader": false
+                            "type": "json"
                         },
                         "replicas": 1,
                         "taskCount": 1,
@@ -1808,10 +1787,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -1851,6 +1827,11 @@ Retrieves an audit history of specs for a single supervisor.
 
 `GET` `/druid/indexer/v1/supervisor/{supervisorId}/history`
 
+#### Query parameters
+
+* `count` (optional)
+  * Type: Integer
+  * Limit the number of results to the last `n` entries. Must be greater than 0 if specified.
 
 #### Responses
 
@@ -1874,7 +1855,9 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### Sample request
 
-The following example shows how to retrieve the audit history of a supervisor with the name `wikipedia_stream`.
+The following examples show how to retrieve the audit history of a supervisor with the name `wikipedia_stream`.
+
+**Get all history entries:**
 
 <Tabs>
 
@@ -1891,6 +1874,29 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream/
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream/history HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+**Get last 10 history entries:**
+
+<Tabs>
+
+<TabItem value="33" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream/history?count=10"
+```
+
+</TabItem>
+<TabItem value="34" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/supervisor/wikipedia_stream/history?count=10 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -1978,10 +1984,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -2176,10 +2179,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -2383,6 +2383,64 @@ Content-Length: 1359
 </TabItem>
 </Tabs>
 
+#### Sample request with `skipRestartIfUnmodified`
+
+The following example sets the `skipRestartIfUnmodified` flag to true. With this flag set to true, the Supervisor will only restart if there has been a modification to the SupervisorSpec. If left unset, the flag defaults to false.
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true" \
+--header 'Content-Type: application/json' \
+--data '{
+    "type": "kafka",
+    "spec": {
+        "ioConfig": {
+            "type": "kafka",
+            "consumerProperties": {
+                "bootstrap.servers": "localhost:9094"
+            },
+            "topic": "social_media",
+            "inputFormat": {
+                "type": "json"
+            },
+            "useEarliestOffset": true
+        },
+        "tuningConfig": {
+            "type": "kafka"
+        },
+        "dataSchema": {
+            "dataSource": "social_media",
+            "timestampSpec": {
+                "column": "__time",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "username",
+                    "post_title",
+                    {
+                        "type": "long",
+                        "name": "views"
+                    },
+                    {
+                        "type": "long",
+                        "name": "upvotes"
+                    },
+                    {
+                        "type": "long",
+                        "name": "comments"
+                    },
+                    "edited"
+                ]
+            },
+            "granularitySpec": {
+                "queryGranularity": "none",
+                "rollup": false,
+                "segmentGranularity": "hour"
+            }
+        }
+    }
+}'
+```
+
 #### Sample response
 
 <details>
@@ -2534,10 +2592,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -2732,10 +2787,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -2958,10 +3010,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -3156,10 +3205,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -3552,15 +3598,36 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Handoff task groups for a supervisor early
 
-Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution.
 
 #### URL
 
 `POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
 
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="202 ACCEPTED">
+
+*Request has been accepted and handoff will be initiated in the background.*
+
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
+*Invalid supervisor ID or the supervisor is not running.*
+
+</TabItem>
+<TabItem value="3" label="400 BAD REQUEST">
+
+*Supervisor does not support early handoff.*
+
+</TabItem>
+</Tabs>
+
 #### Sample request
 
-The following example shows how to handoff task groups for a Kafka supervisor with the name `social_media` and has the task groups: `1,2,3`.
+The following example shows how to handoff task groups for a supervisor with the name `social_media` and has the task groups: `1,2,3`.
 
 <Tabs>
 
@@ -3593,8 +3660,10 @@ Content-Type: application/json
 #### Sample response
 
 <details>
-  <summary>View the response</summary>
-(empty response)
+  <summary>202 Accepted</summary>
+
+*Empty response*
+
 </details>
 
 ### Shut down a supervisor

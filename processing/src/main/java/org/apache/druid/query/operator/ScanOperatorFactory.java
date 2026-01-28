@@ -115,16 +115,16 @@ public class ScanOperatorFactory implements OperatorFactory
     if (this == o) {
       return true;
     }
-    if (!(o instanceof ScanOperatorFactory)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
     ScanOperatorFactory that = (ScanOperatorFactory) o;
-    return Objects.equals(offsetLimit, that.offsetLimit)
-        && Objects.equals(timeRange, that.timeRange)
-        && Objects.equals(filter, that.filter)
-        && Objects.equals(projectedColumns, that.projectedColumns)
-        && Objects.equals(virtualColumns, that.virtualColumns)
-        && Objects.equals(ordering, that.ordering);
+    return Objects.equals(timeRange, that.timeRange)
+           && Objects.equals(filter, that.filter)
+           && Objects.equals(offsetLimit, that.offsetLimit)
+           && Objects.equals(projectedColumns, that.projectedColumns)
+           && Objects.equals(virtualColumns, that.virtualColumns)
+           && Objects.equals(ordering, that.ordering);
   }
 
   @Override

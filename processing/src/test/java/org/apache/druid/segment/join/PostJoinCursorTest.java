@@ -20,32 +20,31 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -53,7 +52,7 @@ import static java.lang.Thread.sleep;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
+public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
 {
 
   public QueryableIndexSegment infiniteFactSegment;
@@ -64,29 +63,56 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
    */
   private static class TestInfiniteQueryableIndexSegment extends QueryableIndexSegment
   {
-
-    private static class InfiniteQueryableIndexStorageAdapter extends QueryableIndexStorageAdapter
+    private static class InfiniteCursorFactory implements CursorFactory
     {
+      final CursorFactory delegate;
       CountDownLatch countDownLatch;
 
-      public InfiniteQueryableIndexStorageAdapter(QueryableIndex index, CountDownLatch countDownLatch)
+      public InfiniteCursorFactory(CursorFactory delegate, CountDownLatch countDownLatch)
       {
-        super(index);
+        this.delegate = delegate;
         this.countDownLatch = countDownLatch;
       }
 
       @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics
-      )
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics)
-                    .map(cursor -> new CursorNoAdvance(cursor, countDownLatch));
+        final CursorHolder holder = delegate.makeCursorHolder(spec);
+        return new CursorHolder()
+        {
+          @Nullable
+          @Override
+          public Cursor asCursor()
+          {
+            return new CursorNoAdvance(holder.asCursor(), countDownLatch);
+          }
+
+          @Nullable
+          @Override
+          public List<OrderBy> getOrdering()
+          {
+            return holder.getOrdering();
+          }
+
+          @Override
+          public void close()
+          {
+            holder.close();
+          }
+        };
+      }
+
+      @Override
+      public RowSignature getRowSignature()
+      {
+        return delegate.getRowSignature();
+      }
+
+      @Override
+      @Nullable
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return delegate.getColumnCapabilities(column);
       }
 
       private static class CursorNoAdvance implements Cursor
@@ -104,12 +130,6 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         public ColumnSelectorFactory getColumnSelectorFactory()
         {
           return cursor.getColumnSelectorFactory();
-        }
-
-        @Override
-        public DateTime getTime()
-        {
-          return cursor.getTime();
         }
 
         @Override
@@ -142,23 +162,27 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         @Override
         public void reset()
         {
-
+          cursor.reset();
         }
       }
     }
 
-    private final StorageAdapter testStorageAdaptor;
+    private final CursorFactory cursorFactory;
 
     public TestInfiniteQueryableIndexSegment(QueryableIndex index, SegmentId segmentId, CountDownLatch countDownLatch)
     {
       super(index, segmentId);
-      testStorageAdaptor = new InfiniteQueryableIndexStorageAdapter(index, countDownLatch);
+      cursorFactory = new InfiniteCursorFactory(new QueryableIndexCursorFactory(index), countDownLatch);
     }
 
+    @Nullable
     @Override
-    public StorageAdapter asStorageAdapter()
+    public <T> T as(@Nonnull Class<T> clazz)
     {
-      return testStorageAdaptor;
+      if (CursorFactory.class.equals(clazz)) {
+        return (T) cursorFactory;
+      }
+      return super.as(clazz);
     }
   }
 
@@ -183,6 +207,17 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
   @Test
   public void testAdvanceWithInterruption() throws IOException, InterruptedException
   {
+    testAdvance(true);
+  }
+
+  @Test
+  public void testAdvanceWithoutInterruption() throws IOException, InterruptedException
+  {
+    testAdvance(false);
+  }
+
+  private void testAdvance(boolean withInterruption) throws IOException, InterruptedException
+  {
 
     final int rowsBeforeInterrupt = 1000;
 
@@ -196,7 +231,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
 
     countriesTable = JoinTestHelper.createCountriesIndexedTable();
 
-    Thread joinCursorThread = new Thread(() -> makeCursorAndAdvance());
+    Thread joinCursorThread = new Thread(() -> makeCursorAndAdvance(withInterruption));
     ExceptionHandler exceptionHandler = new ExceptionHandler();
     joinCursorThread.setUncaughtExceptionHandler(exceptionHandler);
     joinCursorThread.start();
@@ -216,7 +251,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
     fail();
   }
 
-  public void makeCursorAndAdvance()
+  public void makeCursorAndAdvance(boolean withInterruption)
   {
 
     List<JoinableClause> joinableClauses = ImmutableList.of(
@@ -229,36 +264,38 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter = new HashJoinSegmentStorageAdapter(
-        infiniteFactSegment.asStorageAdapter(),
+    HashJoinSegment hashJoinSegment = new HashJoinSegment(
+        ReferenceCountedSegmentProvider.unmanaged(infiniteFactSegment).orElseThrow(),
+        null,
         joinableClauses,
-        joinFilterPreAnalysis
+        joinFilterPreAnalysis,
+        () -> {}
     );
 
-    Cursor cursor = Iterables.getOnlyElement(hashJoinSegmentStorageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).toList());
+    try (final CursorHolder cursorHolder = Objects.requireNonNull(hashJoinSegment.as(CursorFactory.class))
+                                                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
 
-    ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
-    {
-      @Override
-      public boolean matches(boolean includeUnknown)
+      ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
       {
-        return false;
+        @Override
+        public boolean matches(boolean includeUnknown)
+        {
+          return false;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+
+        }
+      });
+
+      if (withInterruption) {
+        cursor.advance();
+      } else {
+        cursor.advanceUninterruptibly();
       }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-
-      }
-    });
-
-    cursor.advance();
+    }
   }
 }

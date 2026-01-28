@@ -1,0 +1,191 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "sql/src/test/quidem/qatests/qaJsonCols/ingest/data",
+        "filter": "funcs.json.gz"
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      "appendToExisting": false
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic",
+        "maxRowsPerSegment": 100,
+        "maxTotalRows": 100
+      },
+      "maxNumConcurrentSubTasks": 2
+    },
+    "dataSchema": {
+      "dataSource": "test_json_cols",
+      "granularitySpec": {
+        "segmentGranularity": "month",
+        "queryGranularity": null,
+        "rollup": true
+      },
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {
+            "name": "t_obj",
+            "type": "auto"
+          },
+          {
+            "name": "t_array",
+            "type": "auto"
+          },
+          {
+            "name": "t_str1",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_int1",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_float1",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool1",
+            "type": "auto"
+          },
+          {
+            "name": "t_null1",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_obj",
+            "type": "auto"
+          },
+          {
+            "name": "t_empty_array",
+            "type": "auto"
+          },
+          {
+            "name": "t_str2",
+            "type": "auto"
+          },
+          {
+            "name": "t_num_int2",
+            "type": "long"
+          },
+          {
+            "name": "t_num_float2",
+            "type": "auto"
+          },
+          {
+            "name": "t_bool2",
+            "type": "auto"
+          },
+          {
+            "name": "t_null2",
+            "type": "auto"
+          },
+          {
+            "name": "t_new",
+            "type": "auto"
+          }
+        ],
+        "useSchemaDiscovery": true
+      },
+      "metricsSpec": [
+        {
+          "name": "cnt",
+          "type": "count"
+        }
+      ],
+      "transformSpec": {
+        "transforms": [
+          {
+            "type": "expression",
+            "name": "t_obj",
+            "expression": "parse_json(to_json_string(json_query(c1, '$.a_obj')))"
+          },
+          {
+            "type": "expression",
+            "name": "t_array",
+            "expression": "json_query(c1, '$.a_array[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str1",
+            "expression": "json_query(s_str, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_int1",
+            "expression": "json_query(s_num_int, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_float1",
+            "expression": "json_query(s_num_float, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_bool1",
+            "expression": "json_query(s_bool, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null1",
+            "expression": "json_query(s_null, '$.')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_obj",
+            "expression": "json_query(c_empty_array_nested, '$[0]')"
+          },
+          {
+            "type": "expression",
+            "name": "t_empty_array",
+            "expression": "json_query(c_empty_obj_nested, '$.o2')"
+          },
+          {
+            "type": "expression",
+            "name": "t_str2",
+            "expression": "json_query(c1, '$.a_str')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_int2",
+            "expression": "json_query(c1, '$.a_obj.a_num_int')"
+          },
+          {
+            "type": "expression",
+            "name": "t_num_float2",
+            "expression": "json_query(c1, '$.a_array[0].a_num_float')"
+          },
+          {
+            "type": "expression",
+            "name": "t_bool2",
+            "expression": "json_query(c1, '$.a_array[1].a_bool')"
+          },
+          {
+            "type": "expression",
+            "name": "t_null2",
+            "expression": "json_query(c1, '$.a_null')"
+          },
+          {
+            "type": "expression",
+            "name": "t_new",
+            "expression": "json_object('c1', c1, 'c2', c2)"
+          }
+        ]
+      }
+    }
+  },
+  "context": {
+    "storeEmptyColumns": true
+  }
+}

@@ -24,13 +24,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -53,6 +52,7 @@ import java.nio.channels.WritableByteChannel;
 public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
+  public static final int MAX_FILE_SIZE = Integer.MAX_VALUE - PAGE_SIZE;
 
   private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
@@ -73,18 +73,31 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       .writeByteArray(x -> x.fileNameByteArray);
 
 
+  /**
+   * Creates a new writer that accepts byte buffers and compresses them.
+   *
+   * @param segmentWriteOutMedium supplier of temporary files
+   * @param filenameBase          base filename to be used for secondary files, if multiple files are needed
+   * @param compressionStrategy   compression strategy to apply
+   * @param bufferSize            size of the buffers that will be passed in
+   * @param fileSizeLimit         limit for files created by the writer. In production code, this should always be
+   *                              {@link GenericIndexedWriter#MAX_FILE_SIZE}. The parameter is exposed only for testing.
+   * @param closer                closer to attach temporary compression buffers to
+   */
   public static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
       final int bufferSize,
+      final int fileSizeLimit,
       final Closer closer
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer)
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer),
+        fileSizeLimit
     );
     writer.objectsSorted = false;
     return writer;
@@ -96,7 +109,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final Closer closer
   )
   {
-    return new ObjectStrategy<ByteBuffer>()
+    return new ObjectStrategy<>()
     {
       private final CompressionStrategy.Compressor compressor = compressionStrategy.getCompressor();
       private final ByteBuffer compressedDataBuffer = compressor.allocateOutBuffer(bufferSize, closer);
@@ -170,7 +183,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       ObjectStrategy<T> strategy
   )
   {
-    this(segmentWriteOutMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
+    this(segmentWriteOutMedium, filenameBase, strategy, MAX_FILE_SIZE);
   }
 
   public GenericIndexedWriter(
@@ -200,7 +213,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   private static void writeBytesIntoSmooshedChannel(
       long numBytesToPutInFile,
       final byte[] buffer,
-      final SmooshedWriter smooshChannel,
+      final SegmentFileChannel smooshChannel,
       final InputStream is
   )
       throws IOException
@@ -242,7 +255,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void write(@Nullable T objectToWrite) throws IOException
+  public int write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;
@@ -263,7 +276,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
     // Increment number of values written. Important to do this after the check above, since numWritten is
     // accessed during "initializeHeaderOutLong" to determine the length of the header.
-    ++numWritten;
+    int retVal = numWritten++;
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(checkedCastNonnegativeLongToInt(valuesOut.size()));
@@ -280,6 +293,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     if (objectsSorted) {
       prevObject = objectToWrite;
     }
+    return retVal;
   }
 
   @Nullable
@@ -295,9 +309,6 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long endOffset = getOffset(index);
     int valueSize = checkedCastNonnegativeLongToInt(endOffset - startOffset);
     if (valueSize == 0) {
-      if (NullHandling.replaceWithDefault()) {
-        return null;
-      }
       ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
       valuesOut.readFully(startOffset - Integer.BYTES, bb);
       bb.flip();
@@ -341,10 +352,10 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable SegmentFileBuilder fileBuilder) throws IOException
   {
     if (requireMultipleFiles) {
-      writeToMultiFiles(channel, smoosher);
+      writeToMultiFiles(channel, fileBuilder);
     } else {
       writeToSingleFile(channel);
     }
@@ -371,7 +382,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     valuesOut.writeTo(channel);
   }
 
-  private void writeToMultiFiles(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  private void writeToMultiFiles(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     Preconditions.checkState(
         headerOutLong.size() == numWritten,
@@ -385,8 +396,8 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
         (((long) headerOutLong.size()) * Long.BYTES)
     );
 
-    if (smoosher == null) {
-      throw new IAE("version 2 GenericIndexedWriter requires FileSmoosher.");
+    if (fileBuilder == null) {
+      throw new IAE("version 2 GenericIndexedWriter requires SegmentFileBuilder.");
     }
 
     int bagSizePower = bagSizePower();
@@ -411,14 +422,14 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
         long numBytesToPutInFile = valuePosition - previousValuePosition;
 
-        try (SmooshedWriter smooshChannel = smoosher
-            .addWithSmooshedWriter(generateValueFileName(filenameBase, i), numBytesToPutInFile)) {
-          writeBytesIntoSmooshedChannel(numBytesToPutInFile, buffer, smooshChannel, is);
+        try (SegmentFileChannel segmentChannel = fileBuilder
+            .addWithChannel(generateValueFileName(filenameBase, i), numBytesToPutInFile)) {
+          writeBytesIntoSmooshedChannel(numBytesToPutInFile, buffer, segmentChannel, is);
           previousValuePosition = valuePosition;
         }
       }
     }
-    writeHeaderLong(smoosher, bagSizePower);
+    writeHeaderLong(fileBuilder, bagSizePower);
   }
 
   /**
@@ -483,7 +494,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     return true;
   }
 
-  private void writeHeaderLong(FileSmoosher smoosher, int bagSizePower)
+  private void writeHeaderLong(SegmentFileBuilder fileBuilder, int bagSizePower)
       throws IOException
   {
     ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
@@ -492,8 +503,8 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long currentNumBytes = 0;
     long relativeRefBytes = 0;
     long relativeNumBytes;
-    try (SmooshedWriter smooshChannel = smoosher
-        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
+    try (SegmentFileChannel smooshChannel = fileBuilder
+        .addWithChannel(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
 
       // following block converts long header indexes into int header indexes.
       for (int pos = 0; pos < numWritten; pos++) {

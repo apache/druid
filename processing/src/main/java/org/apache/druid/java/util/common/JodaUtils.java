@@ -104,7 +104,7 @@ public class JodaUtils
             )
         );
 
-    return new Iterator<Interval>()
+    return new Iterator<>()
     {
       private Interval previous;
 

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
 
@@ -26,7 +24,7 @@ import { HeaderBar } from './header-bar';
 describe('HeaderBar', () => {
   it('matches snapshot', () => {
     const headerBar = shallow(
-      <HeaderBar active="workbench" capabilities={Capabilities.FULL} onUnrestrict={() => {}} />,
+      <HeaderBar activeView="workbench" capabilities={Capabilities.FULL} onUnrestrict={() => {}} />,
     );
     expect(headerBar).toMatchSnapshot();
   });

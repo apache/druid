@@ -219,7 +219,7 @@ public class DerivativeDataSourceManager
   private long getAvgSizePerGranularity(String datasource)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Long>() {
+        new HandleCallback<>() {
           Set<Interval> intervals = new HashSet<>();
           long totalSize = 0;
           @Override

@@ -49,9 +49,10 @@ public class KllDoublesSketchToRankPostAggregatorTest
         0
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllDoublesSketchToRankPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllDoublesSketchToRankPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

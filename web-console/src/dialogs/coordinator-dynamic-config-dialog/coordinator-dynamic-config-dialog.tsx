@@ -27,8 +27,10 @@ import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getDruidErrorMessage } from '../../utils';
+import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
+
+import { COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS } from './coordinator-dynamic-config-completions';
 
 import './coordinator-dynamic-config-dialog.scss';
 
@@ -46,17 +48,16 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
-    processQuery: async () => {
-      const historyResp = await Api.instance.get(`/druid/coordinator/v1/config/history?count=100`);
-      return historyResp.data;
+    processQuery: async (_, signal) => {
+      return await getApiArray(`/druid/coordinator/v1/config/history?count=100`, signal);
     },
   });
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async () => {
+    processQuery: async (_, signal) => {
       try {
-        const configResp = await Api.instance.get('/druid/coordinator/v1/config');
+        const configResp = await Api.instance.get('/druid/coordinator/v1/config', { signal });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -107,9 +108,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
           <p>
             Edit the coordinator dynamic configuration on the fly. For more information please refer
             to the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#dynamic-configuration`}>
               documentation
             </ExternalLink>
             .
@@ -133,6 +132,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
               height="50vh"
               onChange={setDynamicConfig}
               setError={setJsonError}
+              jsonCompletions={COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS}
             />
           )}
         </>

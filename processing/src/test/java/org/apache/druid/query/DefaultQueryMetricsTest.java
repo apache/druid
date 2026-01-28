@@ -48,7 +48,7 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultQueryMetricsQuery()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
@@ -66,17 +66,17 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
         .context(ImmutableMap.of("testKey", "testValue"))
         .build();
     queryMetrics.query(query);
-    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     // No way to verify this right now since DefaultQueryMetrics implements a no-op for sqlQueryId(String) and queryId(String)
     // This change is done to keep the code coverage tool happy by exercising the implementation
     queryMetrics.sqlQueryId("dummy");
     queryMetrics.queryId("dummy");
+    queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
     Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
@@ -131,18 +131,20 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
 
     queryMetrics.reportNodeBytes(10).emit(serviceEmitter);
     serviceEmitter.verifyValue("query/node/bytes", 10L);
-    Assert.assertEquals(9, serviceEmitter.getEvents().size());
+
+    queryMetrics.reportResultCachePoll(true).emit(serviceEmitter);
+    serviceEmitter.verifyValue("query/resultCache/hit", 1);
 
     // Verify that Queried Segment Count does not get emitted by the DefaultQueryMetrics
     // and the total number of emitted metrics remains unchanged
     queryMetrics.reportQueriedSegmentCount(25).emit(serviceEmitter);
-    Assert.assertEquals(9, serviceEmitter.getEvents().size());
+    Assert.assertEquals(10, serviceEmitter.getNumEmittedEvents());
   }
 
   @Test
   public void testVectorizedDimensionInMetrics()
   {
-    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
+    final StubServiceEmitter serviceEmitter = StubServiceEmitter.createStarted();
     DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
     queryMetrics.vectorized(true);
     queryMetrics.reportSegmentTime(0).emit(serviceEmitter);
@@ -150,8 +152,8 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(7, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("", actualEvent.get("host"));
-    Assert.assertEquals("", actualEvent.get("service"));
+    Assert.assertEquals("localhost", actualEvent.get("host"));
+    Assert.assertEquals("testing", actualEvent.get("service"));
     Assert.assertEquals("query/segment/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
     Assert.assertEquals(true, actualEvent.get("vectorized"));

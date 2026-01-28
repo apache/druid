@@ -33,7 +33,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -44,9 +43,14 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
 
   private final SegmentLoadQueueManager loadQueueManager;
+  private final MetadataAction.GetDatasourceRules ruleHandler;
 
-  public UnloadUnusedSegments(SegmentLoadQueueManager loadQueueManager)
+  public UnloadUnusedSegments(
+      SegmentLoadQueueManager loadQueueManager,
+      MetadataAction.GetDatasourceRules ruleHandler
+  )
   {
+    this.ruleHandler = ruleHandler;
     this.loadQueueManager = loadQueueManager;
   }
 
@@ -58,7 +62,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    final List<ServerHolder> allServers = params.getDruidCluster().getAllServers();
+    final List<ServerHolder> allServers = params.getDruidCluster().getAllManagedServers();
     int numCancelledLoads = allServers.stream().mapToInt(
         server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();
@@ -69,7 +73,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     ).sum();
 
     if (numCancelledLoads > 0 || numQueuedDrops > 0) {
-      log.info("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
+      log.debug("Cancelled [%d] loads and started [%d] drops of unused segments.", numCancelledLoads, numQueuedDrops);
     }
 
     return params;
@@ -82,18 +86,16 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       Map<String, Boolean> broadcastStatusByDatasource
   )
   {
-    final Set<DataSegment> usedSegments = params.getUsedSegments();
-
     final AtomicInteger numQueuedDrops = new AtomicInteger(0);
     final ImmutableDruidServer server = serverHolder.getServer();
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource, params)) {
+      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource)) {
         continue;
       }
 
       int totalUnneededCount = 0;
       for (DataSegment segment : dataSource.getSegments()) {
-        if (!usedSegments.contains(segment)
+        if (!params.isUsedSegment(segment)
             && loadQueueManager.dropSegment(segment, serverHolder)) {
           totalUnneededCount++;
           log.debug(
@@ -118,13 +120,11 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       DruidCoordinatorRuntimeParams params
   )
   {
-    final Set<DataSegment> usedSegments = params.getUsedSegments();
-
     final AtomicInteger cancelledOperations = new AtomicInteger(0);
     server.getQueuedSegments().forEach((segment, action) -> {
-      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource, params)) {
+      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource)) {
         // do nothing
-      } else if (usedSegments.contains(segment)) {
+      } else if (params.isUsedSegment(segment)) {
         // do nothing
       } else if (action.isLoad() && server.cancelOperation(action, segment)) {
         cancelledOperations.incrementAndGet();
@@ -147,21 +147,21 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private boolean shouldSkipUnload(
       ServerHolder server,
       String dataSource,
-      Map<String, Boolean> broadcastStatusByDatasource,
-      DruidCoordinatorRuntimeParams params
+      Map<String, Boolean> broadcastStatusByDatasource
   )
   {
     boolean isBroadcastDatasource = broadcastStatusByDatasource
-        .computeIfAbsent(dataSource, ds -> isBroadcastDatasource(ds, params));
+        .computeIfAbsent(dataSource, this::isBroadcastDatasource);
     return server.isRealtimeServer() && !isBroadcastDatasource;
   }
 
   /**
    * A datasource is considered a broadcast datasource if it has even one broadcast rule.
    */
-  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
+  private boolean isBroadcastDatasource(String datasource)
   {
-    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
-                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
+    return ruleHandler.getRulesWithDefault(datasource)
+                      .stream()
+                      .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

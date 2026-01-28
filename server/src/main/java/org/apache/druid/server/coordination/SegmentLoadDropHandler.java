@@ -27,19 +27,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
@@ -50,42 +45,33 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
+ * Responsible for loading and dropping of segments by a process that can serve segments.
  */
 @ManageLifecycle
-public class SegmentLoadDropHandler implements DataSegmentChangeHandler
+public class SegmentLoadDropHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
-  // Synchronizes removals from segmentsToDelete
-  private final Object segmentDeleteLock = new Object();
-
-  // Synchronizes start/stop of this object.
-  private final Object startStopLock = new Object();
-
   private final SegmentLoaderConfig config;
   private final DataSegmentAnnouncer announcer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentManager segmentManager;
-  private final ScheduledExecutorService exec;
-  private final ServerTypeConfig serverTypeConfig;
-  private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
+  private final ScheduledExecutorService normalLoadExec;
+  private final ThreadPoolExecutor turboLoadExec;
 
-  private volatile boolean started = false;
+  /**
+   * Holder of latches for segments that have drops scheduled, or drops currently being executed.
+   */
+  private final ConcurrentHashMap<DataSegment, SegmentDropLatch> segmentDropLatches;
 
   // Keep history of load/drop request status in a LRU cache to maintain idempotency if same request shows up
   // again and to return status of a completed request. Maximum size of this cache must be significantly greater
@@ -101,21 +87,27 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   public SegmentLoadDropHandler(
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
-      DataSegmentServerAnnouncer serverAnnouncer,
-      SegmentManager segmentManager,
-      ServerTypeConfig serverTypeConfig
+      SegmentManager segmentManager
   )
   {
     this(
         config,
         announcer,
-        serverAnnouncer,
         segmentManager,
-        Executors.newScheduledThreadPool(
+        new ScheduledThreadPoolExecutor(
             config.getNumLoadingThreads(),
-            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+            Execs.makeThreadFactory("SegmentLoadDropHandler-normal-%s")
         ),
-        serverTypeConfig
+        // Create a fixed size threadpool which has a timeout of 1 minute. Since they are all core threads, new threads
+        // will be created without enqueing the tasks till the capacity is reached.
+        new ThreadPoolExecutor(
+            config.getNumBootstrapThreads(),
+            config.getNumBootstrapThreads(),
+            60L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            Execs.makeThreadFactory("SegmentLoadDropHandler-turbo-%s")
+        )
     );
   }
 
@@ -123,77 +115,22 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   SegmentLoadDropHandler(
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ScheduledExecutorService exec,
-      ServerTypeConfig serverTypeConfig
+      ScheduledExecutorService normalLoadExec,
+      ThreadPoolExecutor turboLoadExec
   )
   {
     this.config = config;
     this.announcer = announcer;
-    this.serverAnnouncer = serverAnnouncer;
     this.segmentManager = segmentManager;
-    this.exec = exec;
-    this.serverTypeConfig = serverTypeConfig;
+    this.normalLoadExec = normalLoadExec;
+    this.turboLoadExec = turboLoadExec;
 
-    this.segmentsToDelete = new ConcurrentSkipListSet<>();
+    // Allow core threads to time out to save resources when not in turbo mode
+    this.turboLoadExec.allowCoreThreadTimeOut(true);
+
+    this.segmentDropLatches = new ConcurrentHashMap<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
-  }
-
-  @LifecycleStart
-  public void start() throws IOException
-  {
-    synchronized (startStopLock) {
-      if (started) {
-        return;
-      }
-
-      log.info("Starting...");
-      try {
-        if (segmentManager.canHandleSegments()) {
-          bootstrapCachedSegments();
-        }
-
-        if (shouldAnnounce()) {
-          serverAnnouncer.announce();
-        }
-      }
-      catch (Exception e) {
-        Throwables.propagateIfPossible(e, IOException.class);
-        throw new RuntimeException(e);
-      }
-      started = true;
-      log.info("Started.");
-    }
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-    synchronized (startStopLock) {
-      if (!started) {
-        return;
-      }
-
-      log.info("Stopping...");
-      try {
-        if (shouldAnnounce()) {
-          serverAnnouncer.unannounce();
-        }
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-      finally {
-        started = false;
-      }
-      log.info("Stopped.");
-    }
-  }
-
-  public boolean isStarted()
-  {
-    return started;
   }
 
   public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
@@ -206,119 +143,24 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return segmentManager.getRowCountDistribution();
   }
 
-  /**
-   * Bulk loading of cached segments into page cache during bootstrap.
-   */
-  private void bootstrapCachedSegments() throws IOException
-  {
-    final Stopwatch stopwatch = Stopwatch.createStarted();
-    final List<DataSegment> segments = segmentManager.getCachedSegments();
-
-    // Start a temporary thread pool to load segments into page cache during bootstrap
-    final ExecutorService loadingExecutor = Execs.multiThreaded(
-        config.getNumBootstrapThreads(), "Segment-Load-Startup-%s"
-    );
-
-    try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
-             new BackgroundSegmentAnnouncer(announcer, exec, config.getAnnounceIntervalMillis())) {
-
-      backgroundSegmentAnnouncer.startAnnouncing();
-
-      final int numSegments = segments.size();
-      final CountDownLatch latch = new CountDownLatch(numSegments);
-      final AtomicInteger counter = new AtomicInteger(0);
-      final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
-      for (final DataSegment segment : segments) {
-        loadingExecutor.submit(
-            () -> {
-              try {
-                log.info(
-                    "Loading segment[%d/%d][%s]",
-                    counter.incrementAndGet(), numSegments, segment.getId()
-                );
-                try {
-                  segmentManager.loadSegmentOnBootstrap(
-                      segment,
-                      () -> this.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
-                  );
-                }
-                catch (Exception e) {
-                  removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
-                  throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
-                }
-                try {
-                  backgroundSegmentAnnouncer.announceSegment(segment);
-                }
-                catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                  throw new SegmentLoadingException(e, "Loading Interrupted");
-                }
-              }
-              catch (SegmentLoadingException e) {
-                log.error(e, "[%s] failed to load", segment.getId());
-                failedSegments.add(segment);
-              }
-              finally {
-                latch.countDown();
-              }
-            }
-        );
-      }
-
-      try {
-        latch.await();
-
-        if (failedSegments.size() > 0) {
-          log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
-             .addData("failedSegments", failedSegments)
-             .emit();
-        }
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        log.makeAlert(e, "LoadingInterrupted").emit();
-      }
-
-      backgroundSegmentAnnouncer.finishAnnouncing();
-    }
-    catch (SegmentLoadingException e) {
-      log.makeAlert(e, "Failed to load segments -- likely problem with announcing.")
-         .addData("numSegments", segments.size())
-         .emit();
-    }
-    finally {
-      loadingExecutor.shutdownNow();
-      stopwatch.stop();
-      // At this stage, all tasks have been submitted, send a shutdown command to cleanup any resources alloted
-      // for the bootstrapping function.
-      segmentManager.shutdownBootstrap();
-      log.info("Cache load of [%d] bootstrap segments took [%,d]ms.", segments.size(), stopwatch.millisElapsed());
-    }
-  }
-
-  @Override
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+  public void addSegment(
+      DataSegment segment,
+      @Nullable DataSegmentChangeCallback callback,
+      SegmentLoadingMode loadingMode
+  )
   {
     SegmentChangeStatus result = null;
     try {
-      log.info("Loading segment[%s]", segment.getId());
-      /*
-         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
-         and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
-         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
-         the segment, which makes dropping segment and downloading segment happen at the same time.
-       */
-      if (segmentsToDelete.contains(segment)) {
-        /*
-           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
-           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
-           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
-           cost of acquiring lock by doing the "contains" check outside the synchronized block.
-         */
-        synchronized (segmentDeleteLock) {
-          segmentsToDelete.remove(segment);
-        }
+      log.info("Loading segment[%s] in mode[%s]", segment.getId(), loadingMode);
+
+      // Cancel any pending drops for this segment, or wait for them if they have already started executing. This is
+      // necessary to prevent delayed drops issued by removeSegment() from dropping a segment while we are trying to
+      // load it.
+      final SegmentDropLatch currentDropLatch = segmentDropLatches.remove(segment);
+      if (currentDropLatch != null) {
+        currentDropLatch.cancelOrAwait();
       }
+
       try {
         segmentManager.loadSegment(segment);
       }
@@ -334,13 +176,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
       }
 
-      result = SegmentChangeStatus.SUCCESS;
+      result = SegmentChangeStatus.success(loadingMode);
     }
     catch (Throwable e) {
       log.makeAlert(e, "Failed to load segment")
          .addData("segment", segment)
          .emit();
-      result = SegmentChangeStatus.failed(e.toString());
+      Throwable rootCause = Throwables.getRootCause(e);
+      result = SegmentChangeStatus.failed(rootCause.toString(), loadingMode);
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);
@@ -350,7 +193,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
     removeSegment(segment, callback, true);
@@ -366,20 +208,29 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     SegmentChangeStatus result = null;
     try {
       announcer.unannounceSegment(segment);
-      segmentsToDelete.add(segment);
+
+      final SegmentDropLatch dropLatch = new SegmentDropLatch();
+      final SegmentDropLatch priorLatch = segmentDropLatches.putIfAbsent(segment, dropLatch);
+
+      if (priorLatch != null) {
+        log.warn("Cannot drop segment[%s] that already has a drop pending. Ignoring.", segment.getId());
+        return;
+      }
 
       Runnable runnable = () -> {
         try {
-          synchronized (segmentDeleteLock) {
-            if (segmentsToDelete.remove(segment)) {
-              segmentManager.dropSegment(segment);
-            }
+          if (dropLatch.startDropping()) {
+            segmentManager.dropSegment(segment);
           }
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to remove segment! Possible resource leak!")
              .addData("segment", segment)
              .emit();
+        }
+        finally {
+          dropLatch.doneDropping();
+          segmentDropLatches.remove(segment, dropLatch);
         }
       };
 
@@ -388,7 +239,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        exec.schedule(
+        normalLoadExec.schedule(
             runnable,
             config.getDropSegmentDelayMillis(),
             TimeUnit.MILLISECONDS
@@ -397,7 +248,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         runnable.run();
       }
 
-      result = SegmentChangeStatus.SUCCESS;
+      result = SegmentChangeStatus.success();
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to remove segment")
@@ -415,17 +266,25 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   public Collection<DataSegment> getSegmentsToDelete()
   {
-    return ImmutableList.copyOf(segmentsToDelete);
+    return ImmutableList.copyOf(segmentDropLatches.keySet());
   }
 
-  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  /**
+   * Process a list of {@link DataSegmentChangeRequest}, invoking
+   * {@link #processRequest(DataSegmentChangeRequest, SegmentLoadingMode)} for each one. Handles the computation
+   * asynchronously and returns a future to the result.
+   */
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(
+      List<DataSegmentChangeRequest> changeRequests,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     boolean isAnyRequestDone = false;
 
     Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
 
     for (DataSegmentChangeRequest cr : changeRequests) {
-      AtomicReference<SegmentChangeStatus> status = processRequest(cr);
+      AtomicReference<SegmentChangeStatus> status = processRequest(cr, segmentLoadingMode);
       if (status.get().getState() != SegmentChangeStatus.State.PENDING) {
         isAnyRequestDone = true;
       }
@@ -445,7 +304,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest)
+  /**
+   * Process a {@link DataSegmentChangeRequest}, invoking the request's
+   * {@link DataSegmentChangeRequest#go(DataSegmentChangeHandler, DataSegmentChangeCallback)}.
+   * The segmentLoadingMode parameter determines the thread pool to use.
+   */
+  private AtomicReference<SegmentChangeStatus> processRequest(
+      DataSegmentChangeRequest changeRequest,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     synchronized (requestStatusesLock) {
       AtomicReference<SegmentChangeStatus> status = requestStatuses.getIfPresent(changeRequest);
@@ -456,21 +323,29 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             new DataSegmentChangeHandler()
             {
               @Override
-              public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void addSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
-                exec.submit(
+                final SegmentChangeStatus pendingStatus = SegmentChangeStatus.pending(segmentLoadingMode);
+                requestStatuses.put(changeRequest, new AtomicReference<>(pendingStatus));
+                getLoadingExecutor(segmentLoadingMode).submit(
                     () -> SegmentLoadDropHandler.this.addSegment(
                         ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                        () -> resolveWaitingFutures()
+                        () -> resolveWaitingFutures(),
+                        segmentLoadingMode
                     )
                 );
               }
 
               @Override
-              public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void removeSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
-                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
+                requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.pending()));
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
@@ -512,154 +387,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     for (CustomSettableFuture future : waitingFuturesCopy) {
       future.resolve();
-    }
-  }
-
-  /**
-   * Returns whether or not we should announce ourselves as a data server using {@link DataSegmentServerAnnouncer}.
-   *
-   * Returns true if _either_:
-   *
-   * <li> Our {@link #serverTypeConfig} indicates we are a segment server. This is necessary for Brokers to be able
-   * to detect that we exist.</li>
-   * <li> The segment manager is able to handle segments. This is necessary for Coordinators to be able to
-   * assign segments to us.</li>
-   */
-  private boolean shouldAnnounce()
-  {
-    return serverTypeConfig.getServerType().isSegmentServer() || segmentManager.canHandleSegments();
-  }
-
-  private static class BackgroundSegmentAnnouncer implements AutoCloseable
-  {
-    private static final EmittingLogger log = new EmittingLogger(BackgroundSegmentAnnouncer.class);
-
-    private final int intervalMillis;
-    private final DataSegmentAnnouncer announcer;
-    private final ScheduledExecutorService exec;
-    private final LinkedBlockingQueue<DataSegment> queue;
-    private final SettableFuture<Boolean> doneAnnouncing;
-
-    private final Object lock = new Object();
-
-    private volatile boolean finished = false;
-    @Nullable
-    private volatile ScheduledFuture startedAnnouncing = null;
-    @Nullable
-    private volatile ScheduledFuture nextAnnoucement = null;
-
-    public BackgroundSegmentAnnouncer(
-        DataSegmentAnnouncer announcer,
-        ScheduledExecutorService exec,
-        int intervalMillis
-    )
-    {
-      this.announcer = announcer;
-      this.exec = exec;
-      this.intervalMillis = intervalMillis;
-      this.queue = new LinkedBlockingQueue<>();
-      this.doneAnnouncing = SettableFuture.create();
-    }
-
-    public void announceSegment(final DataSegment segment) throws InterruptedException
-    {
-      if (finished) {
-        throw new ISE("Announce segment called after finishAnnouncing");
-      }
-      queue.put(segment);
-    }
-
-    public void startAnnouncing()
-    {
-      if (intervalMillis <= 0) {
-        return;
-      }
-
-      log.info("Starting background segment announcing task");
-
-      // schedule background announcing task
-      nextAnnoucement = startedAnnouncing = exec.schedule(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              synchronized (lock) {
-                try {
-                  if (!(finished && queue.isEmpty())) {
-                    final List<DataSegment> segments = new ArrayList<>();
-                    queue.drainTo(segments);
-                    try {
-                      announcer.announceSegments(segments);
-                      nextAnnoucement = exec.schedule(this, intervalMillis, TimeUnit.MILLISECONDS);
-                    }
-                    catch (IOException e) {
-                      doneAnnouncing.setException(
-                          new SegmentLoadingException(e, "Failed to announce segments[%s]", segments)
-                      );
-                    }
-                  } else {
-                    doneAnnouncing.set(true);
-                  }
-                }
-                catch (Exception e) {
-                  doneAnnouncing.setException(e);
-                }
-              }
-            }
-          },
-          intervalMillis,
-          TimeUnit.MILLISECONDS
-      );
-    }
-
-    public void finishAnnouncing() throws SegmentLoadingException
-    {
-      synchronized (lock) {
-        finished = true;
-        // announce any remaining segments
-        try {
-          final List<DataSegment> segments = new ArrayList<>();
-          queue.drainTo(segments);
-          announcer.announceSegments(segments);
-        }
-        catch (Exception e) {
-          throw new SegmentLoadingException(e, "Failed to announce segments[%s]", queue);
-        }
-
-        // get any exception that may have been thrown in background announcing
-        try {
-          // check in case intervalMillis is <= 0
-          if (startedAnnouncing != null) {
-            startedAnnouncing.cancel(false);
-          }
-          // - if the task is waiting on the lock, then the queue will be empty by the time it runs
-          // - if the task just released it, then the lock ensures any exception is set in doneAnnouncing
-          if (doneAnnouncing.isDone()) {
-            doneAnnouncing.get();
-          }
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new SegmentLoadingException(e, "Loading Interrupted");
-        }
-        catch (ExecutionException e) {
-          throw new SegmentLoadingException(e.getCause(), "Background Announcing Task Failed");
-        }
-      }
-      log.info("Completed background segment announcing");
-    }
-
-    @Override
-    public void close()
-    {
-      // stop background scheduling
-      synchronized (lock) {
-        finished = true;
-        if (nextAnnoucement != null) {
-          nextAnnoucement.cancel(false);
-        }
-      }
     }
   }
 
@@ -709,5 +436,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  private ExecutorService getLoadingExecutor(SegmentLoadingMode loadingMode)
+  {
+    return loadingMode == SegmentLoadingMode.TURBO ? turboLoadExec : normalLoadExec;
+  }
+
+  public SegmentLoaderConfig getSegmentLoaderConfig()
+  {
+    return config;
+  }
 }
 

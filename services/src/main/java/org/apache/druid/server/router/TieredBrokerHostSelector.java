@@ -68,7 +68,7 @@ public class TieredBrokerHostSelector
 
   private volatile boolean started = false;
 
-  private static final Function<DiscoveryDruidNode, Server> TO_SERVER = new Function<DiscoveryDruidNode, Server>()
+  private static final Function<DiscoveryDruidNode, Server> TO_SERVER = new Function<>()
   {
     @Override
     public Server apply(final DiscoveryDruidNode instance)
@@ -315,7 +315,7 @@ public class TieredBrokerHostSelector
   {
     return Maps.transformValues(
         servers,
-        new Function<NodesHolder, List<Server>>()
+        new Function<>()
         {
           @Override
           public List<Server> apply(NodesHolder input)

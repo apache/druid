@@ -88,6 +88,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * For most queries, this is a no-op, but it can be useful for query types that support more than one result
    * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
    * must return a copy.
+   * <p>
+   * Jackson's default implementation of deserialization is usually optimised and this method should be overriden
+   * only if there is a functional requirement of so. The method must be benchmarked in isolation, without other portions
+   * of the query engine executing as modifying this method can alter the performance of queries where deserializing is
+   * a major portion of the execution.
    */
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final QueryType query)
   {
@@ -252,18 +257,35 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public abstract TypeReference<ResultType> getResultTypeReference();
 
   /**
+   * Like {@link #getCacheStrategy(Query, ObjectMapper)} but the caller doesn't supply the object mapper for deserializing
+   * and converting the cached data to desired type. It's upto the individual implementations to decide the appropriate action in that case.
+   * It can either throw an exception outright or decide if the query requires the object mapper for proper downstream processing and
+   * work with the generic java types if not.
+   * <p>
+   * @deprecated Use {@link #getCacheStrategy(Query, ObjectMapper)} instead
+   */
+  @Deprecated
+  @Nullable
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
+  {
+    return null;
+  }
+
+  /**
    * Returns a CacheStrategy to be used to load data into the cache and remove it from the cache.
    * <p>
    * This is optional.  If it returns null, caching is effectively disabled for the query.
    *
    * @param query The query whose results might be cached
+   * @param mapper Object mapper to convert the deserialized generic java objects to desired types. It can be nullable
+   *               to preserve backward compatibility.
    * @param <T>   The type of object that will be stored in the cache
    * @return A CacheStrategy that can be used to populate and read from the Cache
    */
   @Nullable
-  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query, @Nullable ObjectMapper mapper)
   {
-    return null;
+    return getCacheStrategy(query);
   }
 
   /**
@@ -399,5 +421,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   )
   {
     return Optional.empty();
+  }
+
+  public <T> boolean canExecuteFully(Query<T> query)
+  {
+    DataSource dataSourceFromQuery = query.getDataSource();
+    return (!(dataSourceFromQuery instanceof QueryDataSource)
+        || canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 }

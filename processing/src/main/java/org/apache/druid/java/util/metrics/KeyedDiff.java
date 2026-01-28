@@ -28,7 +28,7 @@ public class KeyedDiff
 {
   private static final Logger log = new Logger(KeyedDiff.class);
 
-  private final Map<String, Map<String, Long>> prevs = new HashMap<String, Map<String, Long>>();
+  private final Map<String, Map<String, Long>> prevs = new HashMap<>();
 
   public Map<String, Long> to(String key, Map<String, Long> curr)
   {

@@ -328,9 +328,16 @@ public final class SegmentId implements Comparable<SegmentId>
     return of(dataSource, newInterval, version, partitionNum);
   }
 
+  /**
+   * Returns a descriptor that references the entire time range of the segment.
+   */
   public SegmentDescriptor toDescriptor()
   {
-    return new SegmentDescriptor(Intervals.utc(interval.getStartMillis(), interval.getEndMillis()), version, partitionNum);
+    return new SegmentDescriptor(
+        Intervals.utc(interval.getStartMillis(), interval.getEndMillis()),
+        version,
+        partitionNum
+    );
   }
 
   @Override

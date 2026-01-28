@@ -16,17 +16,16 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 import { SegmentsView } from '../segments-view/segments-view';
 
 describe('SegmentsView', () => {
   it('matches snapshot', () => {
     const segmentsView = shallow(
       <SegmentsView
-        filters={[]}
+        filters={TableFilters.empty()}
         onFiltersChange={() => {}}
         goToQuery={() => {}}
         capabilities={Capabilities.FULL}

@@ -1,0 +1,595 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C9_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][2]' RETURNING decimal array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C10_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_str, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C11_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[3]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C12_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][3]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C13_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_null, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C14_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[4]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C15_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][4]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C16_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_empty, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C17_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[5]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C18_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][5]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C19_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_mixed, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C20_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[6]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C21_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][6]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C22_D1
+#-------------------------------------------------------------------------
+SELECT textcat(a_nested, 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C23_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B2_C24_D1
+#-------------------------------------------------------------------------
+SELECT textcat(json_value(a_nested, '$[7][7]' RETURNING varchar array), 'A') AS col
+FROM test_array;
+Cannot apply 'textcat' to arguments of type 'textcat(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_bool) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C2_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C3_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C4_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_int) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C5_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C6_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C7_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_float) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C8_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C9_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C10_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_str) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C11_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C12_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C13_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_null) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C14_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C15_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C16_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_empty) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C17_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C18_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C19_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_mixed) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C20_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C21_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C22_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', a_nested) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C23_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B3_C24_D1
+#-------------------------------------------------------------------------
+SELECT count(*)
+FROM
+  (SELECT string_format('%sZ', json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
+   FROM test_array);
++--------+
+| EXPR$0 |
++--------+
+|      4 |
++--------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C1_D1
+#-------------------------------------------------------------------------
+SELECT length(a_bool) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C2_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C3_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C4_D1
+#-------------------------------------------------------------------------
+SELECT length(a_int) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C5_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C6_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C7_D1
+#-------------------------------------------------------------------------
+SELECT length(a_float) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C8_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C9_D1
+#-------------------------------------------------------------------------
+SELECT length(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_scalar_funcs TEST_ID: A2_B4_C10_D1
+#-------------------------------------------------------------------------
+SELECT length(a_str) AS col
+FROM test_array;
+Cannot apply 'LENGTH' to arguments of type 'LENGTH(
+!error
+

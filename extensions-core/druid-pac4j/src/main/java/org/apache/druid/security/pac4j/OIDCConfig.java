@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 
 public class OIDCConfig
 {
-  private final String DEFAULT_SCOPE = "name";
+  private static final String DEFAULT_SCOPE = "name";
   @JsonProperty
   private final String clientID;
 

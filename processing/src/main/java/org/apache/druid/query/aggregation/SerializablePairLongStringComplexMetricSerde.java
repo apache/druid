@@ -19,11 +19,16 @@
 
 package org.apache.druid.query.aggregation;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
@@ -97,7 +102,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   @Override
   public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor<Object>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<SerializablePairLongString> extractedClass()
@@ -130,9 +135,9 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   @Override
-  public ObjectStrategy<?> getObjectStrategy()
+  public ObjectStrategy<SerializablePairLongString> getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongString>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
@@ -166,7 +171,34 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   @Override
-  public GenericColumnSerializer<?> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public TypeStrategy<SerializablePairLongString> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(getTypeName()),
+        new Hash.Strategy<>()
+        {
+          @Override
+          public int hashCode(SerializablePairLongString o)
+          {
+            return o.hashCode();
+          }
+
+          @Override
+          public boolean equals(SerializablePairLongString a, SerializablePairLongString b)
+          {
+            return a.equals(b);
+          }
+        }
+    );
+  }
+
+  @Override
+  public GenericColumnSerializer<?> getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     if (compressionEnabled) {
       return new SerializablePairLongStringColumnSerializer(
@@ -183,7 +215,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   private static final ObjectStrategy<SerializablePairLongString> LEGACY_STRATEGY =
-      new ObjectStrategy<SerializablePairLongString>()
+      new ObjectStrategy<>()
       {
         @Override
         public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
@@ -235,6 +267,12 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
           }
 
           return bbuf.array();
+        }
+
+        @Override
+        public boolean readRetainsBufferReference()
+        {
+          return false;
         }
       };
 }

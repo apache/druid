@@ -27,7 +27,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.utils.JvmUtils;
 
@@ -37,10 +37,10 @@ import java.util.concurrent.ScheduledExecutorService;
  * Factory for building {@link DirectDruidClient}
  */
 @LazySingleton
-public class DirectDruidClientFactory
+public class DirectDruidClientFactory implements QueryableDruidServer.Maker
 {
   private final ServiceEmitter emitter;
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
@@ -49,14 +49,14 @@ public class DirectDruidClientFactory
   @Inject
   public DirectDruidClientFactory(
       final ServiceEmitter emitter,
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final QueryWatcher queryWatcher,
       final @Smile ObjectMapper smileMapper,
       final @EscalatedClient HttpClient httpClient
   )
   {
     this.emitter = emitter;
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
@@ -68,7 +68,7 @@ public class DirectDruidClientFactory
   public DirectDruidClient makeDirectClient(DruidServer server)
   {
     return new DirectDruidClient(
-        warehouse,
+        conglomerate,
         queryWatcher,
         smileMapper,
         httpClient,
@@ -77,5 +77,11 @@ public class DirectDruidClientFactory
         emitter,
         queryCancellationExecutor
     );
+  }
+
+  @Override
+  public QueryableDruidServer make(DruidServer server)
+  {
+    return new QueryableDruidServer(server, makeDirectClient(server));
   }
 }

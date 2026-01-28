@@ -97,7 +97,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     }
 
     // This ResourceHolder is supposed to be used from a single thread, so no synchronization/atomicity
-    return new ResourceHolder<T>()
+    return new ResourceHolder<>()
     {
       boolean released = false;
 

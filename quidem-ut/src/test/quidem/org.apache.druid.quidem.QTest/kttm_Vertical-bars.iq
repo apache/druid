@@ -1,0 +1,769 @@
+#The queries in this file were generated; see README.generated
+#started Wed Jul 10 16:25:46 IST 2024
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+# Wed Jul 10 17:01:55 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 17:01:55 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 17:01:55 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2024-07-09 11:32:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2024-07-10 11:32:00')
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|         0 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 17:01:55 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|    465346 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 17:01:58 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+| Chrome                | 232603 |
+| Mobile Safari         | 113617 |
+| Chrome Mobile         |  60173 |
+| Safari                |  38323 |
+| Firefox               |   8307 |
+| Yandex.Browser        |   4258 |
+| Opera                 |   2819 |
+| IE                    |   1238 |
+| Mozilla               |   1224 |
+| Silk                  |   1050 |
+| Yandex.Browser mobile |    583 |
+| Mobile Firefox        |    253 |
+| Puffin                |    240 |
+| Chromium              |    149 |
+| Waterfox              |    129 |
+| Opera Mobile          |     78 |
+| PS4 Web browser       |     77 |
+| Android browser       |     52 |
+| Sogou Explorer        |     51 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| PS Vita browser       |     19 |
+| unknown               |     17 |
+|                       |     10 |
+| Apple Mail            |      7 |
++-----------------------+--------+
+(25 rows)
+
+!ok
+# Wed Jul 10 17:01:59 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 6;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+| 76.0.3809.100   | 133145 |
+| 12.1.2          |  86940 |
+| 76.0.3809.111   |  43738 |
+| 12.1.1          |  26409 |
+| 76.0.3809.102   |  20389 |
+| 75.0.3770.144   |  20121 |
++-----------------+--------+
+(6 rows)
+
+!ok
+# Wed Jul 10 17:01:59 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome'))
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|    232603 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 17:01:59 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox'))
+GROUP BY 1;
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+| Chrome Mobile         |  60173 |
+| Chromium              |    149 |
+| Firefox               |   8307 |
+| IE                    |   1238 |
+| Mobile Firefox        |    253 |
+| Mobile Safari         | 113617 |
+| Mozilla               |   1224 |
+| Opera                 |   2819 |
+| Puffin                |    240 |
+| Safari                |  38323 |
+| Silk                  |   1050 |
+| Waterfox              |    129 |
+| Yandex.Browser        |   4258 |
+| Yandex.Browser mobile |    583 |
++-----------------------+--------+
+(14 rows)
+
+!ok
+# Wed Jul 10 17:01:59 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102'))
+GROUP BY 1,2;
++---------------+-----------------+--------+
+| Browser       | Browser_Version | count  |
++---------------+-----------------+--------+
+| Chrome        | 76.0.3809.100   | 133113 |
+| Chrome        | 76.0.3809.102   |  20389 |
+| Chrome        | 76.0.3809.111   |   1745 |
+| Chrome Mobile | 76.0.3809.111   |  41993 |
+| Chromium      | 76.0.3809.100   |     32 |
+| Mobile Safari | 12.1.1          |  18434 |
+| Mobile Safari | 12.1.2          |  72287 |
+| Safari        | 12.1.1          |   7975 |
+| Safari        | 12.1.2          |  14653 |
++---------------+-----------------+--------+
+(9 rows)
+
+!ok
+# Wed Jul 10 17:01:59 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102')) IS NOT TRUE)
+GROUP BY 1;
++-----------------------+-------+
+| Browser               | count |
++-----------------------+-------+
+| Chrome                | 77356 |
+| Chrome Mobile         | 18180 |
+| Chromium              |   117 |
+| Firefox               |  8307 |
+| IE                    |  1238 |
+| Mobile Firefox        |   253 |
+| Mobile Safari         | 22896 |
+| Mozilla               |  1224 |
+| Opera                 |  2819 |
+| Puffin                |   240 |
+| Safari                | 15695 |
+| Silk                  |  1050 |
+| Waterfox              |   129 |
+| Yandex.Browser        |  4258 |
+| Yandex.Browser mobile |   583 |
++-----------------------+-------+
+(15 rows)
+
+!ok
+# Wed Jul 10 17:02:04 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102'))
+GROUP BY 1,2;
++---------+-----------------+-------+
+| Browser | Browser_Version | count |
++---------+-----------------+-------+
++---------+-----------------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 17:02:04 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox'))
+GROUP BY 1;
++---------+-------+
+| Browser | count |
++---------+-------+
++---------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 17:02:04 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102')) IS NOT TRUE)
+GROUP BY 1;
++---------+-------+
+| Browser | count |
++---------+-------+
++---------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 17:02:07 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "r"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "r" DESC
+LIMIT 101;
++-----------------------+--------+
+| Browser               | r      |
++-----------------------+--------+
+| Chrome                | 232603 |
+| Mobile Safari         | 113617 |
+| Chrome Mobile         |  60173 |
+| Safari                |  38323 |
+| Firefox               |   8307 |
+| Yandex.Browser        |   4258 |
+| Opera                 |   2819 |
+| IE                    |   1238 |
+| Mozilla               |   1224 |
+| Silk                  |   1050 |
+| Yandex.Browser mobile |    583 |
+| Mobile Firefox        |    253 |
+| Puffin                |    240 |
+| Chromium              |    149 |
+| Waterfox              |    129 |
+| Opera Mobile          |     78 |
+| PS4 Web browser       |     77 |
+| Android browser       |     52 |
+| Sogou Explorer        |     51 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| PS Vita browser       |     19 |
+| unknown               |     17 |
+|                       |     10 |
+| Apple Mail            |      7 |
++-----------------------+--------+
+(25 rows)
+
+!ok
+# Wed Jul 10 17:02:10 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++---------------+--------+
+| Browser       | count  |
++---------------+--------+
+| Chrome        | 232603 |
+| Mobile Safari | 113617 |
+| Chrome Mobile |  60173 |
++---------------+--------+
+(3 rows)
+
+!ok
+# Wed Jul 10 17:02:10 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 406393 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:10 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 6;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+| 76.0.3809.100   | 133113 |
+| 12.1.2          |  72287 |
+| 76.0.3809.111   |  43738 |
+| 76.0.3809.102   |  20389 |
+| 75.0.3770.144   |  20121 |
+| 12.1.1          |  18434 |
++-----------------+--------+
+(6 rows)
+
+!ok
+# Wed Jul 10 17:02:10 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome'))
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 232603 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:10 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v0",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome Mobile')))) AS "v2",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome Mobile')))) AS "v3"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Mobile Safari','Chrome Mobile'))
+GROUP BY ();
++--------+----+-------+----+
+| v0     | v1 | v2    | v3 |
++--------+----+-------+----+
+| 113617 |  0 | 60173 |  0 |
++--------+----+-------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:11 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144'))
+GROUP BY 1,2;
++---------------+-----------------+--------+
+| Browser       | Browser_Version | count  |
++---------------+-----------------+--------+
+| Chrome        | 75.0.3770.144   |  20121 |
+| Chrome        | 76.0.3809.100   | 133113 |
+| Chrome        | 76.0.3809.102   |  20389 |
+| Chrome        | 76.0.3809.111   |   1745 |
+| Chrome Mobile | 76.0.3809.111   |  41993 |
+| Mobile Safari | 12.1.2          |  72287 |
++---------------+-----------------+--------+
+(6 rows)
+
+!ok
+# Wed Jul 10 17:02:11 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144'))
+GROUP BY 1,2;
++---------+-----------------+-------+
+| Browser | Browser_Version | count |
++---------+-----------------+-------+
++---------+-----------------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 17:02:11 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v0",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v2",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome Mobile')))) AS "v4",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome Mobile')))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144')) IS NOT TRUE)
+GROUP BY ();
++-------+----+-------+----+-------+----+
+| v0    | v1 | v2    | v3 | v4    | v5 |
++-------+----+-------+----+-------+----+
+| 57235 |  0 | 41330 |  0 | 18180 |  0 |
++-------+----+-------+----+-------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:21 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "r"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY 1
+ORDER BY "r" DESC
+LIMIT 101;
++-----------------+--------+
+| Browser_Version | r      |
++-----------------+--------+
+| 76.0.3809.100   | 133113 |
+| 12.1.2          |  72287 |
+| 76.0.3809.111   |  43738 |
+| 76.0.3809.102   |  20389 |
+| 75.0.3770.144   |  20121 |
+| 12.1.1          |  18434 |
+| 64.0.3282.140   |  18359 |
+|                 |   9110 |
+| 75.0.3770.142   |   5795 |
+| 67.0.3396.87    |   5371 |
+| 12.0            |   4995 |
+| 70.0.3538.102   |   4374 |
+| 74.0.3729.159   |   4053 |
+| 12.1            |   3144 |
+| 75.0.3770.100   |   2847 |
+| 11.0            |   2252 |
+| 76.0.3809.89    |   1907 |
+| 13.0            |   1867 |
+| 76.0.3809.123   |   1765 |
+| 75.0.3770.143   |   1642 |
+| 63.0.3239.132   |   1487 |
+| 75.0.3770.101   |   1478 |
+| 75.0.3770.129   |   1324 |
+| 49.0.2623.112   |   1268 |
+| 10.0            |   1089 |
+| 74.0.3729.169   |   1027 |
+| 74.0.3729.125   |    919 |
+| 73.0.3683.86    |    867 |
+| 75.0.3770.102   |    792 |
+| 72.0.3626.121   |    714 |
+| 72.0.3626.122   |    666 |
+| 70.0.3538.110   |    645 |
+| 74.0.3729.136   |    631 |
+| 76.0.3809.87    |    615 |
+| 73.0.3683.90    |    586 |
+| 69.0.3497.100   |    555 |
+| 74.0.3729.157   |    529 |
+| 69.0.3497.128   |    502 |
+| 73.0.3683.103   |    488 |
+| 74.0.3729.131   |    486 |
+| 52.0.2743.116   |    483 |
+| 58.0.3029.110   |    471 |
+| 75.0.3770.80    |    451 |
+| 73.0.3683.114   |    419 |
+| 71.0.3578.99    |    398 |
+| 71.0.3578.141   |    389 |
+| 73.0.3683.88    |    387 |
+| 71.0.3578.127   |    379 |
+| 9.0             |    376 |
+| 67.0.3396.99    |    336 |
+| 56.0.2924.87    |    323 |
+| 51.0.2704.79    |    308 |
+| 72.0.3626.109   |    299 |
+| 76.0.3809.81    |    285 |
+| 77.0.3865.35    |    280 |
+| 71.0.3578.98    |    275 |
+| 58.0.2988.0     |    250 |
+| 68.0.3440.91    |    231 |
+| 72.0.3626.117   |    228 |
+| 66.0.3359.126   |    216 |
+| 78.0.3877.0     |    210 |
+| 65.0.3325.109   |    207 |
+| 75.0.3770.90    |    206 |
+| 59.0.3043.0     |    200 |
+| 64.0.3282.137   |    199 |
+| 42.0.2311.135   |    194 |
+| 46.0.2486.0     |    186 |
+| 57.0.2987.133   |    178 |
+| 72.0.3626.81    |    174 |
+| 73.0.3683.75    |    171 |
+| 70.0.3538.76    |    163 |
+| 65.0.3325.181   |    142 |
+| 70.0.3538.77    |    140 |
+| 72.0.3626.105   |    136 |
+| 58.0.3012.0     |    135 |
+| 74.0.3729.180   |    134 |
+| 70.0.3538.80    |    133 |
+| 77.0.3865.42    |    132 |
+| 63.0.3239.111   |    127 |
+| 59.0.3071.125   |    126 |
+| 78.0.3879.0     |    119 |
+| 74.0.3729.108   |    117 |
+| 61.0.3163.100   |    114 |
+| 55.0.2883.91    |    113 |
+| 75.0.3770.67    |    112 |
+| 75.0.3770.89    |    111 |
+| 57.0.2987.110   |    106 |
+| 66.0.3359.181   |    105 |
+| 72.0.3626.96    |    101 |
+| 58.0.3029.140   |     98 |
+| 57.0.2987.108   |     95 |
+| 53.0.2785.34    |     89 |
+| 51.0.2683.0     |     88 |
+| 63.0.3235.0     |     85 |
+| 43.0.2357.93    |     84 |
+| 72.0.3626.119   |     81 |
+| 69.0.3497.120   |     80 |
+| 45.0.2454.85    |     77 |
+| 70.0.3538.25    |     73 |
+| 78.0.3892.0     |     73 |
+| 74.0.3729.112   |     68 |
++-----------------+--------+
+(101 rows)
+
+!ok
+# Wed Jul 10 17:02:23 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++---------------+--------+
+| Browser       | count  |
++---------------+--------+
+| Chrome        | 133113 |
+| Mobile Safari |  72287 |
++---------------+--------+
+(2 rows)
+
+!ok
+# Wed Jul 10 17:02:23 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 205400 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:23 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 6;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+| 76.0.3809.100   | 133113 |
+| 12.1.2          |  72287 |
++-----------------+--------+
+(2 rows)
+
+!ok
+# Wed Jul 10 17:02:23 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v2",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v4",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY ();
++--------+----+--------+----+----+----+
+| v0     | v1 | v2     | v3 | v4 | v5 |
++--------+----+--------+----+----+----+
+| 133113 |  0 | 133113 |  0 |  0 |  0 |
++--------+----+--------+----+----+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:24 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v2",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v4",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY ();
++-------+----+----+----+-------+----+
+| v0    | v1 | v2 | v3 | v4    | v5 |
++-------+----+----+----+-------+----+
+| 72287 |  0 |  0 |  0 | 72287 |  0 |
++-------+----+----+----+-------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:30 IST 2024
+SELECT
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v1",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v2",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v3",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v4",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v5",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v6",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v7",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v8",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v9",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v10",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v11"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY ();
++-------------+----+-------------+----+-------------+----+----+----+----+----+-------------+-----+
+| v0          | v1 | v2          | v3 | v4          | v5 | v6 | v7 | v8 | v9 | v10         | v11 |
++-------------+----+-------------+----+-------------+----+----+----+----+----+-------------+-----+
+| 49117680583 |    | 10361056506 |    | 49117680583 |    |    |    |    |    | 10361056506 |     |
++-------------+----+-------------+----+-------------+----+----+----+----+----+-------------+-----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:34 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 5;
++-------------+-------+
+| Os          | count |
++-------------+-------+
+| Windows     | 88616 |
+| iOS         | 72287 |
+| Windows 7   | 18877 |
+| OS X        | 17009 |
+| Windows 8.1 |  6558 |
++-------------+-------+
+(5 rows)
+
+!ok
+# Wed Jul 10 17:02:34 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v2",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v4",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v5",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v6",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v7",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v8",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v9",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v10",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v11",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v12",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v13",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v14",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v15",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v16",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v17",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v18",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v19",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v20",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v21",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v22",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v23"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='Windows'))
+GROUP BY ();
++-------+-------------+----+----+----+----+----+----+-------+-------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| v0    | v1          | v2 | v3 | v4 | v5 | v6 | v7 | v8    | v9          | v10 | v11 | v12 | v13 | v14 | v15 | v16 | v17 | v18 | v19 | v20 | v21 | v22 | v23 |
++-------+-------------+----+----+----+----+----+----+-------+-------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+| 88616 | 40565948570 |  0 |    |  0 |    |  0 |    | 88616 | 40565948570 |   0 |     |   0 |     |   0 |     |   0 |     |   0 |     |   0 |     |   0 |     |
++-------+-------------+----+----+----+----+----+----+-------+-------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+(1 row)
+
+!ok
+# Wed Jul 10 17:02:34 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v2",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v4",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v5",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v6",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')))) AS "v7",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v8",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v9",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v10",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v11",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v12",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v13",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v14",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v15",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v16",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v17",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v18",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chrome')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v19",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v20",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v21",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v22",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Mobile Safari')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v23"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS'))
+GROUP BY ();
++----+----+----+----+-------+-------------+----+----+----+----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-------+-------------+-----+-----+
+| v0 | v1 | v2 | v3 | v4    | v5          | v6 | v7 | v8 | v9 | v10 | v11 | v12 | v13 | v14 | v15 | v16 | v17 | v18 | v19 | v20   | v21         | v22 | v23 |
++----+----+----+----+-------+-------------+----+----+----+----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-------+-------------+-----+-----+
+|  0 |    |  0 |    | 72287 | 10361056506 |  0 |    |  0 |    |   0 |     |   0 |     |   0 |     |   0 |     |   0 |     | 72287 | 10361056506 |   0 |     |
++----+----+----+----+-------+-------------+----+----+----+----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-------+-------------+-----+-----+
+(1 row)
+
+!ok

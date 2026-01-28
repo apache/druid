@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -39,15 +38,23 @@ import java.util.Objects;
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
-
+  private final String dimensionName;
   private volatile boolean hasNulls = false;
 
-  @Override
-  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public DoubleDimensionIndexer(String dimensionName)
   {
-    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    this.dimensionName = dimensionName;
+  }
+
+  @Override
+  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  )
+  {
+    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions, dimensionName);
     if (d == null) {
-      hasNulls = NullHandling.sqlCompatible();
+      hasNulls = true;
     }
     return new EncodedKeyComponent<>(d, Double.BYTES);
   }
@@ -55,7 +62,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public void setSparseIndexed()
   {
-    hasNulls = NullHandling.sqlCompatible();
+    hasNulls = true;
   }
 
   @Override
@@ -131,7 +138,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          assert NullHandling.replaceWithDefault();
+          assert !isNull();
           return 0.0;
         }
         return (Double) dims[dimIndex];
@@ -145,7 +152,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          return NullHandling.defaultDoubleValue();
+          return null;
         }
         return (Double) dims[dimIndex];
       }

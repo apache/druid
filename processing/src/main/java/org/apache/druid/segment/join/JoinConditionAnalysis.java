@@ -20,12 +20,15 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -33,7 +36,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Represents analysis of a join condition.
@@ -48,7 +50,7 @@ import java.util.stream.Collectors;
  *
  * All of these conditions are ANDed together to get the overall condition.
  */
-public class JoinConditionAnalysis
+public class JoinConditionAnalysis implements Cacheable
 {
   private final String originalExpression;
   private final String rightPrefix;
@@ -71,17 +73,42 @@ public class JoinConditionAnalysis
     this.rightPrefix = Preconditions.checkNotNull(rightPrefix, "rightPrefix");
     this.equiConditions = Collections.unmodifiableList(equiConditions);
     this.nonEquiConditions = Collections.unmodifiableList(nonEquiConditions);
-    // if any nonEquiCondition is an expression and it evaluates to false
-    isAlwaysFalse = nonEquiConditions.stream()
-                                     .anyMatch(expr -> expr.isLiteral() && !expr.eval(InputBindings.nilBindings())
-                                                                                .asBoolean());
-    // if there are no equiConditions and all nonEquiConditions are literals and the evaluate to true
-    isAlwaysTrue = equiConditions.isEmpty() && nonEquiConditions.stream()
-                                                                .allMatch(expr -> expr.isLiteral() && expr.eval(
-                                                                    InputBindings.nilBindings()).asBoolean());
-    canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
-    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).collect(Collectors.toSet());
-    requiredColumns = computeRequiredColumns(rightPrefix, equiConditions, nonEquiConditions);
+
+    rightKeyColumns = new HashSet<>();
+    requiredColumns = new HashSet<>();
+
+    for (Equality equality : equiConditions) {
+      final Set<String> requiredLeft = equality.getLeftExpr().analyzeInputs().getRequiredBindings();
+      requiredColumns.addAll(requiredLeft);
+
+      rightKeyColumns.add(equality.getRightColumn());
+      requiredColumns.add(rightPrefix + equality.getRightColumn());
+    }
+
+    boolean alwaysFalse = false;
+    boolean alwaysTrue = equiConditions.isEmpty();
+    boolean hashJoin = true;
+
+    for (Expr expr : nonEquiConditions) {
+      hashJoin = hashJoin && expr.isLiteral();
+      if (expr.isLiteral()) {
+        if (hashJoin) {
+          // we only need to check if allTrue or allFalse if all conditions are literals
+          final ExprEval<?> eval = expr.eval(InputBindings.nilBindings());
+          alwaysTrue = alwaysTrue && eval.asBoolean();
+          // we don't need to check for null here because it is ok to consider UNKNOWN as false because
+          // UNKNOWN AND <anything> is UNKNOWN, and there is no possibility this condition can be wrapped in a NOT, so
+          // it is effectively FALSE and we can still short-circuit
+          alwaysFalse = alwaysFalse || !eval.asBoolean();
+        }
+      } else {
+        requiredColumns.addAll(expr.analyzeInputs().getRequiredBindings());
+      }
+    }
+
+    isAlwaysTrue = hashJoin && alwaysTrue;
+    isAlwaysFalse = hashJoin && alwaysFalse;
+    canHashJoin = hashJoin;
   }
 
   /**
@@ -223,23 +250,9 @@ public class JoinConditionAnalysis
     return originalExpression;
   }
 
-  private static Set<String> computeRequiredColumns(
-      final String rightPrefix,
-      final List<Equality> equiConditions,
-      final List<Expr> nonEquiConditions
-  )
+  @Override
+  public byte[] getCacheKey()
   {
-    final Set<String> requiredColumns = new HashSet<>();
-
-    for (Equality equality : equiConditions) {
-      requiredColumns.add(rightPrefix + equality.getRightColumn());
-      requiredColumns.addAll(equality.getLeftExpr().analyzeInputs().getRequiredBindings());
-    }
-
-    for (Expr expr : nonEquiConditions) {
-      requiredColumns.addAll(expr.analyzeInputs().getRequiredBindings());
-    }
-
-    return requiredColumns;
+    return originalExpression.getBytes(StandardCharsets.UTF_8);
   }
 }

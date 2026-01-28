@@ -23,11 +23,14 @@ import com.google.common.base.Function;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -42,31 +45,6 @@ public abstract class ComplexMetricSerde
   public abstract String getTypeName();
 
   public abstract ComplexMetricExtractor getExtractor();
-
-  /**
-   * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
-   * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
-   *
-   * @param buffer  the buffer to deserialize
-   * @param builder ColumnBuilder to add the column to
-   * @param columnConfig ColumnConfiguration used during deserialization
-   */
-  public void deserializeColumn(
-      ByteBuffer buffer,
-      ColumnBuilder builder,
-      @SuppressWarnings("unused") ColumnConfig columnConfig
-  )
-  {
-    deserializeColumn(buffer, builder);
-  }
-
-
-  /**
-   * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
-   * This method is left for backward compatibility.
-   */
-  @Deprecated
-  public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.
@@ -142,14 +120,100 @@ public abstract class ComplexMetricSerde
   }
 
   /**
-   * This method provides the ability for a ComplexMetricSerde to control its own serialization.
-   * For large column (i.e columns greater than {@link Integer#MAX_VALUE}) use
-   * {@link LargeColumnSupportedComplexColumnSerializer}
+   * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
+   * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
    *
-   * @return an instance of GenericColumnSerializer used for serialization.
+   * @param buffer  the buffer to deserialize
+   * @param builder ColumnBuilder to add the column to
+   * @param columnConfig ColumnConfiguration used during deserialization
    */
+  public void deserializeColumn(
+      ByteBuffer buffer,
+      ColumnBuilder builder,
+      ColumnConfig columnConfig
+  )
+  {
+    deserializeColumn(buffer, builder);
+  }
+
+
+  /**
+   * {@link ComplexMetricSerde#deserializeColumn(ByteBuffer, ColumnBuilder, ColumnConfig)} should be used instead of this.
+   * This method is left for backward compatibility.
+   */
+  @Deprecated
+  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
+  {
+    // default implementation to match default serializer implementation
+    final int position = buffer.position();
+    final byte version = buffer.get();
+    if (version == CompressedComplexColumnSerializer.IS_COMPRESSED) {
+      CompressedComplexColumnSupplier supplier = CompressedComplexColumnSupplier.read(
+          buffer,
+          builder,
+          getTypeName(),
+          getObjectStrategy()
+      );
+      builder.setComplexColumnSupplier(supplier);
+      builder.setNullValueIndexSupplier(supplier.getNullValues());
+      builder.setHasNulls(!supplier.getNullValues().isEmpty());
+    } else {
+      buffer.position(position);
+      builder.setComplexColumnSupplier(
+          new ComplexColumnPartSupplier(
+              getTypeName(),
+              GenericIndexed.read(buffer, getObjectStrategy(), builder.getFileMapper())
+          )
+      );
+    }
+  }
+
+  /**
+   * {@link ComplexMetricSerde#getSerializer(SegmentWriteOutMedium, String, IndexSpec)} should be used instead of this.
+   * This method is left for backward compatibility.
+   */
+  @Nullable
+  @Deprecated
   public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    return ComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
+    return null;
+  }
+
+  /**
+   * This method provides the ability for a ComplexMetricSerde to control its own serialization.
+   * Default implementation uses {@link CompressedComplexColumnSerializer} if {@link IndexSpec#complexMetricCompression}
+   * is not null or uncompressed/none, or {@link LargeColumnSupportedComplexColumnSerializer} if no compression is
+   * specified.
+   *
+   * @return an instance of {@link GenericColumnSerializer} used for serialization.
+   */
+  public GenericColumnSerializer getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
+  {
+    // backwards compatibility, if defined use it
+    final GenericColumnSerializer serializer = getSerializer(segmentWriteOutMedium, column);
+    if (serializer != null) {
+      return serializer;
+    }
+
+    // otherwise, use compressed or generic indexed based serializer
+    CompressionStrategy strategy = indexSpec.getComplexMetricCompression();
+    if (strategy == null || CompressionStrategy.NONE == strategy || CompressionStrategy.UNCOMPRESSED == strategy) {
+      return LargeColumnSupportedComplexColumnSerializer.create(
+          segmentWriteOutMedium,
+          column,
+          getObjectStrategy()
+      );
+    } else {
+      return CompressedComplexColumnSerializer.create(
+          segmentWriteOutMedium,
+          column,
+          indexSpec,
+          getObjectStrategy()
+      );
+    }
   }
 }

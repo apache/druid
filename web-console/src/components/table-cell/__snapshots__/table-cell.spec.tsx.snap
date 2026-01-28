@@ -3,18 +3,18 @@
 exports[`TableCell matches snapshot Date (invalid) 1`] = `
 <div
   class="table-cell timestamp"
-  title="NaN"
+  data-tooltip="NaN"
 >
-  Unusable date
+  Invalid date
 </div>
 `;
 
 exports[`TableCell matches snapshot Date 1`] = `
 <div
   class="table-cell timestamp"
-  title="1645664523000"
+  data-tooltip="1645664523000"
 >
-  2022-02-24T01:02:03.000Z
+  2022-02-24 01:02:03
 </div>
 `;
 
@@ -31,8 +31,7 @@ exports[`TableCell matches snapshot array long 1`] = `
   7, 98, 99]
   <span
     aria-hidden="true"
-    class="bp4-icon bp4-icon-more action-icon"
-    icon="more"
+    class="bp5-icon bp5-icon-more action-icon"
   >
     <svg
       data-icon="more"
@@ -111,8 +110,7 @@ exports[`TableCell matches snapshot truncate 1`] = `
   test_test_
   <span
     aria-hidden="true"
-    class="bp4-icon bp4-icon-more action-icon"
-    icon="more"
+    class="bp5-icon bp5-icon-more action-icon"
   >
     <svg
       data-icon="more"

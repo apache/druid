@@ -159,6 +159,9 @@ public class Execs
           @Override
           public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
           {
+            if (executor.isShutdown()) {
+              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
+            }
             try {
               executor.getQueue().put(r);
             }

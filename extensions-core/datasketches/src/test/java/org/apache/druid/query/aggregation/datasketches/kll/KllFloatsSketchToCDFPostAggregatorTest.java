@@ -55,9 +55,10 @@ public class KllFloatsSketchToCDFPostAggregatorTest
         new float[]{0.25f, 0.75f}
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllFloatsSketchToCDFPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllFloatsSketchToCDFPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

@@ -29,24 +29,20 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -59,8 +55,6 @@ import java.util.stream.Stream;
 
 public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSupervisorTaskTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   public ParallelIndexSupervisorTaskKillTest()
   {
@@ -80,8 +74,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
         new ParallelIndexIOConfig(
-            null,
-            // Sub tasks would run forever
+            // Sub-tasks would run forever
             new TestInputSource(Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.SUCCESS), 4)),
             new NoopInputFormat(),
             false,
@@ -93,16 +86,12 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
       Thread.sleep(100);
     }
     task.stopGracefully(null);
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
-    getIndexingServiceClient().waitToFinish(task, 3000L, TimeUnit.MILLISECONDS);
 
-    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
-    Assert.assertTrue(runner.getRunningTaskIds().isEmpty());
-    // completeSubTaskSpecs should be empty because no task has reported its status to TaskMonitor
-    Assert.assertTrue(runner.getCompleteSubTaskSpecs().isEmpty());
-
-    Assert.assertEquals(4, runner.getTaskMonitor().getNumCanceledTasks());
+    Exception e = Assert.assertThrows(
+        RuntimeException.class,
+        () -> getIndexingServiceClient().waitToFinish(task, 3000L, TimeUnit.MILLISECONDS)
+    );
+    Assert.assertTrue(e.getCause() instanceof ExecutionException);
   }
 
   @Test(timeout = 5000L)
@@ -111,7 +100,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
         new ParallelIndexIOConfig(
-            null,
             new TestInputSource(
                 Pair.of(new TestInput(10L, TaskState.FAILED), 1),
                 Pair.of(new TestInput(Integer.MAX_VALUE, TaskState.FAILED), 3)
@@ -157,55 +145,21 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     final int numTotalSubTasks = inputSource.estimateNumSplits(new NoopInputFormat(), null);
     // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            DEFAULT_TIMESTAMP_SPEC,
-            DEFAULT_DIMENSIONS_SPEC,
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("dataSource")
+                  .withTimestamp(DEFAULT_TIMESTAMP_SPEC)
+                  .withDimensions(DEFAULT_DIMENSIONS_SPEC)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          interval == null ? null : Collections.singletonList(interval)
+                      )
+                  )
+                  .build(),
         ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            numTotalSubTasks,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        TuningConfigBuilder.forParallelIndexTask().withMaxNumConcurrentSubTasks(numTotalSubTasks).build()
     );
 
     // set up test tools
@@ -273,28 +227,20 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
   }
 
-  private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
+  private static class TestSupervisorTask extends ParallelIndexSupervisorTask
   {
     private TestSupervisorTask(
         ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context
     )
     {
-      super(
-          null,
-          null,
-          ingestionSchema,
-          context
-      );
+      super(null, null, null, ingestionSchema, context);
     }
 
     @Override
     SinglePhaseParallelIndexTaskRunner createSinglePhaseTaskRunner(TaskToolbox toolbox)
     {
-      return new TestRunner(
-          toolbox,
-          this
-      );
+      return new TestRunner(toolbox, this);
     }
   }
 
@@ -309,11 +255,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     {
       super(
           toolbox,
-          supervisorTask.getId(),
-          supervisorTask.getGroupId(),
-          supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext(),
-          CentralizedDatasourceSchemaConfig.create()
+          supervisorTask
       );
       this.supervisorTask = supervisorTask;
     }
@@ -331,7 +273,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting(),

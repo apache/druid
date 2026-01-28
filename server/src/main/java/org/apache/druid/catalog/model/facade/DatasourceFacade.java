@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
@@ -30,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +124,7 @@ public class DatasourceFacade extends TableFacade
     return stringProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
   }
 
+  @Nullable
   public Granularity segmentGranularity()
   {
     String definedGranularity = segmentGranularityString();
@@ -171,5 +174,25 @@ public class DatasourceFacade extends TableFacade
   public ColumnFacade column(String name)
   {
     return columnIndex.get(name);
+  }
+
+  @Nullable
+  public List<DatasourceProjectionMetadata> projections()
+  {
+    Object value = property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    if (value == null) {
+      return null;
+    }
+    try {
+      return jsonMapper().convertValue(value, DatasourceDefn.ProjectionsDefn.TYPE_REF);
+    }
+    catch (Exception e) {
+      LOG.error(
+          "Failed to convert a catalog %s property of value [%s]",
+          DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+          value
+      );
+      return null;
+    }
   }
 }

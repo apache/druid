@@ -22,7 +22,7 @@ import type {
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -30,13 +30,15 @@ import {
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlQuery,
-} from '@druid-toolkit/query';
+  SqlSetStatement,
+} from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RowColumn } from '../../utils';
 import { caseInsensitiveEquals, deleteKeys } from '../../utils';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { LastExecution } from '../execution/execution';
@@ -46,7 +48,6 @@ import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
@@ -93,10 +94,8 @@ export class WorkbenchQuery {
     externalConfig: ExternalConfig,
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
-    arrayMode: ArrayMode,
+    arrayMode: ArrayIngestMode,
   ): WorkbenchQuery {
-    const queryContext: QueryContext = {};
-    if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
@@ -106,7 +105,7 @@ export class WorkbenchQuery {
           arrayMode,
         ),
       ).toString(),
-      queryContext,
+      queryContext: {},
     });
   }
 
@@ -115,7 +114,7 @@ export class WorkbenchQuery {
     const headers: string[] = [];
     const bodies: string[] = [];
     for (const part of parts) {
-      const m = part.match(/^===== (Helper:.+|Query|Context) =====$/);
+      const m = /^===== (Helper:.+|Query|Context) =====$/.exec(part);
       if (m) {
         headers.push(m[1]);
       } else {
@@ -151,11 +150,12 @@ export class WorkbenchQuery {
     return WorkbenchQuery.enabledQueryEngines;
   }
 
-  static fromEffectiveQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
+  static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
-    const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
+    const cleanContext = deleteKeys(context, ['sqlOuterLimit', '__resultFormat']);
 
     let retQuery = WorkbenchQuery.blank()
+      .changeEngine('sql-msq-task')
       .changeQueryString(queryString)
       .changeQueryContext(cleanContext);
 
@@ -213,7 +213,7 @@ export class WorkbenchQuery {
   }
 
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
-    const m = issue.match(/at line (\d+),(\d+)/);
+    const m = /at line (\d+),(\d+)/.exec(issue);
     if (!m) return;
     return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
@@ -230,7 +230,7 @@ export class WorkbenchQuery {
   public readonly unlimited?: boolean;
   public readonly prefixLines?: number;
 
-  public readonly parsedQuery?: SqlQuery;
+  public readonly parsedQuery?: SqlQuery; // Derived from query string
 
   constructor(value: WorkbenchQueryValue) {
     let queryString = value.queryString;
@@ -267,7 +267,9 @@ export class WorkbenchQuery {
       queryContext: this.queryContext,
       queryParameters: this.queryParameters,
       engine: this.engine,
+      lastExecution: this.lastExecution,
       unlimited: this.unlimited,
+      prefixLines: this.prefixLines,
     };
   }
 
@@ -281,8 +283,53 @@ export class WorkbenchQuery {
     ].join('\n\n');
   }
 
+  public formatLastExecution(): string | undefined {
+    const { lastExecution } = this;
+    if (!lastExecution) return;
+    return `Attached to: ${lastExecution.id} (${lastExecution.engine})`;
+  }
+
   public changeQueryString(queryString: string): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), queryString });
+  }
+
+  public changeQueryStringContext(queryContext: QueryContext): WorkbenchQuery {
+    if (this.isJsonLike()) {
+      // JSON query: set the inner context instead of modifying the query string
+      return this.changeQueryContext(queryContext);
+    }
+    return this.changeQueryString(SqlSetStatement.setContextInText(this.queryString, queryContext));
+  }
+
+  public getQueryStringContext(): QueryContext {
+    if (this.isJsonLike()) {
+      // JSON query: return the inner context for symmetry with changeQueryStringContext
+      return this.queryContext;
+    }
+    return SqlSetStatement.getContextFromText(this.queryString);
+  }
+
+  public getEffectiveContext(): QueryContext {
+    let effectiveContext = this.queryContext;
+    if (this.isJsonLike()) {
+      try {
+        const query = Hjson.parse(this.queryString);
+        effectiveContext = { ...effectiveContext, ...query.context };
+        if (typeof query.query === 'string') {
+          effectiveContext = {
+            ...effectiveContext,
+            ...SqlSetStatement.getContextFromText(query.query),
+          };
+        }
+      } catch {}
+    } else {
+      effectiveContext = {
+        ...effectiveContext,
+        ...SqlSetStatement.getContextFromText(this.queryString),
+      };
+    }
+
+    return effectiveContext;
   }
 
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
@@ -316,6 +363,12 @@ export class WorkbenchQuery {
   public getEffectiveEngine(): DruidEngine {
     const { engine } = this;
     if (engine) return engine;
+
+    // If an engine is set explicitly in the config then respect it
+    const contextEngine = this.getEffectiveContext().engine;
+    if (contextEngine === 'native') return 'sql-native';
+    if (contextEngine === 'msq-dart') return 'sql-msq-dart';
+
     const enabledEngines = WorkbenchQuery.getQueryEngines();
     if (this.isJsonLike()) {
       if (this.isSqlInJson()) {
@@ -403,7 +456,7 @@ export class WorkbenchQuery {
 
     if (this.isJsonLike()) return false;
 
-    return /(?:INSERT|REPLACE)\s+INTO/i.test(queryString);
+    return /(?:INSERT|REPLACE|MERGE)\s+INTO/i.test(queryString);
   }
 
   public toggleUnlimited(): WorkbenchQuery {
@@ -438,11 +491,13 @@ export class WorkbenchQuery {
     return ret.changeQueryString(newQueryString);
   }
 
-  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
-    const { queryContext } = this;
-    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+  public getMaxNumTasks(): number | undefined {
+    return this.getEffectiveContext().maxNumTasks;
+  }
 
-    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    if (!maxNumTasks || typeof this.getMaxNumTasks() === 'number') return this;
+    return this.changeQueryContext({ ...this.queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
@@ -526,9 +581,21 @@ export class WorkbenchQuery {
       ...queryContext,
     };
 
-    let cancelQueryId: string | undefined;
+    // Effective context lets us see the context which can also include the set statements from the SetStatements
+    const effectiveContext = {
+      ...apiQuery.context,
+      ...SqlSetStatement.getContextFromText(apiQuery.query || ''),
+    };
+
     if (engine === 'sql-native') {
-      cancelQueryId = apiQuery.context.sqlQueryId;
+      if (typeof effectiveContext.engine === 'undefined') {
+        apiQuery.context.engine = 'native';
+      }
+    }
+
+    let cancelQueryId: string | undefined;
+    if (engine === 'sql-native' || engine === 'sql-msq-dart') {
+      cancelQueryId = effectiveContext.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
         apiQuery.context.sqlQueryId = cancelQueryId = makeQueryId();
@@ -536,17 +603,40 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-task') {
-      apiQuery.context.executionMode ??= 'async';
+      if (typeof effectiveContext.executionMode === 'undefined') {
+        apiQuery.context.executionMode = 'async';
+      }
+
       if (ingestQuery) {
         // Alter these defaults for ingest queries if unset
-        apiQuery.context.finalizeAggregations ??= false;
-        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
-        apiQuery.context.waitUntilSegmentsLoad ??= true;
+        if (typeof effectiveContext.finalizeAggregations === 'undefined') {
+          apiQuery.context.finalizeAggregations = false;
+        }
+        if (typeof effectiveContext.groupByEnableMultiValueUnnesting === 'undefined') {
+          apiQuery.context.groupByEnableMultiValueUnnesting = false;
+        }
+        if (typeof effectiveContext.waitUntilSegmentsLoad === 'undefined') {
+          apiQuery.context.waitUntilSegmentsLoad = true;
+        }
       }
     }
 
     if (engine === 'sql-native' || engine === 'sql-msq-task') {
-      apiQuery.context.sqlStringifyArrays ??= false;
+      if (typeof effectiveContext.sqlStringifyArrays === 'undefined') {
+        apiQuery.context.sqlStringifyArrays = false;
+      }
+    }
+
+    if (engine === 'sql-msq-dart') {
+      if (typeof effectiveContext.engine === 'undefined') {
+        apiQuery.context.engine = 'msq-dart';
+      }
+      if (typeof effectiveContext.fullReport === 'undefined') {
+        apiQuery.context.fullReport = true;
+      }
+      if (typeof effectiveContext.liveReportCounters === 'undefined') {
+        apiQuery.context.liveReportCounters = true;
+      }
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

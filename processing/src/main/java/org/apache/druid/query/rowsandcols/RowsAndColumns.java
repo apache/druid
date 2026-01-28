@@ -19,19 +19,13 @@
 
 package org.apache.druid.query.rowsandcols;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
@@ -74,31 +68,6 @@ public interface RowsAndColumns
     }
     return retVal;
   }
-
-  static <T> Map<Class<?>, Function<T, ?>> makeAsMap(Class<T> clazz)
-  {
-    Map<Class<?>, Function<T, ?>> retVal = new HashMap<>();
-
-    for (Method method : clazz.getMethods()) {
-      if (method.isAnnotationPresent(SemanticCreator.class)) {
-        if (method.getParameterCount() != 0) {
-          throw DruidException.defensive("Method [%s] annotated with SemanticCreator was not 0-argument.", method);
-        }
-
-        retVal.put(method.getReturnType(), arg -> {
-          try {
-            return method.invoke(arg);
-          }
-          catch (InvocationTargetException | IllegalAccessException e) {
-            throw DruidException.defensive().build(e, "Problem invoking method [%s]", method);
-          }
-        });
-      }
-    }
-
-    return retVal;
-  }
-
 
   /**
    * The set of column names available from the RowsAndColumns
@@ -143,4 +112,5 @@ public interface RowsAndColumns
    */
   @Nullable
   <T> T as(Class<T> clazz);
+
 }

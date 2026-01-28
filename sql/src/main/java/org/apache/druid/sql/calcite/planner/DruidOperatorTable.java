@@ -284,6 +284,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
                    .add(new MultiValueStringOperatorConversions.FilterOnly())
                    .add(new MultiValueStringOperatorConversions.FilterNone())
+                   .add(new MultiValueStringOperatorConversions.RegexFilter())
+                   .add(new MultiValueStringOperatorConversions.PrefixFilter())
                    .add(new MultiValueStringToArrayOperatorConversion())
                    .build();
 
@@ -353,6 +355,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonMergeOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
                    .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())

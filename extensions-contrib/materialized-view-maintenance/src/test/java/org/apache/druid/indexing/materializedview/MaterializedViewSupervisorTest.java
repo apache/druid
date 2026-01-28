@@ -30,10 +30,11 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.indexer.HadoopIOConfig;
+import org.apache.druid.indexer.HadoopIndexTask;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -44,16 +45,19 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -64,7 +68,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -84,7 +87,6 @@ public class MaterializedViewSupervisorTest
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private String derivativeDatasourceName;
@@ -107,14 +109,22 @@ public class MaterializedViewSupervisorTest
         derbyConnector
     );
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            objectMapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            NoopSegmentMetadataCache.instance(),
+            NoopServiceEmitter.instance()
+        ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
-    sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
     taskQueue = EasyMock.createMock(TaskQueue.class);
 
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
@@ -133,7 +143,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),
@@ -145,7 +154,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegments() throws IOException
+  public void testCheckSegments()
   {
     List<DataSegment> baseSegments = createBaseSegments();
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -171,7 +180,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists() throws IOException
+  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -193,7 +202,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksFailsIfTaskCannotBeAdded() throws IOException
+  public void testSubmitTasksFailsIfTaskCannotBeAdded()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -219,7 +228,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegmentsAndSubmitTasks() throws IOException
+  public void testCheckSegmentsAndSubmitTasks()
   {
     Set<DataSegment> baseSegments = Collections.singleton(createBaseSegments().get(0));
     indexerMetadataStorageCoordinator.commitSegments(baseSegments, null);
@@ -238,14 +247,10 @@ public class MaterializedViewSupervisorTest
     Map<Interval, HadoopIndexTask> runningTasks = runningTasksPair.lhs;
     Map<Interval, String> runningVersion = runningTasksPair.rhs;
 
-    DataSchema dataSchema = new DataSchema(
-        "test_datasource",
-        null,
-        null,
-        null,
-        TransformSpec.NONE,
-        objectMapper
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test_datasource")
+                                      .withObjectMapper(objectMapper)
+                                      .build();
     HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(new HashMap<>(), null, null);
     HadoopIngestionSpec spec = new HadoopIngestionSpec(dataSchema, hadoopIOConfig, null);
     HadoopIndexTask task1 = new HadoopIndexTask(
@@ -257,7 +262,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), task1);
     runningVersion.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), "test_version1");
@@ -271,7 +277,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         null,
         null,
-        null
+        null,
+        new HadoopTaskConfig(null, null)
     );
     runningTasks.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), task2);
     runningVersion.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), "test_version2");
@@ -319,7 +326,6 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         EasyMock.createMock(AuthorizerMapper.class),
@@ -337,39 +343,6 @@ public class MaterializedViewSupervisorTest
 
     EasyMock.replay(mock);
     supervisor.run();
-  }
-
-  @Test
-  public void testResetOffsetsNotSupported()
-  {
-    MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
-        "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
-        new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
-        HadoopTuningConfig.makeDefaultTuningConfig(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        objectMapper,
-        taskMaster,
-        taskStorage,
-        metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
-        indexerMetadataStorageCoordinator,
-        new MaterializedViewTaskConfig(),
-        EasyMock.createMock(AuthorizerMapper.class),
-        EasyMock.createMock(ChatHandlerProvider.class),
-        new SupervisorStateManagerConfig()
-    );
-    MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
-    Assert.assertThrows(
-        "Reset offsets not supported in MaterializedViewSupervisor",
-        UnsupportedOperationException.class,
-        () -> supervisor.resetOffsets(null)
-    );
   }
 
   private List<DataSegment> createBaseSegments()

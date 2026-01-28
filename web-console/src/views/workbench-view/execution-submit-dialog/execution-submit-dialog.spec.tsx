@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { shallow } from '../../../utils/shallow-renderer';
 
 import { ExecutionSubmitDialog } from './execution-submit-dialog';

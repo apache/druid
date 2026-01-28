@@ -32,7 +32,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.UnionQueryRunner;
+import org.apache.druid.query.UnionDataSourceQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
@@ -65,7 +65,8 @@ public class TimeSeriesUnionQueryRunnerTest extends InitializedNullHandlingTest
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            false
         ),
         // descending?
         Arrays.asList(false, true)
@@ -171,7 +172,7 @@ public class TimeSeriesUnionQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner mergingrunner = toolChest.mergeResults(
-        new UnionQueryRunner<>(
+        new UnionDataSourceQueryRunner<>(
             new QueryRunner<Result<TimeseriesResultValue>>()
             {
               @Override

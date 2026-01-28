@@ -32,15 +32,18 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.api.Response;
-import org.eclipse.jetty.proxy.AsyncProxyServlet;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 public class AsyncManagementForwardingServlet extends AsyncProxyServlet
@@ -71,6 +74,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private final DruidHttpClientConfig httpClientConfig;
   private final DruidLeaderSelector coordLeaderSelector;
   private final DruidLeaderSelector overlordLeaderSelector;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public AsyncManagementForwardingServlet(
@@ -78,7 +82,8 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       @Global Provider<HttpClient> httpClientProvider,
       @Global DruidHttpClientConfig httpClientConfig,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      @IndexingService DruidLeaderSelector overlordLeaderSelector
+      @IndexingService DruidLeaderSelector overlordLeaderSelector,
+      AuthorizerMapper authorizerMapper
   )
   {
     this.jsonMapper = jsonMapper;
@@ -86,6 +91,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     this.httpClientConfig = httpClientConfig;
     this.coordLeaderSelector = coordLeaderSelector;
     this.overlordLeaderSelector = overlordLeaderSelector;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
@@ -110,9 +116,11 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
     } else if (ENABLED_PATH.equals(requestURI)) {
+      authorizeNoPermissionsNeeded(request);
       handleEnabledRequest(response);
       return;
     } else {
+      authorizeNoPermissionsNeeded(request);
       handleInvalidRequest(
           response,
           StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
@@ -122,6 +130,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     }
 
     if (currentLeader == null) {
+      authorizeNoPermissionsNeeded(request);
       handleInvalidRequest(
           response,
           StringUtils.format(
@@ -189,6 +198,14 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   {
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  /**
+   * Authorizes router-internal requests that do not require any permissions. (But do require an authenticated user.)
+   */
+  private void authorizeNoPermissionsNeeded(HttpServletRequest request)
+  {
+    AuthorizationUtils.authorizeAllResourceActions(request, Collections.emptyList(), authorizerMapper);
   }
 
   private void handleInvalidRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException

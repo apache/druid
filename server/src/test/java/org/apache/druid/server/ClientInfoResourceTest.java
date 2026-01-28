@@ -27,11 +27,12 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.HistoricalFilter;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -129,7 +130,7 @@ public class ClientInfoResourceTest
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(ImmutableList.of(server)).anyTimes();
 
     timelineServerView = EasyMock.createMock(TimelineServerView.class);
-    EasyMock.expect(timelineServerView.getTimeline(EasyMock.anyObject(DataSourceAnalysis.class)))
+    EasyMock.expect(timelineServerView.getTimeline(EasyMock.anyObject(TableDataSource.class)))
             .andReturn((Optional) Optional.of(timeline));
 
     EasyMock.replay(serverInventoryView, timelineServerView);
@@ -223,7 +224,7 @@ public class ClientInfoResourceTest
         "2015-02-02T09:00:00.000Z/2015-02-06T23:00:00.000Z",
         "true"
     );
-    
+
     Map<String, Object> expected = ImmutableMap.of(
         "2015-02-02T09:00:00.000Z/2015-02-03T00:00:00.000Z",
         ImmutableMap.of(KEY_DIMENSIONS, ImmutableSet.of("d1"), KEY_METRICS, ImmutableSet.of("m1")),
@@ -368,8 +369,8 @@ public class ClientInfoResourceTest
                                      .size(1)
                                      .build();
     server.addDataSegment(segment);
-    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
-    timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<ServerSelector>(ss));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()), HistoricalFilter.IDENTITY_FILTER);
+    timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<>(ss));
   }
 
   private void addSegmentWithShardSpec(
@@ -392,7 +393,7 @@ public class ClientInfoResourceTest
                                      .size(1)
                                      .build();
     server.addDataSegment(segment);
-    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
+    ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()), HistoricalFilter.IDENTITY_FILTER);
     timeline.add(Intervals.of(interval), version, shardSpec.createChunk(ss));
   }
 

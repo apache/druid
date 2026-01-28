@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -41,13 +42,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -80,9 +81,6 @@ import java.util.Set;
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
-    @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
-    @Type(name = RealtimeIndexTask.TYPE, value = RealtimeIndexTask.class),
-    @Type(name = AppenderatorDriverRealtimeIndexTask.TYPE, value = AppenderatorDriverRealtimeIndexTask.class),
     @Type(name = NoopTask.TYPE, value = NoopTask.class),
     @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })
@@ -154,8 +152,7 @@ public interface Task
    * the task does not use any. Users can be given permission to access particular types of
    * input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
-   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
-   * would be the case, if the task uses firehose.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security
    */
   @JsonIgnore
   @Nonnull
@@ -163,15 +160,6 @@ public interface Task
   {
     throw new UOE(StringUtils.format(
         "Task type [%s], does not support input source based security",
-        getType()
-    ));
-  }
-
-  default UOE getInputSecurityOnFirehoseUnsupportedError()
-  {
-    throw new UOE(StringUtils.format(
-        "Input source based security cannot be performed '%s' task because it uses firehose."
-        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
         getType()
     ));
   }
@@ -188,7 +176,9 @@ public interface Task
 
   /**
    * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
-   * that may be needed by queries.
+   * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
+   * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
+   * any direct buffers or processing pools if required.
    *
    * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
    * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
@@ -323,14 +313,13 @@ public interface Task
     return new TaskIdentifier(this.getId(), this.getGroupId(), this.getType());
   }
 
-  static TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(TaskInfo<Task, TaskStatus> taskInfo)
+  static TaskIdStatus toTaskIdentifierInfo(TaskInfo taskInfo)
   {
-    return new TaskInfo<>(
-        taskInfo.getId(),
-        taskInfo.getCreatedTime(),
+    return new TaskIdStatus(
+        taskInfo.getTask().getMetadata(),
         taskInfo.getStatus(),
         taskInfo.getDataSource(),
-        taskInfo.getTask().getMetadata()
+        taskInfo.getCreatedTime()
     );
   }
 
@@ -339,9 +328,18 @@ public interface Task
    * This behaviour can be overridden by passing parameters {@link LookupLoadingSpec#CTX_LOOKUP_LOADING_MODE}
    * and {@link LookupLoadingSpec#CTX_LOOKUPS_TO_LOAD} in the task context.
    */
-  @Nullable
   default LookupLoadingSpec getLookupLoadingSpec()
   {
     return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.ALL);
+  }
+
+  /**
+   * Specifies the list of broadcast datasources to load for this task. Tasks load ALL broadcast datasources by default.
+   * This behavior can be overridden by passing parameters {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCE_LOADING_MODE}
+   * and {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCES_TO_LOAD} in the task context.
+   */
+  default BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return BroadcastDatasourceLoadingSpec.createFromContext(getContext(), BroadcastDatasourceLoadingSpec.ALL);
   }
 }

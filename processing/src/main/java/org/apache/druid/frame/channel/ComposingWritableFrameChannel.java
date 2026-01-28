@@ -22,11 +22,13 @@ package org.apache.druid.frame.channel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -42,6 +44,9 @@ import java.util.function.Supplier;
 public class ComposingWritableFrameChannel implements WritableFrameChannel
 {
   @Nullable
+  private final Integer partitionNumber;
+
+  @Nullable
   private final List<Supplier<OutputChannel>> outputChannelSuppliers;
 
   @Nullable
@@ -51,7 +56,19 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   private final Map<Integer, HashSet<Integer>> partitionToChannelMap;
   private int currentIndex;
 
+  /**
+   * Create a new channel.
+   *
+   * @param partitionNumber                   partition number for a single-partition channel, or null for a
+   *                                          multi-partition channel
+   * @param outputChannelSuppliers            one supplier per composed channel, if this is a single-partition channel
+   * @param partitionedOutputChannelSuppliers one supplier per composed channel, if this is a multi-partition channel
+   * @param writableChannelSuppliers          one supplier per composed channel
+   * @param partitionToChannelMap             empty map that will be populated with the set of valid channels
+   *                                          for each partition
+   */
   public ComposingWritableFrameChannel(
+      @Nullable Integer partitionNumber,
       @Nullable List<Supplier<OutputChannel>> outputChannelSuppliers,
       @Nullable List<Supplier<PartitionedOutputChannel>> partitionedOutputChannelSuppliers,
       List<Supplier<WritableFrameChannel>> writableChannelSuppliers,
@@ -61,6 +78,7 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
     if (outputChannelSuppliers != null && partitionedOutputChannelSuppliers != null) {
       throw new IAE("Atmost one of outputChannelSuppliers and partitionedOutputChannelSuppliers can be provided");
     }
+    this.partitionNumber = partitionNumber;
     this.outputChannelSuppliers = outputChannelSuppliers;
     this.partitionedOutputChannelSuppliers = partitionedOutputChannelSuppliers;
     this.writableChannelSuppliers = Preconditions.checkNotNull(writableChannelSuppliers, "writableChannelSuppliers is null");
@@ -70,15 +88,26 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
   }
 
   @Override
-  public void write(FrameWithPartition frameWithPartition) throws IOException
+  public void write(RowsAndColumns rac, int partitionNum) throws IOException
   {
     if (currentIndex >= writableChannelSuppliers.size()) {
       throw new ISE("No more channels available to write. Total available channels : " + writableChannelSuppliers.size());
     }
 
+    if (partitionNumber != null
+        && partitionNum != WritableFrameChannel.NO_PARTITION
+        && partitionNum != partitionNumber) {
+      throw DruidException.defensive(
+          "Invalid partition number[%d], expected[%d]",
+          partitionNum,
+          partitionNumber
+      );
+    }
+
     try {
-      writableChannelSuppliers.get(currentIndex).get().write(frameWithPartition);
-      partitionToChannelMap.computeIfAbsent(frameWithPartition.partition(), k -> Sets.newHashSetWithExpectedSize(1))
+      final int writtenPartition = partitionNumber != null ? partitionNumber : partitionNum;
+      writableChannelSuppliers.get(currentIndex).get().write(rac, partitionNum);
+      partitionToChannelMap.computeIfAbsent(writtenPartition, k -> Sets.newHashSetWithExpectedSize(1))
                            .add(currentIndex);
     }
     catch (ResourceLimitExceededException rlee) {
@@ -96,7 +125,7 @@ public class ComposingWritableFrameChannel implements WritableFrameChannel
       if (currentIndex >= writableChannelSuppliers.size()) {
         throw rlee;
       }
-      write(frameWithPartition);
+      write(rac, partitionNum);
     }
   }
 

@@ -20,13 +20,11 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
-import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -116,6 +114,7 @@ abstract class UnaryExpr implements Expr
 @SuppressWarnings("ClassName")
 class UnaryMinusExpr extends UnaryExpr
 {
+
   UnaryMinusExpr(String op, Expr expr)
   {
     super(op, expr);
@@ -135,8 +134,8 @@ class UnaryMinusExpr extends UnaryExpr
       return ExprEval.of(((BigInteger) expr.getLiteralValue()).multiply(BigInteger.valueOf(-1)).longValueExact());
     }
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
-      return ExprEval.of(null);
+    if (ret.value() == null) {
+      return ExprEval.ofType(ret.type(), null);
     }
     if (ret.type().is(ExprType.LONG)) {
       return ExprEval.of(-ret.asLong());
@@ -156,7 +155,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.negate(inspector, expr);
+    return VectorMathProcessors.negate().asProcessor(inspector, expr);
   }
 }
 
@@ -178,13 +177,8 @@ class UnaryNotExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
-      return ExprEval.of(null);
-    }
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      // conforming to other boolean-returning binary operators
-      ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
-      return ExprEval.ofBoolean(!ret.asBoolean(), retType);
+    if (ret.value() == null) {
+      return ExprEval.ofLong(null);
     }
     return ExprEval.ofLongBoolean(!ret.asBoolean());
   }
@@ -193,13 +187,6 @@ class UnaryNotExpr extends UnaryExpr
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      ExpressionType implicitCast = super.getOutputType(inspector);
-      if (Types.is(implicitCast, ExprType.STRING)) {
-        return ExpressionType.LONG;
-      }
-      return implicitCast;
-    }
     return ExpressionType.LONG;
   }
 

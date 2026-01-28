@@ -23,11 +23,18 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.utils.CloseableUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,12 +44,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -138,6 +147,63 @@ public class CompressedFloatsSerdeTest
     testWithValues(chunk);
   }
 
+  @Test
+  public void testLargeColumn() throws IOException
+  {
+    // This test only makes sense if we can use BlockLayoutColumnarFloatSerializer directly.
+    // Exclude incompatible compressionStrategy.
+    Assume.assumeThat(compressionStrategy, CoreMatchers.not(CoreMatchers.equalTo(CompressionStrategy.NONE)));
+
+    final File columnDir = temporaryFolder.newFolder();
+    final String columnName = "column";
+    final long numRows = 500_000; // enough values that we expect to switch into large-column mode
+
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder());
+        FileSmoosher smoosher = new FileSmoosher(columnDir)
+    ) {
+      final Random random = new Random(0);
+      final int fileSizeLimit = 128_000; // limit to 128KB so we switch to large-column mode sooner
+      final ColumnarFloatsSerializer serializer = new BlockLayoutColumnarFloatsSerializer(
+          columnName,
+          segmentWriteOutMedium,
+          columnName,
+          order,
+          compressionStrategy,
+          fileSizeLimit,
+          segmentWriteOutMedium.getCloser()
+      );
+      serializer.open();
+
+      for (int i = 0; i < numRows; i++) {
+        serializer.add(random.nextLong());
+      }
+
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
+        serializer.writeTo(primaryWriter, smoosher);
+      }
+    }
+
+    try (SmooshedFileMapper smooshMapper = SmooshedFileMapper.load(columnDir)) {
+      MatcherAssert.assertThat(
+          "Number of value parts written", // ensure the column actually ended up multi-part
+          smooshMapper.getInternalFilenames().stream().filter(s -> s.startsWith("column_value_")).count(),
+          Matchers.greaterThan(1L)
+      );
+
+      final Supplier<ColumnarFloats> columnSupplier = CompressedColumnarFloatsSupplier.fromByteBuffer(
+          smooshMapper.mapFile(columnName),
+          order,
+          smooshMapper
+      );
+
+      try (final ColumnarFloats column = columnSupplier.get()) {
+        Assert.assertEquals(numRows, column.size());
+      }
+    }
+  }
+
   // this test takes ~30 minutes to run
   @Ignore
   @Test
@@ -188,7 +254,7 @@ public class CompressedFloatsSerdeTest
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarFloatsSupplier supplier = CompressedColumnarFloatsSupplier
-        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     try (ColumnarFloats floats = supplier.get()) {
 
       assertIndexMatchesVals(floats, values);
@@ -241,9 +307,8 @@ public class CompressedFloatsSerdeTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedColumnarFloatsSupplier anotherSupplier = CompressedColumnarFloatsSupplier.fromByteBuffer(
-        ByteBuffer.wrap(bytes), order
-    );
+    CompressedColumnarFloatsSupplier anotherSupplier =
+        CompressedColumnarFloatsSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), order, null);
     try (ColumnarFloats indexed = anotherSupplier.get()) {
       assertIndexMatchesVals(indexed, vals);
     }
@@ -256,7 +321,7 @@ public class CompressedFloatsSerdeTest
       final ColumnarFloats indexed, final float[] vals
   ) throws Exception
   {
-    final AtomicReference<String> reason = new AtomicReference<String>("none");
+    final AtomicReference<String> reason = new AtomicReference<>("none");
 
     final int numRuns = 1000;
     final CountDownLatch startLatch = new CountDownLatch(1);

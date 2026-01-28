@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.StringDimensionIndexer;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -44,10 +43,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10)
 public class StringDimensionIndexerBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   StringDimensionIndexer indexer;
   int[] exampleArray;
 
@@ -60,7 +55,7 @@ public class StringDimensionIndexerBenchmark
   @Setup
   public void setup()
   {
-    indexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false, true);
+    indexer = new StringDimensionIndexer(DimensionSchema.MultiValueHandling.ofDefault(), true, false);
 
     for (int i = 0; i < cardinality; i++) {
       indexer.processRowValsToUnsortedEncodedKeyComponent("abcd-" + i, true);

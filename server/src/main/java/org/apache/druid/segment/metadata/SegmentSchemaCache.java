@@ -19,17 +19,12 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentMetadata;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
@@ -37,26 +32,26 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * In-memory cache of segment schema.
+ * In-memory cache of segment schema used by {@link CoordinatorSegmentMetadataCache}.
  * <p>
- * Internally, mapping of segmentId to segment level information like schemaId & numRows is maintained.
- * This mapping is updated on each database poll {@link SegmentSchemaCache#finalizedSegmentSchemaInfo}.
- * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
- * <p>
- * Additionally, this class caches schema for realtime segments in {@link SegmentSchemaCache#realtimeSegmentSchema}. This mapping
- * is cleared either when the segment is removed or marked as finalized.
- * <p>
- * Finalized segments which do not have their schema information present in the DB, fetch their schema via metadata query.
- * Metadata query results are cached in {@link SegmentSchemaCache#temporaryMetadataQueryResults}. Once the schema information is backfilled
- * in the DB, it is removed from {@link SegmentSchemaCache#temporaryMetadataQueryResults} and added to {@link SegmentSchemaCache#temporaryPublishedMetadataQueryResults}.
- * {@link SegmentSchemaCache#temporaryPublishedMetadataQueryResults} is cleared on each successfull DB poll.
- * <p>
- * {@link CoordinatorSegmentMetadataCache} uses this cache to fetch schema for a segment.
- * <p>
- * Schema corresponding to the specified version in {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached.
+ * The schema for a given segment ID may be present in one of the following
+ * data-structures:
+ * <ul>
+ * <li>{@link #realtimeSegmentSchemas}: Schema for realtime segments retrieved
+ * from realtime tasks</li>
+ * <li>{@link #schemasPendingBackfill}: Schema for published segments
+ * fetched from data nodes using metadata queries.</li>
+ * <li>{@link #recentlyBackfilledSchemas}: Schema for segments recently persisted
+ * to the DB. This is needed only to maintain continuity until the next DB poll.</li>
+ * <li>{@link #publishedSegmentSchemas}: Schema for used segments as polled from
+ * the metadata store.</li>
+ * </ul>
+ * The cache always contains segment schemas with version
+ * {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION}.
  */
 @LazySingleton
 public class SegmentSchemaCache
@@ -64,43 +59,48 @@ public class SegmentSchemaCache
   private static final Logger log = new Logger(SegmentSchemaCache.class);
 
   /**
-   * Cache is marked initialized after first DB poll.
+   * Cache is marked initialized when the first DB poll finishes after becoming
+   * leader.
    */
   private final AtomicReference<CountDownLatch> initialized = new AtomicReference<>(new CountDownLatch(1));
 
   /**
-   * Finalized segment schema information.
+   * Segment schemas for published used segments.
    */
-  private volatile FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo =
-      new FinalizedSegmentSchemaInfo(ImmutableMap.of(), ImmutableMap.of());
+  private final AtomicReference<PublishedSegmentSchemas> publishedSegmentSchemas
+      = new AtomicReference<>(PublishedSegmentSchemas.EMPTY);
 
   /**
-   * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
-   * The mapping is removed when the segment is either removed or marked as finalized.
+   * Schema information for realtime segments retrieved by inventory view from
+   * tasks. The entry for a segment is removed from this map when the segment is
+   * either removed or published.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchema = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> realtimeSegmentSchemas = new ConcurrentHashMap<>();
 
   /**
-   * If the segment schema is fetched via segment metadata query, subsequently it is added here.
-   * The mapping is removed when the schema information is backfilled in the DB.
+   * Segment schemas fetched from data nodes via segment metadata queries.
+   * Once the information is persisted to DB, it is removed from this map.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> temporaryMetadataQueryResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> schemasPendingBackfill = new ConcurrentHashMap<>();
 
   /**
-   * Once the schema information is backfilled in the DB, it is added here.
-   * This map is cleared after each DB poll.
-   * After the DB poll and before clearing this map it is possible that some results were added to this map.
-   * These results would get lost after clearing this map.
-   * But, it should be fine since the schema could be retrieved if needed using metadata query, also the schema would be available in the next poll.
+   * Segment schemas recently persisted to DB via backfill. This map is needed
+   * only to keep recently persisted schemas cached until the next DB poll.
    */
-  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> temporaryPublishedMetadataQueryResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SchemaPayloadPlus> recentlyBackfilledSchemas = new ConcurrentHashMap<>();
 
-  private final ServiceEmitter emitter;
+  /**
+   * Number of cache misses since last metric emission period.
+   */
+  private final AtomicInteger cacheMissCount = new AtomicInteger(0);
 
-  @Inject
-  public SegmentSchemaCache(ServiceEmitter emitter)
+  /**
+   * @return true if schema caching is enabled.
+   */
+  public boolean isEnabled()
   {
-    this.emitter = emitter;
+    // Always return true since this implementation is bound only when caching is enabled
+    return true;
   }
 
   public void setInitialized()
@@ -120,9 +120,9 @@ public class SegmentSchemaCache
   {
     initialized.set(new CountDownLatch(1));
 
-    finalizedSegmentSchemaInfo = new FinalizedSegmentSchemaInfo(ImmutableMap.of(), ImmutableMap.of());
-    temporaryMetadataQueryResults.clear();
-    temporaryPublishedMetadataQueryResults.clear();
+    publishedSegmentSchemas.set(PublishedSegmentSchemas.EMPTY);
+    schemasPendingBackfill.clear();
+    recentlyBackfilledSchemas.clear();
   }
 
   public boolean isInitialized()
@@ -140,63 +140,69 @@ public class SegmentSchemaCache
   }
 
   /**
-   * This method is called after each DB Poll. It updates reference for segment metadata and schema maps.
+   * Resets the schema in the cache for published (non-realtime) segments.
+   * This method is called after each successful poll of used segments and
+   * schemas from the metadata store.
+   *
+   * @param usedSegmentIdToMetadata    Map from used segment ID to corresponding metadata
+   * @param schemaFingerprintToPayload Map from schema fingerprint to payload
    */
-  public void updateFinalizedSegmentSchema(FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo)
+  public void resetSchemaForPublishedSegments(
+      Map<SegmentId, SegmentMetadata> usedSegmentIdToMetadata,
+      Map<String, SchemaPayload> schemaFingerprintToPayload
+  )
   {
-    this.finalizedSegmentSchemaInfo = finalizedSegmentSchemaInfo;
+    this.publishedSegmentSchemas.set(
+        new PublishedSegmentSchemas(usedSegmentIdToMetadata, schemaFingerprintToPayload)
+    );
+
+    // remove metadata for segments which have been polled in the last database poll
+    recentlyBackfilledSchemas
+        .keySet()
+        .removeAll(publishedSegmentSchemas.get().segmentIdToMetadata.keySet());
+
     setInitialized();
   }
 
   /**
-   * Cache schema for realtime segment. This is cleared when segment is published.
+   * Adds schema for a realtime segment to the cache.
    */
-  public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
+  public void addRealtimeSegmentSchema(SegmentId segmentId, SchemaPayloadPlus schema)
   {
-    realtimeSegmentSchema.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature), numRows));
+    realtimeSegmentSchemas.put(segmentId, schema);
   }
 
   /**
-   * Cache metadata query result. This entry is cleared when metadata query result is published to the DB.
+   * Adds a temporary schema for the given segment ID to the cache. This schema
+   * is typically fetched from data nodes by issuing segment metadata queries.
+   * Once this schema is persisted to DB, call {@link #markSchemaPersisted}.
    */
-  public void addTemporaryMetadataQueryResult(
-      SegmentId segmentId,
-      RowSignature rowSignature,
-      Map<String, AggregatorFactory> aggregatorFactories,
-      long numRows
-  )
+  public void addSchemaPendingBackfill(SegmentId segmentId, SchemaPayloadPlus schema)
   {
-    temporaryMetadataQueryResults.put(segmentId, new SchemaPayloadPlus(new SchemaPayload(rowSignature, aggregatorFactories), numRows));
+    schemasPendingBackfill.put(segmentId, schema);
   }
 
   /**
-   * After, metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
-   * and added to temporaryPublishedMetadataQueryResults.
+   * Marks the schema for the given segment ID as persisted to the DB.
    */
-  public void markMetadataQueryResultPublished(SegmentId segmentId)
+  public void markSchemaPersisted(SegmentId segmentId)
   {
-    SchemaPayloadPlus temporaryMetadataQueryResult = temporaryMetadataQueryResults.get(segmentId);
-    if (temporaryMetadataQueryResult == null) {
-      log.error("SegmentId [%s] not found in temporaryMetadataQueryResults map.", segmentId);
+    SchemaPayloadPlus segmentSchema = schemasPendingBackfill.get(segmentId);
+    if (segmentSchema == null) {
+      log.info("SegmentId[%s] has no schema pending backfill.", segmentId);
     } else {
-      temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResult);
+      recentlyBackfilledSchemas.put(segmentId, segmentSchema);
     }
 
-    temporaryMetadataQueryResults.remove(segmentId);
+    schemasPendingBackfill.remove(segmentId);
   }
 
   /**
-   * temporaryPublishedMetadataQueryResults is reset after each DB poll.
-   */
-  public void resetTemporaryPublishedMetadataQueryResultOnDBPoll()
-  {
-    temporaryPublishedMetadataQueryResults.clear();
-  }
-
-  /**
-   * Fetch schema for a given segment. Note, that there is no check on schema version in this method,
-   * since schema corresponding to a particular version {@link CentralizedDatasourceSchemaConfig#SCHEMA_VERSION} is cached.
-   * Any change in version would require a service restart, so this cache will never have schema for multiple versions.
+   * Reads the schema for a given segment ID from the cache.
+   * <p>
+   * Note that there is no check on schema version in this method, since only
+   * schema corresponding to a single schema version is present in the cache at
+   * any time. Any change in version requires a service restart and the cache is rebuilt.
    */
   public Optional<SchemaPayloadPlus> getSchemaForSegment(SegmentId segmentId)
   {
@@ -205,7 +211,7 @@ public class SegmentSchemaCache
     // If were to look up the finalized segment map first, during handoff it is possible
     // that segment schema isn't polled yet and thus missing from the map and by the time
     // we look up the schema in the realtime map, it has been removed.
-    SchemaPayloadPlus payloadPlus = realtimeSegmentSchema.get(segmentId);
+    SchemaPayloadPlus payloadPlus = realtimeSegmentSchemas.get(segmentId);
     if (payloadPlus != null) {
       return Optional.of(payloadPlus);
     }
@@ -215,149 +221,130 @@ public class SegmentSchemaCache
     // in temporaryPublishedMetadataQueryResults and by the time we check temporaryMetadataQueryResults it is removed.
 
     // segment schema has been fetched via metadata query
-    payloadPlus = temporaryMetadataQueryResults.get(segmentId);
+    payloadPlus = schemasPendingBackfill.get(segmentId);
     if (payloadPlus != null) {
       return Optional.of(payloadPlus);
     }
 
     // segment schema has been fetched via metadata query and the schema has been published to the DB
-    payloadPlus = temporaryPublishedMetadataQueryResults.get(segmentId);
+    payloadPlus = recentlyBackfilledSchemas.get(segmentId);
     if (payloadPlus != null) {
       return Optional.of(payloadPlus);
     }
 
     // segment schema has been polled from the DB
-    SegmentMetadata segmentMetadata = getSegmentMetadataMap().get(segmentId);
+    SegmentMetadata segmentMetadata = getPublishedSegmentMetadataMap().get(segmentId);
     if (segmentMetadata != null) {
-      SchemaPayload schemaPayload = getSchemaPayloadMap().get(segmentMetadata.getSchemaFingerprint());
+      SchemaPayload schemaPayload = getPublishedSchemaPayloadMap().get(segmentMetadata.getSchemaFingerprint());
       if (schemaPayload != null) {
         return Optional.of(
-            new SchemaPayloadPlus(
-                schemaPayload,
-                segmentMetadata.getNumRows()
-            )
+            new SchemaPayloadPlus(schemaPayload, segmentMetadata.getNumRows())
         );
       }
     }
 
+    cacheMissCount.incrementAndGet();
     return Optional.empty();
   }
 
   /**
-   * Check if the schema is cached.
+   * Check if the cache contains schema for the given segment ID.
    */
   public boolean isSchemaCached(SegmentId segmentId)
   {
-    return realtimeSegmentSchema.containsKey(segmentId) ||
-           temporaryMetadataQueryResults.containsKey(segmentId) ||
-           temporaryPublishedMetadataQueryResults.containsKey(segmentId) ||
-           isFinalizedSegmentSchemaCached(segmentId);
+    return realtimeSegmentSchemas.containsKey(segmentId) ||
+           schemasPendingBackfill.containsKey(segmentId) ||
+           recentlyBackfilledSchemas.containsKey(segmentId) ||
+           isPublishedSegmentSchemaCached(segmentId);
   }
 
-  private boolean isFinalizedSegmentSchemaCached(SegmentId segmentId)
+  private boolean isPublishedSegmentSchemaCached(SegmentId segmentId)
   {
-    SegmentMetadata segmentMetadata = getSegmentMetadataMap().get(segmentId);
+    SegmentMetadata segmentMetadata = getPublishedSegmentMetadataMap().get(segmentId);
     if (segmentMetadata != null) {
-      return getSchemaPayloadMap().containsKey(segmentMetadata.getSchemaFingerprint());
+      return getPublishedSchemaPayloadMap().containsKey(segmentMetadata.getSchemaFingerprint());
     }
     return false;
   }
 
-  private ImmutableMap<SegmentId, SegmentMetadata> getSegmentMetadataMap()
+  /**
+   * @return Immutable map from segment ID to {@link SegmentMetadata} for all
+   * published used segments currently present in this cache.
+   */
+  public Map<SegmentId, SegmentMetadata> getPublishedSegmentMetadataMap()
   {
-    return finalizedSegmentSchemaInfo.getFinalizedSegmentMetadata();
-  }
-
-  private ImmutableMap<String, SchemaPayload> getSchemaPayloadMap()
-  {
-    return finalizedSegmentSchemaInfo.getFinalizedSegmentSchema();
+    return publishedSegmentSchemas.get().segmentIdToMetadata;
   }
 
   /**
-   * On segment removal, remove cached schema for the segment.
+   * @return Immutable map from schema fingerprint to {@link SchemaPayload} for
+   * all schema fingerprints currently present in this cache.
    */
-  public boolean segmentRemoved(SegmentId segmentId)
+  public Map<String, SchemaPayload> getPublishedSchemaPayloadMap()
+  {
+    return publishedSegmentSchemas.get().schemaFingerprintToPayload;
+  }
+
+  /**
+   * Removes schema cached for this segment ID.
+   */
+  public void segmentRemoved(SegmentId segmentId)
   {
     // remove the segment from all the maps
-    realtimeSegmentSchema.remove(segmentId);
-    temporaryMetadataQueryResults.remove(segmentId);
-    temporaryPublishedMetadataQueryResults.remove(segmentId);
+    realtimeSegmentSchemas.remove(segmentId);
+    schemasPendingBackfill.remove(segmentId);
+    recentlyBackfilledSchemas.remove(segmentId);
 
     // Since finalizedSegmentMetadata & finalizedSegmentSchema is updated on each DB poll,
     // there is no need to remove segment from them.
-    return true;
   }
 
   /**
-   * Remove schema for realtime segment.
+   * Removes schema for realtime segment.
    */
   public void realtimeSegmentRemoved(SegmentId segmentId)
   {
-    realtimeSegmentSchema.remove(segmentId);
-  }
-
-  public void emitStats()
-  {
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric(
-                                       "metadatacache/realtimeSegmentSchema/count",
-                                       realtimeSegmentSchema.size()
-                                   ));
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric(
-                                       "metadatacache/finalizedSegmentMetadata/count",
-                                       getSegmentMetadataMap().size()
-                                   ));
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric(
-                                       "metadatacache/finalizedSchemaPayload/count",
-                                       getSchemaPayloadMap().size()
-                                   ));
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-                     "metadatacache/temporaryMetadataQueryResults/count",
-                     temporaryMetadataQueryResults.size()
-                 )
-    );
-    emitter.emit(ServiceMetricEvent.builder().setMetric(
-                     "metadatacache/temporaryPublishedMetadataQueryResults/count",
-                     temporaryPublishedMetadataQueryResults.size()
-                 )
-    );
+    realtimeSegmentSchemas.remove(segmentId);
   }
 
   /**
-   * This class encapsulates schema information for segments polled from the DB.
+   * @return Summary stats of the current contents of the cache.
    */
-  public static class FinalizedSegmentSchemaInfo
+  public Map<String, Integer> getStats()
   {
-    /**
-     * Mapping from segmentId to segment level information which includes numRows and schemaFingerprint.
-     * This mapping is updated on each database poll.
-     */
-    private final ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata;
+    return Map.of(
+        Metric.CACHE_MISSES, cacheMissCount.getAndSet(0),
+        Metric.REALTIME_SEGMENT_SCHEMAS, realtimeSegmentSchemas.size(),
+        Metric.USED_SEGMENT_SCHEMAS, getPublishedSegmentMetadataMap().size(),
+        Metric.USED_SEGMENT_SCHEMA_FINGERPRINTS, getPublishedSchemaPayloadMap().size(),
+        Metric.SCHEMAS_PENDING_BACKFILL, schemasPendingBackfill.size()
+    );
+  }
 
-    /**
-     * Mapping from schemaFingerprint to payload.
-     */
-    private final ImmutableMap<String, SchemaPayload> finalizedSegmentSchema;
+  @VisibleForTesting
+  SchemaPayloadPlus getTemporaryPublishedMetadataQueryResults(SegmentId id)
+  {
+    return recentlyBackfilledSchemas.get(id);
+  }
 
-    public FinalizedSegmentSchemaInfo(
-        final ImmutableMap<SegmentId, SegmentMetadata> finalizedSegmentMetadata,
-        final ImmutableMap<String, SchemaPayload> finalizedSegmentSchema
+  /**
+   * Contains schema information for published segments polled from the DB.
+   */
+  private static class PublishedSegmentSchemas
+  {
+    private static final PublishedSegmentSchemas EMPTY = new PublishedSegmentSchemas(Map.of(), Map.of());
+
+    private final Map<SegmentId, SegmentMetadata> segmentIdToMetadata;
+    private final Map<String, SchemaPayload> schemaFingerprintToPayload;
+
+    private PublishedSegmentSchemas(
+        final Map<SegmentId, SegmentMetadata> segmentIdToMetadata,
+        final Map<String, SchemaPayload> schemaFingerprintToPayload
     )
     {
-      this.finalizedSegmentMetadata = finalizedSegmentMetadata;
-      this.finalizedSegmentSchema = finalizedSegmentSchema;
-    }
-
-    public ImmutableMap<SegmentId, SegmentMetadata> getFinalizedSegmentMetadata()
-    {
-      return finalizedSegmentMetadata;
-    }
-
-    public ImmutableMap<String, SchemaPayload> getFinalizedSegmentSchema()
-    {
-      return finalizedSegmentSchema;
+      // Make immutable copies
+      this.segmentIdToMetadata = Map.copyOf(segmentIdToMetadata);
+      this.schemaFingerprintToPayload = Map.copyOf(schemaFingerprintToPayload);
     }
   }
 }

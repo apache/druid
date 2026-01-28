@@ -16,10 +16,15 @@
  * limitations under the License.
  */
 
+export * from './array-ingest-mode/array-ingest-mode';
 export * from './async-query/async-query';
 export * from './compaction-config/compaction-config';
+export * from './compaction-dynamic-config/compaction-dynamic-config';
 export * from './compaction-status/compaction-status';
+export * from './console/console';
 export * from './coordinator-dynamic-config/coordinator-dynamic-config';
+export * from './dart/dart-query-entry';
+export * from './datasource/datasource';
 export * from './dimension-spec/dimension-spec';
 export * from './druid-engine/druid-engine';
 export * from './execution/execution';
@@ -31,10 +36,13 @@ export * from './ingest-query-pattern/ingest-query-pattern';
 export * from './ingestion-spec/ingestion-spec';
 export * from './input-format/input-format';
 export * from './input-source/input-source';
+export * from './load-rule/load-rule';
 export * from './lookup-spec/lookup-spec';
 export * from './metric-spec/metric-spec';
+export * from './native-json-query/native-json-query-completions';
 export * from './overlord-dynamic-config/overlord-dynamic-config';
 export * from './query-context/query-context';
+export * from './segment/segment';
 export * from './stages/stages';
 export * from './supervisor-status/supervisor-status';
 export * from './task/task';

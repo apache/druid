@@ -19,11 +19,12 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.BooleanUnaryFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
@@ -52,7 +53,7 @@ import java.util.Set;
  * @see org.apache.druid.query.filter.IsTrueDimFilter
  * @see org.apache.druid.query.filter.IsFalseDimFilter
  */
-public class IsBooleanFilter implements Filter
+public class IsBooleanFilter implements BooleanUnaryFilter
 {
   private final Filter baseFilter;
   private final boolean isTrue;
@@ -63,67 +64,29 @@ public class IsBooleanFilter implements Filter
     this.isTrue = isTrue;
   }
 
+  public boolean isTrue()
+  {
+    return isTrue;
+  }
+
+  @Override
+  public Filter getBaseFilter()
+  {
+    return baseFilter;
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex getBitmapColumnIndex(int numRows, FilterBundle.Builder baseBuilder)
+  {
+    return getBitmapColumnIndex(numRows, isTrue, baseBuilder.getBitmapColumnIndex());
+  }
+
   @Nullable
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    final BitmapColumnIndex baseIndex = baseFilter.getBitmapColumnIndex(selector);
-    if (baseIndex != null && (isTrue || baseIndex.getIndexCapabilities().isInvertible())) {
-      return new BitmapColumnIndex()
-      {
-        private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
-        @Override
-        public ColumnIndexCapabilities getIndexCapabilities()
-        {
-          return baseIndex.getIndexCapabilities();
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
-        {
-          if (isTrue) {
-            return baseIndex.computeBitmapResult(bitmapResultFactory, false);
-          }
-          return bitmapResultFactory.complement(
-              baseIndex.computeBitmapResult(bitmapResultFactory, useThreeValueLogic),
-              selector.getNumRows()
-          );
-        }
-
-        @Nullable
-        @Override
-        public <T> T computeBitmapResult(
-            BitmapResultFactory<T> bitmapResultFactory,
-            int applyRowCount,
-            int totalRowCount,
-            boolean includeUnknown
-        )
-        {
-          if (isTrue) {
-            return baseIndex.computeBitmapResult(
-                bitmapResultFactory,
-                applyRowCount,
-                totalRowCount,
-                false
-            );
-          }
-
-          final T result = baseIndex.computeBitmapResult(
-              bitmapResultFactory,
-              applyRowCount,
-              totalRowCount,
-              useThreeValueLogic
-          );
-
-          if (result == null) {
-            return null;
-          }
-
-          return bitmapResultFactory.complement(result, selector.getNumRows());
-        }
-      };
-    }
-    return null;
+    return getBitmapColumnIndex(selector.getNumRows(), isTrue, baseFilter.getBitmapColumnIndex(selector));
   }
 
   @Override
@@ -133,14 +96,13 @@ public class IsBooleanFilter implements Filter
 
     return new ValueMatcher()
     {
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
         if (isTrue) {
           return baseMatcher.matches(false);
         }
-        return !baseMatcher.matches(useThreeValueLogic);
+        return !baseMatcher.matches(true);
       }
 
       @Override
@@ -159,7 +121,6 @@ public class IsBooleanFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
@@ -167,7 +128,7 @@ public class IsBooleanFilter implements Filter
         if (isTrue) {
           return baseMatcher.match(mask, false);
         }
-        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, useThreeValueLogic);
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, true);
 
         scratch.copyFrom(mask);
         scratch.removeAll(baseMatch);
@@ -225,5 +186,72 @@ public class IsBooleanFilter implements Filter
   {
     // to return a different hash from baseFilter
     return Objects.hash(1, baseFilter, isTrue);
+  }
+
+  @Nullable
+  private static BitmapColumnIndex getBitmapColumnIndex(int numRows, boolean isTrue, BitmapColumnIndex baseIndex)
+  {
+    if (baseIndex != null && (isTrue || baseIndex.getIndexCapabilities().isInvertible())) {
+      return new BitmapColumnIndex()
+      {
+        @Override
+        public ColumnIndexCapabilities getIndexCapabilities()
+        {
+          return baseIndex.getIndexCapabilities();
+        }
+
+        @Override
+        public int estimatedComputeCost()
+        {
+          // There's no additional cost on is boolean filter, cost will come from child FilterBundle.Builder
+          return 0;
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+        {
+          if (isTrue) {
+            return baseIndex.computeBitmapResult(bitmapResultFactory, false);
+          }
+          return bitmapResultFactory.complement(
+              baseIndex.computeBitmapResult(bitmapResultFactory, true),
+              numRows
+          );
+        }
+
+        @Nullable
+        @Override
+        public <T> T computeBitmapResult(
+            BitmapResultFactory<T> bitmapResultFactory,
+            int applyRowCount,
+            int totalRowCount,
+            boolean includeUnknown
+        )
+        {
+          if (isTrue) {
+            return baseIndex.computeBitmapResult(
+                bitmapResultFactory,
+                applyRowCount,
+                totalRowCount,
+                false
+            );
+          }
+
+          final T result = baseIndex.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              true
+          );
+
+          if (result == null) {
+            return null;
+          }
+
+          return bitmapResultFactory.complement(result, numRows);
+        }
+      };
+    }
+    return null;
   }
 }

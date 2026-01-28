@@ -17,10 +17,9 @@
  */
 
 import { Icon } from '@blueprintjs/core';
-import type { Column, QueryResult } from '@druid-toolkit/query';
-import { SqlColumn } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React from 'react';
+import type { Column, QueryResult } from 'druid-query-toolkit';
+import { SqlColumn } from 'druid-query-toolkit';
 
 import { columnToIcon } from '../../../../../utils';
 

@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -30,33 +32,37 @@ import java.util.Map;
 
 public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<KafkaTopicPartition, Long>
 {
+  @JsonCreator
   public KafkaSupervisorReportPayload(
-      String dataSource,
-      String topic,
-      int partitions,
-      int replicas,
-      long durationSeconds,
-      @Nullable Map<KafkaTopicPartition, Long> latestOffsets,
-      @Nullable Map<KafkaTopicPartition, Long> minimumLag,
-      @Nullable Long aggregateLag,
-      @Nullable DateTime offsetsLastUpdated,
-      boolean suspended,
-      boolean healthy,
-      SupervisorStateManager.State state,
-      SupervisorStateManager.State detailedState,
-      List<SupervisorStateManager.ExceptionEvent> recentErrors
+      @JsonProperty("id") String id,
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("stream") String stream,
+      @JsonProperty("partitions") int partitions,
+      @JsonProperty("replicas") int replicas,
+      @JsonProperty("durationSeconds") long durationSeconds,
+      @JsonProperty("latestOffsets") @Nullable Map<KafkaTopicPartition, Long> latestOffsets,
+      @JsonProperty("minimumLag") @Nullable Map<KafkaTopicPartition, Long> minimumLag,
+      @JsonProperty("minimumLagMillis") @Nullable Map<KafkaTopicPartition, Long> minimumLagMillis,
+      @JsonProperty("aggregateLag") @Nullable Long aggregateLag,
+      @JsonProperty("offsetsLastUpdated") @Nullable DateTime offsetsLastUpdated,
+      @JsonProperty("suspended") boolean suspended,
+      @JsonProperty("healthy") boolean healthy,
+      @JsonProperty("ignored1") SupervisorStateManager.State state, // No serializer for State class
+      @JsonProperty("ignored2") SupervisorStateManager.State detailedState,
+      @JsonProperty("recentErrors") List<SupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(
+        id,
         dataSource,
-        topic,
+        stream,
         partitions,
         replicas,
         durationSeconds,
         latestOffsets,
         minimumLag,
         aggregateLag,
-        null,
+        minimumLagMillis,
         null,
         offsetsLastUpdated,
         suspended,
@@ -71,7 +77,8 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
   public String toString()
   {
     return "KafkaSupervisorReportPayload{" +
-           "dataSource='" + getDataSource() + '\'' +
+           "id='" + getId() + '\'' +
+           ", dataSource='" + getDataSource() + '\'' +
            ", topic='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +
            ", replicas=" + getReplicas() +

@@ -41,7 +41,7 @@ import java.util.Set;
 
 public class DimFilterUtilsTest
 {
-  private static final Function<ShardSpec, ShardSpec> CONVERTER = new Function<ShardSpec, ShardSpec>()
+  private static final Function<ShardSpec, ShardSpec> CONVERTER = new Function<>()
   {
     @Nullable
     @Override

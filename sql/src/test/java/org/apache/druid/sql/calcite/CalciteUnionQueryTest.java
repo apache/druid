@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
@@ -142,7 +141,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @NotYetSupported(Modes.UNION_MORE_STRICT_ROWTYPE_CHECK)
   @Test
   public void testUnionAllTablesColumnTypeMismatchFloatLong()
   {
@@ -189,66 +187,156 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
+  @Test
+  public void testUnionFlipFlop()
+  {
+    String sql = "SELECT\n"
+        + "dim1,dim2,count(1) \n"
+        + "FROM (SELECT dim1 as dim1, dim2 as dim2 FROM foo UNION ALL SELECT dim2 as dim1, dim1 as dim2 FROM foo)\n"
+        + "WHERE dim1 = 'def' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"abc", "def", 1L},
+                  new Object[] {"def", "abc", 1L}
+              )
+          )
+          .run();
+    } else {
+      assertQueryIsUnplannable(
+          sql,
+          "names queried for each table are different"
+      );
+    }
+  }
+
+
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
-    // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
-    // query cannot be planned.
-
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    String sql = "SELECT\n"
         + "dim3, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
-        + "GROUP BY 1, 2",
-        "SQL requires union between inputs that are not simple table scans and involve a " +
-        "filter or aliasing. Or column types of tables being unioned are not of same type."
-    );
+        + "GROUP BY 1, 2";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"", "a", 4.0D, 1L},
+                  new Object[] {"11", "en", 1.0D, 1L},
+                  new Object[] {"a", "a", 1.0D, 1L},
+                  new Object[] {"b", "a", 1.0D, 1L}
+              )
+          )
+          .run();
+    } else {
+      // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
+      // query cannot be planned.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between inputs that are not simple table scans and involve a " +
+          "filter or aliasing. Or column types of tables being unioned are not of same type."
+      );
+    }
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenMappingIsRequired()
   {
-    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
-
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    String sql = "SELECT\n"
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1",
-        "SQL requires union between two tables " +
-        "and column names queried for each table are different Left: [dim1], Right: [dim2]."
-    );
+        + "GROUP BY 1";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"a", 2L},
+                  new Object[] {"def", 1L}
+              )
+          )
+          .run();
+    } else {
+      // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between two tables " +
+          "and column names queried for each table are different Left: [dim1], Right: [dim2]."
+      );
+    }
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  public void testUnionIsUnplannable()
+  public void testUnionDifferentColumnOrder()
   {
-    // Cannot plan this UNION operation
-    assertQueryIsUnplannable(
-        "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
-        "SQL requires 'UNION' but only 'UNION ALL' is supported."
-    );
+    String sql = "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo";
+    if (testBuilder().isDecoupledMode()) {
+      // UnionToDistinctRule
+      testBuilder()
+          .sql(sql)
+          .expectedResults(ImmutableList.of(new Object[] {"def", 2L}))
+          .expectedResults(
+              ResultMatchMode.RELAX_NULLS,
+              ImmutableList.of(
+                  new Object[] {null, "10.1", 2.0F},
+                  new Object[] {null, "abc", 6.0F},
+                  new Object[] {"", "2", 3.0F},
+                  new Object[] {"a", "", 1.0F},
+                  new Object[] {"a", "1", 4.0F},
+                  new Object[] {"abc", "def", 5.0F},
+                  new Object[] {"en", "druid", 1.0F},
+                  new Object[] {"he", "\u05D3\u05E8\u05D5\u05D0\u05D9\u05D3", 1.0F},
+                  new Object[] {"ru", "\u0434\u0440\u0443\u0438\u0434", 1.0F}
+              )
+
+          )
+          .run();
+    } else {
+      // Cannot plan this UNION operation
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires 'UNION' but only 'UNION ALL' is supported."
+      );
+    }
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
-    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    String sql = "SELECT\n"
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
-        + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1",
-        "SQL requires union between inputs that are not simple table scans and involve " +
-        "a filter or aliasing. Or column types of tables being unioned are not of same type."
-    );
+        + "WHERE c = '1' OR c = 'def'\n"
+        + "GROUP BY 1";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[]{"1", 7L},
+                  new Object[]{"def", 1L}
+              )
+          )
+          .run();
+    } else {
+      // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between inputs that are not simple table scans and involve " +
+          "a filter or aliasing. Or column types of tables being unioned are not of same type."
+      );
+    }
   }
 
   @Test
@@ -335,19 +423,31 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllSameTableTwiceWithDifferentMapping()
   {
-    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    String sql = "SELECT\n"
         + "dim1, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
-        + "GROUP BY 1, 2",
-        "SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
-    );
+        + "GROUP BY 1, 2";
+    if (testBuilder().isDecoupledMode()) {
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"", "a", 2.0D, 2L},
+                  new Object[] {"1", "a", 8.0D, 2L}
+              )
+          )
+          .run();
+    } else {
+      // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between two tables and column names queried for each table are different Left: [dim1, dim2, m1], Right: [dim2, dim1, m1]."
+      );
+    }
   }
 
   @Test

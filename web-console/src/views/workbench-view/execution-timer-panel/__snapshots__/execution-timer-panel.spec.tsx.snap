@@ -2,16 +2,15 @@
 
 exports[`AnchoredQueryTimer matches snapshot with execution 1`] = `
 <div
-  class="bp4-button-group execution-timer-panel"
+  class="bp5-button-group execution-timer-panel"
 >
   <button
-    class="bp4-button bp4-minimal timer"
+    class="bp5-button bp5-minimal timer"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-stopwatch"
-      icon="stopwatch"
+      class="bp5-icon bp5-icon-stopwatch"
     >
       <svg
         data-icon="stopwatch"
@@ -27,19 +26,18 @@ exports[`AnchoredQueryTimer matches snapshot with execution 1`] = `
       </svg>
     </span>
     <span
-      class="bp4-button-text"
+      class="bp5-button-text"
     >
       3.00s
     </span>
   </button>
   <button
-    class="bp4-button bp4-minimal"
+    class="bp5-button bp5-minimal"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-cross"
-      icon="cross"
+      class="bp5-icon bp5-icon-cross"
     >
       <svg
         data-icon="cross"
@@ -60,16 +58,15 @@ exports[`AnchoredQueryTimer matches snapshot with execution 1`] = `
 
 exports[`AnchoredQueryTimer matches snapshot with startTime 1`] = `
 <div
-  class="bp4-button-group execution-timer-panel"
+  class="bp5-button-group execution-timer-panel"
 >
   <button
-    class="bp4-button bp4-minimal timer"
+    class="bp5-button bp5-minimal timer"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-stopwatch"
-      icon="stopwatch"
+      class="bp5-icon bp5-icon-stopwatch"
     >
       <svg
         data-icon="stopwatch"
@@ -85,19 +82,18 @@ exports[`AnchoredQueryTimer matches snapshot with startTime 1`] = `
       </svg>
     </span>
     <span
-      class="bp4-button-text"
+      class="bp5-button-text"
     >
       1.00s
     </span>
   </button>
   <button
-    class="bp4-button bp4-minimal"
+    class="bp5-button bp5-minimal"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-cross"
-      icon="cross"
+      class="bp5-icon bp5-icon-cross"
     >
       <svg
         data-icon="cross"

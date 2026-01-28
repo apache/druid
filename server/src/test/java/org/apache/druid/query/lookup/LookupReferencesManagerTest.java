@@ -22,18 +22,17 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.client.coordinator.CoordinatorClientImpl;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,11 +40,11 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -59,7 +58,7 @@ public class LookupReferencesManagerTest
   LookupExtractorFactory lookupExtractorFactory;
   LookupExtractorFactoryContainer container;
   ObjectMapper mapper = new DefaultObjectMapper();
-  private DruidLeaderClient druidLeaderClient;
+  private CoordinatorClientImpl coordinatorClient;
   private LookupListeningAnnouncerConfig config;
 
   @Before
@@ -67,7 +66,7 @@ public class LookupReferencesManagerTest
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
-    druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
+    coordinatorClient = EasyMock.createMock(CoordinatorClientImpl.class);
 
     config = EasyMock.createMock(LookupListeningAnnouncerConfig.class);
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.ALL).anyTimes();
@@ -80,50 +79,29 @@ public class LookupReferencesManagerTest
     );
     container = new LookupExtractorFactoryContainer("v0", lookupExtractorFactory);
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
-    String temporaryPath = temporaryFolder.newFolder().getAbsolutePath();
     lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
         mapper,
-        druidLeaderClient,
+        coordinatorClient,
         config,
         true
     );
   }
 
-  private static HttpResponse newEmptyResponse(final HttpResponseStatus status)
-  {
-    final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(status).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
-    EasyMock.replay(response);
-    return response;
-  }
-
   @Test
-  public void testStartStop() throws InterruptedException, IOException
+  public void testStartStop() throws IOException
   {
     lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(null),
-        mapper, druidLeaderClient, config
+        mapper, coordinatorClient, config
     );
 
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForStartStop", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     Assert.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
     Assert.assertNull(lookupReferencesManager.mainThread);
     Assert.assertNull(lookupReferencesManager.stateRef.get());
@@ -171,23 +149,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
 
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForAddGetRemove", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
@@ -214,23 +181,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
 
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForAddGetRemove", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-                HttpMethod.GET,
-                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-            ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
@@ -271,23 +227,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
 
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForAddGetRemove", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-                HttpMethod.GET,
-                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-            ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
@@ -317,6 +262,7 @@ public class LookupReferencesManagerTest
 
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
+
   @Test
   public void testCloseIsCalledAfterStopping() throws Exception
   {
@@ -325,23 +271,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForCloseIsCalledAfterStopping", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testMock", new LookupExtractorFactoryContainer("0", lookupExtractorFactory));
     lookupReferencesManager.handlePendingNotices();
@@ -359,23 +294,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
 
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForDestroyIsCalledAfterRemove", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testMock", container);
@@ -390,23 +314,12 @@ public class LookupReferencesManagerTest
   @Test
   public void testGetNotThere() throws Exception
   {
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForGetNotThere", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("notThere"));
   }
@@ -423,23 +336,12 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory2.start()).andReturn(true).once();
 
     EasyMock.replay(lookupExtractorFactory1, lookupExtractorFactory2);
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForUpdateWithHigherVersion", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
     lookupReferencesManager.handlePendingNotices();
@@ -459,23 +361,12 @@ public class LookupReferencesManagerTest
     LookupExtractorFactory lookupExtractorFactory2 = EasyMock.createNiceMock(LookupExtractorFactory.class);
 
     EasyMock.replay(lookupExtractorFactory1, lookupExtractorFactory2);
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForUpdateWithLowerVersion", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
     lookupReferencesManager.handlePendingNotices();
@@ -493,48 +384,27 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory1.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory1.isInitialized()).andReturn(false).anyTimes();
     EasyMock.replay(lookupExtractorFactory1);
-    Map<String, Object> lookupMap = new HashMap<>();
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-                HttpMethod.GET,
-                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-            ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
     lookupReferencesManager.handlePendingNotices();
     Assert.assertTrue(lookupReferencesManager.get("testName").isPresent());
     EasyMock.verify(lookupExtractorFactory1);
   }
+
   @Test
   public void testRemoveNonExisting() throws Exception
   {
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForRemoveNonExisting", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.remove("test", null);
     lookupReferencesManager.handlePendingNotices();
@@ -552,20 +422,11 @@ public class LookupReferencesManagerTest
         "0",
         new MapLookupExtractorFactory(ImmutableMap.of("key2", "value2"), true)
     );
-    Map<String, Object> lookupMap = new HashMap<>();
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(
-        druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true")
-    ).andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("one", container1);
     lookupReferencesManager.add("two", container2);
@@ -575,8 +436,15 @@ public class LookupReferencesManagerTest
 
     Assert.assertEquals(
         ImmutableSet.of("one", "two"),
-        ((LookupExtractorFactoryContainerProvider) lookupReferencesManager).getAllLookupNames()
+        (lookupReferencesManager).getAllLookupNames()
     );
+  }
+
+  @Test
+  public void testGetCanonicalLookupName()
+  {
+    String lookupName = "lookupName1";
+    Assert.assertEquals(lookupName, lookupReferencesManager.getCanonicalLookupName(lookupName));
   }
 
   @Test
@@ -611,22 +479,11 @@ public class LookupReferencesManagerTest
             ), true
         )
     );
-    Map<String, Object> lookupMap = new HashMap<>();
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     lookupReferencesManager.add("one", container1);
     lookupReferencesManager.add("two", container2);
@@ -652,25 +509,14 @@ public class LookupReferencesManagerTest
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
-        mapper, druidLeaderClient, config
+        mapper, coordinatorClient, config
     );
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForRealModeWithMainThread", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertTrue(lookupReferencesManager.mainThread.isAlive());
 
@@ -741,25 +587,14 @@ public class LookupReferencesManagerTest
             ), true
         )
     );
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testLookup1", container1);
     lookupMap.put("testLookup2", container2);
     lookupMap.put("testLookup3", container3);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.of(container1), lookupReferencesManager.get("testLookup1"));
@@ -788,27 +623,16 @@ public class LookupReferencesManagerTest
         )
     );
     EasyMock.reset(config);
-    EasyMock.reset(druidLeaderClient);
+    EasyMock.reset(coordinatorClient);
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testLookup1", container1);
     lookupMap.put("testLookup2", container2);
     lookupMap.put("testLookup3", container3);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER);
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(lookupLoadingSpec);
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-                HttpMethod.GET,
-                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-            ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
+    EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
     return lookupMap;
@@ -836,10 +660,51 @@ public class LookupReferencesManagerTest
   public void testCoordinatorLoadSubsetOfLookups() throws Exception
   {
     Map<String, LookupExtractorFactoryContainer> lookupMap =
-        getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1", "testLookup2")));
+        getLookupMapForSelectiveLoadingOfLookups(
+            LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1", "testLookup2"))
+        );
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup1")), lookupReferencesManager.get("testLookup1"));
     Assert.assertEquals(Optional.of(lookupMap.get("testLookup2")), lookupReferencesManager.get("testLookup2"));
     Assert.assertFalse(lookupReferencesManager.get("testLookup3").isPresent());
+  }
+
+  @Test
+  public void testAddWithRequiredLoadingSpec() throws Exception
+  {
+    LookupLoadingSpec loadingSpec = LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1"));
+    getLookupMapForSelectiveLoadingOfLookups(loadingSpec);
+
+    LookupExtractorFactoryContainer container2 = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(Map.of("key2", "value2"), true
+        )
+    );
+    EasyMock.reset(config);
+    EasyMock.expect(config.getLookupLoadingSpec()).andReturn(loadingSpec);
+    EasyMock.replay(config);
+    lookupReferencesManager.add("testLookup2", container2);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Set.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
+  }
+
+  @Test
+  public void testAddWithNoneLoadingSpec() throws Exception
+  {
+    getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.NONE);
+
+    LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer(
+        "0",
+        new MapLookupExtractorFactory(Map.of("key2", "value2"), true
+        )
+    );
+    EasyMock.reset(config);
+    EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.NONE);
+    EasyMock.replay(config);
+    lookupReferencesManager.add("testLookup", container);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertTrue(lookupReferencesManager.getAllLookupNames().isEmpty());
   }
 
   @Test
@@ -856,21 +721,15 @@ public class LookupReferencesManagerTest
     lookupReferencesManager = new LookupReferencesManager(
         lookupConfig,
         mapper,
-        druidLeaderClient,
+        coordinatorClient,
         config
     );
 
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request)
-            .anyTimes();
-    EasyMock.expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
-    EasyMock.replay(druidLeaderClient);
+
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andThrow(new RuntimeException()).anyTimes();
+    EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
     lookupReferencesManager.add("testMockForLoadLookupOnCoordinatorFailure", container);
@@ -888,23 +747,26 @@ public class LookupReferencesManagerTest
     lookupReferencesManager = new LookupReferencesManager(
         lookupConfig,
         mapper,
-        druidLeaderClient,
+        coordinatorClient,
         config,
         true
     );
     EasyMock.reset(config);
-    EasyMock.reset(druidLeaderClient);
+    EasyMock.reset(coordinatorClient);
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.expect(config.getLookupLoadingSpec()).andReturn(LookupLoadingSpec.ALL).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request)
-            .anyTimes();
-    EasyMock.expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
-    EasyMock.replay(druidLeaderClient);
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andThrow(
+        new RuntimeException(
+            new HttpResponseException(
+                new StringFullResponseHolder(
+                    new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                    StandardCharsets.UTF_8
+                )
+            )
+        )
+    ).anyTimes();
+    EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
     Assert.assertEquals(
         Optional.of(container),
@@ -926,26 +788,15 @@ public class LookupReferencesManagerTest
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
         lookupConfig,
         mapper,
-        druidLeaderClient,
+        coordinatorClient,
         config
     );
-    Map<String, Object> lookupMap = new HashMap<>();
+    Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>();
     lookupMap.put("testMockForDisableLookupSync", container);
-    String strResult = mapper.writeValueAsString(lookupMap);
-    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     EasyMock.replay(config);
-    EasyMock.expect(druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
-    ))
-            .andReturn(request);
-    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
-        newEmptyResponse(HttpResponseStatus.OK),
-        StandardCharsets.UTF_8
-    ).addChunk(strResult);
-    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
 
+    EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     lookupReferencesManager.start();
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("testMockForDisableLookupSync"));
   }

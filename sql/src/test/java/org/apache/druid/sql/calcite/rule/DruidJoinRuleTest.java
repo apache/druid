@@ -30,10 +30,9 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,7 +69,6 @@ public class DruidJoinRuleTest
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
     PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
     Mockito.when(plannerContext.queryContext()).thenReturn(QueryContext.empty());
     Mockito.when(plannerContext.getJoinAlgorithm()).thenReturn(JoinAlgorithm.BROADCAST);
@@ -122,8 +120,7 @@ public class DruidJoinRuleTest
   @Test
   public void test_canHandleCondition_leftEqRightFn()
   {
-    Assert.assertEquals(
-        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assert.assertTrue(
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
@@ -147,8 +144,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_leftEqLeft()
   {
 
-    Assert.assertEquals(
-        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assert.assertTrue(
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
@@ -167,8 +163,7 @@ public class DruidJoinRuleTest
   @Test
   public void test_canHandleCondition_rightEqRight()
   {
-    Assert.assertEquals(
-        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assert.assertTrue(
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,

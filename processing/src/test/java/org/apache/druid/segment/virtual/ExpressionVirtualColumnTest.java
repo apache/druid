@@ -21,7 +21,6 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
@@ -115,7 +114,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       ImmutableMap.of(
           "x", 3L,
           "y", 4L,
-          "b", Arrays.asList(new String[]{"3", null, "5"})
+          "b", Arrays.asList("3", null, "5")
       )
   );
 
@@ -220,12 +219,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(null, selector.getObject());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(4L, selector.getObject());
-    } else {
-      // y is null for row1
-      Assert.assertEquals(null, selector.getObject());
-    }
+    // y is null for row1
+    Assert.assertEquals(null, selector.getObject());
 
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(5.1d, selector.getObject());
@@ -249,7 +244,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorImplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
     Assert.assertEquals(
-        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        Arrays.asList("6.0", null, "10.0"),
         selectorImplicit.getObject()
     );
 
@@ -263,7 +258,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("6.0", "8.0", "10.0"), selectorExplicit.getObject());
     CURRENT_ROW.set(ROWMULTI3);
     Assert.assertEquals(
-        Arrays.asList("6.0", NullHandling.replaceWithDefault() ? "0.0" : null, "10.0"),
+        Arrays.asList("6.0", null, "10.0"),
         selectorExplicit.getObject()
     );
   }
@@ -380,19 +375,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     final BaseLongColumnValueSelector selector = X_PLUS_Y.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0L, selector.getLong());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(4L, selector.getLong());
-    } else {
-      // y is null for row1
-      Assert.assertTrue(selector.isNull());
-    }
+    // y is null for row1
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(5L, selector.getLong());
@@ -407,33 +394,17 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     final BaseLongColumnValueSelector selector = Z_CONCAT_X.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0L, selector.getLong());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(4L, selector.getLong());
-    } else {
-      // y is null for row1
-      Assert.assertTrue(selector.isNull());
-    }
+    // y is null for row1
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW2);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0L, selector.getLong());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW3);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0L, selector.getLong());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
   }
 
   @Test
@@ -442,19 +413,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     final BaseFloatColumnValueSelector selector = X_PLUS_Y.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(4.0f, selector.getFloat(), 0.0f);
-    } else {
-      // y is null for row1
-      Assert.assertTrue(selector.isNull());
-    }
+    // y is null for row1
+    Assert.assertTrue(selector.isNull());
 
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(5.1f, selector.getFloat(), 0.0f);
@@ -486,18 +449,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(false, nullMatcher.matches(false));
-      Assert.assertEquals(false, fiveMatcher.matches(false));
-      Assert.assertEquals(true, nonNullMatcher.matches(false));
-      Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
-    } else {
-      // y is null in row1
-      Assert.assertEquals(true, nullMatcher.matches(false));
-      Assert.assertEquals(false, fiveMatcher.matches(false));
-      Assert.assertEquals(false, nonNullMatcher.matches(false));
-      Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
-    }
+    // y is null in row1
+    Assert.assertEquals(true, nullMatcher.matches(false));
+    Assert.assertEquals(false, fiveMatcher.matches(false));
+    Assert.assertEquals(false, nonNullMatcher.matches(false));
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(false, nullMatcher.matches(false));
@@ -549,7 +505,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     CURRENT_ROW.set(ROW1);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? "4" : null,
+        null,
         selector.lookupName(selector.getRow().get(0))
     );
 
@@ -583,14 +539,14 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? "foobar" : null,
+        null,
         selector.lookupName(selector.getRow().get(0))
     );
 
     CURRENT_ROW.set(ROW3);
     Assert.assertEquals(1, selector.getRow().size());
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? "foobar" : null,
+        null,
         selector.lookupName(selector.getRow().get(0))
     );
   }
@@ -618,18 +574,11 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(false, nullMatcher.matches(false));
-      Assert.assertEquals(false, fiveMatcher.matches(false));
-      Assert.assertEquals(true, nonNullMatcher.matches(false));
-      Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
-    } else {
-      // y is null in row1
-      Assert.assertEquals(true, nullMatcher.matches(false));
-      Assert.assertEquals(false, fiveMatcher.matches(false));
-      Assert.assertEquals(false, nonNullMatcher.matches(false));
-      Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
-    }
+    // y is null in row1
+    Assert.assertEquals(true, nullMatcher.matches(false));
+    Assert.assertEquals(false, fiveMatcher.matches(false));
+    Assert.assertEquals(false, nonNullMatcher.matches(false));
+    Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW2);
     Assert.assertEquals(false, nullMatcher.matches(false));
@@ -661,12 +610,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         CONSTANT_NULL_ARITHMETIC.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(2L, selector.getLong());
-      Assert.assertFalse(selector.isNull());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
   }
 
   @Test
@@ -676,12 +620,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         CONSTANT_NULL_ARITHMETIC.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(2.1f, selector.getFloat(), 0.0f);
-      Assert.assertFalse(selector.isNull());
-    } else {
-      Assert.assertTrue(selector.isNull());
-    }
+    Assert.assertTrue(selector.isNull());
   }
 
   @Test
@@ -693,14 +632,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     );
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(2.1f, selector.getFloat(), 0.0f);
-      Assert.assertFalse(selector.isNull());
-      Assert.assertEquals(2.1d, selector.getObject().asDouble(), 0.0d);
-    } else {
-      Assert.assertTrue(selector.isNull());
-      Assert.assertTrue(selector.getObject().isNumericNull());
-    }
+    Assert.assertTrue(selector.isNull());
+    Assert.assertTrue(selector.getObject().isNumericNull());
   }
 
   @Test
@@ -767,13 +700,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     );
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0, selector.getLong(), 0.0f);
-      Assert.assertFalse(selector.isNull());
-    } else {
-      Assert.assertTrue(selector.isNull());
-      Assert.assertTrue(selector.getObject().isNumericNull());
-    }
+    Assert.assertTrue(selector.isNull());
+    Assert.assertTrue(selector.getObject().isNumericNull());
   }
 
   @Test
@@ -791,13 +719,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     );
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0, selector.getDouble(), 0.0f);
-      Assert.assertFalse(selector.isNull());
-    } else {
-      Assert.assertTrue(selector.isNull());
-      Assert.assertTrue(selector.getObject().isNumericNull());
-    }
+    Assert.assertTrue(selector.isNull());
+    Assert.assertTrue(selector.getObject().isNumericNull());
   }
 
   @Test
@@ -815,13 +738,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     );
 
     CURRENT_ROW.set(ROW0);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0, selector.getFloat(), 0.0f);
-      Assert.assertFalse(selector.isNull());
-    } else {
-      Assert.assertTrue(selector.isNull());
-      Assert.assertTrue(selector.getObject().isNumericNull());
-    }
+    Assert.assertTrue(selector.isNull());
+    Assert.assertTrue(selector.getObject().isNumericNull());
   }
 
   @Test

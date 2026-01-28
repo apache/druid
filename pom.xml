@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>37.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -70,73 +70,102 @@
     </scm>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <java.version>8</java.version>
+        <!--  java 11 is no longer supported, but for backward compatibility reasons we plan to stay on 11 until druid37, see https://github.com/apache/druid/pull/18759.
+          Note for upgrade:
+          - remove the maven-compiler-plugin in embedded-tests
+          - remove exclusion of embedded-tests in strict compilation check
+          -->
+        <java.version>11</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.3.0</apache.curator.version>
-        <apache.kafka.version>3.6.1</apache.kafka.version>
+        <apache.curator.version>5.8.0</apache.curator.version>
+        <apache.kafka.version>3.9.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
-        <apache.ranger.version>2.4.0</apache.ranger.version>
-        <gson.version>2.10.1</gson.version>
+        <apache.ranger.version>2.7.0</apache.ranger.version>
+        <gson.version>2.12.0</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.23.0</avatica.version>
-        <avro.version>1.11.3</avro.version>
-        <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
-             default_config.fmpp
-             sql/src/main/codegen/includes/*
+        <avatica.version>1.27.0</avatica.version>
+        <avro.version>1.11.4</avro.version>
+        <!--
+            The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
-        <calcite.version>1.35.0</calcite.version>
-        <confluent.version>6.2.12</confluent.version>
+        <calcite.version>1.37.0</calcite.version>
+        <confluent.version>6.2.15</confluent.version>
+        <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.20.0</errorprone.version>
+        <errorprone.version>2.35.1</errorprone.version>
+        <fabric8.version>7.5.2</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>32.0.1-jre</guava.version>
-        <guice.version>4.1.0</guice.version>
-        <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.54.v20240208</jetty.version>
+        <guava.version>32.1.3-jre</guava.version>
+        <guice.version>5.1.0</guice.version>
+        <hamcrest.version>2.2</hamcrest.version>
+        <jetty.version>12.0.30</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.12.7.20221012</jackson.version>
+        <jackson.version>2.19.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.22.1</log4j.version>
+        <log4j.version>2.25.3</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.108.Final</netty4.version>
+        <netty4.version>4.2.6.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <protobuf.version>3.24.0</protobuf.version>
+        <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>1.7.36</slf4j.version>
-        <jna.version>5.13.0</jna.version>
-        <jna-platform.version>5.13.0</jna-platform.version>
+        <slf4j.version>2.0.16</slf4j.version>
+        <jna.version>5.18.1</jna.version>
+        <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
-        <mockito.version>5.5.0</mockito.version>
-        <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
-             however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
-             We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
-        <mockito.inline.artifact>core</mockito.inline.artifact>
-        <aws.sdk.version>1.12.638</aws.sdk.version>
+        <graaljs.version>22.3.5</graaljs.version>
+        <mockito.version>5.14.2</mockito.version>
+        <aws.sdk.version>1.12.784</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
-        <jacoco.version>0.8.7</jacoco.version>
+        <jacoco.version>0.8.12</jacoco.version>
+        <testcontainers.version>2.0.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.8.4</zookeeper.version>
-        <checkerframework.version>2.5.7</checkerframework.version>
+        <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
-        <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
+        <jdk.strong.encapsulation.argLine>
+            <!-- Strong encapsulation parameters -->
+            <!-- When updating this list, update all four locations: -->
+            <!--  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES -->
+            <!--  2) docs/operations/java.md, "Strong encapsulation" section -->
+            <!--  3) pom.xml, jdk.strong.encapsulation.argLine (here) -->
+            <!--  4) examples/bin/run-java script -->
+
+            <!-- required for DataSketches Memory -->
+            --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+            --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+
+            <!-- required for NativeIO#getfd -->
+            --add-opens=java.base/java.io=ALL-UNNAMED
+
+            <!-- required for Guice -->
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+
+            <!-- required for metrics -->
+            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+
+            <!-- required for certain EqualsVerifier tests (not required in production) -->
+            --add-opens=java.base/java.util=ALL-UNNAMED
+        </jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
+        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -161,11 +190,12 @@
 
     <modules>
         <module>processing</module>
-        <module>indexing-hadoop</module>
-        <module>indexing-service</module>
         <module>server</module>
-        <module>sql</module>
+        <module>indexing-service</module>
+        <module>indexing-hadoop</module>
+        <module>multi-stage-query</module>
         <module>services</module>
+        <module>sql</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
@@ -174,6 +204,7 @@
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/kubernetes-extensions</module>
+        <module>extensions-core/kubernetes-overlord-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -186,7 +217,6 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
-        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -200,9 +230,9 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
-        <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
+        <module>extensions-core/druid-testcontainers</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
@@ -211,6 +241,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
@@ -231,18 +262,18 @@
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
-        <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/grpc-query</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
-
+        <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
-        <!-- Revised integration tests -->
+        <!-- more test stuff -->
         <module>integration-tests-ex/tools</module>
-        <module>integration-tests-ex/image</module>
-        <module>integration-tests-ex/cases</module>
+        <module>quidem-ut</module>
+        <module>embedded-tests</module>
     </modules>
 
     <repositories>
@@ -294,12 +325,12 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.11.0</version>
+                <version>2.17.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
-                <version>1.1.1</version>
+                <version>1.3.5</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
@@ -319,12 +350,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.12.0</version>
+                <version>3.19.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.10.0</version>
+                <version>1.13.1</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -357,20 +388,9 @@
                 <version>2.8.4</version>
             </dependency>
             <dependency>
-                <groupId>org.skife.config</groupId>
-                <artifactId>config-magic</artifactId>
-                <version>0.9</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
-                <version>2.4.11</version>
+                <version>2.5.2</version>
             </dependency>
 
             <!-- transitive dependency of testng
@@ -394,7 +414,7 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.6.10</version>
+                <version>1.9.25</version>
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
@@ -410,7 +430,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.78.1</version>
+                <version>1.81</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -508,6 +528,10 @@
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
                   </exclusion>
+                  <exclusion>
+                      <groupId>net.hydromatic</groupId>
+                      <artifactId>aggdesigner-algorithm</artifactId>
+                  </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -562,11 +586,6 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.google.inject.extensions</groupId>
-                <artifactId>guice-multibindings</artifactId>
-                <version>${guice.version}</version>
-            </dependency>
-            <dependency>
               <groupId>com.google.inject.extensions</groupId>
               <artifactId>guice-assistedinject</artifactId>
               <version>${guice.version}</version>
@@ -579,17 +598,17 @@
             <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
-                <version>73.2</version>
+                <version>77.1</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
-                <version>1.7.14</version>
+                <version>1.7.14.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.26.0</version>
+                <version>1.27.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -609,7 +628,7 @@
                 <type>pom</type>
             </dependency>
             <dependency>
-                <groupId>org.hibernate</groupId>
+                <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${hibernate-validator.version}</version>
             </dependency>
@@ -640,9 +659,9 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>javax.xml.bind</groupId>
-                <artifactId>jaxb-api</artifactId>
-                <version>2.3.1</version>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>2.3.3</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
@@ -657,7 +676,17 @@
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
                 <artifactId>jaxb-runtime</artifactId>
-                <version>2.3.1</version>
+                <version>2.3.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.graalvm.js</groupId>
+                <artifactId>js</artifactId>
+                <version>${graaljs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.graalvm.js</groupId>
+                <artifactId>js-scriptengine</artifactId>
+                <version>${graaljs.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.jdbi</groupId>
@@ -728,26 +757,44 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlet</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlet</artifactId>
+                <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlets</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlets</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-proxy</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-proxy</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-rewrite</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
@@ -774,12 +821,12 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.12.5</version>
+                <version>2.14.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
-                <version>2.0.1</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
@@ -793,7 +840,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
@@ -850,15 +897,26 @@
                 <artifactId>commons-dbcp2</artifactId>
                 <version>2.0.1</version>
             </dependency>
+            <!-- this is relocated to at.yawk.lz4, but license checker script (the one that uses licenses.yaml)
+             complains about stuff (our dependencies) using org.lz4 package, so put this here even though our own
+              packaging doesn't use it directly anymore
+             -->
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
+            </dependency>
+            <!-- dependency:analyze complains if we don't declare this like this in our own packaging, since this is
+             what org.lz4 is relocated as -->
+            <dependency>
+                <groupId>at.yawk.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.10.2</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.4</version>
+                <version>1.1.10.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -894,7 +952,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.11</version>
+                <version>4.4.16</version>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -940,7 +998,7 @@
             <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <!-- override the transitive dependency from com.opencsv:opensv:4.6 to version 1.9.3 to address CVE-2014-0114 -->
-                <version>1.9.4</version>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
@@ -963,20 +1021,24 @@
                 <version>0.9.49</version>
             </dependency>
             <dependency>
+                <groupId>org.checkerframework</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>${checkerframework.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <!-- Uses Netty 4.1.x -->
-                <version>2.5.3</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1011,7 +1073,7 @@
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
-                <version>3.1.0</version>
+                <version>4.0.1</version>
             </dependency>
             <dependency>
                 <groupId>javax.activation</groupId>
@@ -1026,7 +1088,7 @@
             <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
-                <version>3.0.24</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
@@ -1071,7 +1133,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.2</version>
+                <version>5.13.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1119,7 +1181,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.3.4</version>
+                <version>3.6.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -1183,25 +1245,6 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-            <dependency>
-                <groupId>com.maxmind.geoip2</groupId>
-                <artifactId>geoip2</artifactId>
-                <version>0.4.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client-jackson2</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
            <dependency>
                <groupId>org.postgresql</groupId>
                <artifactId>postgresql</artifactId>
@@ -1257,6 +1300,11 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>com.google.j2objc</groupId>
+                <artifactId>j2objc-annotations</artifactId>
+                <version>2.8</version>
+            </dependency>
+            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
@@ -1283,7 +1331,7 @@
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
-                <artifactId>hamcrest-all</artifactId>
+                <artifactId>hamcrest</artifactId>
                 <version>${hamcrest.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -1306,6 +1354,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-testlib</artifactId>
+                <version>${guice.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava-testlib</artifactId>
                 <version>${guava.version}</version>
@@ -1314,7 +1368,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.15.1</version>
+                <version>3.15.8</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1349,7 +1403,7 @@
           <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value-annotations</artifactId>
-            <version>2.8.8</version>
+            <version>2.10.1</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1363,6 +1417,45 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <dependency>
+              <groupId>org.jruby.joni</groupId>
+              <artifactId>joni</artifactId>
+              <version>2.1.34</version>
+          </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-junit-jupiter</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-json-provider</artifactId>
+                <version>${jackson.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-smile-provider</artifactId>
+                <version>${jackson.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1371,7 +1464,7 @@
             <plugin>
                 <groupId>org.openrewrite.maven</groupId>
                 <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.31.0</version>
+                <version>5.42.0</version>
                 <configuration>
                     <activeRecipes>
                         <recipe>org.apache.druid.RewriteRules</recipe>
@@ -1390,7 +1483,17 @@
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-testing-frameworks</artifactId>
-                        <version>2.6.0</version>
+                        <version>2.20.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-apache</artifactId>
+                        <version>1.8.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-jackson</artifactId>
+                        <version>0.6.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -1435,6 +1538,15 @@
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
                         <exclude>com/fasterxml/jackson/databind/*</exclude>
                     </excludes>
+                    <!-- fileSets specify the target locations which will be scanned by jacoco:merge -->
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.basedir}</directory>
+                            <includes>
+                                <include>**/target/jacoco*.exec</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
                 </configuration>
                 <executions>
                     <execution>
@@ -1465,7 +1577,7 @@
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <excludes>
-                        *com/fasterxml/jackson/databind/*
+                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java
                     </excludes>
                 </configuration>
                 <dependencies>
@@ -1488,13 +1600,13 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.2.0</version>
+                <version>4.9.3.2</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>4.2.2</version>
+                        <version>4.8.6</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -1505,7 +1617,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.16.0</version>
+                <version>3.26.0</version>
                 <configuration>
                     <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
@@ -1515,6 +1627,7 @@
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
                     </excludeRoots>
+                    <targetJdk>${maven.compiler.release}</targetJdk>
                 </configuration>
                 <executions>
                     <execution>
@@ -1529,13 +1642,13 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
-                          signatures based on 'maven.compiler.target':
+                          signatures based on 'maven.compiler.release':
                         -->
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
@@ -1548,6 +1661,10 @@
                       <exclude>**/DruidSqlParserImpl.class</exclude>
                       <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
+                      <!-- Exclude JMH-generated classes -->
+                      <exclude>**/*_jmhType_*.class</exclude>
+                      <exclude>**/*_jmhTest_*.class</exclude>
+                      <exclude>**/*_generated*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1589,12 +1706,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <signature>
-                                <groupId>org.codehaus.mojo.signature
-                                </groupId>
-                                <artifactId>java18</artifactId>
-                                <version>1.0</version>
-                            </signature>
+                            <!-- checks for ${java.version}, TODO: replace this plugin with release flag with javac, see https://openjdk.org/jeps/247  -->
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
@@ -1603,6 +1715,19 @@
                                 <ignore>sun.misc.Unsafe</ignore>
                                 <!-- ignore java reflection polymorphic api signatures -->
                                 <ignore>java.lang.invoke.MethodHandle</ignore>
+                                <!-- For ignoring java.lang.ClassLoader#getPlatformClassLoader since that's present in java 9+.
+                                Need to be added since animal sniffer is using JDK8 signature currently. -->
+                                <ignore>java.lang.ClassLoader</ignore>
+                                <!--
+                                 For the following java.nio.* classes, we get errors like: "Undefined reference: java.nio.ByteBuffer java.nio.ByteBuffer.clear()"
+                                 GitHub issue: https://github.com/mojohaus/animal-sniffer/issues/4
+                                 -->
+                                <ignore>java.nio.ByteBuffer</ignore>
+                                <ignore>java.nio.IntBuffer</ignore>
+                                <ignore>java.nio.CharBuffer</ignore>
+                                <ignore>java.nio.FloatBuffer</ignore>
+                                <ignore>java.nio.DoubleBuffer</ignore>
+                                <ignore>java.nio.MappedByteBuffer</ignore>
                             </ignores>
                         </configuration>
                     </execution>
@@ -1611,7 +1736,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1631,6 +1755,11 @@
                                     <excludes>
                                         <!--LGPL licenced library-->
                                         <exclude>com.google.code.findbugs:annotations</exclude>
+                                        <!-- shouldn't be loaded alongside with log4j-slf4j2-impl -->
+                                        <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
+                                        <!-- See https://github.com/apache/druid/pull/17370 -->
+                                        <exclude>javax.xml.bind:jaxb-api</exclude>
+                                        <exclude>org.eclipse.jetty.toolchain:jetty-servlet-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>
@@ -1656,9 +1785,9 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.9.10</version>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -1717,13 +1846,15 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.4.4</version>
+                <version>12.2.0</version>
                 <configuration>
+                    <nvdApiKey>${nvdApiKey}</nvdApiKey>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
                     <!-- For node analysis info, see https://github.com/jeremylong/DependencyCheck/issues/2482#issuecomment-603755623 -->
                     <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>  <!-- plugin author (jeremylong) recommends to disable, since this analyzer is retired -->
+                    <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
                     <nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
                 </configuration>
@@ -1765,8 +1896,6 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
-                            we have jfr profiler enabled which adds additional memory pressure. -->
                             -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1778,6 +1907,8 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
+                            -XX:OnOutOfMemoryError=${project.parent.basedir}/dev/chmod-heap-dumps.sh
+                            -XX:HeapDumpPath=${project.parent.basedir}/target
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                             ${jfrProfilerArgLine}
@@ -1805,23 +1936,17 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-clean-plugin</artifactId>
-                    <version>2.5</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.1.1</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.7</version>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <ignoredNonTestScopedDependencies>
+                            <ignoredNonTestScopedDependency>*</ignoredNonTestScopedDependency>
+                        </ignoredNonTestScopedDependencies>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
-                    <version>2.3.1</version>
                     <executions>
                         <execution>
                             <phase>package</phase>
@@ -1833,18 +1958,8 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.2.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>
@@ -1857,19 +1972,9 @@
                     <version>4.5.3</version>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>license-maven-plugin</artifactId>
-                    <version>1.8</version>
-                </plugin>
-                <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.5.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1884,10 +1989,9 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.10.1</version>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>
@@ -1897,9 +2001,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.11.0</version>
+                    <inherited>true</inherited>
                     <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
+                        <release>${maven.compiler.release}</release>
                     </configuration>
                 </plugin>
               <plugin>
@@ -1912,18 +2016,6 @@
     </build>
 
     <profiles>
-        <!-- mockito 5.x dropped support for Java 8, but is necessary to test against Java >17 -->
-        <profile>
-          <id>pre-java-11</id>
-          <activation>
-            <jdk>(,11)</jdk>
-          </activation>
-          <properties>
-            <!-- mockito-inline was removed in mockito 5.3, but is necessary when running against mockito 4.x for Java 8 -->
-            <mockito.version>4.11.0</mockito.version>
-            <mockito.inline.artifact>inline</mockito.inline.artifact>
-          </properties>
-        </profile>
         <profile>
             <id>java-12+</id>
             <activation>
@@ -1937,54 +2029,6 @@
                 </jdk.security.manager.allow.argLine>
             </properties>
         </profile>
-        <profile>
-            <id>java-9+</id>
-            <activation>
-                <jdk>[9,)</jdk>
-            </activation>
-            <properties>
-                <jdk.strong.encapsulation.argLine>
-                    <!-- Strong encapsulation parameters -->
-                    <!-- When updating this list, update all four locations: -->
-                    <!--  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES -->
-                    <!--  2) docs/operations/java.md, "Strong encapsulation" section -->
-                    <!--  3) pom.xml, jdk.strong.encapsulation.argLine (here) -->
-                    <!--  4) examples/bin/run-java script -->
-
-                    <!-- required for DataSketches Memory -->
-                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
-                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-                    --add-opens=java.base/java.nio=ALL-UNNAMED
-                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
-
-                    <!-- required for NativeIO#getfd -->
-                    --add-opens=java.base/java.io=ALL-UNNAMED
-
-                    <!-- required for Guice -->
-                    --add-opens=java.base/java.lang=ALL-UNNAMED
-
-                    <!-- required for metrics -->
-                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-
-                    <!-- required for certain EqualsVerifier tests (not required in production) -->
-                    --add-opens=java.base/java.util=ALL-UNNAMED
-                </jdk.strong.encapsulation.argLine>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <inherited>true</inherited>
-                        <!-- prefer release instead of source/target in JDK 9 and above -->
-                        <configuration>
-                            <release>${java.version}</release>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-          </profile>
           <profile>
             <id>strict</id>
             <activation>
@@ -2015,9 +2059,10 @@
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                              </compilerArgs>
+                            </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
                                   <groupId>com.google.errorprone</groupId>
@@ -2189,6 +2234,8 @@
                                 <exclude>**/.classpath</exclude> <!-- Eclipse -->
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
+                                <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
+                                <exclude>**/*.sum</exclude> <!-- go.sum is excluded -->
                             </excludes>
                         </configuration>
                     </plugin>
@@ -2248,6 +2295,9 @@
             <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
+        </profile>
+        <profile>
+            <id>ci</id>
         </profile>
     </profiles>
 </project>

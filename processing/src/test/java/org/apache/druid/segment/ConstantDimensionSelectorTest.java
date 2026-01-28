@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -75,7 +74,7 @@ public class ConstantDimensionSelectorTest extends InitializedNullHandlingTest
   public void testLookupId()
   {
     Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(null));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0 : -1, NULL_SELECTOR.idLookup().lookupId(""));
+    Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId(""));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("billy"));
     Assert.assertEquals(-1, NULL_SELECTOR.idLookup().lookupId("bob"));
 

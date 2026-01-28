@@ -272,9 +272,7 @@ public class DeterminePartitionsJob implements Jobby
         }
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
           List<ShardSpec> specs = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
-              {
-              }
+              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<>() {}
           );
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
@@ -416,7 +414,10 @@ public class DeterminePartitionsJob implements Jobby
     {
       final List<Object> timeAndDims = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(key.getBytes(), List.class);
 
-      final DateTime timestamp = new DateTime(timeAndDims.get(0), ISOChronology.getInstanceUTC());
+      final Object timestampObj = timeAndDims.get(0);
+      final long longTimestamp = ((Number) timestampObj).longValue();
+      final DateTime timestamp = new DateTime(longTimestamp, ISOChronology.getInstanceUTC());
+
       final Map<String, Iterable<String>> dims = (Map<String, Iterable<String>>) timeAndDims.get(1);
 
       helper.emitDimValueCounts(context, timestamp, dims);
@@ -619,7 +620,7 @@ public class DeterminePartitionsJob implements Jobby
 
     private static Iterable<DimValueCount> combineRows(Iterable<Text> input)
     {
-      final Comparator<List<String>> dimsComparator = new Comparator<List<String>>()
+      final Comparator<List<String>> dimsComparator = new Comparator<>()
       {
         @Override
         public int compare(List<String> o1, List<String> o2)
@@ -922,7 +923,7 @@ public class DeterminePartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.JSON_MAPPER
-            .writerWithType(
+            .writerFor(
                 new TypeReference<List<ShardSpec>>()
                 {
                 }

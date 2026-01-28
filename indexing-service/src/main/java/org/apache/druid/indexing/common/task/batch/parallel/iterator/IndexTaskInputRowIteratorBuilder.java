@@ -19,11 +19,10 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 
-import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
 public interface IndexTaskInputRowIteratorBuilder
 {
@@ -34,7 +33,6 @@ public interface IndexTaskInputRowIteratorBuilder
 
   /**
    * @param granularitySpec {@link GranularitySpec} for the {@link org.apache.druid.segment.indexing.DataSchema}
-   *                        associated with the {@link Firehose}.
    */
   IndexTaskInputRowIteratorBuilder granularitySpec(GranularitySpec granularitySpec);
 

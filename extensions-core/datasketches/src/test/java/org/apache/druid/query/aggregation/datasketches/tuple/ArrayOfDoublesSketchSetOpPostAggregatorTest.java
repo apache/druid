@@ -76,9 +76,10 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
         Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchSetOpPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new ArrayOfDoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchSetOpPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

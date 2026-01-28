@@ -31,7 +31,7 @@ public class SimpleSequence<T> extends BaseSequence<T, Iterator<T>>
   SimpleSequence(final Iterable<T> iterable)
   {
     super(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()

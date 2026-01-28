@@ -1,6 +1,6 @@
 ---
 id: test-stats
-title: "Test Stats Aggregators"
+title: "Test stats aggregators"
 ---
 
 <!--
@@ -23,24 +23,29 @@ title: "Test Stats Aggregators"
   -->
 
 
-This Apache Druid extension incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details.
+The `druid-stats` extension for Apache Druid incorporates aggregators to compute test statistics, including z-scores and p-values.
+Please refer to [Democratizing Experimentation Data for Product Innovations](https://medium.com/paypal-tech/democratizing-experimentation-data-for-product-innovations-8b6e1cf40c27) for math background and details.
 
 Make sure to include `druid-stats` extension in order to use these aggregators.
 
 ## Z-Score for two sample ztests post aggregator
 
-Please refer to [https://www.isixsigma.com/tools-templates/hypothesis-testing/making-sense-two-proportions-test/](https://www.isixsigma.com/tools-templates/hypothesis-testing/making-sense-two-proportions-test/) and [http://www.ucs.louisiana.edu/~jcb0773/Berry_statbook/Berry_statbook_chpt6.pdf](http://www.ucs.louisiana.edu/~jcb0773/Berry_statbook/Berry_statbook_chpt6.pdf) for more details.
+Please refer to [Making Sense of the Two-Proportions Test](https://www.isixsigma.com/tools-templates/hypothesis-testing/making-sense-two-proportions-test/) and [An Introduction to Statistics: Comparing Two Means](https://userweb.ucs.louisiana.edu/~jcb0773/Berry_statbook/427bookall-August2024.pdf) for more details.
 
-z = (p1 - p2) / S.E.  (assuming null hypothesis is true)
+```
+z = (p1 - p2) / S.E.  (assuming null hypothesis is true)
+```
 
 Please see below for p1 and p2.
 Please note S.E. stands for standard error where
 
+```
 S.E. = sqrt{ p1 * ( 1 - p1 )/n1 + p2 * (1 - p2)/n2) }
-
+```
 (p1 – p2) is the observed difference between two sample proportions.
 
 ### zscore2sample post aggregator
+
 * **`zscore2sample`**: calculate the z-score using two-sample z-test while converting binary variables (***e.g.*** success or not) to continuous variables (***e.g.*** conversion rate).
 
 ```json
@@ -74,7 +79,7 @@ p2 = (successCount2) / (sample size 2)
 }
 ```
 
-## Example Usage
+## Example usage
 
 In this example, we use zscore2sample post aggregator to calculate z-score, and then feed the z-score to pvalue2tailedZtest post aggregator to calculate p-value.
 

@@ -20,15 +20,20 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.frame.write.FrameWriterTestData;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -41,6 +46,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
+
+import java.util.List;
+import java.util.Objects;
 
 public class LongFieldReaderTest extends InitializedNullHandlingTest
 {
@@ -71,8 +79,8 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_isNull_defaultOrNull()
   {
-    writeToMemory(NullHandling.defaultLongValue());
-    Assert.assertEquals(NullHandling.sqlCompatible(), LongFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+    writeToMemory(null);
+    Assert.assertTrue(LongFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -85,16 +93,12 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_defaultOrNull()
   {
-    writeToMemory(NullHandling.defaultLongValue());
+    writeToMemory(null);
 
     final ColumnValueSelector<?> readSelector =
         LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
-    Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
-
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals((long) NullHandling.defaultLongValue(), readSelector.getLong());
-    }
+    Assert.assertTrue(readSelector.isNull());
   }
 
   @Test
@@ -111,7 +115,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeDimensionSelector_defaultOrNull()
   {
-    writeToMemory(NullHandling.defaultLongValue());
+    writeToMemory(null);
 
     final DimensionSelector readSelector =
         LongFieldReader.forPrimitive()
@@ -120,7 +124,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
     Assert.assertEquals(1, row.size());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? "0" : null, readSelector.lookupName(0));
+    Assert.assertNull(readSelector.lookupName(0));
 
     // Informational method tests.
     Assert.assertFalse(readSelector.supportsLookupNameUtf8());
@@ -130,17 +134,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(readSelector.makeValueMatcher("0").matches(false));
-      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches(false));
-      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
-      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
-    } else {
-      Assert.assertFalse(readSelector.makeValueMatcher("0").matches(false));
-      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
-      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
-      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
-    }
+    Assert.assertFalse(readSelector.makeValueMatcher("0").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
   }
 
   @Test
@@ -200,6 +197,28 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
     Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
     Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
+  }
+
+
+  @Test
+  public void testCompareRows()
+  {
+    final List<Long> rows = FrameWriterTestData.TEST_LONGS.getData(KeyOrder.ASCENDING);
+
+    final ColumnAccessor accessor =
+        RowBasedFrameRowsAndColumnsTest.MAKER.apply(
+            MapOfColumnsRowsAndColumns.builder()
+                                      .add("dim1", rows.toArray(), ColumnType.LONG)
+                                      .build()
+        ).findColumn("dim1").toAccessor();
+
+    for (int i = 1; i < rows.size(); i++) {
+      if (Objects.equals(accessor.getObject(i - 1), accessor.getObject(i))) {
+        Assert.assertEquals(0, accessor.compareRows(i - 1, i));
+      } else {
+        Assert.assertTrue(accessor.compareRows(i - 1, i) < 0);
+      }
+    }
   }
 
   private void writeToMemory(final Long value)

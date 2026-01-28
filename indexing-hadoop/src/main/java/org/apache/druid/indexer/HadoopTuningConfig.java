@@ -46,7 +46,6 @@ public class HadoopTuningConfig implements TuningConfig
 
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
-  private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -57,12 +56,11 @@ public class HadoopTuningConfig implements TuningConfig
         DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
-        DEFAULT_INDEX_SPEC,
-        DEFAULT_INDEX_SPEC,
+        IndexSpec.getDefault(),
+        IndexSpec.getDefault(),
         DEFAULT_APPENDABLE_INDEX,
         DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
-        false,
         false,
         true,
         false,
@@ -92,7 +90,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
-  private final boolean useMaxMemoryEstimates;
   private final boolean leaveIntermediate;
   private final boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -129,7 +126,6 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       final @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       final @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      final @JsonProperty("useMaxMemoryEstimates") @Nullable Boolean useMaxMemoryEstimates,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") @Nullable Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -154,7 +150,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.version = Configs.valueOrDefault(version, DateTimes.nowUtc().toString());
     this.partitionsSpec = Configs.valueOrDefault(partitionsSpec, DEFAULT_PARTITIONS_SPEC);
     this.shardSpecs = Configs.valueOrDefault(shardSpecs, DEFAULT_SHARD_SPECS);
-    this.indexSpec = Configs.valueOrDefault(indexSpec, DEFAULT_INDEX_SPEC);
+    this.indexSpec = Configs.valueOrDefault(indexSpec, IndexSpec.getDefault());
     this.indexSpecForIntermediatePersists = Configs.valueOrDefault(
         indexSpecForIntermediatePersists,
         this.indexSpec
@@ -163,7 +159,6 @@ public class HadoopTuningConfig implements TuningConfig
         maxRowsInMemory,
         Configs.valueOrDefault(maxRowsInMemoryCOMPAT, DEFAULT_MAX_ROWS_IN_MEMORY_BATCH)
     );
-    this.useMaxMemoryEstimates = Configs.valueOrDefault(useMaxMemoryEstimates, false);
     this.appendableIndexSpec = Configs.valueOrDefault(appendableIndexSpec, DEFAULT_APPENDABLE_INDEX);
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
@@ -264,12 +259,6 @@ public class HadoopTuningConfig implements TuningConfig
   public long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
-  }
-
-  @JsonProperty
-  public boolean isUseMaxMemoryEstimates()
-  {
-    return useMaxMemoryEstimates;
   }
 
   @JsonProperty
@@ -381,7 +370,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -414,7 +402,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -447,7 +434,6 @@ public class HadoopTuningConfig implements TuningConfig
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        useMaxMemoryEstimates,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,

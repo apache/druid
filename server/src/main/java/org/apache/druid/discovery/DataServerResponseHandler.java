@@ -118,7 +118,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     }
     return ClientResponse.finished(
         new SequenceInputStream(
-            new Enumeration<InputStream>()
+            new Enumeration<>()
             {
               @Override
               public boolean hasMoreElements()

@@ -20,24 +20,25 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.audit.AuditInfo;
 import org.joda.time.DateTime;
+
+import java.util.Objects;
 
 /**
  * A DTO containing audit information for compaction config for a datasource.
  */
 public class DataSourceCompactionConfigAuditEntry
 {
-  private final GlobalCompactionConfig globalConfig;
+  private final ClusterCompactionConfig globalConfig;
   private final DataSourceCompactionConfig compactionConfig;
   private final AuditInfo auditInfo;
   private final DateTime auditTime;
 
   @JsonCreator
   public DataSourceCompactionConfigAuditEntry(
-      @JsonProperty("globalConfig") GlobalCompactionConfig globalConfig,
+      @JsonProperty("globalConfig") ClusterCompactionConfig globalConfig,
       @JsonProperty("compactionConfig") DataSourceCompactionConfig compactionConfig,
       @JsonProperty("auditInfo") AuditInfo auditInfo,
       @JsonProperty("auditTime") DateTime auditTime
@@ -50,7 +51,7 @@ public class DataSourceCompactionConfigAuditEntry
   }
 
   @JsonProperty
-  public GlobalCompactionConfig getGlobalConfig()
+  public ClusterCompactionConfig getGlobalConfig()
   {
     return globalConfig;
   }
@@ -73,52 +74,31 @@ public class DataSourceCompactionConfigAuditEntry
     return auditTime;
   }
 
-  /**
-   * A DTO containing compaction config for that affects the entire cluster.
-   */
-  public static class GlobalCompactionConfig
+  public boolean hasSameConfig(DataSourceCompactionConfigAuditEntry other)
   {
-    private final double compactionTaskSlotRatio;
-    private final int maxCompactionTaskSlots;
-    private final boolean useAutoScaleSlots;
+    return Objects.equals(this.compactionConfig, other.compactionConfig)
+        && Objects.equals(this.globalConfig, other.globalConfig);
+  }
 
-    @JsonCreator
-    public GlobalCompactionConfig(
-        @JsonProperty("compactionTaskSlotRatio")
-        double compactionTaskSlotRatio,
-        @JsonProperty("maxCompactionTaskSlots") int maxCompactionTaskSlots,
-        @JsonProperty("useAutoScaleSlots") boolean useAutoScaleSlots
-    )
-    {
-      this.compactionTaskSlotRatio = compactionTaskSlotRatio;
-      this.maxCompactionTaskSlots = maxCompactionTaskSlots;
-      this.useAutoScaleSlots = useAutoScaleSlots;
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
     }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DataSourceCompactionConfigAuditEntry that = (DataSourceCompactionConfigAuditEntry) o;
+    return Objects.equals(globalConfig, that.globalConfig)
+           && Objects.equals(compactionConfig, that.compactionConfig)
+           && Objects.equals(auditInfo, that.auditInfo)
+           && Objects.equals(auditTime, that.auditTime);
+  }
 
-    @JsonProperty
-    public double getCompactionTaskSlotRatio()
-    {
-      return compactionTaskSlotRatio;
-    }
-
-    @JsonProperty
-    public int getMaxCompactionTaskSlots()
-    {
-      return maxCompactionTaskSlots;
-    }
-
-    @JsonProperty
-    public boolean isUseAutoScaleSlots()
-    {
-      return useAutoScaleSlots;
-    }
-
-    @JsonIgnore
-    public boolean hasSameConfig(CoordinatorCompactionConfig coordinatorCompactionConfig)
-    {
-      return useAutoScaleSlots == coordinatorCompactionConfig.isUseAutoScaleSlots() &&
-             compactionTaskSlotRatio == coordinatorCompactionConfig.getCompactionTaskSlotRatio() &&
-             coordinatorCompactionConfig.getMaxCompactionTaskSlots() == maxCompactionTaskSlots;
-    }
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(globalConfig, compactionConfig, auditInfo, auditTime);
   }
 }

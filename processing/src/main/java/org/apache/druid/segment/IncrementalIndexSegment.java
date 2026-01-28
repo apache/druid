@@ -20,9 +20,12 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
+import org.apache.druid.segment.incremental.IncrementalIndexPhysicalSegmentInspector;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -49,16 +52,30 @@ public class IncrementalIndexSegment implements Segment
     return index.getInterval();
   }
 
+  @Nullable
   @Override
-  public QueryableIndex asQueryableIndex()
+  public <T> T as(final Class<T> clazz)
   {
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) new IncrementalIndexCursorFactory(index);
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) new IncrementalIndexTimeBoundaryInspector(index);
+    } else if (MaxIngestedEventTimeInspector.class.equals(clazz)) {
+      return (T) new IncrementalIndexMaxIngestedEventTimeInspector(index);
+    } else if (Metadata.class.equals(clazz)) {
+      return (T) index.getMetadata();
+    } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+      return (T) new IncrementalIndexPhysicalSegmentInspector(index);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(true);
+    }
     return null;
   }
 
   @Override
-  public StorageAdapter asStorageAdapter()
+  public String getDebugString()
   {
-    return new IncrementalIndexStorageAdapter(index);
+    return getClass().getSimpleName() + ":" + segmentId;
   }
 
   @Override

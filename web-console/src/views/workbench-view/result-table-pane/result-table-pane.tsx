@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar, SqlType } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
@@ -61,6 +60,30 @@ const CAST_TARGETS: string[] = ['VARCHAR', 'BIGINT', 'DOUBLE'];
 
 function getJsonPaths(jsons: Record<string, any>[]): string[] {
   return ['$.'].concat(computeFlattenExprsForData(jsons, 'include-arrays', true));
+}
+
+function isStringJsonObject(value: string): boolean {
+  if (!(value.startsWith('{') && value.endsWith('}'))) {
+    return false;
+  }
+
+  try {
+    return typeof JSON.parse(value) === 'object';
+  } catch {
+    return false;
+  }
+}
+
+function isStringJsonString(value: string): boolean {
+  if (!(value.startsWith('"') && value.endsWith('"'))) {
+    return false;
+  }
+
+  try {
+    return typeof JSON.parse(value) === 'string';
+  } catch {
+    return false;
+  }
 }
 
 function getExpressionIfAlias(query: SqlQuery, columnIndex: number, numColumns: number): string {
@@ -183,15 +206,18 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
         );
       }
 
-      // Casts
+      // Expression changers
       if (selectExpression) {
         const underlyingExpression = selectExpression.getUnderlyingExpression();
-        if (underlyingExpression instanceof SqlFunction && underlyingExpression.getCastType()) {
+        const columnValues = queryResult.getColumnByIndex(headerIndex)!;
+
+        // Remove outer function
+        if (underlyingExpression instanceof SqlFunction && underlyingExpression.getArg(0)) {
           menuItems.push(
             <MenuItem
               key="uncast"
               icon={IconNames.CROSS}
-              text="Remove cast"
+              text={`Remove outer ${underlyingExpression.getEffectiveFunctionName()} function`}
               onClick={() => {
                 if (!selectExpression || !underlyingExpression) return;
                 handleQueryAction(q =>
@@ -205,6 +231,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           );
         }
 
+        // Add a CAST
         menuItems.push(
           <MenuItem key="cast" icon={IconNames.EXCHANGE} text="Cast to...">
             {filterMap(CAST_TARGETS, asType => {
@@ -218,8 +245,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                     handleQueryAction(q =>
                       q.changeSelect(
                         headerIndex,
-                        selectExpression
-                          .getUnderlyingExpression()
+                        underlyingExpression
                           .cast(asType)
                           .setAlias(selectExpression.getOutputName()),
                       ),
@@ -230,47 +256,91 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             })}
           </MenuItem>,
         );
-      }
 
-      // JSON hint
-      if (selectExpression && column.nativeType === 'COMPLEX<json>') {
-        const paths = getJsonPaths(
-          filterMap(queryResult.rows, row => {
-            const v = row[headerIndex];
-            // Strangely multi-stage-query-engine and broker deal with JSON differently
-            if (v && typeof v === 'object') return v;
-            try {
-              return JSONBig.parse(v);
-            } catch {
-              return;
-            }
-          }),
-        );
+        // Parse as JSON
+        if (column.nativeType === 'STRING' && queryResult.getNumResults()) {
+          if (columnValues.every(isStringJsonObject)) {
+            menuItems.push(
+              <MenuItem
+                key="parse_json"
+                icon={IconNames.DIAGRAM_TREE}
+                text="Parse as JSON"
+                onClick={() => {
+                  if (!selectExpression) return;
+                  handleQueryAction(q =>
+                    q.changeSelect(
+                      headerIndex,
+                      F('TRY_PARSE_JSON', underlyingExpression).setAlias(
+                        selectExpression.getOutputName(),
+                      ),
+                    ),
+                  );
+                }}
+              />,
+            );
+          } else if (columnValues.every(isStringJsonString)) {
+            menuItems.push(
+              <MenuItem
+                key="unquote_json_string"
+                icon={IconNames.DOCUMENT_SHARE}
+                text="Unquote JSON string"
+                onClick={() => {
+                  if (!selectExpression) return;
+                  handleQueryAction(q =>
+                    q.changeSelect(
+                      headerIndex,
+                      SqlFunction.jsonValue(
+                        F('TRY_PARSE_JSON', underlyingExpression),
+                        '$',
+                        SqlType.VARCHAR,
+                      ).setAlias(selectExpression.getOutputName()),
+                    ),
+                  );
+                }}
+              />,
+            );
+          }
+        }
 
-        if (paths.length) {
-          menuItems.push(
-            <MenuItem key="json_value" icon={IconNames.DIAGRAM_TREE} text="Get JSON value for...">
-              {paths.map(path => {
-                return (
-                  <MenuItem
-                    key={path}
-                    text={path}
-                    onClick={() => {
-                      if (!selectExpression) return;
-                      handleQueryAction(q =>
-                        q.addSelect(
-                          F('JSON_VALUE', selectExpression.getUnderlyingExpression(), path).as(
-                            selectExpression.getOutputName() + path.replace(/^\$/, ''),
-                          ),
-                          { insertIndex: headerIndex + 1 },
-                        ),
-                      );
-                    }}
-                  />
-                );
-              })}
-            </MenuItem>,
+        // Extract a JSON path
+        if (column.nativeType === 'COMPLEX<json>' && queryResult.getNumResults()) {
+          const paths = getJsonPaths(
+            filterMap(columnValues, (v: any) => {
+              // Strangely, multi-stage-query-engine and broker deal with JSON differently
+              if (v && typeof v === 'object') return v;
+              try {
+                return JSONBig.parse(v);
+              } catch {
+                return;
+              }
+            }),
           );
+
+          if (paths.length) {
+            menuItems.push(
+              <MenuItem key="json_value" icon={IconNames.DIAGRAM_TREE} text="Get JSON value for...">
+                {paths.map(path => {
+                  return (
+                    <MenuItem
+                      key={path}
+                      text={path}
+                      onClick={() => {
+                        if (!selectExpression) return;
+                        handleQueryAction(q =>
+                          q.addSelect(
+                            SqlFunction.jsonValue(underlyingExpression, path).setAlias(
+                              selectExpression.getOutputName() + path.replace(/^\$/, ''),
+                            ),
+                            { insertIndex: headerIndex + 1 },
+                          ),
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </MenuItem>,
+            );
+          }
         }
       }
 
@@ -609,9 +679,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             return {
               Header() {
                 return (
-                  <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                  <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name" title={columnToSummary(column)}>
+                      <div className="output-name" data-tooltip={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (
@@ -624,7 +694,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         </div>
                       )}
                     </div>
-                  </Popover2>
+                  </Popover>
                 );
               },
               headerClassName: getHeaderClassName(h),
@@ -633,7 +703,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 const value = row.value;
                 return (
                   <div>
-                    <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -644,7 +714,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover2>
+                    </Popover>
                   </div>
                 );
               },
@@ -657,7 +727,9 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
       {editingExpression && (
         <ExpressionEditorDialog
           includeOutputName

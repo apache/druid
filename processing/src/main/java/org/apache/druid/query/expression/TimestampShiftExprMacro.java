@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.joda.time.Chronology;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -101,7 +101,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprEval timestamp = args.get(0).eval(bindings);
       if (timestamp.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       return ExprEval.of(chronology.add(period, timestamp.asLong(), step));
     }
@@ -115,18 +115,10 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      ExprVectorProcessor<?> processor;
-      processor = new LongOutLongInFunctionVectorValueProcessor(
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
           CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(long input)
-        {
-          return chronology.add(period, input, step);
-        }
-      };
+          input -> chronology.add(period, input, step)
+      );
 
       return (ExprVectorProcessor<T>) processor;
     }
@@ -152,7 +144,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprEval timestamp = args.get(0).eval(bindings);
       if (timestamp.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       final Period period = getPeriod(args, bindings);
       final Chronology chronology = getTimeZone(args, bindings);

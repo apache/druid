@@ -53,19 +53,6 @@ public class TestSegmentForAs implements Segment
     return id.getInterval();
   }
 
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return as(QueryableIndex.class);
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return as(StorageAdapter.class);
-  }
-
   @SuppressWarnings("unchecked")
   @Nullable
   @Override

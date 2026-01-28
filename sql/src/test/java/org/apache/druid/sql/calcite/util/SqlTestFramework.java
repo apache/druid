@@ -20,39 +20,89 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.client.TestHttpClient;
+import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.cache.Cache;
+import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.StorageNodeModule;
+import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetricsFactory;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupingEngine;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.quidem.ProjectPathUtils;
+import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.SubqueryGuardrailHelper;
+import org.apache.druid.server.TestClusterQuerySegmentWalker;
+import org.apache.druid.server.TestClusterQuerySegmentWalker.TestSegmentsBroker;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -61,18 +111,29 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 
+import javax.inject.Named;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -138,29 +199,22 @@ public class SqlTestFramework
      */
     void gatherProperties(Properties properties);
 
+    Class<? extends SqlEngine> getSqlEngineClass();
+
+    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    );
+
     /**
-     * Configure modules needed for tests. This is the preferred way to configure
-     * Jackson: include the production module in this method that includes the
-     * required Jackson configuration.
+     * Should return a module which provides the core Druid components.
      */
-    void configureGuice(DruidInjectorBuilder builder);
+    DruidModule getCoreModule();
 
-    QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer closer
-    );
-
-    SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    );
-
-    SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper objectMapper,
-        Injector injector
-    );
+    /**
+     * Provides the overrides the core Druid components.
+     */
+    DruidModule getOverrideModule();
 
     default CatalogResolver createCatalogResolver()
     {
@@ -169,19 +223,141 @@ public class SqlTestFramework
 
     /**
      * Configure the JSON mapper.
-     *
-     * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
      */
-    void configureJsonMapper(ObjectMapper mapper);
+    @Deprecated
+    default void configureJsonMapper(ObjectMapper mapper)
+    {
+    }
 
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
 
     PlannerComponentSupplier getPlannerComponentSupplier();
+
     @Override
     default void close() throws IOException
     {
+    }
+
+    /**
+     * Configures modules and overrides.
+     *
+     * New classes should use the {@link QueryComponentSupplier#getCoreModule()}
+     * and {@link QueryComponentSupplier#getOverrideModule()} methods.
+     */
+    @Deprecated
+    void configureGuice(DruidInjectorBuilder injectorBuilder, List<Module> overrideModules);
+
+    /**
+     * Communicates if explain are supported.
+     *
+     * MSQ right now needs a full query run.
+     */
+    Boolean isExplainSupported();
+
+    QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
+
+    TempDirProducer getTempDirProducer();
+  }
+
+  public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
+  {
+    private final QueryComponentSupplier delegate;
+
+    public QueryComponentSupplierDelegate(QueryComponentSupplier delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+      delegate.gatherProperties(properties);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
+    {
+      delegate.configureGuice(builder, overrideModules);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
+    {
+      return delegate.addSegmentsToWalker(walker, jsonMapper);
+    }
+
+    @Override
+    public void configureJsonMapper(ObjectMapper mapper)
+    {
+      delegate.configureJsonMapper(mapper);
+    }
+
+    @Override
+    public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+    {
+      return delegate.createJoinableFactoryWrapper(lookupProvider);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      delegate.finalizeTestFramework(sqlTestFramework);
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return delegate.getPlannerComponentSupplier();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      delegate.close();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(
+        QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser
+    )
+    {
+      return delegate.wrapConglomerate(conglomerate, resourceCloser);
+    }
+
+    @Override
+    public DruidModule getCoreModule()
+    {
+      return delegate.getCoreModule();
+    }
+
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return delegate.getOverrideModule();
+    }
+
+    @Override
+    public Class<? extends SqlEngine> getSqlEngineClass()
+    {
+      return delegate.getSqlEngineClass();
+    }
+
+    @Override
+    public TempDirProducer getTempDirProducer()
+    {
+      return delegate.getTempDirProducer();
     }
   }
 
@@ -233,61 +409,220 @@ public class SqlTestFramework
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-    }
+      return DruidModuleCollection.of(
+          new PolicyModule(),
+          new LookylooModule(),
+          new SegmentWranglerModule(),
+          new ExpressionModule(),
+          new CatalogCoreModule(),
+          DruidModule.override(
+              new QueryRunnerFactoryModule(),
+              new Module()
+              {
+                @Override
+                public void configure(Binder binder)
+                {
 
-    @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer resourceCloser
-    )
-    {
-      if (builder.mergeBufferCount == 0) {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            () -> builder.minTopNThreshold
-        );
-      } else {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            QueryStackTests.getProcessingConfig(builder.mergeBufferCount)
-        );
-      }
-    }
+                }
 
-    @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
-    {
-      return TestDataBuilder.createMockWalker(
-          injector,
-          conglomerate,
-          tempDirProducer.newTempFolder("segments"),
-          QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-          joinableFactory
+                @Provides
+                @Named("isExplainSupported")
+                public Boolean isExplainSupported(Builder builder)
+                {
+                  return builder.componentSupplier.isExplainSupported();
+                }
+
+                @Provides
+                public QueryComponentSupplier getQueryComponentSupplier(Builder builder)
+                {
+                  return builder.componentSupplier;
+                }
+
+                @Provides
+                @LazySingleton
+                GroupByQueryMetricsFactory groupByQueryMetricsFactory()
+                {
+                  return DefaultGroupByQueryMetricsFactory.instance();
+                }
+
+                @Provides
+                @LazySingleton
+                public TopNQueryConfig makeTopNQueryConfig(Builder builder)
+                {
+                  return new TopNQueryConfig()
+                  {
+                    @Override
+                    public int getMinTopNThreshold()
+                    {
+                      return builder.minTopNThreshold;
+                    }
+                  };
+                }
+
+                @Provides
+                public QueryWatcher getQueryWatcher()
+                {
+                  return QueryRunnerTestHelper.NOOP_QUERYWATCHER;
+                }
+              }
+          ),
+          new BuiltInTypesModule(),
+          new TestSqlModule(),
+          DruidModule.override(
+              new ServerModule(),
+              new Module()
+              {
+                @Provides
+                @Self
+                @LazySingleton
+                public DruidNode makeSelfDruidNode()
+                {
+                  return new DruidNode("druid/broker", "local-test-host", false, 12345, 443, true, false);
+                }
+
+                @Override
+                public void configure(Binder binder)
+                {
+                }
+              }
+              ),
+          new LifecycleModule(),
+          DruidModule.override(
+              new QueryableModule(),
+              binder -> {
+                TestRequestLogger testRequestLogger = new TestRequestLogger();
+                binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+              }
+          ),
+          DruidModule.override(
+              new SqlModule(),
+              new Module()
+              {
+                @Override
+                public void configure(Binder binder)
+                {
+                }
+
+                @Provides
+                @LazySingleton
+                ViewManager createViewManager(Builder builder)
+                {
+                  return builder.componentSupplier.getPlannerComponentSupplier().createViewManager();
+                }
+
+                @Provides
+                @LazySingleton
+                private DruidSchema makeDruidSchema(
+                    final Injector injector,
+                    QueryRunnerFactoryConglomerate conglomerate,
+                    QuerySegmentWalker walker,
+                    Builder builder,
+                    TimelineServerView timelineServerView
+                )
+                {
+                  return QueryFrameworkUtils.createMockSchema(
+                      injector,
+                      conglomerate,
+                      (SpecificSegmentsQuerySegmentWalker) walker,
+                      builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+                      builder.catalogResolver,
+                      timelineServerView
+                  );
+                }
+
+                @Provides
+                @LazySingleton
+                private SystemSchema makeSystemSchema(
+                    AuthorizerMapper authorizerMapper,
+                    DruidSchema druidSchema,
+                    TimelineServerView timelineServerView)
+                {
+                  return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+                }
+
+                @Provides
+                @LazySingleton
+                private TimelineServerView makeTimelineServerView(SpecificSegmentsQuerySegmentWalker walker)
+                {
+                  return new TestTimelineServerView(walker.getSegments());
+                }
+
+                @Provides
+                @LazySingleton
+                private LookupSchema makeLookupSchema(final Injector injector)
+                {
+                  return QueryFrameworkUtils.createMockLookupSchema(injector);
+                }
+
+                @Provides
+                @LazySingleton
+                private DruidSchemaCatalog makeCatalog(
+                    final PlannerConfig plannerConfig,
+                    final ViewManager viewManager,
+                    AuthorizerMapper authorizerMapper,
+                    DruidSchema druidSchema,
+                    SystemSchema systemSchema,
+                    LookupSchema lookupSchema,
+                    DruidOperatorTable createOperatorTable
+                )
+                {
+                  final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+                      plannerConfig,
+                      viewManager,
+                      authorizerMapper,
+                      druidSchema,
+                      systemSchema,
+                      lookupSchema,
+                      createOperatorTable
+                  );
+                  return rootSchema;
+                }
+              }
+          ),
+          new TestSetupModule(),
+          new TestSchemaSetupModule(),
+          new StorageNodeModule()
       );
     }
 
     @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper objectMapper,
-        Injector injector
-    )
+    public DruidModule getOverrideModule()
     {
-      return new NativeSqlEngine(
-          qlf,
-          objectMapper
-      );
+      return DruidModuleCollection.of();
+    }
+
+    /**
+     * Configures Guice modules (mostly).
+     *
+     * Deprecated; see: {@link QueryComponentSupplier#configureGuice(DruidInjectorBuilder, List)}
+     */
+    @Deprecated
+    protected void configureGuice(DruidInjectorBuilder builder)
+    {
     }
 
     @Override
-    public void configureJsonMapper(ObjectMapper mapper)
+    @Deprecated
+    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
+      configureGuice(builder);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
+    {
+      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker, jsonMapper);
+    }
+
+    @Override
+    public Class<? extends SqlEngine> getSqlEngineClass()
+    {
+      return NativeSqlEngine.class;
     }
 
     @Override
@@ -317,6 +652,27 @@ public class SqlTestFramework
     public void close() throws IOException
     {
       tempDirProducer.close();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return true;
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(
+        QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser
+    )
+    {
+      return conglomerate;
+    }
+
+    @Override
+    public final TempDirProducer getTempDirProducer()
+    {
+      return tempDirProducer;
     }
   }
 
@@ -406,6 +762,7 @@ public class SqlTestFramework
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
     private SqlTestFrameworkConfig config;
+    private Closer resourceCloser = Closer.create();
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -446,6 +803,21 @@ public class SqlTestFramework
       this.config = config;
       return this;
     }
+
+    public QueryComponentSupplier getComponentSupplier()
+    {
+      return componentSupplier;
+    }
+
+    public CatalogResolver getCatalogResolver()
+    {
+      return catalogResolver;
+    }
+
+    public Closer getResourceCloser()
+    {
+      return resourceCloser;
+    }
   }
 
   /**
@@ -476,7 +848,8 @@ public class SqlTestFramework
           viewManager,
           componentSupplier.createSchemaManager(),
           framework.authorizerMapper,
-          framework.builder.catalogResolver
+          framework.builder.catalogResolver,
+          framework.injector.getInstance(TimelineServerView.class)
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -490,14 +863,12 @@ public class SqlTestFramework
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
-          authConfig != null ? authConfig : new AuthConfig()
+          authConfig != null ? authConfig : new AuthConfig(),
+          NoopPolicyEnforcer.instance(),
+          new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);
-      this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(
-          framework.engine,
-          plannerFactory,
-          authConfig
-      );
+      this.statementFactory = QueryFrameworkUtils.createSqlMultiStatementFactory(framework.engine, plannerFactory);
       componentSupplier.populateViews(viewManager, plannerFactory);
     }
 
@@ -530,13 +901,31 @@ public class SqlTestFramework
    * This is an intermediate solution: the ultimate solution is to create things
    * in Guice itself.
    */
-  private class TestSetupModule implements DruidModule
+  public static class TestSetupModule implements DruidModule
   {
-    private final Builder builder;
-
-    public TestSetupModule(Builder builder)
+    @Provides
+    TempDirProducer getTempDirProducer(Builder builder)
     {
-      this.builder = builder;
+      return builder.componentSupplier.getTempDirProducer();
+    }
+
+    @Provides
+    ServiceEmitter getServiceEmitter()
+    {
+      return NoopServiceEmitter.instance();
+    }
+
+    @Provides
+    @LazySingleton
+    public QuerySegmentWalker getQuerySegmentWalker(SpecificSegmentsQuerySegmentWalker walker)
+    {
+      return walker;
+    }
+
+    @Provides
+    ChatHandlerProvider getChatHandlerProvider()
+    {
+      return new NoopChatHandlerProvider();
     }
 
     @Override
@@ -544,19 +933,94 @@ public class SqlTestFramework
     {
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null));
     }
 
     @Provides
-    @LazySingleton
-    public QueryRunnerFactoryConglomerate conglomerate()
+    @Global
+    NonBlockingPool<ByteBuffer> getGlobalPool(TestBufferPool pool)
     {
-      return componentSupplier.createCongolmerate(builder, resourceCloser);
+      return pool;
+    }
+
+    @Provides
+    @Merging
+    BlockingPool<ByteBuffer> getMergingPool(TestBufferPool pool)
+    {
+      return pool;
+    }
+
+    @Provides
+    AuthorizerMapper getAuthorizerMapper()
+    {
+      return AuthTestUtils.TEST_AUTHORIZER_MAPPER;
     }
 
     @Provides
     @LazySingleton
-    public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector)
+    private GroupByResourcesReservationPool makeGroupByResourcesReservationPool(
+        final GroupByQueryConfig config,
+        final TestGroupByBuffers bufferPools
+    )
+    {
+      return new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
+    }
+
+    @Provides
+    @LazySingleton
+    private GroupingEngine makeGroupingEngine(
+        final ObjectMapper mapper,
+        final DruidProcessingConfig processingConfig,
+        final GroupByStatsProvider statsProvider,
+        final GroupByQueryConfig config,
+        final GroupByResourcesReservationPool groupByResourcesReservationPool
+    )
+    {
+      final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+      return new GroupingEngine(
+          processingConfig,
+          configSupplier,
+          groupByResourcesReservationPool,
+          mapper,
+          mapper,
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+          statsProvider
+      );
+    }
+
+    @Provides
+    @LazySingleton
+    @Merging
+    GroupByResourcesReservationPool makeMergingGroupByResourcesReservationPool(
+        final GroupByResourcesReservationPool groupByResourcesReservationPool
+    )
+    {
+      return groupByResourcesReservationPool;
+    }
+
+    @Provides
+    @LazySingleton
+    public DruidProcessingConfig makeProcessingConfig(Builder builder)
+    {
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestBufferPool makeTestBufferPool(Builder builder)
+    {
+      return QueryStackTests.makeTestBufferPool(builder.resourceCloser);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig, Builder builder)
+    {
+      return QueryStackTests.makeGroupByBuffers(builder.resourceCloser, processingConfig);
+    }
+
+    @Provides
+    @LazySingleton
+    public JoinableFactoryWrapper joinableFactoryWrapper(final Injector injector, Builder builder)
     {
       return builder.componentSupplier.createJoinableFactoryWrapper(
           injector.getInstance(LookupExtractorFactoryContainerProvider.class)
@@ -565,25 +1029,153 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
+    public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
-      SpecificSegmentsQuerySegmentWalker walker = componentSupplier.createQuerySegmentWalker(
+      return QueryFrameworkUtils.createMockQueryLifecycleFactory(
+          injector.getInstance(QuerySegmentWalker.class),
           injector.getInstance(QueryRunnerFactoryConglomerate.class),
-          injector.getInstance(JoinableFactoryWrapper.class),
-          injector
+          injector.getInstance(AuthorizerMapper.class)
       );
-      resourceCloser.register(walker);
+    }
+
+    @Provides
+    SqlTestFrameworkConfig getTestConfig(Builder builder)
+    {
+      return builder.config;
+    }
+
+    @Provides
+    @Named("quidem")
+    public URI getDruidTestURI(SqlTestFrameworkConfig config)
+    {
+      return config.getDruidTestURI();
+    }
+  }
+
+  public static class TestSchemaSetupModule implements DruidModule
+  {
+    @Provides
+    @LazySingleton
+    public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(
+        @Named("empty") SpecificSegmentsQuerySegmentWalker walker,
+        Builder builder,
+        List<TestDataSet> testDataSets,
+        ObjectMapper jsonMapper
+    )
+    {
+      builder.resourceCloser.register(walker);
+      if (testDataSets.isEmpty()) {
+        builder.componentSupplier.addSegmentsToWalker(walker, jsonMapper);
+      } else {
+        for (TestDataSet testDataSet : testDataSets) {
+          walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());
+        }
+      }
+
       return walker;
     }
 
     @Provides
     @LazySingleton
-    public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp,
+        SqlTestFrameworkConfig cfg)
     {
-      return QueryFrameworkUtils.createMockQueryLifecycleFactory(
-          injector.getInstance(SpecificSegmentsQuerySegmentWalker.class),
-          injector.getInstance(QueryRunnerFactoryConglomerate.class)
+      String datasets = cfg.datasets;
+      if (datasets.isEmpty()) {
+        return Collections.emptyList();
+      }
+      final File[] inputFiles = getTableIngestFiles(datasets);
+      List<TestDataSet> ret = new ArrayList<TestDataSet>();
+      for (File src : inputFiles) {
+        ret.add(FakeIndexTaskUtil.makeDS(objectMapper, src));
+      }
+      return ret;
+    }
+
+    private File[] getTableIngestFiles(String datasets)
+    {
+      File datasetsFile = ProjectPathUtils.getPathFromProjectRoot(datasets);
+      if (!datasetsFile.exists()) {
+        throw new RE("Table config file does not exist: %s", datasetsFile);
+      }
+      if (!datasetsFile.isDirectory()) {
+        throw new RE("The option datasets [%s] must point to a directory relative to the project root!", datasetsFile);
+      }
+      final File[] inputFiles = datasetsFile.listFiles(this::jsonFiles);
+      if (inputFiles.length == 0) {
+        throw new RE("There are no json files found in datasets directory [%s]!", datasetsFile);
+      }
+
+      return inputFiles;
+    }
+
+    boolean jsonFiles(File f)
+    {
+      return !f.isDirectory() && f.getName().endsWith(".json");
+    }
+
+    @Provides
+    @LazySingleton
+    public TestSegmentsBroker makeTimelines()
+    {
+      return new TestSegmentsBroker();
+    }
+
+    @Provides
+    @LazySingleton
+    private HttpClient makeHttpClient(ObjectMapper objectMapper)
+    {
+      return new TestHttpClient(objectMapper);
+    }
+
+    @Provides
+    @Named("empty")
+    @LazySingleton
+    public SpecificSegmentsQuerySegmentWalker createEmptyWalker(
+        TestSegmentsBroker testSegmentsBroker,
+        ClientQuerySegmentWalker clientQuerySegmentWalker)
+    {
+      return new SpecificSegmentsQuerySegmentWalker(
+          testSegmentsBroker.timelines,
+          testSegmentsBroker.referenceProviders,
+          clientQuerySegmentWalker
       );
+    }
+
+    @Provides
+    @LazySingleton
+    private ClientQuerySegmentWalker makeClientQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, Injector injector, ServiceEmitter emitter,
+        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker,
+        LocalQuerySegmentWalker testLocalQuerySegmentWalker, ServerConfig serverConfig)
+    {
+      return new ClientQuerySegmentWalker(
+          emitter,
+          testClusterQuerySegmentWalker,
+          testLocalQuerySegmentWalker,
+          conglomerate,
+          joinableFactory.getJoinableFactory(),
+          new RetryQueryRunnerConfig(),
+          injector.getInstance(ObjectMapper.class),
+          serverConfig,
+          injector.getInstance(Cache.class),
+          injector.getInstance(CacheConfig.class),
+          new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
+          new SubqueryCountStatsProvider(),
+          new DefaultGenericQueryMetricsFactory()
+      );
+    }
+
+    @Provides
+    @LazySingleton
+    public SubqueryGuardrailHelper makeSubqueryGuardrailHelper()
+    {
+      return new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1);
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
     }
   }
 
@@ -591,7 +1183,6 @@ public class SqlTestFramework
 
   private final Builder builder;
   private final QueryComponentSupplier componentSupplier;
-  private final Closer resourceCloser = Closer.create();
   private final Injector injector;
   private final AuthorizerMapper authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
   private final SqlEngine engine;
@@ -609,21 +1200,21 @@ public class SqlTestFramework
         // Ignore load scopes. This is a unit test, not a Druid node. If a
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
-        .ignoreLoadScopes()
-        .addModule(binder -> binder.bind(Closer.class).toInstance(resourceCloser))
-        .addModule(new LookylooModule())
-        .addModule(new SegmentWranglerModule())
-        .addModule(new SqlAggregationModule())
-        .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder));
+        .ignoreLoadScopes();
 
-    builder.componentSupplier.configureGuice(injectorBuilder);
+    injectorBuilder.addAll(DruidModuleCollection.flatten(componentSupplier.getCoreModule()));
+    injectorBuilder.addModule(binder -> binder.bind(Builder.class).toInstance(builder));
+
+    ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
+    overrideModules.addAll(DruidModuleCollection.flatten(componentSupplier.getOverrideModule()));
+    builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
-    serviceInjector.addAll(builder.overrideModules);
+    serviceInjector.addAll(overrideModules);
 
     this.injector = serviceInjector.build();
-    this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
+    this.engine = injector.getInstance(componentSupplier.getSqlEngineClass());
+
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
   }
@@ -694,7 +1285,7 @@ public class SqlTestFramework
   public void close()
   {
     try {
-      resourceCloser.close();
+      builder.resourceCloser.close();
       componentSupplier.close();
     }
     catch (IOException e) {

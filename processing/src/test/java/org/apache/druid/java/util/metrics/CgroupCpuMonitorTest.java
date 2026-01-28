@@ -19,12 +19,13 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +36,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -73,8 +75,8 @@ public class CgroupCpuMonitorTest
   @Test
   public void testMonitor() throws IOException, InterruptedException
   {
-    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, ImmutableMap.of(), "some_feed");
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
     Assert.assertEquals(2, actualEvents.size());
@@ -100,19 +102,64 @@ public class CgroupCpuMonitorTest
             .collect(Collectors.toList())
             .containsAll(
                 ImmutableSet.of(
-                    CgroupCpuMonitor.TOTAL_USAGE_METRIC,
-                    CgroupCpuMonitor.USER_USAGE_METRIC,
-                    CgroupCpuMonitor.SYS_USAGE_METRIC
+                    CgroupUtil.CPU_TOTAL_USAGE_METRIC,
+                    CgroupUtil.CPU_USER_USAGE_METRIC,
+                    CgroupUtil.CPU_SYS_USAGE_METRIC
                 )));
   }
 
   @Test
   public void testQuotaCompute()
   {
-    Assert.assertEquals(-1, CgroupCpuMonitor.computeProcessorQuota(-1, 100000), 0);
-    Assert.assertEquals(0, CgroupCpuMonitor.computeProcessorQuota(0, 100000), 0);
-    Assert.assertEquals(-1, CgroupCpuMonitor.computeProcessorQuota(100000, 0), 0);
-    Assert.assertEquals(2.0D, CgroupCpuMonitor.computeProcessorQuota(200000, 100000), 0);
-    Assert.assertEquals(0.5D, CgroupCpuMonitor.computeProcessorQuota(50000, 100000), 0);
+    Assert.assertEquals(-1, CgroupUtil.computeProcessorQuota(-1, 100000), 0);
+    Assert.assertEquals(0, CgroupUtil.computeProcessorQuota(0, 100000), 0);
+    Assert.assertEquals(-1, CgroupUtil.computeProcessorQuota(100000, 0), 0);
+    Assert.assertEquals(2.0D, CgroupUtil.computeProcessorQuota(200000, 100000), 0);
+    Assert.assertEquals(0.5D, CgroupUtil.computeProcessorQuota(50000, 100000), 0);
+  }
+
+  @Test
+  public void testCgroupsV2Detection() throws IOException, URISyntaxException
+  {
+    // Set up cgroups v2 structure
+    File cgroupV2Dir = temporaryFolder.newFolder();
+    File procV2Dir = temporaryFolder.newFolder();
+    TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
+
+
+    CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
+    
+    // Constructor should detect v2 and log warning
+    CgroupCpuMonitor monitor = new CgroupCpuMonitor(v2Discoverer, "test-feed");
+    
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+
+    // doMonitor should return true
+    Assert.assertTrue(monitor.doMonitor(emitter));
+
+    Assert.assertEquals(2, emitter.getEvents().size());
+    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
+  }
+
+  @Test  
+  public void testCgroupsV1MonitoringContinuesNormally() throws IOException, InterruptedException
+  {
+    // This test verifies that the existing v1 monitoring continues to work
+    // after the v2 detection changes
+    final CgroupCpuMonitor monitor = new CgroupCpuMonitor(discoverer, "some_feed");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
+    
+    Assert.assertTrue(monitor.doMonitor(emitter));
+    final List<Event> actualEvents = emitter.getEvents();
+
+    // Should emit metrics normally for v1
+    Assert.assertEquals(2, actualEvents.size());
+    final Map<String, Object> sharesEvent = actualEvents.get(0).toMap();
+    final Map<String, Object> coresEvent = actualEvents.get(1).toMap();
+    Assert.assertEquals("cgroup/cpu/shares", sharesEvent.get("metric"));
+    Assert.assertEquals(1024L, sharesEvent.get("value"));
+    Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
+    Assert.assertEquals(3.0D, coresEvent.get("value"));
+    Assert.assertEquals(CgroupVersion.V1.name(), coresEvent.get("cgroupversion"));
   }
 }

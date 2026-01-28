@@ -67,17 +67,16 @@ public class InputSourceSampler
 {
   private static final String SAMPLER_DATA_SOURCE = "sampler";
 
-  private static final DataSchema DEFAULT_DATA_SCHEMA = new DataSchema(
-      SAMPLER_DATA_SOURCE,
-      new TimestampSpec(null, null, null),
-      new DimensionsSpec(null),
-      null,
-      null,
-      null
-  );
 
-  // We want to be able to sort the list of processed results back into the same order that we read them from the
-  // firehose so that the rows in the data loader are not always changing. To do this, we add a temporary column to the
+  private static final DataSchema DEFAULT_DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource(SAMPLER_DATA_SOURCE)
+                .withTimestamp(new TimestampSpec(null, null, null))
+                .withDimensions(DimensionsSpec.builder().build())
+                .build();
+
+  // We want to be able to sort the list of processed results back into the same order that we read them from the input
+  // source so that the rows in the data loader are not always changing. To do this, we add a temporary column to the
   // InputRow (in SamplerInputRow) and tag each row with a sortKey. We use an aggregator so that it will not affect
   // rollup, and we use a longMin aggregator so that as rows get rolled up, the earlier rows stay stable and later
   // rows may get rolled into these rows. After getting the results back from the IncrementalIndex, we sort by this
@@ -172,7 +171,7 @@ public class InputSourceSampler
 
             //keep the index of the row to be added to responseRows for further use
             final int rowIndex = responseRows.size();
-            IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex), true);
+            IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex));
             if (addResult.hasParseException()) {
               responseRows.add(new SamplerResponseRow(
                   rawColumns,
@@ -196,7 +195,9 @@ public class InputSourceSampler
           Map<String, Object> parsed = new LinkedHashMap<>();
 
           parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
-          columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
+          columnNames.stream()
+                     .filter(k -> !ColumnHolder.TIME_COLUMN_NAME.equals(k))
+                     .forEach(k -> parsed.put(k, row.getRaw(k)));
 
           Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
           if (sortKey != null) {
@@ -239,14 +240,12 @@ public class InputSourceSampler
         List<DimensionSchema> physicalDimensionSchemas = new ArrayList<>();
 
         RowSignature.Builder signatureBuilder = RowSignature.builder();
-        signatureBuilder.add(
-            ColumnHolder.TIME_COLUMN_NAME,
-            index.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME).toColumnType()
-        );
-        for (IncrementalIndex.DimensionDesc dimensionDesc : index.getDimensions()) {
-          if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionDesc.getName())) {
-            final ColumnType columnType = dimensionDesc.getCapabilities().toColumnType();
-            signatureBuilder.add(dimensionDesc.getName(), columnType);
+        for (final String dimensionName : index.getDimensionNames(true)) {
+          if (ColumnHolder.TIME_COLUMN_NAME.equals(dimensionName)) {
+            signatureBuilder.addTimeColumn();
+          } else if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionName)) {
+            final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionName);
+            signatureBuilder.add(dimensionDesc.getName(), ColumnType.fromCapabilities(dimensionDesc.getCapabilities()));
             // use explicitly specified dimension schema if it exists
             if (dataSchema != null &&
                 dataSchema.getDimensionsSpec() != null &&
@@ -269,7 +268,7 @@ public class InputSourceSampler
           if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(aggregatorFactory.getName())) {
             signatureBuilder.add(
                 aggregatorFactory.getName(),
-                index.getColumnCapabilities(aggregatorFactory.getName()).toColumnType()
+                ColumnType.fromCapabilities(index.getColumnCapabilities(aggregatorFactory.getName()))
             );
           }
         }

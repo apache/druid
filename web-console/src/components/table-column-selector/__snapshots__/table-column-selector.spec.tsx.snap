@@ -2,15 +2,16 @@
 
 exports[`TableColumnSelector matches snapshot 1`] = `
 <span
-  aria-haspopup="true"
-  class="table-column-selector bp4-popover2-target"
+  class="table-column-selector bp5-popover-target"
 >
   <button
-    class="bp4-button"
+    aria-expanded="false"
+    aria-haspopup="menu"
+    class="bp5-button"
     type="button"
   >
     <span
-      class="bp4-button-text"
+      class="bp5-button-text"
     >
       Columns 
       <span
@@ -21,8 +22,7 @@ exports[`TableColumnSelector matches snapshot 1`] = `
     </span>
     <span
       aria-hidden="true"
-      class="bp4-icon bp4-icon-caret-down"
-      icon="caret-down"
+      class="bp5-icon bp5-icon-caret-down"
     >
       <svg
         data-icon="caret-down"

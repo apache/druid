@@ -22,9 +22,8 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,7 +39,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
@@ -66,7 +64,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -184,11 +182,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    if (NullHandling.replaceWithDefault()) {
-      assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
-    } else {
-      assertArrayExpr("concat(x,' ',nonexistent,' ',y)", null);
-    }
+    assertArrayExpr("concat(x,' ',nonexistent,' ',y)", null);
 
     assertExpr("concat(z)", "3.1");
     assertArrayExpr("concat()", null);
@@ -263,17 +257,17 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("lpad(x, 5, 'ab')", "abfoo");
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
-    assertExpr("lpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("lpad(x, -1, 'ab')", "");
     assertExpr("lpad(null, 5, 'ab')", null);
-    assertExpr("lpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
-    assertExpr("lpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
-    assertExpr("lpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("lpad(x, 2, '')", "fo");
+    assertExpr("lpad(x, 6, '')", "foo");
+    assertExpr("lpad('', 3, '*')", "***");
     assertExpr("lpad(x, 2, null)", null);
     assertExpr("lpad(a, 4, '*')", "[foo");
     assertExpr("lpad(a, 2, '*')", "[f");
-    assertExpr("lpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("lpad(a, 2, '')", "[f");
     assertExpr("lpad(b, 4, '*')", "[1, ");
-    assertExpr("lpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("lpad(b, 2, '')", "[1");
     assertExpr("lpad(b, 2, null)", null);
     assertExpr("lpad(x, 5, x)", "fofoo");
     assertExpr("lpad(x, 5, y)", "22foo");
@@ -288,16 +282,16 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("rpad(x, 5, 'ab')", "fooab");
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
-    assertExpr("rpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
+    assertExpr("rpad(x, -1, 'ab')", "");
     assertExpr("rpad(null, 5, 'ab')", null);
-    assertExpr("rpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
-    assertExpr("rpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
-    assertExpr("rpad('', 3, '*')", NullHandling.replaceWithDefault() ? null : "***");
+    assertExpr("rpad(x, 2, '')", "fo");
+    assertExpr("rpad(x, 6, '')", "foo");
+    assertExpr("rpad('', 3, '*')", "***");
     assertExpr("rpad(x, 2, null)", null);
     assertExpr("rpad(a, 2, '*')", "[f");
-    assertExpr("rpad(a, 2, '')", NullHandling.replaceWithDefault() ? null : "[f");
+    assertExpr("rpad(a, 2, '')", "[f");
     assertExpr("rpad(b, 4, '*')", "[1, ");
-    assertExpr("rpad(b, 2, '')", NullHandling.replaceWithDefault() ? null : "[1");
+    assertExpr("rpad(b, 2, '')", "[1");
     assertExpr("rpad(b, 2, null)", null);
     assertExpr("rpad(x, 5, x)", "foofo");
     assertExpr("rpad(x, 5, y)", "foo22");
@@ -310,7 +304,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayConstructor()
   {
     assertArrayExpr("array(1, 2, 3, 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertArrayExpr("array(1, 2, 3, 'bar')", new String[]{"1", "2", "3", "bar"});
     assertArrayExpr("array(1.0)", new Double[]{1.0});
     assertArrayExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
     assertArrayExpr(
@@ -328,7 +322,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_length([1,2,3])", 3L);
     assertExpr("array_length(a)", 4L);
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_length(nestedArray)", 2L, typedBindings);
+    assertExpr("array_length(nestedArray)", 2L, typedBindings, ExprMacroTable.nil());
   }
 
   @Test
@@ -339,7 +333,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_offset([1, 2, 3], -1)", null);
     assertExpr("array_offset(a, 2)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
+    assertExpr("array_offset(nestedArray, 1)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings, ExprMacroTable.nil());
   }
 
   @Test
@@ -350,14 +344,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_ordinal([1, 2, 3], 0)", null);
     assertExpr("array_ordinal(a, 3)", "baz");
     // nested types only work with typed bindings right now, and pretty limited support for stuff
-    assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings);
+    assertExpr("array_ordinal(nestedArray, 2)", ImmutableMap.of("x", 4L, "y", 6.6), typedBindings, ExprMacroTable.nil());
   }
 
   @Test
   public void testArrayOffsetOf()
   {
     assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
-    assertExpr("array_offset_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_offset_of([1, 2, 3], 4)", null);
     assertExpr("array_offset_of(a, 'baz')", 2L);
   }
 
@@ -365,7 +359,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayOrdinalOf()
   {
     assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
-    assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
+    assertExpr("array_ordinal_of([1, 2, 3], 4)", null);
     assertExpr("array_ordinal_of(a, 'baz')", 3L);
   }
 
@@ -397,6 +391,107 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_contains([1, null, 2], null)", 1L);
     assertExpr("array_contains([1, null, 2], [null])", 1L);
     assertExpr("array_contains([1, 2], null)", 0L);
+    assertExpr("array_contains([1, 2, 3], [])", 1L);
+    assertExpr("array_contains([], [])", 1L);
+    assertExpr("array_contains([null], [])", 1L);
+    assertExpr("array_contains(['foo', 'bar'], [])", 1L);
+    assertExpr("array_contains(null, [])", null);
+  }
+
+  @Test
+  public void testMvContains()
+  {
+    // Tests where the first argument is a numeric array that does not contain null
+    assertExpr("mv_contains([1, 2, 3], 2)", 1L);
+    assertExpr("mv_contains([1, 2, 3], 4)", 0L);
+    assertExpr("mv_contains([1, 2, 3], [2, 3])", 1L);
+    assertExpr("mv_contains([1, 2, 3], [3, 4])", 0L);
+    assertExpr("mv_contains([1, 2], null)", 0L);
+    assertExpr("mv_contains(b, y)", 1L);
+    assertExpr("mv_contains(b, x)", 0L);
+
+    // Tests where the first argument is a string array that does not contain null
+    assertExpr("mv_contains(a, str1)", 0L);
+    assertExpr("mv_contains(a, x)", 1L);
+
+    // Tests where the first argument is a numeric array that does contain null
+    assertExpr("mv_contains([1, null, 2], 2)", 1L);
+    assertExpr("mv_contains([1, null, 2], 3)", 0L);
+    assertExpr("mv_contains([1, null, 2], [2, 3])", 0L);
+    assertExpr("mv_contains([1, null, 2], [1, 2])", 1L);
+    assertExpr("mv_contains([1, null, 2], [null])", 1L);
+    assertExpr("mv_contains([null, 1], null)", 1L);
+    assertExpr("mv_contains([null, 1], [null])", 1L);
+    assertExpr("mv_contains([1, null, 2], y)", 1L);
+    assertExpr("mv_contains([null, 1], o)", 0L);
+
+    // Tests where the first argument is a string array that does contain null
+    assertExpr("mv_contains(['foo', null, 'bar'], 'foo')", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], 'baz')", 0L);
+    assertExpr("mv_contains(['foo', null, 'bar'], null)", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo'])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', 'bar'])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', 'baz'])", 0L);
+    assertExpr("mv_contains(['foo', null, 'bar'], [null])", 1L);
+    assertExpr("mv_contains(['foo', null, 'bar'], ['foo', null])", 1L);
+    assertExpr("mv_contains([null, 'test'], ['test', 'other'])", 0L);
+
+    // Tests where the first argument is a non-null string
+    assertExpr("mv_contains('test', 'test')", 1L);
+    assertExpr("mv_contains('test', 'other')", 0L);
+    assertExpr("mv_contains('test', ['test'])", 1L);
+    assertExpr("mv_contains('test', ['other'])", 0L);
+    assertExpr("mv_contains('hello', 'hello')", 1L);
+    assertExpr("mv_contains('hello', 'world')", 0L);
+    assertExpr("mv_contains('hello', 42)", 0L);
+    assertExpr("mv_contains('hello', 3.14)", 0L);
+    assertExpr("mv_contains('hello', ['hello'])", 1L);
+    assertExpr("mv_contains('hello', ['hello', 'world'])", 0L);
+    assertExpr("mv_contains('hello', [42])", 0L);
+    assertExpr("mv_contains('hello', [3.14])", 0L);
+    assertExpr("mv_contains('hello', null)", 0L);
+
+    // Tests where the first argument is null
+    assertExpr("mv_contains(null, [3, 4])", 0L);
+    assertExpr("mv_contains(null, null)", 1L);
+    assertExpr("mv_contains(null, 1)", 0L);
+    assertExpr("mv_contains(null, 'test')", 0L);
+    assertExpr("mv_contains(null, [1, 2])", 0L);
+    assertExpr("mv_contains(null, [])", 1L);
+    assertExpr("mv_contains(null, [null])", 1L);
+    assertExpr("mv_contains(null, [null, 1])", 0L);
+
+    // Tests where the first argument is an empty array
+    assertExpr("mv_contains([], 1)", 0L);
+    assertExpr("mv_contains([], [1, 2])", 0L);
+    assertExpr("mv_contains([], [])", 1L);
+    assertExpr("mv_contains([], null)", 1L);
+    assertExpr("mv_contains([], [null])", 1L);
+
+    // Tests where the first argument is a long
+    assertExpr("mv_contains(42, 42)", 1L);
+    assertExpr("mv_contains(42, 43)", 0L);
+    assertExpr("mv_contains(42, 'test')", 0L);
+    assertExpr("mv_contains(42, 42.0)", 0L);
+    assertExpr("mv_contains(42, [42])", 1L);
+    assertExpr("mv_contains(42, [42, 43])", 0L);
+    assertExpr("mv_contains(42, [42, 43, null])", 0L);
+    assertExpr("mv_contains(42, ['test'])", 0L);
+    assertExpr("mv_contains(42, [42.0])", 0L);
+    assertExpr("mv_contains(42, null)", 0L);
+
+    // Tests where the first argument is a double
+    assertExpr("mv_contains(3.14, 3.14)", 1L);
+    assertExpr("mv_contains(3.14, 3)", 0L);
+    assertExpr("mv_contains(3.14, 'pi')", 0L);
+    assertExpr("mv_contains(3.14, 3.14)", 1L);
+    assertExpr("mv_contains(3.14, [3.14])", 1L);
+    assertExpr("mv_contains(3.14, [3.14])", 1L);
+    assertExpr("mv_contains(3.14, [3, 3.14])", 0L);
+    assertExpr("mv_contains(3.14, ['3.14'])", 1L);
+    assertExpr("mv_contains(3.14, [3.14, 6.28])", 0L);
+    assertExpr("mv_contains(3.14, [3.14, 6.28, null])", 0L);
+    assertExpr("mv_contains(3.14, null)", 0L);
   }
 
   @Test
@@ -410,6 +505,100 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("array_overlap([4, 5, 6], [null])", 0L);
     assertExpr("array_overlap([4, 5, null, 6], null)", 0L);
     assertExpr("array_overlap([4, 5, null, 6], [null])", 1L);
+    assertExpr("array_overlap([1, 2, 3], [])", 0L);
+    assertExpr("array_overlap([], [])", 0L);
+    assertExpr("array_overlap([null], [])", 0L);
+    assertExpr("array_overlap(['foo', 'bar'], [])", 0L);
+    assertExpr("array_overlap(null, [])", null);
+    assertExpr("array_overlap([1, null, 3], [])", 0L);
+  }
+
+  @Test
+  public void testMvOverlap()
+  {
+    // Tests where the first argument is a numeric array that does not contain null
+    assertExpr("mv_overlap([1, 2, 3], [2, 4, 6])", 1L);
+    assertExpr("mv_overlap([1, 2, 3], [4, 5, 6])", 0L);
+    assertExpr("mv_overlap([4, 5, 6], null)", 0L);
+    assertExpr("mv_overlap([4, 5, 6], [null])", 0L);
+    assertExpr("mv_overlap(b, c)", 0L);
+    assertExpr("mv_overlap(c, b)", 0L); // (c, b) = 0L now that 2nd arg is cast to string array
+
+    // Tests where the first argument is a string array that does not contain null
+    assertExpr("mv_overlap(a, emptyArray)", 0L);
+    assertExpr("mv_overlap(a, a)", 1L);
+
+    // Tests where the first argument is a numeric array that does contain null
+    assertExpr("mv_overlap([4, null], [4, 5, 6])", 1L);
+    assertExpr("mv_overlap([7, null], [4, 5, 6])", null);
+    assertExpr("mv_overlap([4, 5, null, 6], [null])", 1L);
+    assertExpr("mv_overlap([4, 5, null, 6], null)", 1L);
+    assertExpr("mv_overlap([null, 1], [null, 2])", 1L);
+    assertExpr("mv_overlap([1, null, 2], b)", 1L);
+    assertExpr("mv_overlap([null, 6], c)", null);
+
+    // Tests where the first argument is a string array that does contain null
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['foo', 'baz'])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['baz', 'qux'])", null);
+    assertExpr("mv_overlap(['foo', null, 'bar'], [null])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], ['foo', null])", 1L);
+    assertExpr("mv_overlap(['foo', null, 'bar'], null)", 1L);
+    assertExpr("mv_overlap([null, 'hello'], ['hello', 'world'])", 1L);
+    assertExpr("mv_overlap([null, 'hello'], ['world'])", null);
+
+    // Tests where the first argument is a non-null string
+    assertExpr("mv_overlap('test', ['test', 'other'])", 1L);
+    assertExpr("mv_overlap('test', ['other'])", 0L);
+    assertExpr("mv_overlap('hello', 'hello')", 1L);
+    assertExpr("mv_overlap('hello', 'world')", 0L);
+    assertExpr("mv_overlap('hello', 42)", 0L);
+    assertExpr("mv_overlap('hello', 3.14)", 0L);
+    assertExpr("mv_overlap('hello', ['hello', 'world'])", 1L);
+    assertExpr("mv_overlap('hello', ['foo', 'bar'])", 0L);
+    assertExpr("mv_overlap('hello', ['foo', 'bar', null])", 0L);
+    assertExpr("mv_overlap('hello', [42, 43])", 0L);
+    assertExpr("mv_overlap('hello', [42, 43, null])", 0L);
+    assertExpr("mv_overlap('hello', [3.14, 6.28])", 0L);
+    assertExpr("mv_overlap('hello', [3.14, 6.28, null])", 0L);
+    assertExpr("mv_overlap('hello', null)", 0L);
+
+    // Tests where the first argument is null
+    assertExpr("mv_overlap(null, [4, 5, 6])", null);
+    assertExpr("mv_overlap(null, [1, 2])", null);
+    assertExpr("mv_overlap(null, 1)", null);
+    assertExpr("mv_overlap(null, 'test')", null);
+    assertExpr("mv_overlap(null, [])", 0L);
+    assertExpr("mv_overlap(null, [null])", 1L);
+    assertExpr("mv_overlap(null, [null, 1])", 1L);
+
+    // Tests where the first argument is an empty array
+    assertExpr("mv_overlap([], [1, 2])", null);
+    assertExpr("mv_overlap([], [])", 0L);
+    assertExpr("mv_overlap([], [null])", 1L);
+    assertExpr("mv_overlap([], null)", 1L);
+
+    // Tests where the first argument is a long
+    assertExpr("mv_overlap(42, 42)", 1L);
+    assertExpr("mv_overlap(42, 43)", 0L);
+    assertExpr("mv_overlap(42, 'test')", 0L);
+    assertExpr("mv_overlap(42, 42.0)", 0L);
+    assertExpr("mv_overlap(42, [41, 42, 43])", 1L);
+    assertExpr("mv_overlap(42, [40, 41])", 0L);
+    assertExpr("mv_overlap(42, ['test', 'foo'])", 0L);
+    assertExpr("mv_overlap(42, [41.0, 42.0, 43.0])", 0L);
+    assertExpr("mv_overlap(42, null)", 0L);
+
+    // Tests where the first argument is a double
+    assertExpr("mv_overlap(3.14, 3.14)", 1L);
+    assertExpr("mv_overlap(3.14, 2.71)", 0L);
+    assertExpr("mv_overlap(3.14, 'pi')", 0L);
+    assertExpr("mv_overlap(3.14, 3)", 0L);
+    assertExpr("mv_overlap(3.14, [3.14, 6.28])", 1L);
+    assertExpr("mv_overlap(3.14, [3.14, 6.28, null])", 1L);
+    assertExpr("mv_overlap(3.14, [1, 2, 3])", 0L);
+    assertExpr("mv_overlap(3.14, ['pi', '3.14'])", 1L);
+    assertExpr("mv_overlap(3.14, [1.0, 2.0, 3.14])", 1L);
+    assertExpr("mv_overlap(3.14, null)", 0L);
   }
 
   @Test
@@ -610,21 +799,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         Pair.of("a", "ARRAY<STRING>")
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      if (NullHandling.sqlCompatible()) {
-        assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
-      } else {
-        Throwable t = Assert.assertThrows(
-            DruidException.class,
-            () -> assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null)
-        );
-        Assert.assertEquals(
-            StringUtils.format(
-                "Function[round] first argument should be a LONG or DOUBLE but got %s instead",
-                argAndType.rhs
-            ),
-            t.getMessage()
-        );
-      }
+      assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
     }
   }
 
@@ -677,6 +852,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("greatest()", null);
     assertExpr("greatest(null, null)", null);
     assertExpr("greatest(1, null, 'A')", "A");
+    assertExpr("greatest(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -703,6 +879,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+    assertExpr("least(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -751,7 +928,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testSizeFormatWithEdgeCases()
   {
     //a nonexist value is null which is treated as 0
-    assertExpr("human_readable_binary_byte_format(nonexist)", NullHandling.sqlCompatible() ? null : "0 B");
+    assertExpr("human_readable_binary_byte_format(nonexist)", null);
 
     //f = 12.34
     assertExpr("human_readable_binary_byte_format(f)", "12 B");
@@ -776,21 +953,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSizeForatInvalidArgumentType()
+  public void testSizeFormatInvalidArgumentType()
   {
-    if (NullHandling.replaceWithDefault()) {
-      //x = "foo"
-      Throwable t = Assert.assertThrows(
-          DruidException.class,
-          () -> Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
-                      .eval(bestEffortBindings)
-      );
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] needs a number as its first argument but got STRING instead",
-          t.getMessage()
-      );
-    }
-
     // x = "foo"
     Throwable t = Assert.assertThrows(
         DruidException.class,
@@ -817,7 +981,7 @@ public class FunctionTest extends InitializedNullHandlingTest
                     .eval(bestEffortBindings)
     );
     Assert.assertEquals(
-        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
+        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got null",
         t.getMessage()
     );
   }
@@ -916,7 +1080,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseAnd('2', '1')", null);
     // but one is ok, druid forgives you
     assertExpr("bitwiseAnd(3, '1')", 1L);
-    assertExpr("bitwiseAnd(2, null)", NullHandling.replaceWithDefault() ? 0L : null);
+    assertExpr("bitwiseAnd(2, null)", null);
 
     // unary doesn't accept any slop
     assertExpr("bitwiseComplement('1')", null);
@@ -961,12 +1125,64 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testLeft()
+  {
+    assertExpr("left('hello', 0)", "");
+    assertExpr("left('hello', 2)", "he");
+    assertExpr("left('hello', '2')", "he");
+    assertExpr("left('hello', 'hello')", null);
+    assertExpr("left('hello', 10)", "hello");
+    assertExpr("left('hello', null)", null);
+    assertExpr("left(31337, 2)", "31");
+    assertExpr("left(null, 10)", null);
+    assertExpr("left(nonexistent, 10)", null);
+
+    Throwable t1 = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("left('foo', -2)", null)
+    );
+    Assert.assertEquals("Function[left] needs a positive integer as the second argument", t1.getMessage());
+  }
+
+  @Test
+  public void testRight()
+  {
+    assertExpr("right('hello', 0)", "");
+    assertExpr("right('hello', 2)", "lo");
+    assertExpr("right('hello', '2')", "lo");
+    assertExpr("right('hello', 'hello')", null);
+    assertExpr("right('hello', 10)", "hello");
+    assertExpr("right('hello', null)", null);
+    assertExpr("right(31337, 2)", "37");
+    assertExpr("right(null, 10)", null);
+    assertExpr("right(nonexistent, 10)", null);
+
+    Throwable t1 = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("right('foo', -2)", null)
+    );
+    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t1.getMessage());
+  }
+
+  @Test
   public void testRepeat()
   {
+    assertExpr("repeat('hello', 0)", null);
     assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', '2')", "hellohello");
+    assertExpr("repeat('hello', 'hello')", null);
     assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat('hello', null)", null);
     assertExpr("repeat(null, 10)", null);
     assertExpr("repeat(nonexistent, 10)", null);
+    assertExpr("repeat(4, 3)", "444");
+    assertExpr("repeat(4.1, 3)", "4.14.14.1");
+
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("repeat('foo', 9999999999)", null)
+    );
+    Assert.assertEquals("Function[repeat] needs an integer as the second argument", t.getMessage());
   }
 
   @Test
@@ -978,7 +1194,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated."
     );
     assertExpr("decode_base64_utf8('eyJ0ZXN0IjogMX0=')", "{\"test\": 1}");
-    assertExpr("decode_base64_utf8('')", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("decode_base64_utf8('')", "");
   }
 
   @Test
@@ -1165,7 +1381,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_to_mv(a)", new String[]{"foo", "bar", "baz", "foobar"});
     assertArrayExpr("array_to_mv(b)", new String[]{"1", "2", "3", "4", "5"});
     assertArrayExpr("array_to_mv(c)", new String[]{"3.1", "4.2", "5.3"});
-    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2", "3"});
+    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2.0", "3.1"});
     // array type is determined by the first array type
     assertArrayExpr("array_to_mv(array_concat(b,c))", new String[]{"1", "2", "3", "4", "5", "3", "4", "5"});
     assertArrayExpr(
@@ -1270,24 +1486,35 @@ public class FunctionTest extends InitializedNullHandlingTest
   private void assertExpr(final String expression, @Nullable final Object expectedResult)
   {
     for (Expr.ObjectBinding toUse : allBindings) {
-      assertExpr(expression, expectedResult, toUse);
+      assertExpr(expression, expectedResult, toUse, ExprMacroTable.nil());
     }
   }
 
-  private void assertExpr(
+  private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
+  {
+    for (Expr.ObjectBinding toUse : allBindings) {
+      assertArrayExpr(expression, expectedResult, toUse, ExprMacroTable.nil());
+    }
+  }
+
+  /**
+   * Check a bunch of stuff to make sure an expression produces the correct result upon evaluation and is chill
+   */
+  public static void assertExpr(
       final String expression,
       @Nullable final Object expectedResult,
-      Expr.ObjectBinding bindings
+      Expr.ObjectBinding bindings,
+      ExprMacroTable macroTable
   )
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    final Expr expr = Parser.parse(expression, macroTable);
     Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
 
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    final Expr exprNoFlatten = Parser.parse(expression, macroTable, false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), macroTable);
     Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
 
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), macroTable);
     Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
 
     final Expr singleThreaded = Expr.singleThreaded(expr, bindings);
@@ -1306,28 +1533,24 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
   }
 
-  private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
-  {
-
-    for (Expr.ObjectBinding toUse : allBindings) {
-      assertArrayExpr(expression, expectedResult, toUse);
-    }
-  }
-
-  private void assertArrayExpr(
+  /**
+   * Check a bunch of stuff to make sure an expression produces the correct array result upon evaluation and is chill
+   */
+  public static void assertArrayExpr(
       final String expression,
       @Nullable final Object[] expectedResult,
-      Expr.ObjectBinding bindings
+      Expr.ObjectBinding bindings,
+      ExprMacroTable macroTable
   )
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    final Expr expr = Parser.parse(expression, macroTable);
     Assert.assertArrayEquals(expression, expectedResult, expr.eval(bindings).asArray());
 
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
+    final Expr exprNoFlatten = Parser.parse(expression, macroTable, false);
+    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), macroTable);
     Assert.assertArrayEquals(expression, expectedResult, roundTrip.eval(bindings).asArray());
 
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
+    final Expr roundTripFlatten = Parser.parse(expr.stringify(), macroTable);
     Assert.assertArrayEquals(expression, expectedResult, roundTripFlatten.eval(bindings).asArray());
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());

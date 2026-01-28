@@ -19,199 +19,143 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.timeline.CompactionState;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
-public class DataSourceCompactionConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = InlineSchemaDataSourceCompactionConfig.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "inline", value = InlineSchemaDataSourceCompactionConfig.class),
+    @JsonSubTypes.Type(name = "catalog", value = CatalogDataSourceCompactionConfig.class)
+})
+public interface DataSourceCompactionConfig
 {
-  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
-  public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
-  // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
-  private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
-  private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
-
-  private final String dataSource;
-  private final int taskPriority;
-  private final long inputSegmentSizeBytes;
   /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   * Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY
    */
+  int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
+
+  // Approx. 100TB. Chosen instead of Long.MAX_VALUE to avoid overflow on web-console and other clients
+  long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 100_000_000_000_000L;
+  Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
+
+  String getDataSource();
+
   @Nullable
-  private final Integer maxRowsPerSegment;
-  private final Period skipOffsetFromLatest;
-  private final UserCompactionTaskQueryTuningConfig tuningConfig;
-  private final UserCompactionTaskGranularityConfig granularitySpec;
-  private final UserCompactionTaskDimensionsConfig dimensionsSpec;
-  private final AggregatorFactory[] metricsSpec;
-  private final UserCompactionTaskTransformConfig transformSpec;
-  private final UserCompactionTaskIOConfig ioConfig;
-  private final Map<String, Object> taskContext;
+  CompactionEngine getEngine();
 
-  @JsonCreator
-  public DataSourceCompactionConfig(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("taskPriority") @Nullable Integer taskPriority,
-      @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
-      @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
-      @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
-      @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
-      @JsonProperty("transformSpec") @Nullable UserCompactionTaskTransformConfig transformSpec,
-      @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
-      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
-  )
-  {
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.taskPriority = taskPriority == null
-                        ? DEFAULT_COMPACTION_TASK_PRIORITY
-                        : taskPriority;
-    this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
-                                 ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
-                                 : inputSegmentSizeBytes;
-    this.maxRowsPerSegment = maxRowsPerSegment;
-    this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
-    this.tuningConfig = tuningConfig;
-    this.ioConfig = ioConfig;
-    this.granularitySpec = granularitySpec;
-    this.metricsSpec = metricsSpec;
-    this.dimensionsSpec = dimensionsSpec;
-    this.transformSpec = transformSpec;
-    this.taskContext = taskContext;
-  }
+  int getTaskPriority();
 
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  @JsonProperty
-  public int getTaskPriority()
-  {
-    return taskPriority;
-  }
-
-  @JsonProperty
-  public long getInputSegmentSizeBytes()
-  {
-    return inputSegmentSizeBytes;
-  }
+  long getInputSegmentSizeBytes();
 
   @Deprecated
-  @JsonProperty
   @Nullable
-  public Integer getMaxRowsPerSegment()
-  {
-    return maxRowsPerSegment;
-  }
+  Integer getMaxRowsPerSegment();
 
-  @JsonProperty
-  public Period getSkipOffsetFromLatest()
-  {
-    return skipOffsetFromLatest;
-  }
+  Period getSkipOffsetFromLatest();
 
-  @JsonProperty
   @Nullable
-  public UserCompactionTaskQueryTuningConfig getTuningConfig()
-  {
-    return tuningConfig;
-  }
+  UserCompactionTaskQueryTuningConfig getTuningConfig();
 
-  @JsonProperty
   @Nullable
-  public UserCompactionTaskIOConfig getIoConfig()
-  {
-    return ioConfig;
-  }
+  UserCompactionTaskIOConfig getIoConfig();
 
-  @JsonProperty
   @Nullable
-  public UserCompactionTaskGranularityConfig getGranularitySpec()
-  {
-    return granularitySpec;
-  }
+  Map<String, Object> getTaskContext();
 
-  @JsonProperty
   @Nullable
-  public UserCompactionTaskDimensionsConfig getDimensionsSpec()
-  {
-    return dimensionsSpec;
-  }
+  Granularity getSegmentGranularity();
 
-  @JsonProperty
   @Nullable
-  public UserCompactionTaskTransformConfig getTransformSpec()
-  {
-    return transformSpec;
-  }
+  UserCompactionTaskGranularityConfig getGranularitySpec();
 
-  @JsonProperty
   @Nullable
-  public AggregatorFactory[] getMetricsSpec()
-  {
-    return metricsSpec;
-  }
+  List<AggregateProjectionSpec> getProjections();
 
-  @JsonProperty
   @Nullable
-  public Map<String, Object> getTaskContext()
-  {
-    return taskContext;
-  }
+  CompactionTransformSpec getTransformSpec();
 
-  @Override
-  public boolean equals(Object o)
+  @Nullable
+  UserCompactionTaskDimensionsConfig getDimensionsSpec();
+
+  @Nullable
+  AggregatorFactory[] getMetricsSpec();
+
+  /**
+   * Converts this compaction config to a {@link CompactionState}.
+   * <p>
+   * For IndexSpec and DimensionsSpec, we convert to their effective specs so that the fingerprint and associated state
+   * reflect the actual layout of the segments after compaction (with all missing defaults not included in the compaction
+   * config filled in). This is consistent with how {@link org.apache.druid.timeline.DataSegment#lastCompactionState }
+   * has been computed historically.
+   */
+  default CompactionState toCompactionState()
   {
-    if (this == o) {
-      return true;
+    ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(this);
+
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
+
+    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
+                          ? IndexSpec.getDefault().getEffectiveSpec()
+                          : tuningConfig.getIndexSpec().getEffectiveSpec();
+
+    DimensionsSpec dimensionsSpec = null;
+    if (getDimensionsSpec() != null && getDimensionsSpec().getDimensions() != null) {
+      dimensionsSpec = DimensionsSpec.builder()
+                                     .setDimensions(
+                                         getDimensionsSpec().getDimensions()
+                                                       .stream()
+                                                       .map(dim -> dim.getEffectiveSchema(indexSpec))
+                                                       .collect(Collectors.toList())
+                                     ).build();
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
-    return taskPriority == that.taskPriority &&
-           inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
-           Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-           Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
-           Objects.equals(tuningConfig, that.tuningConfig) &&
-           Objects.equals(granularitySpec, that.granularitySpec) &&
-           Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
-           Arrays.equals(metricsSpec, that.metricsSpec) &&
-           Objects.equals(transformSpec, that.transformSpec) &&
-           Objects.equals(ioConfig, that.ioConfig) &&
-           Objects.equals(taskContext, that.taskContext);
-  }
 
-  @Override
-  public int hashCode()
-  {
-    int result = Objects.hash(
-        dataSource,
-        taskPriority,
-        inputSegmentSizeBytes,
-        maxRowsPerSegment,
-        skipOffsetFromLatest,
-        tuningConfig,
-        granularitySpec,
+    List<AggregatorFactory> metricsSpec = getMetricsSpec() == null
+                                          ? null
+                                          : Arrays.asList(getMetricsSpec());
+
+    CompactionTransformSpec transformSpec = getTransformSpec();
+
+    GranularitySpec granularitySpec = null;
+    if (getGranularitySpec() != null) {
+      UserCompactionTaskGranularityConfig userGranularityConfig = getGranularitySpec();
+      granularitySpec = new UniformGranularitySpec(
+          userGranularityConfig.getSegmentGranularity(),
+          userGranularityConfig.getQueryGranularity(),
+          userGranularityConfig.isRollup(),
+          null  // intervals
+      );
+    }
+
+    List<AggregateProjectionSpec> projections = getProjections();
+
+    return new CompactionState(
+        partitionsSpec,
         dimensionsSpec,
+        metricsSpec,
         transformSpec,
-        ioConfig,
-        taskContext
+        indexSpec,
+        granularitySpec,
+        projections
     );
-    result = 31 * result + Arrays.hashCode(metricsSpec);
-    return result;
   }
 }

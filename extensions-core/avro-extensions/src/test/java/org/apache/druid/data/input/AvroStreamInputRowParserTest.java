@@ -136,7 +136,7 @@ public class AvroStreamInputRowParserTest
   private static final List<CharSequence> SOME_STRING_ARRAY_VALUE = Arrays.asList("8", "4", "2", "1", null);
   private static final List<Integer> SOME_INT_ARRAY_VALUE = Arrays.asList(1, 2, 4, 8);
   static final Map<CharSequence, Integer> SOME_INT_VALUE_MAP_VALUE = Maps.asMap(
-      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, Integer>()
+      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<>()
       {
         @Nonnull
         @Override
@@ -147,7 +147,7 @@ public class AvroStreamInputRowParserTest
       }
   );
   static final Map<CharSequence, CharSequence> SOME_STRING_VALUE_MAP_VALUE = Maps.asMap(
-      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<CharSequence, CharSequence>()
+      new HashSet<>(Arrays.asList("8", "2", "4", "1")), new Function<>()
       {
         @Nonnull
         @Override
@@ -429,7 +429,7 @@ public class AvroStreamInputRowParserTest
                     .on(",")
                     .withKeyValueSeparator("=")
                     .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll("")),
-                new Function<String, Integer>()
+                new Function<>()
                 {
                   @Nullable
                   @Override

@@ -21,13 +21,6 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
-  "query/node/backpressure": {
-    "dimensions": [
-      "server"
-    ],
-    "type": "timer",
-    "timeUnit": "MILLISECONDS"
-  },
   "query/segment/time": {
     "dimensions": [],
     "type": "timer",
@@ -133,7 +126,8 @@
   },
   "ingest/events/thrownAway": {
     "dimensions": [
-      "dataSource"
+      "dataSource",
+      "reason"
     ],
     "type": "counter"
   },
@@ -161,33 +155,33 @@
     ],
     "type": "counter"
   },
-  "ingest/persist/counter": {
+  "ingest/persists/count": {
     "dimensions": [
       "dataSource"
     ],
     "type": "counter"
   },
-  "ingest/persist/time": {
+  "ingest/persists/time": {
     "dimensions": [
       "dataSource"
     ],
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
-  "ingest/persist/cpu": {
+  "ingest/persists/cpu": {
     "dimensions": [
       "dataSource"
     ],
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
-  "ingest/persist/backPressure": {
+  "ingest/persists/backPressure": {
     "dimensions": [
       "dataSource"
     ],
     "type": "gauge"
   },
-  "ingest/persist/failed": {
+  "ingest/persists/failed": {
     "dimensions": [
       "dataSource"
     ],
@@ -242,49 +236,31 @@
     ],
     "type": "counter"
   },
-  "segment/assigned/counter": {
+  "segment/assigned/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/moved/counter": {
+  "segment/moved/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/dropped/counter": {
+  "segment/dropped/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/deleted/counter": {
+  "segment/deleted/count": {
     "dimensions": [
       "tier"
     ],
     "type": "counter"
   },
-  "segment/unneeded/counter": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/raw": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalization": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalized": {
+  "segment/unneeded/count": {
     "dimensions": [
       "tier"
     ],
@@ -302,13 +278,13 @@
     ],
     "type": "gauge"
   },
-  "segment/loadQueue/counter": {
+  "segment/loadQueue/count": {
     "dimensions": [
       "server"
     ],
     "type": "gauge"
   },
-  "segment/dropQueue/counter": {
+  "segment/dropQueue/count": {
     "dimensions": [
       "server"
     ],
@@ -320,7 +296,7 @@
     ],
     "type": "gauge"
   },
-  "segment/overShadowed/counter": {
+  "segment/overShadowed/count": {
     "dimensions": [],
     "type": "gauge"
   },
@@ -372,7 +348,7 @@
     ],
     "type": "gauge"
   },
-  "jvm/bufferpool/counter": {
+  "jvm/bufferpool/count": {
     "dimensions": [
       "bufferpoolName"
     ],
@@ -414,7 +390,7 @@
     ],
     "type": "gauge"
   },
-  "jvm/gc/counter": {
+  "jvm/gc/count": {
     "dimensions": [
       "gcName",
       "gcGen"
@@ -452,37 +428,37 @@
     "dimensions": [],
     "type": "gauge"
   },
-  "sys/disk/write/counter": {
+  "sys/disk/write/count": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
-  "sys/disk/read/counter": {
+  "sys/disk/read/count": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/write/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/write/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/read/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/fs/used": {
     "dimensions": [
@@ -525,13 +501,13 @@
     ],
     "type": "gauge"
   },
-  "coordinator-segment/counter": {
+  "coordinator-segment/count": {
     "dimensions": [
       "dataSource"
     ],
     "type": "gauge"
   },
-  "historical-segment/counter": {
+  "historical-segment/count": {
     "dimensions": [
       "dataSource",
       "tier",

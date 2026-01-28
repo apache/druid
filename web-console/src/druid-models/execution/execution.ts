@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
+import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
 
+import { maybeGetClusterCapacity } from '../../helpers';
 import {
   deepGet,
   deleteKeys,
@@ -192,7 +193,12 @@ export interface ExecutionValue {
 }
 
 export class Execution {
+  static USE_TASK_PAYLOAD = true;
+  static USE_TASK_REPORTS = false;
   static INLINE_DATASOURCE_MARKER = '__query_select';
+
+  static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
+    maybeGetClusterCapacity;
 
   static validAsyncState(status: string | undefined): status is AsyncState {
     return oneOf(status, 'ACCEPTED', 'RUNNING', 'FINISHED', 'FAILED');
@@ -229,7 +235,7 @@ export class Execution {
     sqlQuery?: string,
     queryContext?: QueryContext,
   ): Execution {
-    const { queryId, schema, result, errorDetails } = asyncSubmitResult;
+    const { queryId, schema, result, errorDetails, stages, counters, warnings } = asyncSubmitResult;
 
     let queryResult: QueryResult | undefined;
     if (schema && result?.sampleRecords) {
@@ -249,14 +255,17 @@ export class Execution {
       };
     }
 
+    const { createdAt, durationMs, state } = asyncSubmitResult;
     return new Execution({
       engine: 'sql-msq-task',
       id: queryId,
-      startTime: new Date(asyncSubmitResult.createdAt),
-      duration: asyncSubmitResult.durationMs,
-      status: Execution.normalizeAsyncState(asyncSubmitResult.state),
+      startTime: new Date(createdAt),
+      duration: durationMs >= 0 ? durationMs : undefined,
+      status: Execution.normalizeAsyncState(state),
       sqlQuery,
       queryContext,
+      stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
+      warnings: Array.isArray(warnings) ? warnings : undefined,
       error: executionError,
       destination:
         typeof result?.dataSource === 'string'
@@ -274,6 +283,10 @@ export class Execution {
       destinationPages: result?.pages,
       result: queryResult,
     });
+  }
+
+  static fromDartReport(dartReport: MsqTaskReportResponse): Execution {
+    return Execution.fromTaskReport(dartReport).changeEngine('sql-msq-dart');
   }
 
   static fromTaskReport(taskReport: MsqTaskReportResponse): Execution {
@@ -318,6 +331,7 @@ export class Execution {
             new Column({ name: sig.name, nativeType: sig.type, sqlType: sqlTypeNames?.[i] }),
         ),
         rows: results,
+        queryDuration: durationMs,
       }).inflateDatesFromSqlTypes();
     }
 
@@ -327,7 +341,7 @@ export class Execution {
       status: Execution.normalizeTaskStatus(status),
       segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
-      duration: typeof durationMs === 'number' ? durationMs : undefined,
+      duration: typeof durationMs === 'number' && durationMs >= 0 ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
         deepGet(taskReport, 'multiStageQuery.payload.status'),
       ),
@@ -352,8 +366,18 @@ export class Execution {
 
   static getProgressDescription(execution: Execution | undefined): string {
     if (!execution?.stages) return 'Loading...';
-    if (!execution.isWaitingForQuery())
-      return 'Query complete, waiting for segments to be loaded...';
+    if (!execution.isWaitingForQuery()) {
+      switch (execution.engine) {
+        case 'sql-msq-task':
+          return 'Query complete, waiting for segments to be loaded...';
+
+        case 'sql-msq-dart':
+          return 'Got a non-running report. Did you reuse a sqlQueryID?';
+
+        default:
+          return 'Query not running.';
+      }
+    }
 
     let ret = execution.stages.getStage(0)?.phase ? 'Running query...' : 'Starting query...';
     if (execution.usageInfo) {
@@ -431,6 +455,13 @@ export class Execution {
 
       _payload: this._payload,
     };
+  }
+
+  public changeEngine(engine: DruidEngine): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      engine,
+    });
   }
 
   public changeSqlQuery(sqlQuery: string, queryContext?: QueryContext): Execution {
@@ -533,6 +564,10 @@ export class Execution {
   public isWaitingForQuery(): boolean {
     const { status } = this;
     return status !== 'SUCCESS' && status !== 'FAILED';
+  }
+
+  public isWaitingForSegments(): boolean {
+    return Boolean(this.stages && !this.isWaitingForQuery() && this.engine === 'sql-msq-task');
   }
 
   public getSegmentStatusDescription() {

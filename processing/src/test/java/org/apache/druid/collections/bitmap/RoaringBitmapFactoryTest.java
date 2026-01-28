@@ -59,7 +59,7 @@ public class RoaringBitmapFactoryTest
     ImmutableBitmap bitmap = factory.union(
         Iterables.transform(
             Collections.singletonList(new WrappedRoaringBitmap()),
-            new Function<WrappedRoaringBitmap, ImmutableBitmap>()
+            new Function<>()
             {
               @Override
               public ImmutableBitmap apply(WrappedRoaringBitmap input)

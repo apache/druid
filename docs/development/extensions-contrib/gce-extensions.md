@@ -32,7 +32,7 @@ of GCE (MIG from now on). This choice has been made to ease the configuration of
 management.
 
 For this reason, in order to use this extension, the user must have created
-1. An instance template with the right machine type and image to bu used to run the MiddleManager
+1. An instance template with the right machine type and image to bu used to run the Middle Manager
 2. A MIG that has been configured to use the instance template created in the point above
 
 Moreover, in order to be able to rescale the machines in the MIG, the Overlord must run with a service account
@@ -98,6 +98,6 @@ for parameters other than the ones specified here, such as `selectStrategy` etc.
 - The module internally uses the [ListManagedInstances](https://cloud.google.com/compute/docs/reference/rest/v1/instanceGroupManagers/listManagedInstances)
  call from the API and, while the documentation of the API states that the call can be paged through using the
  `pageToken` argument, the responses to such call do not provide any `nextPageToken` to set such parameter. This means
- that the extension can operate safely with a maximum of 500 MiddleManagers instances at any time (the maximum number
+ that the extension can operate safely with a maximum of 500 Middle Managers instances at any time (the maximum number
  of instances to be returned for each call).
  

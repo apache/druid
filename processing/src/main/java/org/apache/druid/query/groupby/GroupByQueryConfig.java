@@ -27,6 +27,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.utils.JvmUtils;
 
+import java.util.Optional;
+
 /**
  *
  */
@@ -44,6 +46,7 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
   public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
+  public static final String CTX_KEY_DEFER_EXPRESSION_DIMENSIONS = "deferExpressionDimensions";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
@@ -118,6 +121,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean mergeThreadLocal = false;
+
+  @JsonProperty
+  private DeferExpressionDimensions deferExpressionDimensions = DeferExpressionDimensions.FIXED_WIDTH_NON_NUMERIC;
 
   @JsonProperty
   private boolean vectorize = true;
@@ -277,6 +283,11 @@ public class GroupByQueryConfig
     return mergeThreadLocal;
   }
 
+  public DeferExpressionDimensions getDeferExpressionDimensions()
+  {
+    return deferExpressionDimensions;
+  }
+
   public boolean isVectorize()
   {
     return vectorize;
@@ -349,13 +360,17 @@ public class GroupByQueryConfig
         getNumParallelCombineThreads()
     );
     newConfig.mergeThreadLocal = queryContext.getBoolean(CTX_KEY_MERGE_THREAD_LOCAL, isMergeThreadLocal());
+    newConfig.deferExpressionDimensions =
+        Optional.ofNullable(queryContext.getString(CTX_KEY_DEFER_EXPRESSION_DIMENSIONS))
+                .map(DeferExpressionDimensions::fromString)
+                .orElse(getDeferExpressionDimensions());
     newConfig.vectorize = queryContext.getBoolean(QueryContexts.VECTORIZE_KEY, isVectorize());
     newConfig.enableMultiValueUnnesting = queryContext.getBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );
 
-    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig.toString());
+    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig);
     return newConfig;
   }
 
@@ -377,6 +392,8 @@ public class GroupByQueryConfig
            ", vectorize=" + vectorize +
            ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
            ", enableMultiValueUnnesting=" + enableMultiValueUnnesting +
+           ", mergeThreadLocal=" + mergeThreadLocal +
+           ", deferExpressionDimensions=" + deferExpressionDimensions +
            '}';
   }
 }

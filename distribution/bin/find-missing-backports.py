@@ -64,17 +64,18 @@ def find_next_url(links):
     return None
 
 
-if len(sys.argv) != 5:
-  sys.stderr.write('usage: program <github-username> <previous-release-branch> <current-release-branch> <milestone-number>\n')
-  sys.stderr.write("  e.g., program myusername 0.17.0 0.18.0 30")
-  sys.stderr.write("  e.g., The milestone number for Druid 30 is 56, since the milestone has the url https://github.com/apache/druid/milestone/56\n")
-  sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.")
+if len(sys.argv) != 4:
+  sys.stderr.write('Incorrect program arguments.\n')
+  sys.stderr.write('Usage: program <github-username> <previous-major-release-branch> <current-major-release-branch>\n')
+  sys.stderr.write("  e.g., program myusername 29.0.0 30.0.0\n")
+  sys.stderr.write("  Ensure that the title of the milestone is the same as the release branch.\n")
+  sys.stderr.write("  Ensure that a GIT_TOKEN environment variable containing a personal access token has been set.\n")
   sys.exit(1)
 
 github_username = sys.argv[1]
 previous_branch = sys.argv[2]
 release_branch = sys.argv[3]
-milestone_number = int(sys.argv[4])
+milestone_title = release_branch
 
 master_branch = "master"
 command = "git log {}..{} --oneline | tail -1".format(master_branch, previous_branch)
@@ -102,9 +103,6 @@ for commit_msg in all_release_commits.splitlines():
 
 print("Number of release PR subjects: {}".format(len(release_pr_subjects)))
 # Get all closed PRs and filter out with milestone
-milestone_url = "https://api.github.com/repos/apache/druid/milestones/{}".format(milestone_number)
-resp = requests.get(milestone_url, auth=(github_username, os.environ["GIT_TOKEN"])).json()
-milestone_title = resp['title']
 pr_items = []
 page = 0
 while True:

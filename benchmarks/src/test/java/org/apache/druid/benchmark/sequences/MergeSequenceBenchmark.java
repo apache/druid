@@ -80,14 +80,14 @@ public class MergeSequenceBenchmark
   public void mergeHierarchical(Blackhole blackhole)
   {
     Iterator<Sequence<Integer>> iterator = sequences.iterator();
-    List<Sequence<Integer>> partialMerged = new ArrayList<Sequence<Integer>>();
-    List<Sequence<Integer>> toMerge = new ArrayList<Sequence<Integer>>();
+    List<Sequence<Integer>> partialMerged = new ArrayList<>();
+    List<Sequence<Integer>> toMerge = new ArrayList<>();
 
     while (iterator.hasNext()) {
       toMerge.add(iterator.next());
       if (toMerge.size() == mergeAtOnce) {
-        partialMerged.add(new MergeSequence<Integer>(Ordering.natural(), Sequences.simple(toMerge)));
-        toMerge = new ArrayList<Sequence<Integer>>();
+        partialMerged.add(new MergeSequence<>(Ordering.natural(), Sequences.simple(toMerge)));
+        toMerge = new ArrayList<>();
       }
     }
 

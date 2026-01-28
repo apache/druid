@@ -21,7 +21,6 @@ package org.apache.druid.segment.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -97,15 +96,9 @@ public class TransformerTest extends InitializedNullHandlingTest
         ImmutableList.of("ts", "dim"),
         ImmutableMap.of("ts", "not_a_timestamp", "dim", false)
     );
-    if (NullHandling.replaceWithDefault()) {
-      final InputRow actual = transformer.transform(row);
-      Assert.assertNotNull(actual);
-      Assert.assertEquals(DateTimes.of("1970-01-01T00:00:00.000Z"), actual.getTimestamp());
-    } else {
-      expectedException.expectMessage("Could not transform value for __time.");
-      expectedException.expect(ParseException.class);
-      transformer.transform(row);
-    }
+    expectedException.expectMessage("Could not transform value for __time.");
+    expectedException.expect(ParseException.class);
+    transformer.transform(row);
   }
 
   @Test
@@ -133,13 +126,8 @@ public class TransformerTest extends InitializedNullHandlingTest
     );
     Assert.assertNotNull(actual);
     Assert.assertEquals(1, actual.getRawValuesList().size());
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(1, actual.getInputRows().size());
-      Assert.assertEquals(DateTimes.of("1970-01-01T00:00:00.000Z"), actual.getInputRows().get(0).getTimestamp());
-    } else {
-      Assert.assertNull(actual.getInputRows());
-      Assert.assertEquals("Could not transform value for __time.", actual.getParseException().getMessage());
-    }
+    Assert.assertNull(actual.getInputRows());
+    Assert.assertEquals("Could not transform value for __time.", actual.getParseException().getMessage());
   }
 
   @Test

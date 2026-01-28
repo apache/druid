@@ -29,16 +29,17 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-:::info
- You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::info[Required extension]
+To use the S3 input source, load the extension [`druid-s3-extensions`](../development/extensions-core/s3.md) in your `common.runtime.properties` file.
 :::
 
 The S3 input source reads objects directly from S3. You can specify either:
-- a list of S3 URI strings
-- a list of S3 location prefixes that attempts to list the contents and ingest
+
+* a list of S3 URI strings
+* a list of S3 location prefixes that attempts to list the contents and ingest
 all objects contained within the locations.
 
-The S3 input source is splittable. Therefore, you can use it with the [Parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
+The S3 input source is splittable. Therefore, you can use it with the [parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
 
 Sample specs:
 
@@ -75,7 +76,6 @@ Sample specs:
     },
 ...
 ```
-
 
 ```json
 ...
@@ -184,7 +184,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (S3 URI starting with `s3://`), `__file_bucket` (S3 bucket), and `__file_path` (S3 object key).|None|no|
 | endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
@@ -204,25 +204,28 @@ Properties Object:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source access key|None|yes if secretAccessKey is given|
-|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source secret key|None|yes if accessKeyId is given|
+|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source access key|None|Yes, if `secretAccessKey` or `sessionToken` is given.|
+|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source secret key|None|Yes, if `accessKeyId` or `sessionToken` is given.|
+|sessionToken|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source session token|None|no|
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 :::info
- **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+
+If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+
 :::
 
 ## Google Cloud Storage input source
 
-:::info
- You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::info[Required extension]
+To use the Google Cloud Storage input source, load the extension [`druid-google-extensions`](../development/extensions-core/google.md) in your `common.runtime.properties` file.
 :::
 
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
 Cloud Storage URI strings. The Google Cloud Storage input source is splittable
-and can be used by the [Parallel task](./native-batch.md), where each worker task of `index_parallel` will read
+and can be used by the [parallel task](./native-batch.md), where each worker task of `index_parallel` will read
 one or multiple objects.
 
 Sample specs:
@@ -261,7 +264,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -288,7 +290,7 @@ Sample specs:
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 
 Note that the Google Cloud Storage input source will skip all empty objects only when `prefixes` is specified.
 
@@ -300,16 +302,16 @@ Google Cloud Storage object:
 |path|The path where data is located.|None|yes|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Google Cloud Storage URI starting with `gs://`), `__file_bucket` (GCS bucket), and `__file_path` (GCS key).|None|no|
 
-## Azure input source 
+## Azure input source
 
-:::info
- You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::info[Required extension]
+To use the Azure input source, load the extension [`druid-azure-extensions`](../development/extensions-core/azure.md) in your `common.runtime.properties` file.
 :::
 
 The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
-specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
-The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema. 
+The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema.
 
 Sample specs:
 
@@ -347,7 +349,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -377,9 +378,9 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located. Use this format: `azureStorage://STORAGE_ACCOUNT/CONTAINER/PATH_TO_FILE`|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest. Use this format`azureStorage://STORAGE_ACCOUNT/CONTAINER/PREFIX`. Empty objects starting with any of the given prefixes are skipped.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
 |objects|JSON array of Azure objects to ingest.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
-|objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azureStorage://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
-|properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)
+|properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -390,14 +391,12 @@ The `objects` property can one of the following:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake storage account|None|yes|
 |path|The container and path where data is located.|None|yes|
 
-
 The `properties` property can be one of the following:
 
-- `sharedAccessStorageToken`
-- `key` 
-- `appRegistrationClientId`, `appRegistrationClientSecret`, and `tenantId` 
-- empty
-
+* `sharedAccessStorageToken`
+* `key`
+* `appRegistrationClientId`, `appRegistrationClientSecret`, and `tenantId`
+* empty
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
@@ -407,8 +406,7 @@ The `properties` property can be one of the following:
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
-
-#### `azure` input source
+### Legacy `azure` input source
 
 The Azure input source that uses the type `azure` is an older version of the Azure input type and is not recommended. It doesn't support specifying which storage account to ingest from. We recommend using the [`azureStorage` input source schema](#azure-input-source) instead since it provides more functionality.
 
@@ -448,7 +446,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -475,7 +472,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
@@ -487,16 +484,15 @@ The `objects` property is:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-
 ## HDFS input source
 
-:::info
- You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::info[Required extension]
+To use the HDFS input source, load the extension [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) in your `common.runtime.properties` file.
 :::
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
-of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](./native-batch.md),
+of HDFS URI strings. The HDFS input source is splittable and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample specs:
@@ -580,15 +576,17 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-:::info
- **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+:::info[Security notes]
 
- The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+
+The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+
 :::
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
-The HTTP input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
+The HTTP input source is _splittable_ and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
@@ -696,7 +694,7 @@ Sample spec:
 
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
-The Local input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
+The Local input source is _splittable_ and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample spec:
@@ -725,13 +723,13 @@ Sample spec:
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
-|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (File URI starting with `file:`) and `__file_path` (file path).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (File URI starting with `file:`) and `__file_path` (file path).|no|
 
 ## Druid input source
 
 The Druid input source is to support reading data directly from existing Druid segments,
 potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-The Druid input source is _splittable_ and can be used by the [Parallel task](./native-batch.md).
+The Druid input source is _splittable_ and can be used by the [parallel task](./native-batch.md).
 This input source has a fixed input format for reading from Druid segments;
 no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 
@@ -744,9 +742,9 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 
 The Druid input source can be used for a variety of purposes, including:
 
-- Creating new datasources that are rolled-up copies of existing datasources.
-- Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
-- Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
+* Creating new datasources that are rolled-up copies of existing datasources.
+* Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
+* Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
 
 When using the Druid input source, the timestamp column shows up as a numeric field named `__time` set to the number
 of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to use this in the timestampSpec, if you
@@ -813,32 +811,44 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 ```
 
 :::info
- Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
- have ingestion specs that rely on this and cannot rewrite them, set
- [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
- to `true` to enable a compatibility mode where the timestampSpec is ignored.
+
+Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you have ingestion specs that rely on this and cannot rewrite them, set [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration) to `true` to enable a compatibility mode where the timestampSpec is ignored.
+
 :::
 
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
-- `range` or `single_dim` partitioning: greater than or equal to 1
-- `hashed` or `dynamic` partitioning: greater than or equal to 2
+
+* `range` or `single_dim` partitioning: greater than or equal to 1
+* `hashed` or `dynamic` partitioning: greater than or equal to 2
 
 For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
 
 ## SQL input source
 
+:::info[Required extension]
+To use the SQL input source, you must load the appropriate extension in your `common.runtime.properties` file.
+* To connect to MySQL, load the extension [`mysql-metadata-storage`](../development/extensions-core/mysql.md).
+* To connect to PostgreSQL, load the extension [`postgresql-metadata-storage`](../development/extensions-core/postgresql.md).
+
+The MySQL extension requires a JDBC driver.
+For more information, see the [Installing the MySQL connector library](../development/extensions-core/mysql.md).
+:::
+
 The SQL input source is used to read data directly from RDBMS.
-The SQL input source is _splittable_ and can be used by the [Parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
+You can _split_ the ingestion tasks for a SQL input source. When you use the [parallel task](./native-batch.md) type, each worker task reads from one SQL query from the list of queries.
 This input source does not support Split Hint Spec.
-Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
-Please refer to the Recommended practices section below before using this input source.
+
+The SQL input source has a fixed input format for reading events.
+Don't specify `inputFormat` when using this input source.
+
+Refer to the [recommended practices](#recommended-practices) before using this input source.
 
 |Property|Description|Required|
 |--------|-----------|---------|
 |type|Set the value to `sql`.|Yes|
-|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
-|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support.<br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
+|foldCase|Boolean to toggle case folding of database column names. For example, to ingest a database column named `Entry_Date` as `entry_date`, set `foldCase` to true and include `entry_date` in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec).|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
 The following is an example of an SQL input source spec:
@@ -866,11 +876,11 @@ The following is an example of an SQL input source spec:
 The spec above will read all events from two separate SQLs for the interval `2013-01-01/2013-01-02`.
 Each of the SQL queries will be run in its own sub-task and thus for the above example, there would be two sub-tasks.
 
-**Recommended practices**
+### Recommended practices
 
 Compared to the other native batch input sources, SQL input source behaves differently in terms of reading the input data. Therefore, consider the following points before using this input source in a production environment:
 
-* During indexing, each sub-task would execute one of the SQL queries and the results are stored locally on disk. The sub-tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t any restriction on the size of the generated files and this would require the MiddleManagers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
+* During indexing, each sub-task would execute one of the SQL queries and the results are stored locally on disk. The sub-tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t any restriction on the size of the generated files and this would require the Middle Managers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
 
 * Filtering the SQL queries based on the intervals specified in the `granularitySpec` can avoid unwanted data being retrieved and stored locally by the indexing sub-tasks. For example, if the `intervals` specified in the `granularitySpec` is `["2013-01-01/2013-01-02"]` and the SQL query is `SELECT * FROM table1`, `SqlInputSource` will read all the data for `table1` based on the query, even though only data between the intervals specified will be indexed into Druid.
 
@@ -878,12 +888,11 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
 
-
 ## Combining input source
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md).
+Each delegate input source must be splittable and compatible with the [parallel task type](./native-batch.md).
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
@@ -927,8 +936,8 @@ The following is an example of a Combining input source spec:
 
 ## Iceberg input source
 
-:::info
-To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
+:::info[Required extension]
+To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md) in your `common.runtime.properties` file.
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -1057,7 +1066,7 @@ The following is a sample spec for a S3 warehouse source:
 
 ### Catalog Object
 
-The catalog object supports `local` and `hive` catalog types.
+The catalog object supports `rest`, `hive`, `glue` and `local` catalog types.
 
 The following table lists the properties of a `local` catalog:
 
@@ -1078,9 +1087,41 @@ The following table lists the properties of a `hive` catalog:
 |catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
 |caseSensitive|Toggle case sensitivity for column names during Iceberg table reads.|true|no|
 
+The following table lists the properties of a `rest` catalog:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set this value to `rest`.|None|yes|
+|catalogUri|The URI associated with the catalog's HTTP endpoint.|None|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
+
+The following table lists the properties of a `glue` catalog:
+
+|Property| Description                                                                                                                                          |Default| Required |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------|-------|----------|
+|type| Set this value to `glue`.                                                                                                                            |None| yes      |
+|catalogProperties| Map of any additional properties that needs to be attached to the catalog. This expects all the config as per [Iceberg Catalog configuration docs](https://iceberg.apache.org/docs/latest/configuration/#catalog-properties) |None| Yes      |
+
+Sample: 
+
+```angular2html
+...
+"icebergCatalog":
+{ 
+    "type": "glue",
+    "catalogProperties":
+    {
+        "warehouse": "s3a://bucket/warehouse",
+        "io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+    }
+}
+..
+```
+
 ### Iceberg filter object
 
-This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+This input source provides the following filters: `and`, `equals`, `interval`, `timeWindow`, `range` and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+It is strongly recommended to apply filtering only on Iceberg partition columns. When filtering on non-partition columns, Iceberg filters may return rows that do not fully match the expression. To address this, it may help to define an additional filter in the [`transformSpec`](./ingestion-spec.md#transformspec) to remove residual rows.
 
 `equals` Filter:
 
@@ -1127,23 +1168,34 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |filterColumn|The column name from the iceberg table schema based on which range filtering needs to happen.|None|yes|
 |lower|Lower bound value to match.|None|no. At least one of `lower` or `upper` must not be null.|
 |upper|Upper bound value to match. |None|no. At least one of `lower` or `upper` must not be null.|
-|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). |false|no|
-|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). |false|no|
+|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (`>` instead of `>=`). |false|no|
+|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range (`<` instead of `<=`). |false|no|
+
+`timeWindow` Filter:
+
+| Property|Description|Default| Required |
+|---------|-----------|-------|----------|
+|type| Set this value to `timeWindow`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen. The filter column must be defined as TimestampType in Iceberg.|None|yes|
+|baseTime|Determines the reference timestamp from which the lookback and lookahead durations are applied to define the time window.|Current UTC timestamp|no|
+|lookbackDuration|Defines the duration that determines how far backward should the filter include data relative to `baseTime`.|P1D|no|
+|lookaheadDuration|Defines the duration that determines how far ahead should the filter include data relative to `baseTime`.|Zero|no|
 
 ## Delta Lake input source
 
-:::info
-To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
+:::info[Required extension]
+To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md) in your `common.runtime.properties` file.
 :::
 
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
- | Property|Description|Required|
-|---------|-----------|--------|
-| type|Set this value to `delta`.|yes|
-| tablePath|The location of the Delta table.|yes|
-| filter|The JSON Object that filters data files within a snapshot.|no|
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| type | Set this value to `delta`. | None | yes |
+| tablePath | The location of the Delta table. | None | yes |
+| filter | The JSON Object that filters data files within a snapshot. | None | no |
+| snapshotVersion | The snapshot version to read from the Delta table. An integer value must be specified. | Latest | no |
 
 ### Delta filter object
 
@@ -1154,7 +1206,6 @@ When a filter is applied on non-partitioned columns, the filtering is best-effor
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
 data that doesn't match the filter. To guarantee that the Delta Kernel prunes out unnecessary column values, only use
 filters on partitioned columns.
-
 
 `and` filter:
 
@@ -1217,8 +1268,7 @@ filters on partitioned columns.
 | column   | The table column to apply the filter on. | yes      |
 | value    | The value to use in the filter.          | yes      |
 
-
-The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
+The following is a sample spec to read all records from the latest snapshot from Delta table `/delta-table/foo`:
 
 ```json
 ...
@@ -1231,7 +1281,8 @@ The following is a sample spec to read all records from the Delta table `/delta-
     }
 ```
 
-The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4' and age >= 30`:
+The following is a sample spec to read records from the Delta table `/delta-table/foo` snapshot version `3` to select records where
+`name = 'Employee4' and age >= 30`:
 
 ```json
 ...
@@ -1254,7 +1305,8 @@ The following is a sample spec to read records from the Delta table `/delta-tabl
               "value": "30"
             }
           ]
-        }
+        },
+       "snapshotVersion":  3
       },
     }
 ```

@@ -31,9 +31,9 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -70,7 +70,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
 
   private final int maxRowsPerFrame;
 
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
   private File file;
   private ReadableByteChunksFrameChannel channel;
   private FrameFileHttpResponseHandler handler;
@@ -95,16 +95,16 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   @Before
   public void setUp() throws IOException
   {
-    adapter = new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+    cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
     file = FrameTestUtil.writeFrameFile(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(maxRowsPerFrame)
-                            .frameType(FrameType.ROW_BASED) // No particular reason to test with both frame types
+                            .frameType(FrameType.latestRowBased())
                             .frames(),
         temporaryFolder.newFile()
     );
 
-    channel = ReadableByteChunksFrameChannel.create("test", false);
+    channel = ReadableByteChunksFrameChannel.create("test", false, null);
     handler = new FrameFileHttpResponseHandler(channel);
   }
 
@@ -134,8 +134,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
 
     // Backpressure future resolves once channel is read.
@@ -230,8 +230,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
 
     // Backpressure future resolves after channel is read.
@@ -341,8 +341,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
   }
 
@@ -421,8 +421,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     Assert.assertEquals(allBytes.length, channel.getBytesAdded());
     channel.doneWriting();
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
   }
 

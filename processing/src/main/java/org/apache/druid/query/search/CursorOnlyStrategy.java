@@ -21,16 +21,16 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
-import org.joda.time.Interval;
+import org.apache.druid.segment.filter.Filters;
 
 import java.util.List;
 
@@ -51,89 +51,79 @@ public class CursorOnlyStrategy extends SearchStrategy
   @Override
   public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
-    final StorageAdapter adapter = segment.asStorageAdapter();
-    final List<DimensionSpec> dimensionSpecs = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
-    return ImmutableList.of(new CursorBasedExecutor(
-        query,
-        segment,
-        filter,
-        interval,
-        dimensionSpecs
-    ));
+    final List<DimensionSpec> dimensionSpecs = getDimsToSearch(segment, query.getDimensions());
+    return ImmutableList.of(
+        new CursorBasedExecutor(
+            query,
+            segment,
+            dimensionSpecs
+        )
+    );
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor
   {
-
-    protected Filter filter;
-    protected Interval interval;
-
     public CursorBasedExecutor(
         SearchQuery query,
         Segment segment,
-        Filter filter,
-        Interval interval, List<DimensionSpec> dimensionSpecs
+        List<DimensionSpec> dimensionSpecs
     )
     {
       super(query, segment, dimensionSpecs);
-
-      this.filter = filter;
-      this.interval = interval;
     }
 
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
-      final StorageAdapter adapter = segment.asStorageAdapter();
+      final CursorFactory adapter = segment.as(CursorFactory.class);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(query.getSingleInterval())
+                                                       .setFilter(
+                                                           Filters.convertToCNFFromQueryContext(
+                                                               query,
+                                                               Filters.toFilter(query.getFilter())
+                                                           )
+                                                       )
+                                                       .setVirtualColumns(query.getVirtualColumns())
+                                                       .setPhysicalColumns(query.getRequiredColumns())
+                                                       .setQueryContext(query.context())
+                                                       .build();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
 
-      final Sequence<Cursor> cursors = adapter.makeCursors(
-          filter,
-          interval,
-          query.getVirtualColumns(),
-          query.getGranularity(),
-          query.isDescending(),
-          null
-      );
+        final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
+        retVal.defaultReturnValue(0);
 
-      final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
-      retVal.defaultReturnValue(0);
+        if (cursor == null) {
+          return retVal;
+        }
 
-      cursors.accumulate(
-          retVal,
-          (map, cursor) -> {
-            if (map.size() >= limit) {
-              return map;
-            }
+        final ColumnSelectorPlus<SearchColumnSelectorStrategy>[] selectorPlusList = DimensionHandlerUtils.createColumnSelectorPluses(
+            SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
+            dimsToSearch,
+            cursor.getColumnSelectorFactory()
+        );
 
-            final ColumnSelectorPlus<SearchColumnSelectorStrategy>[] selectorPlusList = DimensionHandlerUtils.createColumnSelectorPluses(
-                SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
-                dimsToSearch,
-                cursor.getColumnSelectorFactory()
+        while (!cursor.isDone()) {
+          for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+            selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
+                selectorPlus.getOutputName(),
+                selectorPlus.getSelector(),
+                searchQuerySpec,
+                limit,
+                retVal
             );
 
-            while (!cursor.isDone()) {
-              for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
-                selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
-                    selectorPlus.getOutputName(),
-                    selectorPlus.getSelector(),
-                    searchQuerySpec,
-                    limit,
-                    map
-                );
-
-                if (map.size() >= limit) {
-                  return map;
-                }
-              }
-
-              cursor.advance();
+            if (retVal.size() >= limit) {
+              return retVal;
             }
-
-            return map;
           }
-      );
 
-      return retVal;
+          cursor.advance();
+        }
+
+        return retVal;
+      }
     }
   }
 }

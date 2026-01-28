@@ -1,7 +1,7 @@
 ---
 id: index
-title: "Quickstart (local)"
-sidebar_label: Quickstart (local)
+title: "Local quickstart"
+sidebar_label: Local quickstart
 ---
 
 <!--
@@ -40,8 +40,8 @@ You can follow these steps on a relatively modest machine, such as a workstation
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
-* [Java 8u92+, 11, or 17](../operations/java.md)
-* Python 3 (preferred) or Python 2
+* [Java 17](../operations/java.md)
+* Python 3 
 * Perl 5
 
 Java must be available. Either it is on your path, or set one of the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variables.
@@ -53,7 +53,7 @@ dedicated user account for running Druid.
 
 ## Install Druid
 
-Download the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz) from Apache Druid. 
+Download the [\{\{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
 
 In your terminal, extract the file and change directories to the distribution directory:
 
@@ -71,7 +71,7 @@ This configuration includes default settings that are appropriate for this tutor
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 
-From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
+From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command:
 
 ```bash
 ./bin/start-druid
@@ -145,7 +145,8 @@ Follow these steps to load the sample Wikipedia dataset:
 5. Click **Done**. You're returned to the **Query** view that displays the newly generated query.
    The query inserts the sample data into the table named `wikiticker-2015-09-12-sampled`.
 
-   <details><summary>Show the query</summary>
+   <details>
+   <summary>Show the query</summary>
 
    ```sql
    REPLACE INTO "wikiticker-2015-09-12-sampled" OVERWRITE ALL

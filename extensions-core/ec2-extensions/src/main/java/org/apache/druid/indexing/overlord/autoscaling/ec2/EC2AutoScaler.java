@@ -152,7 +152,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 
       final List<String> instanceIds = Lists.transform(
           result.getReservation().getInstances(),
-          new Function<Instance, String>()
+          new Function<>()
           {
             @Override
             public String apply(Instance input)
@@ -167,7 +167,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       return new AutoScalingData(
           Lists.transform(
               result.getReservation().getInstances(),
-              new Function<Instance, String>()
+              new Function<>()
               {
                 @Override
                 public String apply(Instance input)
@@ -208,7 +208,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
       return terminateWithIds(
           Lists.transform(
               instances,
-              new Function<Instance, String>()
+              new Function<>()
               {
                 @Override
                 public String apply(Instance input)

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
@@ -33,6 +34,8 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.rpc.ServiceClientImpl;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -147,5 +150,29 @@ public class RemoteTaskActionClientTest
     client.submit(action);
 
     EasyMock.verify(directOverlordClient, response);
+  }
+
+  @Test
+  public void test_defaultTaskActionRetryPolicy_hasMaxRetryDurationOf10Minutes()
+  {
+    final RetryPolicyConfig defaultRetryConfig = new RetryPolicyConfig();
+
+    // Build a policy with the default values for min and max wait
+    // Value of max attempts is irrelevant since we just want to compute back off times
+    final StandardRetryPolicy retryPolicy = StandardRetryPolicy
+        .builder()
+        .maxAttempts(1)
+        .minWaitMillis(defaultRetryConfig.getMinWait().toStandardDuration().getMillis())
+        .maxWaitMillis(defaultRetryConfig.getMaxWait().toStandardDuration().getMillis())
+        .build();
+
+    final long maxWait10Minutes = 10 * 60 * 1000;
+    long totalWaitTimeMillis = 0;
+    int attempt = 0;
+    for (; totalWaitTimeMillis < maxWait10Minutes; ++attempt) {
+      totalWaitTimeMillis += ServiceClientImpl.computeBackoffMs(retryPolicy, attempt);
+    }
+
+    Assert.assertEquals(13, defaultRetryConfig.getMaxRetryCount());
   }
 }

@@ -35,9 +35,9 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -67,22 +67,22 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(SegmentMetadataQuerySegmentWalker.class);
   private final CoordinatorServerView serverView;
   private final DruidHttpClientConfig httpClientConfig;
-  private final QueryToolChestWarehouse warehouse;
-  private final ServerConfig serverConfig;
   private final ServiceEmitter emitter;
+  protected final QueryRunnerFactoryConglomerate conglomerate;
+  protected final ServerConfig serverConfig;
 
   @Inject
   public SegmentMetadataQuerySegmentWalker(
       final CoordinatorServerView serverView,
       final DruidHttpClientConfig httpClientConfig,
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final ServerConfig serverConfig,
       final ServiceEmitter emitter
   )
   {
     this.serverView = serverView;
     this.httpClientConfig = httpClientConfig;
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.emitter = emitter;
     this.serverConfig = serverConfig;
   }
@@ -112,7 +112,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> QueryRunner<T> decorateRunner(Query<T> query, QueryRunner<T> baseClusterRunner)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     final SetAndVerifyContextQueryRunner<T> baseRunner = new SetAndVerifyContextQueryRunner<>(
         serverConfig,
@@ -141,8 +141,12 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
     final TimelineLookup<String, SegmentLoadInfo> timelineLookup = timelineConverter.apply(timeline);
 
-    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = computeSegmentsToQuery(timelineLookup, query, toolChest);
+    QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
+    Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = computeSegmentsToQuery(
+        timelineLookup,
+        query,
+        toolChest
+    );
 
     queryPlus = queryPlus.withQueryMetrics(toolChest);
     queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentAndServers.size()).emit(emitter);
@@ -181,7 +185,8 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
       QueryPlus<T> queryPlus,
       ResponseContext responseContext,
       long maxQueuedBytesPerServer,
-      List<SegmentDescriptor> segmentDescriptors)
+      List<SegmentDescriptor> segmentDescriptors
+  )
   {
     return serverRunner.run(
         queryPlus.withQuery(
@@ -207,7 +212,10 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
     List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjectHolders =
         intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList());
 
-    final List<TimelineObjectHolder<String, SegmentLoadInfo>> serversLookup = toolChest.filterSegments(query, timelineObjectHolders);
+    final List<TimelineObjectHolder<String, SegmentLoadInfo>> serversLookup = toolChest.filterSegments(
+        query,
+        timelineObjectHolders
+    );
 
     Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = new HashSet<>();
     for (TimelineObjectHolder<String, SegmentLoadInfo> holder : serversLookup) {
@@ -252,8 +260,6 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> Sequence<T> merge(Query<T> query, List<Sequence<T>> sequencesByInterval)
   {
-    return Sequences
-          .simple(sequencesByInterval)
-          .flatMerge(seq -> seq, query.getResultOrdering());
+    return Sequences.simple(sequencesByInterval).flatMerge(seq -> seq, query.getResultOrdering());
   }
 }

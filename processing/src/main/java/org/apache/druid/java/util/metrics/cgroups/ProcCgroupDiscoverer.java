@@ -41,7 +41,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
 {
   private static final String CGROUP_TYPE = "cgroup";
 
-  private final File procDir;
+  protected final File procDir;
 
   /**
    * Create a proc discovery mechanism based on a `/proc` directory.
@@ -118,7 +118,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
     throw new RE("Hierarchy for [%s] not found", cgroup);
   }
 
-  private ProcMountsEntry getMountEntry(final File procMounts, final String cgroup)
+  protected ProcMountsEntry getMountEntry(final File procMounts, final String cgroup)
   {
     final List<String> lines;
     try {
@@ -192,5 +192,23 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       this.controllers = controllers;
       this.path = path;
     }
+  }
+
+  @Override
+  public Cpu.CpuMetrics getCpuMetrics()
+  {
+    return new Cpu(this).snapshot();
+  }
+
+  @Override
+  public CpuSet.CpuSetMetric getCpuSetMetrics()
+  {
+    return new CpuSet(this).snapshot();
+  }
+
+  @Override
+  public CgroupVersion getCgroupVersion()
+  {
+    return CgroupVersion.V1;
   }
 }

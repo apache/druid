@@ -46,6 +46,12 @@ public abstract class DictionaryRangeScanningBitmapIndex extends SimpleImmutable
     this.rangeSize = rangeSize;
   }
 
+  @Override
+  public int estimatedComputeCost()
+  {
+    return this.rangeSize;
+  }
+
   @Nullable
   @Override
   public final <T> T computeBitmapResult(

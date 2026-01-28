@@ -33,21 +33,23 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
 /**
  * Processor that computes Druid queries, single-threaded.
  *
- * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
+ * The datasource for the query must satisfy {@link DataSource#isProcessable()} and
  * {@link DataSource#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
  *
@@ -59,6 +61,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   private final SegmentWrangler segmentWrangler;
   private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryScheduler scheduler;
+  private final PolicyEnforcer policyEnforcer;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -67,6 +70,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
       SegmentWrangler segmentWrangler,
       JoinableFactoryWrapper joinableFactoryWrapper,
       QueryScheduler scheduler,
+      PolicyEnforcer policyEnforcer,
       ServiceEmitter emitter
   )
   {
@@ -74,39 +78,34 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     this.segmentWrangler = segmentWrangler;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.scheduler = scheduler;
+    this.policyEnforcer = policyEnforcer;
     this.emitter = emitter;
   }
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
+    ExecutionVertex ev = ExecutionVertex.of(query);
 
-    if (!analysis.isConcreteBased() || !dataSourceFromQuery.isGlobal()) {
-      throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);
+    if (!ev.canRunQueryUsingLocalWalker()) {
+      throw new IAE("Cannot query dataSource locally: %s", ev.getBaseDataSource());
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
     // matter, but at least some or all will be in a future PR
-    final Iterable<ReferenceCountingSegment> segments =
-        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals))
-                          .transform(ReferenceCountingSegment::wrapRootGenerationSegment);
+    final Iterable<Optional<Segment>> segments =
+        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(ev.getBaseDataSource(), intervals))
+                          .transform(ReferenceCountedSegmentProvider::unmanaged);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
-        .createSegmentMapFunction(
-            query,
-            cpuAccumulator
-        );
-
+    final SegmentMapFunction segmentMapFn = ev.createSegmentMapFunction(policyEnforcer);
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
         DirectQueryProcessingPool.INSTANCE,
         () -> StreamSupport.stream(segments.spliterator(), false)
-                           .map(segmentMapFn)
+                           .map(s -> segmentMapFn.apply(s).orElseThrow())
                            .map(queryRunnerFactory::createRunner).iterator()
     );
 

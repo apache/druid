@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -48,16 +47,12 @@ public class SinglePhaseSubTaskSpecTest
       "groupId",
       "supervisorTaskId",
       new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "dataSource",
-              new TimestampSpec(null, null, null),
-              new DimensionsSpec(null),
-              new AggregatorFactory[0],
-              null,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource("dataSource")
+                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withDimensions(DimensionsSpec.builder().build())
+                    .build(),
           new ParallelIndexIOConfig(
-              null,
               new LocalInputSource(new File("baseDir"), "filter"),
               new JsonInputFormat(null, null, null, null, null),
               null,

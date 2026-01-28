@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -53,6 +54,8 @@ import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -61,14 +64,15 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -79,7 +83,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -335,13 +339,13 @@ public class QueryRunnerTestHelper
   // simple cartesian iterable
   public static Iterable<Object[]> cartesian(final Iterable... iterables)
   {
-    return new Iterable<Object[]>()
+    return new Iterable<>()
     {
 
       @Override
       public Iterator<Object[]> iterator()
       {
-        return new Iterator<Object[]>()
+        return new Iterator<>()
         {
           private final Iterator[] iterators = new Iterator[iterables.length];
           private final Object[] cached = new Object[iterables.length];
@@ -393,92 +397,137 @@ public class QueryRunnerTestHelper
   }
 
   /**
-   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory)} is vectorizable.
+   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory, boolean)} is vectorizable.
    */
   public static boolean isTestRunnerVectorizable(QueryRunner runner)
   {
     final String runnerName = runner.toString();
-    return !("rtIndex".equals(runnerName) || "noRollupRtIndex".equals(runnerName));
+    return !("rtIndex".equals(runnerName)
+             || "rtIndexPartialSchemaStringDiscovery".equals(runnerName)
+             || "noRollupRtIndex".equals(runnerName)
+             || "nonTimeOrderedRtIndex".equals(runnerName)
+             || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
   }
 
-
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
-      QueryRunnerFactory<T, QueryType> factory
+  /**
+   * Create test query runners.
+   *
+   * @param factory query runner factory
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              compatible with non-time-ordered segments.
+   */
+  public static <T, QueryType extends Query<T>> List<TestQueryRunner<T>> makeQueryRunners(
+      QueryRunnerFactory<T, QueryType> factory,
+      boolean includeNonTimeOrdered
   )
   {
-    BiFunction<String, Segment, QueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
+    BiFunction<String, Segment, TestQueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
 
-    return ImmutableList.of(
-        maker.apply(
-            "rtIndex",
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "noRollupRtIndex",
-            new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "mMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "noRollupMMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "mergedRealtimeIndex",
-            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "frontCodedMMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
+    final ImmutableList.Builder<TestQueryRunner<T>> retVal = ImmutableList.builder();
+
+    retVal.addAll(
+        Arrays.asList(
+            maker.apply(
+                "rtIndex",
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "rtIndexPartialSchemaStringDiscovery",
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "noRollupRtIndex",
+                new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "noRollupMMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mergedRealtimeIndex",
+                new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "frontCodedMMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mMappedTestIndexCompressedComplex",
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndexCompressedComplex(), SEGMENT_ID)
+            )
         )
     );
+
+    if (includeNonTimeOrdered) {
+      retVal.addAll(
+          Arrays.asList(
+              maker.apply(
+                  "nonTimeOrderedRtIndex",
+                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedRealtimeTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedNoRollupRtIndex",
+                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedNoRollupRealtimeTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedMMappedTestIndex",
+                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedMMappedTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedNoRollupMMappedTestIndex",
+                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedNoRollupMMappedTestIndex(), SEGMENT_ID)
+              )
+          )
+      );
+    }
+
+    return retVal.build();
   }
 
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunnersToMerge(
-      QueryRunnerFactory<T, QueryType> factory
+  /**
+   * Create test query runners.
+   *
+   * @param factory query runner factory
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              written to be compatible with non-time-ordered segments.
+   */
+  public static <T, QueryType extends Query<T>> List<TestQueryRunner<T>> makeQueryRunnersToMerge(
+      final QueryRunnerFactory<T, QueryType> factory,
+      final boolean includeNonTimeOrdered
   )
   {
-    return mapQueryRunnersToMerge(factory, makeQueryRunners(factory));
+    return mapQueryRunnersToMerge(factory, makeQueryRunners(factory, includeNonTimeOrdered));
   }
 
-  public static <T, QueryType extends Query<T>> ArrayList<QueryRunner<T>> mapQueryRunnersToMerge(
+  public static <T, QueryType extends Query<T>> ArrayList<TestQueryRunner<T>> mapQueryRunnersToMerge(
       QueryRunnerFactory<T, QueryType> factory,
-      List<QueryRunner<T>> runners
+      List<TestQueryRunner<T>> runners
   )
   {
-    final ArrayList<QueryRunner<T>> retVal = new ArrayList<>(runners.size());
+    final ArrayList<TestQueryRunner<T>> retVal = new ArrayList<>(runners.size());
 
     final QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
-    for (QueryRunner<T> baseRunner : runners) {
+    for (TestQueryRunner<T> baseRunner : runners) {
       retVal.add(
-          FluentQueryRunner.create(baseRunner, toolchest)
-                           .applyPreMergeDecoration()
-                           .mergeResults(true)
-                           .applyPostMergeDecoration()
-                           .setToString(baseRunner.toString())
+          new TestQueryRunner<>(
+              baseRunner.getName(),
+              FluentQueryRunner.create(baseRunner, toolchest)
+                               .applyPreMergeDecoration()
+                               .mergeResults(true)
+                               .applyPostMergeDecoration(),
+              baseRunner.getSegment()
+          )
       );
     }
 
     return retVal;
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
-      String resourceFileName,
-      final String runnerName
-  )
-  {
-    return makeQueryRunner(
-        factory,
-        SEGMENT_ID,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), SEGMENT_ID),
-        runnerName
-    );
-  }
-
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       Segment adapter,
       final String runnerName
@@ -487,32 +536,23 @@ public class QueryRunnerTestHelper
     return makeQueryRunner(factory, SEGMENT_ID, adapter, runnerName);
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
-      SegmentId segmentId,
-      Segment adapter,
+  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
+      final QueryRunnerFactory<T, QueryType> factory,
+      final SegmentId segmentId,
+      final Segment adapter,
       final String runnerName
   )
   {
-    //noinspection
-    return new BySegmentQueryRunner<T>(
-        segmentId,
-        adapter.getDataInterval().getStart(),
-        factory.createRunner(adapter)
-    )
-    {
-      @Override
-      public String toString()
-      {
-        // Tests that use these QueryRunners directly are parameterized and use the toString of their QueryRunner as
-        // the name of the test.  It would be better if the usages were adjusted to actually parameterize with an extra
-        // name parameter, or use a different object or something like that, but for now, we have to overload toString
-        // to name it so that the parameterization continues to work.
-        return runnerName;
-      }
-    };
+    return new TestQueryRunner<>(
+        runnerName,
+        new BySegmentQueryRunner<>(
+            segmentId,
+            adapter.getDataInterval().getStart(),
+            factory.createRunner(adapter)
+        ),
+        adapter
+    );
   }
-
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerWithSegmentMapFn(
       QueryRunnerFactory<T, QueryType> factory,
@@ -521,17 +561,16 @@ public class QueryRunnerTestHelper
       final String runnerName
   )
   {
-    final DataSource base = query.getDataSource();
-
-    final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
-                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                                      adapter));
-    return makeQueryRunner(factory, segmentReference, runnerName);
+    ExecutionVertex ev = ExecutionVertex.of(query);
+    final Optional<Segment> segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
+                                                 .apply(Optional.of(adapter));
+    return makeQueryRunner(factory, segmentReference.orElseThrow(), runnerName);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
+      final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
@@ -545,25 +584,36 @@ public class QueryRunnerTestHelper
                 segments.addAll(timeline.lookup(interval));
               }
               List<Sequence<T>> sequences = new ArrayList<>();
-              for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
-                  query,
-                  segments
-              )) {
-                Segment segment = holder.getObject().getChunk(0).getObject();
-                QueryPlus queryPlusRunning = queryPlus.withQuery(
-                    queryPlus.getQuery().withQuerySegmentSpec(
-                        new SpecificSegmentSpec(
-                            new SegmentDescriptor(
-                                holder.getInterval(),
-                                holder.getVersion(),
-                                0
-                            )
-                        )
-                    )
+              final Closer closer = Closer.create();
+              try {
+                for (TimelineObjectHolder<String, DataSegment> holder : toolChest.filterSegments(
+                    query,
+                    segments
+                )) {
+                  final SegmentDescriptor descriptor = new SegmentDescriptor(
+                      holder.getInterval(),
+                      holder.getVersion(),
+                      0
+                  );
+                  final QueryPlus queryPlusRunning = queryPlus.withQuery(
+                      queryPlus.getQuery().withQuerySegmentSpec(new SpecificSegmentSpec(descriptor))
+                  );
+                  final ReferenceCountedSegmentProvider referenceProvider = referenceProviders.get(
+                      holder.getObject().getChunk(0).getObject()
+                  );
+                  final QueryRunner<?> runner = factory.createRunner(
+                      closer.register(referenceProvider.acquireReference().orElseThrow())
+                  );
+                  sequences.add(runner.run(queryPlusRunning, responseContext));
+                }
+                return Sequences.withBaggage(
+                    new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences)),
+                    closer
                 );
-                sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
               }
-              return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+              catch (Throwable t) {
+                throw CloseableUtils.closeAndWrapInCatch(t, closer);
+              }
             },
             toolChest
         )

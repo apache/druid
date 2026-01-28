@@ -31,12 +31,14 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexIO.IndexLoader;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -100,7 +102,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     segmentDir = indexMerger.persist(
         incrementalIndex,
         temporaryFolder.newFolder(),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
   }
@@ -184,21 +186,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Metadata metadata = null;
-      ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
-      if (metadataBB != null) {
-        try {
-          metadata = mapper.readValue(
-              IndexIO.SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
-              Metadata.class
-          );
-        }
-        catch (IOException ex) {
-          throw new IOException("Failed to read metadata", ex);
-        }
-      }
-
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<BaseColumnHolder>> columns = new HashMap<>();
 
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
@@ -220,7 +208,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
               }
           ));
         } else {
-          ColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
+          BaseColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
           columns.put(columnName, () -> columnHolder);
         }
 
@@ -241,7 +229,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
+        BaseColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
         columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
       }
 
@@ -250,15 +238,33 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
           dims,
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
-          smooshedFiles,
-          metadata,
-          lazy
-      );
+          smooshedFiles
+      )
+      {
+        @Override
+        public Metadata getMetadata()
+        {
+          try {
+            ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+            if (metadataBB != null) {
+              return mapper.readValue(
+                  IndexIO.SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
+                  Metadata.class
+              );
+            } else {
+              return null;
+            }
+          }
+          catch (IOException ex) {
+            throw DruidException.defensive(ex, "Failed to read metadata");
+          }
+        }
+      };
 
       return index;
     }
 
-    private ColumnHolder deserializeColumn(
+    private BaseColumnHolder deserializeColumn(
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles
@@ -267,7 +273,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
       ColumnDescriptor serde = mapper.readValue(
           IndexIO.SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class
       );
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(byteBuffer, columnConfig, smooshedFiles, null);
     }
   }
 }

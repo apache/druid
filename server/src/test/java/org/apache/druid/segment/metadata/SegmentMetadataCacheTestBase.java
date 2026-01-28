@@ -31,15 +31,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -52,6 +50,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Rule;
@@ -90,7 +89,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public QueryRunnerFactoryConglomerate conglomerate;
   public Closer resourceCloser;
-  public QueryToolChestWarehouse queryToolChestWarehouse;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -112,14 +110,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    queryToolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
   }
 
   public void setUpData() throws Exception
@@ -266,19 +256,14 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                    .size(0)
                    .build();
 
-    realtimeSegment1 = new DataSegment(
-        DATASOURCE3,
-        Intervals.of("2012/2013"),
-        "version3",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(2, 3),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    realtimeSegment1 = DataSegment.builder(SegmentId.of(DATASOURCE3, Intervals.of("2012/2013"), "version3", null))
+                                  .shardSpec(new NumberedShardSpec(2, 3))
+                                  .dimensions(ImmutableList.of("dim1", "dim2"))
+                                  .metrics(ImmutableList.of("met1", "met2"))
+                                  .projections(ImmutableList.of("proj1", "proj2"))
+                                  .binaryVersion(1)
+                                  .size(100L)
+                                  .build();
   }
 
   public void tearDown() throws Exception
@@ -299,12 +284,13 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public QueryLifecycleFactory getQueryLifecycleFactory(QuerySegmentWalker walker)
   {
     return new QueryLifecycleFactory(
-        queryToolChestWarehouse,
+        conglomerate,
         walker,
         new DefaultGenericQueryMetricsFactory(),
         new NoopServiceEmitter(),
         new TestRequestLogger(),
         new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );
@@ -312,18 +298,13 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public DataSegment newSegment(String datasource, int partitionId)
   {
-    return new DataSegment(
-        datasource,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of("dim1", "dim2"),
-        ImmutableList.of("met1", "met2"),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    return DataSegment.builder(SegmentId.of(datasource, Intervals.of("2012/2013"), "version1", partitionId))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .dimensions(ImmutableList.of("dim1", "dim2"))
+                      .metrics(ImmutableList.of("met1", "met2"))
+                      .projections(ImmutableList.of("proj1", "proj2"))
+                      .binaryVersion(1)
+                      .size(100L)
+                      .build();
   }
 }

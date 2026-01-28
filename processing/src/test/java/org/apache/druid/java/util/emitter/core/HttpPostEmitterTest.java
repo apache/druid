@@ -73,26 +73,26 @@ public class HttpPostEmitterTest
         .setMaxBatchSize(1024 * 1024)
         .setBatchQueueSizeLimit(1000)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
-    emitter.start();
+    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER)) {
+      emitter.start();
 
-    // emit first event
-    emitter.emitAndReturnBatch(new IntEvent());
-    Thread.sleep(1000L);
+      // emit first event
+      emitter.emitAndReturnBatch(new IntEvent());
+      Thread.sleep(1000L);
 
-    // get concurrentBatch reference and set value to lon as if it would fail while
-    // HttpPostEmitter#onSealExclusive method invocation.
-    Field concurrentBatch = emitter.getClass().getDeclaredField("concurrentBatch");
-    concurrentBatch.setAccessible(true);
-    ((AtomicReference<Object>) concurrentBatch.get(emitter)).getAndSet(1L);
-    // something terrible happened previously so that batch has to recover
+      // get concurrentBatch reference and set value to lon as if it would fail while
+      // HttpPostEmitter#onSealExclusive method invocation.
+      Field concurrentBatch = emitter.getClass().getDeclaredField("concurrentBatch");
+      concurrentBatch.setAccessible(true);
+      ((AtomicReference<Object>) concurrentBatch.get(emitter)).getAndSet(1L);
+      // something terrible happened previously so that batch has to recover
 
-    // emit second event
-    emitter.emitAndReturnBatch(new IntEvent());
+      // emit second event
+      emitter.emitAndReturnBatch(new IntEvent());
 
-    emitter.flush();
-    emitter.close();
+      emitter.flush();
 
-    Assert.assertEquals(2, emitter.getTotalEmittedEvents());
+      Assert.assertEquals(2, emitter.getTotalEmittedEvents());
+    }
   }
 }

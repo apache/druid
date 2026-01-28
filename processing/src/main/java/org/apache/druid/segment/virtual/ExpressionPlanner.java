@@ -182,16 +182,13 @@ public class ExpressionPlanner
       traits.remove(ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE);
     }
 
-    // vectorized expressions do not support incomplete, multi-valued inputs or outputs, or implicit mapping
-    // they also do not support unknown inputs, but they also do not currently have to deal with them, as missing
-    // capabilites is indicative of a non-existent column instead of an unknown schema. If this ever changes,
+    // vectorized expressions do not support unknown inputs, but they also do not currently have to deal with them, as
+    // missing capabilites is indicative of a non-existent column instead of an unknown schema. If this ever changes,
     // this check should also change
     boolean supportsVector = ExpressionPlan.none(
         traits,
         ExpressionPlan.Trait.INCOMPLETE_INPUTS,
-        ExpressionPlan.Trait.NEEDS_APPLIED,
-        ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-        ExpressionPlan.Trait.NON_SCALAR_OUTPUT
+        ExpressionPlan.Trait.NEEDS_APPLIED
     );
 
     if (supportsVector && expression.canVectorize(inspector)) {

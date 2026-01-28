@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -34,32 +33,29 @@ public class PossiblyNullColumnValueSelector<T> implements ColumnValueSelector<T
 {
   private final ColumnValueSelector<T> baseSelector;
   private final BooleanSupplier beNull;
-  @Nullable
-  private final T nullValue;
 
   PossiblyNullColumnValueSelector(final ColumnValueSelector<T> baseSelector, final BooleanSupplier beNull)
   {
     this.baseSelector = baseSelector;
     this.beNull = beNull;
-    this.nullValue = NullHandling.defaultValueForClass(baseSelector.classOfObject());
   }
 
   @Override
   public double getDouble()
   {
-    return beNull.getAsBoolean() ? NullHandling.ZERO_DOUBLE : baseSelector.getDouble();
+    return beNull.getAsBoolean() ? 0.0d : baseSelector.getDouble();
   }
 
   @Override
   public float getFloat()
   {
-    return beNull.getAsBoolean() ? NullHandling.ZERO_FLOAT : baseSelector.getFloat();
+    return beNull.getAsBoolean() ? 0.0f : baseSelector.getFloat();
   }
 
   @Override
   public long getLong()
   {
-    return beNull.getAsBoolean() ? NullHandling.ZERO_LONG : baseSelector.getLong();
+    return beNull.getAsBoolean() ? 0L : baseSelector.getLong();
   }
 
   @Override
@@ -73,7 +69,7 @@ public class PossiblyNullColumnValueSelector<T> implements ColumnValueSelector<T
   @Override
   public T getObject()
   {
-    return beNull.getAsBoolean() ? nullValue : baseSelector.getObject();
+    return beNull.getAsBoolean() ? null : baseSelector.getObject();
   }
 
   @Override

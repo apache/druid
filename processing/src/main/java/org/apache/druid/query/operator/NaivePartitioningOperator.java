@@ -19,14 +19,9 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
-import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,137 +35,50 @@ import java.util.concurrent.atomic.AtomicReference;
  * Additionally, this assumes that data has been pre-sorted according to the partitioning columns.  If it is
  * given data that has not been pre-sorted, an exception is expected to be thrown.
  */
-public class NaivePartitioningOperator implements Operator
+public class NaivePartitioningOperator extends AbstractPartitioningOperator
 {
-  private final List<String> partitionColumns;
-  private final Operator child;
-
   public NaivePartitioningOperator(
       List<String> partitionColumns,
       Operator child
   )
   {
-    this.partitionColumns = partitionColumns;
-    this.child = child;
+    super(partitionColumns, child);
   }
 
   @Override
-  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
+  protected HandleContinuationResult handleContinuation(Receiver receiver, Continuation cont)
   {
-    if (continuation != null) {
-      Continuation cont = (Continuation) continuation;
-
-      if (cont.iter != null) {
-        while (cont.iter.hasNext()) {
-          final Signal signal = receiver.push(cont.iter.next());
-          switch (signal) {
-            case GO:
-              break;
-            case PAUSE:
-              if (cont.iter.hasNext()) {
-                return cont;
-              }
-
-              if (cont.subContinuation == null) {
-                // We were finished anyway
-                receiver.completed();
-                return null;
-              }
-
-              return new Continuation(null, cont.subContinuation);
-            case STOP:
-              receiver.completed();
-              try {
-                cont.close();
-              }
-              catch (IOException e) {
-                throw new RE(e, "Unable to close continutation");
-              }
-              return null;
-            default:
-              throw new RE("Unknown signal[%s]", signal);
-          }
-        }
-
-        if (cont.subContinuation == null) {
-          receiver.completed();
-          return null;
-        }
+    while (cont.iter.hasNext()) {
+      final Signal signal = receiver.push(cont.iter.next());
+      if (signal != Signal.GO) {
+        return handleNonGoCases(signal, cont.iter, receiver, cont);
       }
-
-      continuation = cont.subContinuation;
     }
-
-    AtomicReference<Iterator<RowsAndColumns>> iterHolder = new AtomicReference<>();
-
-    final Closeable retVal = child.goOrContinue(
-        continuation,
-        new Receiver()
-        {
-          @Override
-          public Signal push(RowsAndColumns rac)
-          {
-            if (rac == null) {
-              throw DruidException.defensive("Should never get a null rac here.");
-            }
-            ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
-            if (groupPartitioner == null) {
-              groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
-            }
-
-            Iterator<RowsAndColumns> partitionsIter =
-                groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
-
-            Signal keepItGoing = Signal.GO;
-            while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
-              keepItGoing = receiver.push(partitionsIter.next());
-            }
-
-            if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
-              iterHolder.set(partitionsIter);
-              return Signal.PAUSE;
-            }
-
-            return keepItGoing;
-          }
-
-          @Override
-          public void completed()
-          {
-            if (iterHolder.get() == null) {
-              receiver.completed();
-            }
-          }
-        }
-    );
-
-    if (iterHolder.get() != null || retVal != null) {
-      return new Continuation(
-          iterHolder.get(),
-          retVal
-      );
-    } else {
-      return null;
-    }
+    return HandleContinuationResult.CONTINUE_PROCESSING;
   }
 
-  private static class Continuation implements Closeable
+  private static class NaiveReceiver extends AbstractReceiver
   {
-    Iterator<RowsAndColumns> iter;
-    Closeable subContinuation;
-
-    public Continuation(Iterator<RowsAndColumns> iter, Closeable subContinuation)
+    public NaiveReceiver(
+        Receiver delegate,
+        AtomicReference<Iterator<RowsAndColumns>> iterHolder,
+        List<String> partitionColumns
+    )
     {
-      this.iter = iter;
-      this.subContinuation = subContinuation;
+      super(delegate, iterHolder, partitionColumns);
     }
 
     @Override
-    public void close() throws IOException
+    protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
     {
-      if (subContinuation != null) {
-        subContinuation.close();
-      }
+      final ClusteredGroupPartitioner groupPartitioner = ClusteredGroupPartitioner.fromRAC(rac);
+      return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
     }
+  }
+
+  @Override
+  protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
+  {
+    return new NaiveReceiver(delegate, iterHolder, partitionColumns);
   }
 }

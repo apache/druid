@@ -56,7 +56,7 @@ public class HdfsDataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
-  public static final Predicate<Throwable> RETRY_PREDICATE = new Predicate<Throwable>()
+  public static final Predicate<Throwable> RETRY_PREDICATE = new Predicate<>()
   {
     @Override
     public boolean apply(Throwable input)
@@ -194,10 +194,9 @@ public class HdfsDataSegmentPuller implements URIDataPuller
     }
     try {
       final FileSystem fs = path.getFileSystem(config);
-      if (fs.isDirectory(path)) {
+      if (fs.getFileStatus(path).isDirectory()) {
 
         // --------    directory     ---------
-
         try {
           return RetryUtils.retry(
               () -> {
@@ -211,7 +210,7 @@ public class HdfsDataSegmentPuller implements URIDataPuller
                   final LocatedFileStatus child = children.next();
                   final Path childPath = child.getPath();
                   final String fname = childPath.getName();
-                  if (fs.isDirectory(childPath)) {
+                  if (fs.getFileStatus(childPath).isDirectory()) {
                     log.warn("[%s] is a child directory, skipping", childPath.toString());
                   } else {
                     final File outFile = new File(outDir, fname);

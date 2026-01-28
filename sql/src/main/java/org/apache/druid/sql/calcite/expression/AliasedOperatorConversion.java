@@ -21,9 +21,7 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -39,10 +37,6 @@ public class AliasedOperatorConversion implements SqlOperatorConversion
 
   public AliasedOperatorConversion(final SqlOperatorConversion baseConversion, final String name)
   {
-    if (!SqlKind.FUNCTION.contains(baseConversion.calciteOperator().getKind())) {
-      throw new IAE("Base operator must be a function but was[%s]", baseConversion.calciteOperator().getKind());
-    }
-
     final SqlFunction baseFunction = (SqlFunction) baseConversion.calciteOperator();
 
     this.baseConversion = baseConversion;

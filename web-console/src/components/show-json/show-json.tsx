@@ -38,9 +38,9 @@ export interface ShowJsonProps {
 export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
   const { endpoint, transform, downloadFilename } = props;
 
-  const [jsonState] = useQueryManager<null, string>({
-    processQuery: async () => {
-      const resp = await Api.instance.get(endpoint);
+  const [jsonState, queryManager] = useQueryManager<null, string>({
+    processQuery: async (_, signal) => {
+      const resp = await Api.instance.get(endpoint, { signal });
       let data = resp.data;
       if (transform) data = transform(data);
       return typeof data === 'string' ? data : JSONBig.stringify(data, undefined, 2);
@@ -53,6 +53,12 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
     <div className="show-json">
       <div className="top-actions">
         <ButtonGroup className="right-buttons">
+          <Button
+            disabled={jsonState.loading}
+            text="Refresh"
+            minimal
+            onClick={() => queryManager.rerunLastQuery()}
+          />
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}

@@ -19,81 +19,84 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestDataSource;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DataSourceCompactionConfigAuditEntryTest
 {
-  private static final double COMPACTION_TASK_SLOT_RATIO = 0.1;
-  private static final int MAX_COMPACTION_SLOTS = 9;
-  private static final boolean USE_AUTO_SCALE_SLOTS = true;
+  private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
+  
+  private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
+      new ClusterCompactionConfig(0.1, 9, null, null, null, null),
+      InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+      auditInfo,
+      DateTimes.nowUtc()
+  );
 
-  @Mock
-  private CoordinatorCompactionConfig coordinatorCompactionConfig;
-
-  @Before
-  public void setUp()
+  @Test
+  public void testhasSameConfigWithSameBaseConfigIsTrue()
   {
-    Mockito.when(coordinatorCompactionConfig.getCompactionTaskSlotRatio()).thenReturn(COMPACTION_TASK_SLOT_RATIO);
-    Mockito.when(coordinatorCompactionConfig.getMaxCompactionTaskSlots()).thenReturn(MAX_COMPACTION_SLOTS);
-    Mockito.when(coordinatorCompactionConfig.isUseAutoScaleSlots()).thenReturn(USE_AUTO_SCALE_SLOTS);
+    final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        auditInfo,
+        DateTimes.nowUtc()
+    );
+    Assert.assertTrue(firstEntry.hasSameConfig(secondEntry));
+    Assert.assertTrue(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
-  public void testhasSameConfigWithSameBaseConfigShouldReturnTrue()
+  public void testhasSameConfigWithDifferentClusterConfigIsFalse()
   {
-    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-            COMPACTION_TASK_SLOT_RATIO,
-            MAX_COMPACTION_SLOTS,
-            USE_AUTO_SCALE_SLOTS
-        );
+    DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
+        new ClusterCompactionConfig(0.2, 9, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        auditInfo,
+        DateTimes.nowUtc()
+    );
+    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
-    Assert.assertTrue(config.hasSameConfig(coordinatorCompactionConfig));
+    secondEntry = new DataSourceCompactionConfigAuditEntry(
+        new ClusterCompactionConfig(0.1, 10, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        auditInfo,
+        DateTimes.nowUtc()
+    );
+    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
-  public void testhasSameConfigWithDifferentUseAutoScaleSlotsShouldReturnFalse()
+  public void testhasSameConfigWithDifferentDatasourceConfigIsFalse()
   {
-    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-            COMPACTION_TASK_SLOT_RATIO,
-            MAX_COMPACTION_SLOTS,
-            !USE_AUTO_SCALE_SLOTS
-        );
-
-    Assert.assertFalse(config.hasSameConfig(coordinatorCompactionConfig));
+    DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
+        auditInfo,
+        DateTimes.nowUtc()
+    );
+    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
-  public void testhasSameConfigWithDifferentMaxCompactionSlotsShouldReturnFalse()
+  public void testhasSameConfigWithNullDatasourceConfigIsFalse()
   {
-    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-            COMPACTION_TASK_SLOT_RATIO,
-            MAX_COMPACTION_SLOTS + 1,
-            USE_AUTO_SCALE_SLOTS
-        );
-
-    Assert.assertFalse(config.hasSameConfig(coordinatorCompactionConfig));
-  }
-
-  @Test
-  public void testhasSameConfigWithDifferentCompactionSlotRatioShouldReturnFalse()
-  {
-    DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig config =
-        new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-            COMPACTION_TASK_SLOT_RATIO - 0.03,
-            MAX_COMPACTION_SLOTS,
-            USE_AUTO_SCALE_SLOTS
-        );
-
-    Assert.assertFalse(config.hasSameConfig(coordinatorCompactionConfig));
+    final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
+        null,
+        auditInfo,
+        DateTimes.nowUtc()
+    );
+    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 }

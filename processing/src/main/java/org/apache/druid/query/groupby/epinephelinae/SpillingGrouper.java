@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -74,6 +75,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final AggregatorFactory[] aggregatorFactories;
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
+  private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -95,7 +97,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final boolean spillingAllowed,
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -152,9 +155,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     }
     this.aggregatorFactories = aggregatorFactories;
     this.temporaryStorage = temporaryStorage;
-    this.spillMapper = spillMapper;
+    this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
+    this.perQueryStats = perQueryStats;
   }
 
   @Override
@@ -214,6 +218,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void close()
   {
+    perQueryStats.dictionarySize(keySerde.getDictionarySize());
     grouper.close();
     keySerde.reset();
     deleteFiles();
@@ -276,7 +281,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           CloseableIterators.withEmptyBaggage(
               Iterators.transform(
                   fileIterator,
-                  new Function<Entry<KeyType>, Entry<KeyType>>()
+                  new Function<>()
                   {
                     final ReusableEntry<KeyType> reusableEntry =
                         ReusableEntry.create(keySerde, aggregatorFactories.length);

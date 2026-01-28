@@ -1,0 +1,963 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/sql
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B21_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_int<ARRAY[1,
+                  2]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     NULL]);
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     NULL])
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     NULL])
+SELECT a_int
+FROM t1;
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     NULL])
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B22_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_int<ARRAY[1,
+                  2,
+                  NULL]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_int<ARRAY[1,
+                  2,
+                  3];
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_int<ARRAY[1,
+                  2,
+                  3]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     3]);
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     3])
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<ARRAY[1,
+                  2,
+                  3];
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<ARRAY[1,
+                  2,
+                  3]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     3])
+SELECT a_int
+FROM t1;
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<ARRAY[1,
+                     2,
+                     3])
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_int<ARRAY[1,
+                  2,
+                  3];
++--------------+
+| a_int        |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B23_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_int<ARRAY[1,
+                  2,
+                  3]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [1, 2, null] |   2 |
+| [null, 2, 1] |   2 |
++--------------+-----+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array));
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array))
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array))
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array))
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B24_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_int<json_value(a_nested, '$[1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array));
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array))
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array))
+SELECT a_int
+FROM t1;
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array))
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array);
++-------+
+| a_int |
++-------+
++-------+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B25_C10
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int,
+       count(*) cnt
+FROM t1
+WHERE a_int<json_value(a_nested, '$[7][1]' RETURNING bigint array)
+GROUP BY a_int;
++-------+-----+
+| a_int | cnt |
++-------+-----+
++-------+-----+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C1
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM test_array
+WHERE a_int<=ARRAY[1,
+                   2];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C2
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM test_array
+WHERE a_int<=ARRAY[1,
+                   2]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C3
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<=ARRAY[1,
+                      2]);
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C4
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array
+   WHERE a_int<=ARRAY[1,
+                      2])
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C5
+#-------------------------------------------------------------------------
+SELECT a_int
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<=ARRAY[1,
+                   2];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C6
+#-------------------------------------------------------------------------
+SELECT a_int,
+       count(*) cnt
+FROM
+  (SELECT *
+   FROM test_array)
+WHERE a_int<=ARRAY[1,
+                   2]
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C7
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<=ARRAY[1,
+                      2])
+SELECT a_int
+FROM t1;
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C8
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array
+   WHERE a_int<=ARRAY[1,
+                      2])
+SELECT a_int,
+       count(*) cnt
+FROM t1
+GROUP BY a_int;
++--------------+-----+
+| a_int        | cnt |
++--------------+-----+
+| [null, 2, 1] |   2 |
++--------------+-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A2_B26_C9
+#-------------------------------------------------------------------------
+WITH t1 AS
+  (SELECT *
+   FROM test_array)
+SELECT a_int
+FROM t1
+WHERE a_int<=ARRAY[1,
+                   2];
++--------------+
+| a_int        |
++--------------+
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(2 rows)
+
+!ok
+

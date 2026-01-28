@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -434,6 +433,22 @@ public class FixedBucketsHistogram
   }
 
   /**
+   * Resets all the counts to 0 and min/max values +/- infinity.
+   */
+  public void reset()
+  {
+    readWriteLock.writeLock().lock();
+    this.upperOutlierCount = 0;
+    this.lowerOutlierCount = 0;
+    this.missingValueCount = 0;
+    this.count = 0;
+    this.max = Double.NEGATIVE_INFINITY;
+    this.min = Double.POSITIVE_INFINITY;
+    Arrays.fill(histogram, 0);
+    readWriteLock.writeLock().unlock();
+  }
+
+  /**
    * Merge another datapoint into this one. The other datapoint could be
    *  - base64 encoded string of {@code FixedBucketsHistogram}
    *  - {@code FixedBucketsHistogram} object
@@ -445,11 +460,7 @@ public class FixedBucketsHistogram
   public void combine(@Nullable Object val)
   {
     if (val == null) {
-      if (NullHandling.replaceWithDefault()) {
-        add(NullHandling.defaultDoubleValue());
-      } else {
-        incrementMissing();
-      }
+      incrementMissing();
     } else if (val instanceof String) {
       combineHistogram(fromBase64((String) val));
     } else if (val instanceof FixedBucketsHistogram) {

@@ -88,9 +88,7 @@ public class JacksonConfigManagerTest
   @Test
   public void testConvertByteToConfigWithNonNullConfigInByte()
   {
-    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
-    {
-    }, null);
+    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<>() {}, null);
     TestConfig defaultConfig = new TestConfig("version", null, 3);
     TestConfig expectedConfig = new TestConfig("version2", null, 5);
     byte[] expectedConfigInByte = configConfigSerdeFromTypeReference.serialize(expectedConfig);

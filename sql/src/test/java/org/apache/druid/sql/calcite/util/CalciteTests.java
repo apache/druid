@@ -32,9 +32,10 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -53,7 +54,12 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RowFilterPolicy;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -62,8 +68,6 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -73,20 +77,19 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
@@ -96,6 +99,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -117,6 +121,8 @@ public class CalciteTests
   public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
+  public static final String RESTRICTED_BROADCAST_DATASOURCE = "restrictedBroadcastDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -125,79 +131,24 @@ public class CalciteTests
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String WIKIPEDIA = "wikipedia";
   public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
+  public static final String TBL_WITH_NULLS_PARQUET = "tblWnulls.parquet";
+  public static final String SML_TBL_PARQUET = "smlTbl.parquet";
+  public static final String ALL_TYPES_UNIQ_PARQUET = "allTypsUniq.parquet";
+  public static final String FEW_ROWS_ALL_DATA_PARQUET = "fewRowsAllData.parquet";
+  public static final String T_ALL_TYPE_PARQUET = "t_alltype.parquet";
+  public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
+  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(
+      BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG)
+  );
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
     public Authorizer getAuthorizer(String name)
     {
-      return (authenticationResult, resource, action) -> {
-        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
-        }
-
-        switch (resource.getType()) {
-          case ResourceType.DATASOURCE:
-            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.VIEW:
-            if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.QUERY_CONTEXT:
-            return Access.OK;
-          case ResourceType.EXTERNAL:
-            if (Action.WRITE.equals(action)) {
-              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
-                return new Access(false);
-              } else {
-                return Access.OK;
-              }
-            }
-            return new Access(false);
-          default:
-            return new Access(false);
-        }
-      };
-    }
-  };
-
-  public static final AuthorizerMapper TEST_EXTERNAL_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
-  {
-    @Override
-    public Authorizer getAuthorizer(String name)
-    {
-      return (authenticationResult, resource, action) -> {
-        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
-        }
-
-        switch (resource.getType()) {
-          case ResourceType.DATASOURCE:
-            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.VIEW:
-            if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
-            }
-          case ResourceType.QUERY_CONTEXT:
-          case ResourceType.EXTERNAL:
-            return Access.OK;
-          default:
-            return new Access(false);
-        }
-      };
+      return TestAuthorizer.simple(TEST_SUPERUSER_NAME, POLICY_RESTRICTION);
     }
   };
 
@@ -248,10 +199,10 @@ public class CalciteTests
   );
 
   public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
-      .addModule(new LookylooModule())
-      .addModule(new SqlAggregationModule())
-      .addModule(new CalciteTestOperatorModule())
-      .build();
+                                                         .addModule(new LookylooModule())
+                                                         .addModule(new SqlAggregationModule())
+                                                         .addModule(new CalciteTestOperatorModule())
+                                                         .build();
 
   private CalciteTests()
   {
@@ -263,7 +214,20 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+    return createMockSqlEngine(walker, conglomerate, null);
+  }
+
+  public static NativeSqlEngine createMockSqlEngine(
+      final QuerySegmentWalker walker,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SqlStatementFactory sqlStatementFactory
+  )
+  {
+    return new NativeSqlEngine(
+        createMockQueryLifecycleFactory(walker, conglomerate),
+        getJsonMapper(),
+        sqlStatementFactory
+    );
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
@@ -271,24 +235,11 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return QueryFrameworkUtils.createMockQueryLifecycleFactory(walker, conglomerate);
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory
-  )
-  {
-    return createSqlStatementFactory(engine, plannerFactory, new AuthConfig());
-  }
-
-  public static SqlStatementFactory createSqlStatementFactory(
-      final SqlEngine engine,
-      final PlannerFactory plannerFactory,
-      final AuthConfig authConfig
-  )
-  {
-    return QueryFrameworkUtils.createSqlStatementFactory(engine, plannerFactory, authConfig);
+    return QueryFrameworkUtils.createMockQueryLifecycleFactory(
+        walker,
+        conglomerate,
+        CalciteTests.TEST_AUTHORIZER_MAPPER
+    );
   }
 
   public static ObjectMapper getJsonMapper()
@@ -360,35 +311,58 @@ public class CalciteTests
     return QueryFrameworkUtils.createOperatorTable(INJECTOR);
   }
 
+
+  public static DruidNode mockCoordinatorNode()
+  {
+    return new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
+  }
+
+  public static FakeDruidNodeDiscoveryProvider mockDruidNodeDiscoveryProvider(final DruidNode coordinatorNode)
+  {
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+    return provider;
+  }
+
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
       final AuthorizerMapper authorizerMapper
   )
   {
-    final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
-    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
-        )
-    );
+    return createMockSystemSchema(druidSchema, new TestTimelineServerView(walker.getSegments()), authorizerMapper);
+  }
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final TimelineServerView timelineServerView,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    final DruidNode coordinatorNode = mockCoordinatorNode();
+    FakeDruidNodeDiscoveryProvider provider = mockDruidNodeDiscoveryProvider(coordinatorNode);
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        provider,
-        NodeRole.COORDINATOR,
-        "/simple/leader"
-    ) {
+    final CoordinatorClient coordinatorClient = new NoopCoordinatorClient()
+    {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return coordinatorNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(coordinatorNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
 
-    final OverlordClient overlordClient = new NoopOverlordClient() {
+    final OverlordClient overlordClient = new NoopOverlordClient()
+    {
       @Override
       public ListenableFuture<URI> findCurrentLeader()
       {
@@ -407,7 +381,7 @@ public class CalciteTests
           @Nullable Integer maxCompletedTasks
       )
       {
-        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        List<TaskStatusPlus> tasks = new ArrayList<>();
         tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
         tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
         tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
@@ -436,18 +410,20 @@ public class CalciteTests
     return new SystemSchema(
         druidSchema,
         new MetadataSegmentView(
-            druidLeaderClient,
-            getJsonMapper(),
+            coordinatorClient,
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
-        new TestTimelineServerView(walker.getSegments()),
+        timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
-        druidLeaderClient,
+        coordinatorClient,
         overlordClient,
         provider,
-        getJsonMapper()
+        getJsonMapper(),
+        new FakeHttpClient(),
+        () -> new SqlEngineRegistry(Collections.emptySet()),
+        new PlannerConfig()
     );
   }
 
@@ -463,7 +439,8 @@ public class CalciteTests
         conglomerate,
         walker,
         plannerConfig,
-        authorizerMapper);
+        authorizerMapper
+    );
   }
 
   /**
@@ -494,7 +471,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 
@@ -597,9 +574,9 @@ public class CalciteTests
     }
 
     @Override
-    public void registerServerRemovedCallback(
+    public void registerServerCallback(
         Executor exec,
-        ServerView.ServerRemovedCallback callback
+        ServerView.ServerCallback callback
     )
     {
       throw new UnsupportedOperationException();

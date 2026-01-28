@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -34,6 +33,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -55,6 +55,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -91,7 +92,6 @@ public class InPlanningBenchmark
   private static final Logger log = new Logger(InPlanningBenchmark.class);
 
   static {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
   }
 
@@ -162,14 +162,14 @@ public class InPlanningBenchmark
     List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
                                                     .getDimensions()
                                                     .stream()
-                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                     .collect(Collectors.toList());
     index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
         DimensionsSpec.builder().setDimensions(columnSchemas).build(),
         TransformSpec.NONE,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -202,7 +202,9 @@ public class InPlanningBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
+        new DruidHookDispatcher()
     );
 
     String prefix = ("explain plan for select long1 from foo where long1 in ");

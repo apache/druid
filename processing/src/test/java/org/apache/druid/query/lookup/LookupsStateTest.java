@@ -55,9 +55,7 @@ public class LookupsStateTest
                      + "}";
 
     TypeReference<LookupsState<LookupExtractorFactoryContainer>> typeRef =
-        new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
-        {
-        };
+        new TypeReference<>() {};
 
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(LookupExtractorFactoryContainerTest.TestLookupExtractorFactory.class);

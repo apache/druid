@@ -1,0 +1,75 @@
+# testUnnestWithGroupByHavingWithWhereOnUnnestArrayCol case-crc:33b6333c
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+SELECT uln, COUNT(*) FROM druid.arrays, UNNEST(arrayLongNulls) AS unnested(uln) WHERE uln IN (1, 2, 3) GROUP BY uln HAVING uln=1;
++-----+--------+
+| uln | EXPR$1 |
++-----+--------+
+|   1 |      5 |
++-----+--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+  LogicalUnnest(unnestExpr=[$0], filter=[=($0, 1)])
+    LogicalProject(arrayLongNulls=[$4])
+      LogicalTableScan(table=[[druid, arrays]])
+
+!logicalPlan
+DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+  DruidUnnest(unnestExpr=[$0], filter=[=($0, 1)])
+    DruidProject(arrayLongNulls=[$4], druid=[logical])
+      DruidTableScan(table=[[druid, arrays]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "arrays"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"arrayLongNulls\"",
+      "outputType" : "ARRAY<LONG>"
+    },
+    "unnestFilter" : {
+      "type" : "equals",
+      "column" : "j0.unnest",
+      "matchValueType" : "LONG",
+      "matchValue" : 1
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.unnest",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

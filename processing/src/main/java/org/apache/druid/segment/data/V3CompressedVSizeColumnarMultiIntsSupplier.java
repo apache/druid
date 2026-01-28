@@ -23,8 +23,8 @@ import com.google.common.annotations.VisibleForTesting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -56,25 +56,11 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
     this.valueSupplier = valueSupplier;
   }
 
-  public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      CompressedColumnarIntsSupplier offsetSupplier = CompressedColumnarIntsSupplier.fromByteBuffer(
-          buffer,
-          order
-      );
-      CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
-          buffer,
-          order
-      );
-      return new V3CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
-    }
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper mapper)
+  public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SegmentFileMapper mapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -143,11 +129,11 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
-    offsetSupplier.writeTo(channel, smoosher);
-    valueSupplier.writeTo(channel, smoosher);
+    offsetSupplier.writeTo(channel, fileBuilder);
+    valueSupplier.writeTo(channel, fileBuilder);
   }
 
   @Override

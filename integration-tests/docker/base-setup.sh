@@ -18,23 +18,32 @@ set -e
 set -u
 
 export DEBIAN_FRONTEND=noninteractive
-APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://archive.apache.org}
+
+# Using archive.apache.org instead of downloads.apache.org to avoid build failures, see https://github.com/apache/druid/pull/18548
+APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://archive.apache.org/dist}
 
 apt-get update
 
 # wget
 apt-get install -y wget
 
-# MySQL (Metadata store)
-apt-get install -y default-mysql-server
+# MariaDB metadata store
+apt-get install -y mariadb-server
 
 # Supervisor
 apt-get install -y supervisor
 
-# Zookeeper
+# Download function
+download_file() {
+  local dest=$1
+  local host=$2
 
+  wget --retry-connrefused --continue --output-document="$dest" "$host"
+}
+
+# Zookeeper
 install_zk() {
-  wget -q -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+  download_file "/tmp/$ZK_TAR.tar.gz" "$APACHE_ARCHIVE_MIRROR_HOST/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
   tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
   cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
   rm /tmp/$ZK_TAR.tar.gz
@@ -46,7 +55,7 @@ ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
 
 # Kafka
 # KAFKA_VERSION is defined by docker build arguments
-wget -q -O /tmp/kafka_2.13-$KAFKA_VERSION.tgz "$APACHE_ARCHIVE_MIRROR_HOST/dist/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
+download_file "/tmp/kafka_2.13-$KAFKA_VERSION.tgz" "$APACHE_ARCHIVE_MIRROR_HOST/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
 tar -xzf /tmp/kafka_2.13-$KAFKA_VERSION.tgz -C /usr/local
 ln -s /usr/local/kafka_2.13-$KAFKA_VERSION /usr/local/kafka
 rm /tmp/kafka_2.13-$KAFKA_VERSION.tgz

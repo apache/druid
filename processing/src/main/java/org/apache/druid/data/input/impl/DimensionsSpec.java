@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -29,7 +30,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -44,14 +47,36 @@ import java.util.stream.Collectors;
 @PublicApi
 public class DimensionsSpec
 {
+  /**
+   * Parameter name for allowing any sort order. Also used as an MSQ context parameter, for some consistency between
+   * MSQ and native ingest configuration.
+   */
+  public static final String PARAMETER_FORCE_TIME_SORT = "forceSegmentSortByTime";
+
+  /**
+   * Warning about non-time ordering to include in error messages when {@link #PARAMETER_FORCE_TIME_SORT} is
+   * not set.
+   */
+  public static final String WARNING_NON_TIME_SORT_ORDER = StringUtils.format(
+      "Warning: support for segments not sorted by[%s] is experimental. Such segments are not readable by older "
+      + "version of Druid, and certain queries cannot run on them. See "
+      + "https://druid.apache.org/docs/latest/ingestion/partitioning#sorting for details before setting "
+      + "%s to[false].",
+      ColumnHolder.TIME_COLUMN_NAME,
+      PARAMETER_FORCE_TIME_SORT
+  );
+
+  public static final boolean DEFAULT_FORCE_TIME_SORT = true;
+
   private final List<DimensionSchema> dimensions;
   private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
   private final boolean includeAllDimensions;
+  private final Boolean forceSegmentSortByTime;
 
   private final boolean useSchemaDiscovery;
 
-  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, null);
+  public static final DimensionsSpec EMPTY = new DimensionsSpec(null, null, null, false, null, false);
 
   public static List<DimensionSchema> getDefaultSchemas(List<String> dimNames)
   {
@@ -78,9 +103,14 @@ public class DimensionsSpec
     return new Builder();
   }
 
+  public static Builder builder(DimensionsSpec dimensionsSpec)
+  {
+    return new Builder(dimensionsSpec);
+  }
+
   public DimensionsSpec(List<DimensionSchema> dimensions)
   {
-    this(dimensions, null, null, false, null);
+    this(dimensions, null, null, false, null, null);
   }
 
   @JsonCreator
@@ -89,7 +119,8 @@ public class DimensionsSpec
       @JsonProperty("dimensionExclusions") List<String> dimensionExclusions,
       @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
       @JsonProperty("includeAllDimensions") boolean includeAllDimensions,
-      @JsonProperty("useSchemaDiscovery") Boolean useSchemaDiscovery
+      @JsonProperty("useSchemaDiscovery") Boolean useSchemaDiscovery,
+      @JsonProperty(PARAMETER_FORCE_TIME_SORT) Boolean forceSegmentSortByTime
   )
   {
     this.dimensions = dimensions == null
@@ -120,6 +151,7 @@ public class DimensionsSpec
     this.includeAllDimensions = includeAllDimensions;
     this.useSchemaDiscovery =
         useSchemaDiscovery != null && useSchemaDiscovery;
+    this.forceSegmentSortByTime = forceSegmentSortByTime;
   }
 
   @JsonProperty
@@ -146,6 +178,26 @@ public class DimensionsSpec
     return useSchemaDiscovery;
   }
 
+  @JsonProperty(PARAMETER_FORCE_TIME_SORT)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Boolean isForceSegmentSortByTimeConfigured()
+  {
+    return forceSegmentSortByTime;
+  }
+
+  /**
+   * Returns {@link #isForceSegmentSortByTimeConfigured()} if nonnull, otherwise
+   * {@link #DEFAULT_FORCE_TIME_SORT}.
+   */
+  public boolean isForceSegmentSortByTime()
+  {
+    if (forceSegmentSortByTime != null) {
+      return forceSegmentSortByTime;
+    } else {
+      return DEFAULT_FORCE_TIME_SORT;
+    }
+  }
+
   @Deprecated
   @JsonIgnore
   public List<SpatialDimensionSchema> getSpatialDimensions()
@@ -154,7 +206,7 @@ public class DimensionsSpec
 
     Iterable<SpatialDimensionSchema> transformedList = Iterables.transform(
         filteredList,
-        new Function<NewSpatialDimensionSchema, SpatialDimensionSchema>()
+        new Function<>()
         {
           @Nullable
           @Override
@@ -174,7 +226,7 @@ public class DimensionsSpec
   {
     return Lists.transform(
         dimensions,
-        new Function<DimensionSchema, String>()
+        new Function<>()
         {
           @Override
           public String apply(DimensionSchema input)
@@ -191,9 +243,13 @@ public class DimensionsSpec
     return dimensionSchemaMap.get(dimension);
   }
 
-  public boolean hasCustomDimensions()
+  /**
+   * Whether this spec represents a set of fixed dimensions. Will be false if schema discovery is enabled, even if
+   * some dimensions are explicitly defined.
+   */
+  public boolean hasFixedDimensions()
   {
-    return !(dimensions == null || dimensions.isEmpty());
+    return dimensions != null && !dimensions.isEmpty() && !useSchemaDiscovery && !includeAllDimensions;
   }
 
   @PublicApi
@@ -204,7 +260,8 @@ public class DimensionsSpec
         ImmutableList.copyOf(dimensionExclusions),
         null,
         includeAllDimensions,
-        useSchemaDiscovery
+        useSchemaDiscovery,
+        forceSegmentSortByTime
     );
   }
 
@@ -215,7 +272,8 @@ public class DimensionsSpec
         ImmutableList.copyOf(Sets.union(dimensionExclusions, dimExs)),
         null,
         includeAllDimensions,
-        useSchemaDiscovery
+        useSchemaDiscovery,
+        forceSegmentSortByTime
     );
   }
 
@@ -227,7 +285,8 @@ public class DimensionsSpec
         ImmutableList.copyOf(dimensionExclusions),
         spatials,
         includeAllDimensions,
-        useSchemaDiscovery
+        useSchemaDiscovery,
+        forceSegmentSortByTime
     );
   }
 
@@ -241,7 +300,7 @@ public class DimensionsSpec
 
     List<String> spatialDimNames = Lists.transform(
         spatialDimensions,
-        new Function<SpatialDimensionSchema, String>()
+        new Function<>()
         {
           @Override
           public String apply(SpatialDimensionSchema input)
@@ -269,7 +328,9 @@ public class DimensionsSpec
     return includeAllDimensions == that.includeAllDimensions
            && useSchemaDiscovery == that.useSchemaDiscovery
            && Objects.equals(dimensions, that.dimensions)
-           && Objects.equals(dimensionExclusions, that.dimensionExclusions);
+           && Objects.equals(dimensionExclusions, that.dimensionExclusions)
+           && Objects.equals(dimensionSchemaMap, that.dimensionSchemaMap)
+           && Objects.equals(forceSegmentSortByTime, that.forceSegmentSortByTime);
   }
 
   @Override
@@ -278,7 +339,9 @@ public class DimensionsSpec
     return Objects.hash(
         dimensions,
         dimensionExclusions,
+        dimensionSchemaMap,
         includeAllDimensions,
+        forceSegmentSortByTime,
         useSchemaDiscovery
     );
   }
@@ -291,6 +354,9 @@ public class DimensionsSpec
            ", dimensionExclusions=" + dimensionExclusions +
            ", includeAllDimensions=" + includeAllDimensions +
            ", useSchemaDiscovery=" + useSchemaDiscovery +
+           (forceSegmentSortByTime != null
+            ? ", forceSegmentSortByTime=" + forceSegmentSortByTime
+            : "") +
            '}';
   }
 
@@ -301,6 +367,21 @@ public class DimensionsSpec
     private List<SpatialDimensionSchema> spatialDimensions;
     private boolean includeAllDimensions;
     private boolean useSchemaDiscovery;
+    private Boolean forceSegmentSortByTime;
+
+    private Builder()
+    {
+
+    }
+
+    private Builder(DimensionsSpec dimensionSpec)
+    {
+      this.dimensions = dimensionSpec.dimensions;
+      this.dimensionExclusions = List.copyOf(dimensionSpec.dimensionExclusions);
+      this.includeAllDimensions = dimensionSpec.includeAllDimensions;
+      this.useSchemaDiscovery = dimensionSpec.useSchemaDiscovery;
+      this.forceSegmentSortByTime = dimensionSpec.forceSegmentSortByTime;
+    }
 
     public Builder setDimensions(List<DimensionSchema> dimensions)
     {
@@ -339,6 +420,12 @@ public class DimensionsSpec
       return this;
     }
 
+    public Builder setForceSegmentSortByTime(Boolean forceSegmentSortByTime)
+    {
+      this.forceSegmentSortByTime = forceSegmentSortByTime;
+      return this;
+    }
+
     public DimensionsSpec build()
     {
       return new DimensionsSpec(
@@ -346,7 +433,8 @@ public class DimensionsSpec
           dimensionExclusions,
           spatialDimensions,
           includeAllDimensions,
-          useSchemaDiscovery
+          useSchemaDiscovery,
+          forceSegmentSortByTime
       );
     }
   }

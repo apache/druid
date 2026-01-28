@@ -19,16 +19,20 @@
 
 package org.apache.druid.query.operator.window;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -126,6 +130,18 @@ public class RowsAndColumnsHelper
       helper.setNulls(nullPositions.toIntArray());
     }
     return this;
+  }
+
+  public static RowsAndColumns makeSingleColumnRac(int... values)
+  {
+    return MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of("column", new IntArrayColumn(values))
+    );
+  }
+
+  public static RowsAndColumnsHelper expectedSingleColumnRac(int... values)
+  {
+    return new RowsAndColumnsHelper().expectColumn("column", values).allColumnsRegistered();
   }
 
   public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)
@@ -279,6 +295,17 @@ public class RowsAndColumnsHelper
             Assert.assertEquals(msg, 0, accessor.getLong(i));
           } else {
             Assert.assertEquals(msg, ((Long) expectedVal).longValue(), accessor.getLong(i));
+          }
+        } else if (expectedVal instanceof Object[]) {
+          Object actualVal = accessor.getObject(i);
+          if (expectedNulls[i]) {
+            Assert.assertNull(msg, accessor.getObject(i));
+          } else {
+            if (actualVal instanceof ArrayList) {
+              Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], ((ArrayList<?>) actualVal).toArray());
+            } else {
+              Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], (Object[]) actualVal);
+            }
           }
         } else {
           if (expectedNulls[i]) {

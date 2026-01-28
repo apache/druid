@@ -91,7 +91,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
                    .expireAfterAccess(this.expireAfterAccess, TimeUnit.MILLISECONDS)
                    .expireMaxSize(this.maxEntriesSize)
                    .make();
-    cache.modificationListenerAdd(new Bind.MapListener<K, V>()
+    cache.modificationListenerAdd(new Bind.MapListener<>()
     {
       @Override
       public void update(K key, V oldVal, V newVal)

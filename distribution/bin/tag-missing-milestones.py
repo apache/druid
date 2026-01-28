@@ -16,10 +16,9 @@
 # limitations under the License.
 
 import os
+import requests
 import subprocess
 import sys
-import requests
-
 
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <previous-release-commit> <new-release-commit> <milestone-number-to-tag>\n')

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -38,7 +39,7 @@ public class RoundRobinServerSelectorTest
   private static final String TIER = "normal";
 
   private final DataSegment segment = new DataSegment(
-      "wiki",
+      TestDataSource.WIKI,
       Intervals.of("2022-01-01/2022-01-02"),
       "1",
       Collections.emptyMap(),

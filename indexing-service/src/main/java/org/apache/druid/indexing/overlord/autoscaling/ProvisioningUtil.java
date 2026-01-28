@@ -29,7 +29,7 @@ public class ProvisioningUtil
       final SimpleWorkerProvisioningConfig config
   )
   {
-    return new Predicate<ImmutableWorkerInfo>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(ImmutableWorkerInfo worker)
@@ -49,7 +49,7 @@ public class ProvisioningUtil
   {
     final Predicate<ImmutableWorkerInfo> isValidWorker = createValidWorkerPredicate(config);
 
-    return new Predicate<ImmutableWorkerInfo>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(ImmutableWorkerInfo worker)

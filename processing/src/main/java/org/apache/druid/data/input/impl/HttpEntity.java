@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
+import java.util.Map;
 
 public class HttpEntity extends RetryingInputEntity
 {
@@ -45,15 +46,19 @@ public class HttpEntity extends RetryingInputEntity
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
+  private final Map<String, String> requestHeaders;
+
   HttpEntity(
       URI uri,
       @Nullable String httpAuthenticationUsername,
-      @Nullable PasswordProvider httpAuthenticationPasswordProvider
+      @Nullable PasswordProvider httpAuthenticationPasswordProvider,
+      @Nullable Map<String, String> requestHeaders
   )
   {
     this.uri = uri;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    this.requestHeaders = requestHeaders;
   }
 
   @Override
@@ -65,7 +70,7 @@ public class HttpEntity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset, requestHeaders);
   }
 
   @Override
@@ -80,10 +85,15 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset, final Map<String, String> requestHeaders)
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
+    if (requestHeaders != null && requestHeaders.size() > 0) {
+      for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+        urlConnection.addRequestProperty(entry.getKey(), entry.getValue());
+      }
+    }
     if (!Strings.isNullOrEmpty(userName) && passwordProvider != null) {
       String userPass = userName + ":" + passwordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));

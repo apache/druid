@@ -184,7 +184,7 @@ public class DerbyConnector extends SQLMetadataConnector
   public boolean tableHasColumn(String tableName, String columnName)
   {
     return getDBI().withHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle)
@@ -192,13 +192,14 @@ public class DerbyConnector extends SQLMetadataConnector
             try {
               if (tableExists(handle, tableName)) {
                 DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
-                ResultSet columns = dbMetaData.getColumns(
-                    null,
-                    null,
-                    tableName.toUpperCase(Locale.ENGLISH),
-                    columnName.toUpperCase(Locale.ENGLISH)
-                );
-                return columns.next();
+                try (ResultSet columns = dbMetaData.getColumns(
+                        null,
+                        null,
+                        tableName.toUpperCase(Locale.ENGLISH),
+                        columnName.toUpperCase(Locale.ENGLISH)
+                )) {
+                  return columns.next();
+                }
               } else {
                 return false;
               }
@@ -209,6 +210,25 @@ public class DerbyConnector extends SQLMetadataConnector
           }
         }
     );
+  }
+
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23505 for Derby
+        if ("23505".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   @LifecycleStart

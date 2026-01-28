@@ -41,7 +41,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -209,7 +208,8 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
             myClazz = float.class;
             break;
           case ARRAY:
-            myClazz = List.class;
+            myClazz = Object[].class;
+            break;
           default:
             throw DruidException.defensive("this class cannot handle type [%s]", columnAccessor.getType());
         }

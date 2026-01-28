@@ -17,14 +17,17 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { EditContextDialog } from './edit-context-dialog';
 
 describe('EditContextDialog', () => {
   it('matches snapshot', () => {
     const compactionDialog = (
-      <EditContextDialog queryContext={{}} onQueryContextChange={() => null} onClose={() => {}} />
+      <EditContextDialog
+        initQueryContext={{}}
+        onQueryContextChange={() => null}
+        onClose={() => {}}
+      />
     );
     render(compactionDialog);
     expect(document.body.lastChild).toMatchSnapshot();

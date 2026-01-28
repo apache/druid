@@ -1,0 +1,728 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaWin
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++-----+
+| cnt |
++-----+
+| 768 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A1_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY client_ip
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A1_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY client_ip
+                                               ORDER BY server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A1_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY client_ip
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A1_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A2_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY length(timezone)
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H'), length(timezone)) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 7 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 8 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A2_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY length(timezone)
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'),
+                                                        length(timezone));
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 7 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 8 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A2_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY length(timezone)
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H'), length(timezone)) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 7 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 8 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A2_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY length(timezone)
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'),
+                                                           length(timezone));
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 7 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     3 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |     3 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |     3 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |     3 | 8 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A3_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY mycol
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A3_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY mycol
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'));
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A3_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY mycol
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A3_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY mycol
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A4_G1_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY timezone
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H'), mycol) AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A4_G1_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM
+  (SELECT server_ip,
+          client_ip,
+          timezone,
+          time_floor(__time, 'PT12H') __time,
+          count(*)
+   FROM test_win
+   GROUP BY server_ip,
+            client_ip,
+            timezone,
+            time_floor(__time, 'PT12H'))
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22') WINDOW w AS (PARTITION BY timezone
+                                               ORDER BY client_ip,
+                                                        server_ip,
+                                                        timezone,
+                                                        time_floor(__time, 'PT12H'),
+                                                        mycol);
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A4_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER (PARTITION BY timezone
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H'), mycol) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A4_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       length(timezone) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY timezone
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'),
+                                                           mycol);
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A5_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER (PARTITION BY client_ip
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |   141 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    15 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    16 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   266 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     8 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    85 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    49 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   188 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A5_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |   141 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    15 | 2 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    16 | 3 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   266 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     8 | 4 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    85 | 5 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    49 | 6 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   188 | 2 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A6_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER (PARTITION BY count(*)
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H'), count(*)) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
++--------------+---------------+----------+---------------------+-------+---+
+| server_ip    | client_ip     | timezone | t                   | mycol | c |
++--------------+---------------+----------+---------------------+-------+---+
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |   141 | 1 |
+| 172.31.11.5  | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    15 | 1 |
+| 172.31.11.5  | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    16 | 1 |
+| 172.31.11.5  | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   266 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 00:00:00 |     8 | 1 |
+| 172.31.57.89 | 107.13.54.103 | EDT      | 2019-08-25 12:00:00 |    85 | 1 |
+| 172.31.57.89 | 107.13.54.103 | N/A      | 2019-08-25 12:00:00 |    49 | 1 |
+| 172.31.57.89 | 99.9.55.22    | N/A      | 2019-08-25 12:00:00 |   188 | 1 |
++--------------+---------------+----------+---------------------+-------+---+
+(8 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A6_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY count(*)
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'),
+                                                           count(*));
+Aggregation inside window is currently not supported with syntax WINDOW W AS <DEF>. Try providing window definition directly without alias
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A7_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER (PARTITION BY mycol
+                          ORDER BY client_ip, server_ip, timezone, time_floor(__time, 'PT12H')) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A7_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY mycol
+                                                  ORDER BY client_ip,
+                                                           server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'));
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A8_G2_Q1
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER (PARTITION BY client_ip
+                          ORDER BY server_ip, timezone, time_floor(__time, 'PT12H'), mycol) AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H');
+Column 'mycol' not found in any table
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_basics_test_window_and_aggr TEST_ID: A8_G2_Q2
+#-------------------------------------------------------------------------
+SELECT server_ip,
+       client_ip,
+       timezone,
+       cast(time_floor(__time, 'PT12H') AS char) t,
+       count(*) AS mycol,
+       row_number() OVER w AS c
+FROM test_win
+WHERE client_ip IN ('107.13.54.103',
+                    '99.9.55.22')
+GROUP BY server_ip,
+         client_ip,
+         timezone,
+         time_floor(__time, 'PT12H') WINDOW w AS (PARTITION BY client_ip
+                                                  ORDER BY server_ip,
+                                                           timezone,
+                                                           time_floor(__time, 'PT12H'),
+                                                           mycol);
+Column 'mycol' not found in any table
+!error
+

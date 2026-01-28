@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
@@ -33,7 +32,6 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
 {
   private static final Expr VALID = ExprEval.of(3232235521L).toExpr();
   private static final String EXPECTED = "192.168.0.1";
-  private static final String NULL = NullHandling.replaceWithDefault() ? "0.0.0.0" : null;
 
   public IPv4AddressStringifyExprMacroTest()
   {
@@ -60,7 +58,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   public void testNullLongArg()
   {
     Expr nullNumeric = ExprEval.ofLong(null).toExpr();
-    Assert.assertEquals(NULL, eval(nullNumeric));
+    Assert.assertNull(eval(nullNumeric));
   }
 
   @Test
@@ -107,28 +105,28 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   @Test
   public void testNullStringArg()
   {
-    Expr nullString = ExprEval.of(null).toExpr();
-    Assert.assertNull(NULL, eval(nullString));
+    Expr nullString = ExprEval.ofString(null).toExpr();
+    Assert.assertNull(eval(nullString));
   }
 
   @Test
   public void testInvalidStringArgNotIPAddress()
   {
-    Expr notIpAddress = ExprEval.of("druid.apache.org").toExpr();
+    Expr notIpAddress = ExprEval.ofString("druid.apache.org").toExpr();
     Assert.assertNull(eval(notIpAddress));
   }
 
   @Test
   public void testInvalidStringArgIPv6Compatible()
   {
-    Expr ipv6Compatible = ExprEval.of("::192.168.0.1").toExpr();
+    Expr ipv6Compatible = ExprEval.ofString("::192.168.0.1").toExpr();
     Assert.assertNull(eval(ipv6Compatible));
   }
 
   @Test
   public void testValidStringArgIPv6Mapped()
   {
-    Expr ipv6Mapped = ExprEval.of("::ffff:192.168.0.1").toExpr();
+    Expr ipv6Mapped = ExprEval.ofString("::ffff:192.168.0.1").toExpr();
     Assert.assertNull(eval(ipv6Mapped));
   }
 
@@ -141,7 +139,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   @Test
   public void testValidStringArgUnsignedInt()
   {
-    Expr unsignedInt = ExprEval.of("3232235521").toExpr();
+    Expr unsignedInt = ExprEval.ofString("3232235521").toExpr();
     Assert.assertNull(eval(unsignedInt));
   }
 

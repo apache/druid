@@ -22,6 +22,7 @@ import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,
+  DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
   guessKafkaInputFormat,
@@ -368,6 +369,7 @@ describe('ingestion-spec', () => {
   it('upgrades / downgrades back compat supervisor spec', () => {
     const backCompatSupervisorSpec = {
       type: 'kafka',
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -485,6 +487,7 @@ describe('ingestion-spec', () => {
     };
 
     expect(cleanSpec(upgradeSpec(backCompatSupervisorSpec))).toEqual({
+      id: 'metrics-kafka',
       spec: {
         dataSchema: {
           dataSource: 'metrics-kafka',
@@ -559,6 +562,7 @@ describe('ingestion-spec', () => {
         },
       } as any),
     ).toEqual({
+      id: 'index_parallel_coronavirus_hamlcmea_2020-03-19T00:56:12.175Z',
       type: 'index_parallel',
       spec: {
         dataSchema: {},
@@ -857,12 +861,96 @@ describe('spec utils', () => {
   });
 
   describe('updateSchemaWithSample', () => {
+    it('works with when not forcing time, arrays', () => {
+      const updateSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        false,
+        'fixed',
+        'array',
+        true,
+      );
+      expect(updateSpec.spec).toMatchInlineSnapshot(`
+        {
+          "dataSchema": {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": {
+              "dimensions": [
+                {
+                  "name": "__time",
+                  "type": "long",
+                },
+                "user",
+                "id",
+                {
+                  "castToType": "ARRAY<STRING>",
+                  "name": "tags",
+                  "type": "auto",
+                },
+                {
+                  "castToType": "ARRAY<LONG>",
+                  "name": "nums",
+                  "type": "auto",
+                },
+              ],
+              "forceSegmentSortByTime": false,
+            },
+            "granularitySpec": {
+              "queryGranularity": "hour",
+              "rollup": true,
+              "segmentGranularity": "day",
+            },
+            "metricsSpec": [
+              {
+                "name": "count",
+                "type": "count",
+              },
+              {
+                "fieldName": "followers",
+                "name": "sum_followers",
+                "type": "longSum",
+              },
+              {
+                "fieldName": "spend",
+                "name": "sum_spend",
+                "type": "doubleSum",
+              },
+            ],
+            "timestampSpec": {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": {
+            "inputFormat": {
+              "type": "json",
+            },
+            "inputSource": {
+              "type": "http",
+              "uris": [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": {
+            "forceGuaranteedRollup": true,
+            "partitionsSpec": {
+              "type": "hashed",
+            },
+            "type": "index_parallel",
+          },
+        }
+      `);
+    });
+
     it('works with rollup, arrays', () => {
       const updateSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -938,8 +1026,9 @@ describe('spec utils', () => {
       const updateSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         true,
       );
       expect(updateSpec.spec).toMatchInlineSnapshot(`
@@ -1015,8 +1104,9 @@ describe('spec utils', () => {
       const updatedSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'arrays',
+        'array',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`
@@ -1083,8 +1173,9 @@ describe('spec utils', () => {
       const updatedSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
-        'multi-values',
+        'mvd',
         false,
       );
       expect(updatedSpec.spec).toMatchInlineSnapshot(`

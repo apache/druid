@@ -55,3 +55,11 @@ $table-cell-h-padding: 5px;
     box-shadow: $pt-dark-elevation-shadow-1;
   }
 }
+
+@mixin pin-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}

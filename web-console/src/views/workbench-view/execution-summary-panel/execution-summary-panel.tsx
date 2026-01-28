@@ -16,19 +16,30 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Popover,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
-import type { Format } from '../../../utils';
+import type { FileFormat } from '../../../utils';
 import {
+  copyAndAlert,
   copyQueryResultsToClipboard,
   downloadQueryResults,
+  FILE_FORMAT_TO_LABEL,
+  FILE_FORMATS,
   formatDurationHybrid,
   formatInteger,
+  oneOf,
   pluralIfNeeded,
 } from '../../../utils';
 import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
@@ -77,11 +88,11 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
 
     const warningCount = execution?.stages?.getWarningCount();
 
-    const handleDownload = (format: Format) => {
+    const handleDownload = (format: FileFormat) => {
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
     };
 
-    const handleCopy = (format: Format) => {
+    const handleCopy = (format: FileFormat) => {
       copyQueryResultsToClipboard(queryResult, format);
     };
 
@@ -96,48 +107,68 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         }
         onClick={() => {
           if (!execution) return;
-          if (execution.engine === 'sql-msq-task') {
+          if (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')) {
             onExecutionDetail();
+          } else {
+            copyAndAlert(execution.id, `Query ID (${execution.id}) copied to clipboard`);
           }
         }}
+        data-tooltip={
+          execution &&
+          (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')
+            ? `Open details for\n${execution.id}`
+            : `Query ID\n${execution.id}\n(click to copy)`)
+        }
       />,
-      execution?.destination?.type === 'durableStorage' && execution.destinationPages ? (
-        <Button
-          key="download"
-          icon={IconNames.DOWNLOAD}
-          minimal
-          onClick={() => setShowDestinationPages(true)}
-        />
-      ) : (
-        <Popover2
-          key="download"
-          className="download-button"
-          content={
-            <Menu>
-              <MenuItem text="Download results as...">
-                <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
-                <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
-                <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-                <MenuItem text="SQL (VALUES)" onClick={() => handleDownload('sql')} />
-              </MenuItem>
-              <MenuItem text="Copy to clipboard as...">
-                <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
-                <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
-                <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
-                <MenuItem text="SQL (VALUES)" onClick={() => handleCopy('sql')} />
-              </MenuItem>
-            </Menu>
-          }
-          position={Position.BOTTOM_RIGHT}
-        >
-          <Button icon={IconNames.DOWNLOAD} minimal />
-        </Popover2>
-      ),
+      <Popover
+        key="download"
+        className="download-button"
+        position={Position.BOTTOM_RIGHT}
+        content={
+          <Menu>
+            {execution.destinationPages && (
+              <>
+                <MenuDivider title="Download in bulk" />
+                <MenuItem text="Show result pages" onClick={() => setShowDestinationPages(true)} />
+                <MenuDivider title="Download data in view" />
+              </>
+            )}
+            <MenuItem text="Download results as...">
+              {FILE_FORMATS.map(fileFormat => (
+                <MenuItem
+                  key={fileFormat}
+                  text={FILE_FORMAT_TO_LABEL[fileFormat]}
+                  onClick={() => handleDownload(fileFormat)}
+                />
+              ))}
+            </MenuItem>
+            <MenuItem text="Copy to clipboard as...">
+              {FILE_FORMATS.map(fileFormat => (
+                <MenuItem
+                  key={fileFormat}
+                  text={FILE_FORMAT_TO_LABEL[fileFormat]}
+                  onClick={() => handleCopy(fileFormat)}
+                />
+              ))}
+            </MenuItem>
+          </Menu>
+        }
+      >
+        <Button icon={IconNames.DOWNLOAD} data-tooltip="Download" minimal />
+      </Popover>,
     );
   }
 
   if (onReset) {
-    buttons.push(<Button key="reset" icon={IconNames.CROSS} minimal onClick={onReset} />);
+    buttons.push(
+      <Button
+        key="reset"
+        icon={IconNames.CROSS}
+        data-tooltip="Clear output"
+        minimal
+        onClick={onReset}
+      />,
+    );
   }
 
   return (

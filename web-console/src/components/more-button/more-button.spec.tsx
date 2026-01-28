@@ -18,7 +18,6 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { MoreButton } from './more-button';
 
@@ -26,8 +25,8 @@ describe('MoreButton', () => {
   it('matches snapshot (full)', () => {
     const moreButton = (
       <MoreButton>
-        <MenuItem>LOL 1</MenuItem>
-        <MenuItem>LOL 2</MenuItem>
+        <MenuItem text="LOL 1" />
+        <MenuItem text="LOL 2" />
       </MoreButton>
     );
 

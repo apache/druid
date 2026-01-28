@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 
 import { LookupsView } from './lookups-view';
 
 describe('LookupsView', () => {
   it('matches snapshot', () => {
-    const lookupsView = shallow(<LookupsView filters={[]} onFiltersChange={() => {}} />);
+    const lookupsView = shallow(
+      <LookupsView filters={TableFilters.empty()} onFiltersChange={() => {}} />,
+    );
     expect(lookupsView).toMatchSnapshot();
   });
 });

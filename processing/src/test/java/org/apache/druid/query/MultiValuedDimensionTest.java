@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -171,7 +170,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 
     persistedSegmentDir = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.getDefault(), null);
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
 
 
@@ -204,7 +203,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     }
     persistedSegmentDirNullSampler = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.getDefault(), null);
 
     queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }
@@ -240,7 +239,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query,
             "1970",
             "tags",
-            NullHandling.replaceWithDefault() ? null : "",
+            "",
             "count",
             2L
         ),
@@ -342,22 +341,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         query
     );
 
-    List<ResultRow> expectedResults;
-    // an empty row e.g. [], or group by 'missing' value, is grouped with the default string value, "" or null
-    // grouping input is filtered to [], null, [""]
-    if (NullHandling.replaceWithDefault()) {
-      // when sql compatible null handling is disabled, the inputs are effectively [], null, [null] and
-      // are all grouped as null
-      expectedResults = Collections.singletonList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 6L)
-      );
-    } else {
-      // with sql compatible null handling, null and [] = null, but [""] = ""
-      expectedResults = ImmutableList.of(
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
-      );
-    }
+    List<ResultRow> expectedResults = ImmutableList.of(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", null, "count", 4L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "", "count", 2L)
+    );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filter-nullish");
   }
@@ -425,7 +412,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query,
             "1970",
             "texpr",
-            NullHandling.sqlCompatible() ? "foo" : null,
+            "foo",
             "count",
             2L
         ),
@@ -473,20 +460,12 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 
     List<ResultRow>
         expectedResults =
-        NullHandling.sqlCompatible() ?
         Arrays.asList(
             GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
             GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
             GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
             GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L),
             GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t3u1", "count", 2L)
-        ) :
-        Arrays.asList(
-            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", null, "count", 2L),
-            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u1", "count", 2L),
-            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t1u2", "count", 2L),
-            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u1", "count", 2L),
-            GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t2u2", "count", 2L)
         );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
@@ -658,7 +637,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query,
             "1970",
             "texpr",
-            NullHandling.emptyToNullIfNeeded(""),
+            "",
             "count",
             2L
         ),
@@ -785,19 +764,10 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         query
     );
 
-    List<ResultRow> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", -1L, "count", 4L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", 0L, "count", 2L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", 1L, "count", 2L)
-      );
-    } else {
-      expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", null, "count", 6L),
-          GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", 1L, "count", 2L)
-      );
-    }
+    List<ResultRow> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", null, "count", 6L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", 1L, "count", 2L)
+    );
 
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-auto");
   }
@@ -832,7 +802,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     );
 
     List<ResultRow> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", NullHandling.replaceWithDefault() ? null : "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot1, foot2, foot3", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot3, foot4, foot5", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot5, foot6, foot7", "count", 2L)
@@ -915,7 +885,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query,
             "1970-01-01T00:00:00.000Z",
             "tt",
-            NullHandling.replaceWithDefault() ? null : "",
+            "",
             "count",
             2L
         ),
@@ -957,7 +927,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     );
 
     List<ResultRow> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", NullHandling.replaceWithDefault() ? null : "foo", "count", 2L),
+        GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foo", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot1, foot2, foot3", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot3, foot4, foot5", "count", 2L),
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "tt", "foot5, foot6, foot7", "count", 2L)
@@ -1068,7 +1038,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       );
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-          new Result<TopNResultValue>(
+          new Result<>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
               TopNResultValue.create(
                   Collections.<Map<String, Object>>singletonList(
@@ -1119,7 +1089,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query));
 
       final Map<String, Object> thirdMap = new HashMap<>();
-      thirdMap.put("texpr", NullHandling.sqlCompatible() ? "foo" : null);
+      thirdMap.put("texpr", "foo");
       thirdMap.put("count", 1L);
 
       List<Map<String, Object>> expected =
@@ -1193,7 +1163,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
               .build();
 
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-          new Result<TopNResultValue>(
+          new Result<>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
               TopNResultValue.create(
                   expected

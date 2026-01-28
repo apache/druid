@@ -20,7 +20,7 @@
 package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.StringUtils;
 

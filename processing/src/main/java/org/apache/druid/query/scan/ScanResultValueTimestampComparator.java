@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.primitives.Longs;
+import org.apache.druid.query.Order;
 
 import java.util.Comparator;
 
@@ -45,7 +46,7 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
     int comparison = Longs.compare(
         o1.getFirstEventTimestamp(scanQuery.getResultFormat()),
         o2.getFirstEventTimestamp(scanQuery.getResultFormat()));
-    if (scanQuery.getTimeOrder().equals(ScanQuery.Order.ASCENDING)) {
+    if (scanQuery.getTimeOrder().equals(Order.ASCENDING)) {
       return comparison;
     }
     return comparison * -1;

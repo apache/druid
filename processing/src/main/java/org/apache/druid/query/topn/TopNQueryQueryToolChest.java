@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -28,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
@@ -65,9 +65,9 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,12 +80,8 @@ import java.util.Optional;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>()
-  {
-  };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
-  {
-  };
+  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<>() {};
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>() {};
 
   private final TopNQueryConfig config;
   private final TopNQueryMetricsFactory queryMetricsFactory;
@@ -124,7 +120,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final ResultMergeQueryRunner<Result<TopNResultValue>> delegateRunner = new ResultMergeQueryRunner<>(
         runner,
-        query -> ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending()),
+        query -> ResultGranularTimestampComparator.create(query.getGranularity(), false),
         query -> {
           TopNQuery topNQuery = (TopNQuery) query;
           return new TopNBinaryFn(
@@ -192,7 +188,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       throw DruidException.defensive("This method can only be used to deserialize.");
     }
 
-    return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+    return new Function<>()
     {
       private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                    .toArray(new AggregatorFactory[0]);
@@ -232,7 +228,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     if (MetricManipulatorFns.finalizing() == fn) {
-      return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+      return new Function<>()
       {
         private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                      .toArray(new AggregatorFactory[0]);
@@ -269,11 +265,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return TYPE_REFERENCE;
   }
 
+  @Nullable
+  @Override
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(TopNQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
 
   @Override
-  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(
+      final TopNQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
-    return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
+    return new CacheStrategy<>()
     {
       private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
@@ -282,7 +287,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       );
 
       @Override
-      public boolean isCacheable(TopNQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(TopNQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         return true;
       }
@@ -333,7 +338,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Function<Result<TopNResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<Result<TopNResultValue>, Object>()
+        return new Function<>()
         {
           private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
 
@@ -366,7 +371,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Function<Object, Result<TopNResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<TopNResultValue>>()
+        return new Function<>()
         {
           private final Granularity granularity = query.getGranularity();
 
@@ -449,7 +454,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         runner,
         config
     );
-    return new QueryRunner<Result<TopNResultValue>>()
+    return new QueryRunner<>()
     {
 
       @Override
@@ -465,14 +470,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         } else {
           return Sequences.map(
               resultSequence,
-              new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+              new Function<>()
               {
                 @Override
                 public Result<TopNResultValue> apply(Result<TopNResultValue> input)
                 {
                   TopNResultValue resultValue = input.getValue();
 
-                  return new Result<TopNResultValue>(
+                  return new Result<>(
                       input.getTimestamp(),
                       TopNResultValue.create(
                           Lists.transform(
@@ -508,12 +513,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public RowSignature resultArraySignature(TopNQuery query)
   {
-    return RowSignature.builder()
-                       .addTimeColumn()
-                       .addDimensions(Collections.singletonList(query.getDimensionSpec()))
-                       .addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN)
-                       .addPostAggregators(query.getPostAggregatorSpecs())
-                       .build();
+    return query.getResultRowSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -559,7 +559,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
+    final RowSignature rowSignature = query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
+
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
@@ -570,8 +571,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
         rowSignature,
         new ArrayList<>()
@@ -636,7 +638,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withThreshold(minTopNThreshold)), responseContext),
-          new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+          new Function<>()
           {
             @Override
             public Result<TopNResultValue> apply(Result<TopNResultValue> input)
@@ -650,7 +652,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     new BySegmentTopNResultValue(
                         Lists.transform(
                             value.getResults(),
-                            new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+                            new Function<>()
                             {
                               @Override
                               public Result<TopNResultValue> apply(Result<TopNResultValue> input)

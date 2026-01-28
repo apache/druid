@@ -25,12 +25,14 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.IndexIO.V9IndexLoader;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -124,11 +126,12 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
     }
 
     @Override
-    ColumnHolder deserializeColumn(
+    BaseColumnHolder deserializeColumn(
         String columnName,
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
-        SmooshedFileMapper smooshedFiles
+        SmooshedFileMapper smooshedFiles,
+        @Nullable ColumnHolder parentColumn
     ) throws IOException
     {
       if (COUNT_COLUMN.equals(columnName)) {
@@ -138,7 +141,8 @@ public class V9IndexLoaderTest extends InitializedNullHandlingTest
           columnName,
           mapper,
           byteBuffer,
-          smooshedFiles
+          smooshedFiles,
+          parentColumn
       );
     }
   }

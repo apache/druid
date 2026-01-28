@@ -24,8 +24,10 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -54,10 +56,11 @@ public class WorkerSelectUtils
       final Map<String, ImmutableWorkerInfo> allWorkers,
       final WorkerTaskRunnerConfig workerTaskRunnerConfig,
       @Nullable final AffinityConfig affinityConfig,
-      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
+      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector,
+      final TaskLimits taskLimits
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig, taskLimits);
 
     if (affinityConfig == null) {
       // All runnable workers are valid.
@@ -105,10 +108,11 @@ public class WorkerSelectUtils
       final Map<String, ImmutableWorkerInfo> allWorkers,
       final WorkerTaskRunnerConfig workerTaskRunnerConfig,
       @Nullable final WorkerCategorySpec workerCategorySpec,
-      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
+      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector,
+      final TaskLimits taskLimits
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig, taskLimits);
 
     // select worker according to worker category spec
     if (workerCategorySpec != null) {
@@ -117,10 +121,25 @@ public class WorkerSelectUtils
       if (categoryConfig != null) {
         final String defaultCategory = categoryConfig.getDefaultCategory();
         final Map<String, String> categoryAffinity = categoryConfig.getCategoryAffinity();
+        final Map<String, String> supervisorIdCategoryAffinity = categoryConfig.getSupervisorIdCategoryAffinity();
 
-        String preferredCategory = categoryAffinity.get(task.getDataSource());
-        // If there is no preferred category for the datasource, then using the defaultCategory. However, the defaultCategory
-        // may be null too, so we need to do one more null check (see below).
+        String preferredCategory = null;
+        
+        // First, check if this task has a supervisorId and if there's a category affinity for it
+        if (task instanceof SeekableStreamIndexTask) {
+          final String supervisorId = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
+          if (supervisorId != null) {
+            preferredCategory = supervisorIdCategoryAffinity.get(supervisorId);
+          }
+        }
+        
+        // If no supervisor-based category is found, fall back to datasource-based category affinity
+        if (preferredCategory == null) {
+          preferredCategory = categoryAffinity.get(task.getDataSource());
+        }
+        
+        // If there is no preferred category for the supervisorId or datasource, then use the defaultCategory.
+        // However, the defaultCategory may be null too, so we need to do one more null check (see below).
         preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
 
         if (preferredCategory != null) {
@@ -145,9 +164,17 @@ public class WorkerSelectUtils
   private static Map<String, ImmutableWorkerInfo> getRunnableWorkers(
       final Task task,
       final Map<String, ImmutableWorkerInfo> allWorkers,
-      final WorkerTaskRunnerConfig workerTaskRunnerConfig
+      final WorkerTaskRunnerConfig workerTaskRunnerConfig,
+      final TaskLimits taskLimits
   )
   {
+    if (!taskLimits.canRunTask(
+        task,
+        getTotalCapacityUsedByType(allWorkers, task.getType()),
+        getTotalCapacity(allWorkers)
+    )) {
+      return Collections.emptyMap();
+    }
     return allWorkers.values()
                      .stream()
                      .filter(worker -> worker.canRunTask(task, workerTaskRunnerConfig.getParallelIndexTaskSlotRatio())
@@ -192,5 +219,21 @@ public class WorkerSelectUtils
             workerHost -> !affinityConfig.getAffinityWorkers().contains(workerHost)
         )
     );
+  }
+
+  private static int getTotalCapacity(final Map<String, ImmutableWorkerInfo> allWorkers)
+  {
+    return allWorkers.values().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  private static int getTotalCapacityUsedByType(
+      final Map<String, ImmutableWorkerInfo> allWorkers,
+      final String taskType
+  )
+  {
+    return allWorkers.values()
+                     .stream()
+                     .mapToInt(workerInfo -> workerInfo.getCurrCapacityUsedByTaskType().getOrDefault(taskType, 0))
+                     .sum();
   }
 }

@@ -20,16 +20,16 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-@ExtendWith(NotYetSupportedProcessor.class)
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
+  @RegisterExtension
+  NotYetSupportedProcessor notYetSupportedProcessor = new NotYetSupportedProcessor(NotYetSupported.Scope.BINDABLE);
+
   @Test
   public void testTasksSum()
   {
@@ -54,7 +54,6 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
 
     testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("select datasource, sum(duration) over () from sys.tasks group by datasource")
         .expectedResults(ImmutableList.of(
             new Object[]{"foo", 11L},

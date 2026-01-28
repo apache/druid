@@ -31,7 +31,6 @@ import org.apache.calcite.sql.type.AbstractSqlType;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -117,7 +116,6 @@ public class RowSignatures
   )
   {
     final RelDataTypeFactory.Builder builder = typeFactory.builder();
-    final boolean nullNumeric = !NullHandling.replaceWithDefault();
     for (final String columnName : rowSignature.getColumnNames()) {
       final RelDataType type;
 
@@ -128,7 +126,7 @@ public class RowSignatures
             rowSignature.getColumnType(columnName)
                         .orElseThrow(() -> new ISE("Encountered null type for column[%s]", columnName));
 
-        type = columnTypeToRelDataType(typeFactory, columnType, nullNumeric);
+        type = columnTypeToRelDataType(typeFactory, columnType, true);
       }
 
       builder.add(columnName, type);

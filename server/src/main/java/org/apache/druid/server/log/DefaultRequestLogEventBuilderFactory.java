@@ -44,7 +44,7 @@ public final class DefaultRequestLogEventBuilderFactory implements RequestLogEve
   @Override
   public ServiceEventBuilder<RequestLogEvent> createRequestLogEventBuilder(String feed, RequestLogLine requestLogLine)
   {
-    return new ServiceEventBuilder<RequestLogEvent>()
+    return new ServiceEventBuilder<>()
     {
       @Override
       public RequestLogEvent build(ImmutableMap<String, String> serviceDimensions)

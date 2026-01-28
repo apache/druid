@@ -57,7 +57,7 @@ public class ComposingEmitterModule implements DruidModule
 
     List<Emitter> emitters = Lists.transform(
         config.getEmitters(),
-        new Function<String, Emitter>()
+        new Function<>()
         {
           @Override
           public Emitter apply(String s)

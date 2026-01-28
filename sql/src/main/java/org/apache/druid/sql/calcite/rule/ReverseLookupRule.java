@@ -36,7 +36,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryContext;
@@ -154,7 +153,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     private final Set<RexNode> consideredAsChild = new HashSet<>();
 
     /**
-     * Flipped by each call to {@link #visitNot(RexCall)}. See {@link NullHandling#useThreeValueLogic()}.
+     * Flipped by each call to {@link #visitNot(RexCall)}.
      */
     private boolean includeUnknown = false;
 
@@ -199,9 +198,9 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
      */
     private RexNode visitNot(final RexCall call)
     {
-      includeUnknown = NullHandling.useThreeValueLogic() && !includeUnknown;
+      includeUnknown = !includeUnknown;
       final RexNode retVal = super.visitCall(call);
-      includeUnknown = NullHandling.useThreeValueLogic() && !includeUnknown;
+      includeUnknown = !includeUnknown;
       return retVal;
     }
 
@@ -364,7 +363,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
         final String replaceMissingValueWith;
 
         if (lookupOperands.size() >= 3) {
-          replaceMissingValueWith = NullHandling.emptyToNullIfNeeded(RexLiteral.stringValue(lookupOperands.get(2)));
+          replaceMissingValueWith = RexLiteral.stringValue(lookupOperands.get(2));
         } else {
           replaceMissingValueWith = null;
         }
@@ -531,7 +530,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
 
         return InDimFilter.optimizeLookup(
             filterToOptimize,
-            mayIncludeUnknown && NullHandling.useThreeValueLogic(),
+            mayIncludeUnknown,
             maxInSize
         );
       }

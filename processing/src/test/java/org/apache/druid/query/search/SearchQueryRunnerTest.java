@@ -22,7 +22,6 @@ package org.apache.druid.query.search;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -41,6 +40,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -61,6 +61,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -94,7 +95,8 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                 SELECTOR,
                 TOOL_CHEST,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            true
         )
     );
   }
@@ -165,7 +167,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
 
     // double the value
     QueryRunner mergedRunner = TOOL_CHEST.mergeResults(
-        new QueryRunner<Result<SearchResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(
@@ -765,11 +767,11 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     QueryRunner runner = factory.createRunner(
-        new QueryableIndexSegment(TestIndex.persistRealtimeAndLoadMMapped(index), SegmentId.dummy("asdf"))
+        new QueryableIndexSegment(TestIndex.persistAndMemoryMap(index), SegmentId.dummy("asdf"))
     );
     List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
+    expectedHits.add(new SearchHit("table", null, 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 
@@ -825,6 +827,33 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
     expectedHits.add(new SearchHit("v1", "e", 93));
 
     checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchVirtualColumns()
+  {
+    List<SearchHit> expectedHits = new ArrayList<>();
+    expectedHits.add(new SearchHit("vquality", "a", 93));
+    expectedHits.add(new SearchHit("vquality", "not a", 1116));
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .granularity(QueryRunnerTestHelper.ALL_GRAN)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "vquality",
+                      "case_searched(like(quality,'a%'), 'a', 'not a')",
+                      ColumnType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .dimensions("vquality")
+              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+              .query("")
+              .build(),
+        expectedHits
+    );
   }
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)

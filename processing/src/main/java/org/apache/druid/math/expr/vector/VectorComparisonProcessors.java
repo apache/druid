@@ -19,990 +19,134 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Evals;
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.ExpressionProcessing;
-import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.column.Types;
-
-import javax.annotation.Nullable;
-import java.util.Objects;
-import java.util.function.Supplier;
 
 public class VectorComparisonProcessors
 {
-  @Deprecated
-  public static <T> ExprVectorProcessor<T> makeComparisonProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right,
-      Supplier<LongOutObjectsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
-      Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
-      Supplier<DoubleOutLongDoubleInFunctionVectorValueProcessor> doubleOutLongDoubleInProcessor,
-      Supplier<DoubleOutDoubleLongInFunctionVectorValueProcessor> doubleOutDoubleLongInProcessor,
-      Supplier<DoubleOutDoublesInFunctionVectorValueProcessor> doubleOutDoublesInProcessor
-  )
+  public static BivariateFunctionVectorProcessorFactory equals()
   {
-    assert !ExpressionProcessing.useStrictBooleans();
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(leftType, ExprType.STRING)) {
-      if (Types.isNullOr(rightType, ExprType.STRING)) {
-        processor = longOutStringsInFunctionVectorProcessor.get();
-      } else {
-        processor = doubleOutDoublesInProcessor.get();
-      }
-    } else if (leftType == null) {
-      if (Types.isNullOr(rightType, ExprType.STRING)) {
-        processor = longOutStringsInFunctionVectorProcessor.get();
-      }
-    } else if (leftType.is(ExprType.DOUBLE) || Types.is(rightType, ExprType.DOUBLE)) {
-      processor = doubleOutDoublesInProcessor.get();
-    }
-    if (processor != null) {
-      return (ExprVectorProcessor<T>) processor;
-    }
-    // fall through to normal math processor logic
-    return VectorMathProcessors.makeMathProcessor(
-        inspector,
-        left,
-        right,
-        longOutLongsInProcessor,
-        doubleOutLongDoubleInProcessor,
-        doubleOutDoubleLongInProcessor,
-        doubleOutDoublesInProcessor
-    );
+    return Equal.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> makeBooleanProcessor(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right,
-      Supplier<LongOutObjectsInFunctionVectorProcessor> longOutStringsInFunctionVectorProcessor,
-      Supplier<LongOutLongsInFunctionVectorValueProcessor> longOutLongsInProcessor,
-      Supplier<LongOutLongDoubleInFunctionVectorValueProcessor> longOutLongDoubleInProcessor,
-      Supplier<LongOutDoubleLongInFunctionVectorValueProcessor> longOutDoubleLongInProcessor,
-      Supplier<LongOutDoublesInFunctionVectorValueProcessor> longOutDoublesInProcessor
-  )
+  public static BivariateFunctionVectorProcessorFactory notEquals()
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    ExprVectorProcessor<?> processor = null;
-    if (Types.is(leftType, ExprType.STRING)) {
-      if (Types.isNullOr(rightType, ExprType.STRING)) {
-        processor = longOutStringsInFunctionVectorProcessor.get();
-      } else {
-        processor = longOutDoublesInProcessor.get();
-      }
-    } else if (Types.is(rightType, ExprType.STRING)) {
-      if (leftType == null) {
-        processor = longOutStringsInFunctionVectorProcessor.get();
-      } else {
-        processor = longOutDoublesInProcessor.get();
-      }
-    } else if (leftType == null) {
-      if (Types.isNullOr(rightType, ExprType.STRING)) {
-        processor = longOutStringsInFunctionVectorProcessor.get();
-      }
-    } else if (leftType.is(ExprType.DOUBLE) || Types.is(rightType, ExprType.DOUBLE)) {
-      processor = longOutDoublesInProcessor.get();
-    }
-    if (processor != null) {
-      return (ExprVectorProcessor<T>) processor;
-    }
-    // fall through to normal math processor logic
-    return VectorMathProcessors.makeLongMathProcessor(
-        inspector,
-        left,
-        right,
-        longOutLongsInProcessor,
-        longOutLongDoubleInProcessor,
-        longOutDoubleLongInProcessor,
-        longOutDoublesInProcessor
-    );
+    return NotEqual.INSTANCE;
   }
 
-  public static <T> ExprVectorProcessor<T> equal(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static BivariateFunctionVectorProcessorFactory greaterThanOrEquals()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(Objects.equals(leftVal, rightVal));
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left == right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(left == right);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(left == right);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(left == right);
-            }
-          }
+    return GreaterThanOrEqual.INSTANCE;
+  }
+
+  public static BivariateFunctionVectorProcessorFactory greaterThan()
+  {
+    return GreaterThan.INSTANCE;
+  }
+
+  public static BivariateFunctionVectorProcessorFactory lessThanOrEquals()
+  {
+    return LessThanOrEqual.INSTANCE;
+  }
+
+  public static BivariateFunctionVectorProcessorFactory lessThan()
+  {
+    return LessThan.INSTANCE;
+  }
+
+  public static class Equal extends SimpleVectorComparisonProcessorFactory
+  {
+    private static final Equal INSTANCE = new Equal();
+
+    public Equal()
+    {
+      super(
+          (compareResult) -> compareResult == 0,
+          (left, right) -> Evals.asLong(left == right),
+          (left, right) -> Evals.asLong(left == right),
+          (left, right) -> Evals.asLong(left == right),
+          (left, right) -> Evals.asLong(left == right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(Objects.equals(leftVal, rightVal));
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left == right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(left == right);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(left == right);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(left == right);
-          }
-        }
-    );
   }
 
-  public static <T> ExprVectorProcessor<T> notEqual(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static class NotEqual extends SimpleVectorComparisonProcessorFactory
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(!Objects.equals(leftVal, rightVal));
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left != right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(left != right);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(left != right);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(left != right);
-            }
-          }
+    private static final NotEqual INSTANCE = new NotEqual();
+
+    public NotEqual()
+    {
+      super(
+          compareResult -> compareResult != 0,
+          (left, right) -> Evals.asLong(left != right),
+          (left, right) -> Evals.asLong(left != right),
+          (left, right) -> Evals.asLong(left != right),
+          (left, right) -> Evals.asLong(left != right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(!Objects.equals(leftVal, rightVal));
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left != right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(left != right);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(left != right);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(left != right);
-          }
-        }
-    );
   }
 
-  public static <T> ExprVectorProcessor<T> greaterThanOrEqual(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static class GreaterThanOrEqual extends SimpleVectorComparisonProcessorFactory
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(
-                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) >= 0
-              );
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left >= right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) >= 0);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(Double.compare(left, right) >= 0);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) >= 0);
-            }
-          }
+    private static final GreaterThanOrEqual INSTANCE = new GreaterThanOrEqual();
+
+    public GreaterThanOrEqual()
+    {
+      super(
+          compareResult -> compareResult >= 0,
+          (left, right) -> Evals.asLong(left >= right),
+          (left, right) -> Evals.asLong(left >= right),
+          (left, right) -> Evals.asLong(left >= right),
+          (left, right) -> Evals.asLong(left >= right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(
-                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) >= 0
-            );
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left >= right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) >= 0);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(Double.compare(left, right) >= 0);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) >= 0);
-          }
-        }
-    );
   }
 
-  public static <T> ExprVectorProcessor<T> greaterThan(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static class GreaterThan extends SimpleVectorComparisonProcessorFactory
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(
-                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) > 0
-              );
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left > right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) > 0);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(Double.compare(left, right) > 0);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) > 0);
-            }
-          }
+    private static final GreaterThan INSTANCE = new GreaterThan();
+
+    public GreaterThan()
+    {
+      super(
+          compareResult -> compareResult > 0,
+          (left, right) -> Evals.asLong(left > right),
+          (left, right) -> Evals.asLong(left > right),
+          (left, right) -> Evals.asLong(left > right),
+          (left, right) -> Evals.asLong(left > right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(
-                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) > 0
-            );
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left > right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) > 0);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(Double.compare(left, right) > 0);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) > 0);
-          }
-        }
-    );
   }
 
-  public static <T> ExprVectorProcessor<T> lessThanOrEqual(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static class LessThanOrEqual extends SimpleVectorComparisonProcessorFactory
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(
-                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) <= 0
-              );
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left <= right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) <= 0);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(Double.compare(left, right) <= 0);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) <= 0);
-            }
-          }
+    private static final LessThanOrEqual INSTANCE = new LessThanOrEqual();
+
+    public LessThanOrEqual()
+    {
+      super(
+          compareResult -> compareResult <= 0,
+          (left, right) -> Evals.asLong(left <= right),
+          (left, right) -> Evals.asLong(left <= right),
+          (left, right) -> Evals.asLong(left <= right),
+          (left, right) -> Evals.asLong(left <= right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(
-                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) <= 0
-            );
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left <= right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) <= 0);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(Double.compare(left, right) <= 0);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) <= 0);
-          }
-        }
-    );
   }
 
-  public static <T> ExprVectorProcessor<T> lessThan(
-      Expr.VectorInputBindingInspector inspector,
-      Expr left,
-      Expr right
-  )
+  public static class LessThan extends SimpleVectorComparisonProcessorFactory
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return makeComparisonProcessor(
-          inspector,
-          left,
-          right,
-          () -> new LongOutObjectsInFunctionVectorProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize(),
-              ExpressionType.STRING
-          )
-          {
-            @Nullable
-            @Override
-            Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-            {
-              return Evals.asLong(
-                  Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) < 0
-              );
-            }
-          },
-          () -> new LongOutLongsInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public long apply(long left, long right)
-            {
-              return Evals.asLong(left < right);
-            }
-          },
-          () -> new DoubleOutLongDoubleInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(long left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) < 0);
-            }
-          },
-          () -> new DoubleOutDoubleLongInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, long right)
-            {
-              return Evals.asDouble(Double.compare(left, right) < 0);
-            }
-          },
-          () -> new DoubleOutDoublesInFunctionVectorValueProcessor(
-              left.asVectorProcessor(inspector),
-              right.asVectorProcessor(inspector),
-              inspector.getMaxVectorSize()
-          )
-          {
-            @Override
-            public double apply(double left, double right)
-            {
-              return Evals.asDouble(Double.compare(left, right) < 0);
-            }
-          }
+    private static final LessThan INSTANCE = new LessThan();
+
+    public LessThan()
+    {
+      super(
+          compareResult -> compareResult < 0,
+          (left, right) -> Evals.asLong(left < right),
+          (left, right) -> Evals.asLong(left < right),
+          (left, right) -> Evals.asLong(left < right),
+          (left, right) -> Evals.asLong(left < right)
       );
     }
-    return makeBooleanProcessor(
-        inspector,
-        left,
-        right,
-        () -> new LongOutObjectsInFunctionVectorProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize(),
-            ExpressionType.STRING
-        )
-        {
-          @Nullable
-          @Override
-          Long processValue(@Nullable Object leftVal, @Nullable Object rightVal)
-          {
-            return Evals.asLong(
-                Comparators.<String>naturalNullsFirst().compare((String) leftVal, (String) rightVal) < 0
-            );
-          }
-        },
-        () -> new LongOutLongsInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, long right)
-          {
-            return Evals.asLong(left < right);
-          }
-        },
-        () -> new LongOutLongDoubleInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(long left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) < 0);
-          }
-        },
-        () -> new LongOutDoubleLongInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, long right)
-          {
-            return Evals.asLong(Double.compare(left, right) < 0);
-          }
-        },
-        () -> new LongOutDoublesInFunctionVectorValueProcessor(
-            left.asVectorProcessor(inspector),
-            right.asVectorProcessor(inspector),
-            inspector.getMaxVectorSize()
-        )
-        {
-          @Override
-          public long apply(double left, double right)
-          {
-            return Evals.asLong(Double.compare(left, right) < 0);
-          }
-        }
-    );
   }
 
   private VectorComparisonProcessors()

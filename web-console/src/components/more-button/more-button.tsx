@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Menu, Position } from '@blueprintjs/core';
+import { Button, Menu, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 type OpenState = 'open' | 'alt-open';
@@ -40,7 +39,7 @@ export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps)
   });
 
   return (
-    <Popover2
+    <Popover
       className="more-button"
       isOpen={Boolean(openState)}
       content={
@@ -56,6 +55,6 @@ export const MoreButton = React.memo(function MoreButton(props: MoreButtonProps)
       }}
     >
       <Button icon={IconNames.MORE} disabled={!childCount} title="More actions" />
-    </Popover2>
+    </Popover>
   );
 });

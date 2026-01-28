@@ -27,8 +27,8 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
-import org.apache.druid.metadata.SQLMetadataStorageActionHandler;
+import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
 
@@ -52,19 +52,19 @@ public class SqlEntity implements InputEntity
 
   private final String sql;
   private final ObjectMapper objectMapper;
-  private final SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector;
+  private final SQLInputSourceDatabaseConnector sqlInputSourceDatabaseConnector;
   private final boolean foldCase;
 
   public SqlEntity(
       String sql,
-      SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector,
+      SQLInputSourceDatabaseConnector sqlInputSourceDatabaseConnector,
       boolean foldCase,
       ObjectMapper objectMapper
   )
   {
     this.sql = sql;
-    this.sqlFirehoseDatabaseConnector = Preconditions.checkNotNull(
-        sqlFirehoseDatabaseConnector,
+    this.sqlInputSourceDatabaseConnector = Preconditions.checkNotNull(
+        sqlInputSourceDatabaseConnector,
         "SQL Metadata Connector not configured!"
     );
     this.foldCase = foldCase;
@@ -93,7 +93,7 @@ public class SqlEntity implements InputEntity
   public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
     final File tempFile = File.createTempFile("druid-sql-entity", ".tmp", temporaryDirectory);
-    return openCleanableFile(sql, sqlFirehoseDatabaseConnector, objectMapper, foldCase, tempFile);
+    return openCleanableFile(sql, sqlInputSourceDatabaseConnector, objectMapper, foldCase, tempFile);
 
   }
 
@@ -102,7 +102,7 @@ public class SqlEntity implements InputEntity
    * The result file is deleted if the query execution or the file write fails.
    *
    * @param sql                          The SQL query to be executed
-   * @param sqlFirehoseDatabaseConnector The database connector
+   * @param sqlInputSourceDatabaseConnector The database connector
    * @param objectMapper                 An object mapper, used for deserialization
    * @param foldCase                     A boolean flag used to enable or disabling case sensitivity while handling database column names
    *
@@ -111,7 +111,7 @@ public class SqlEntity implements InputEntity
 
   public static CleanableFile openCleanableFile(
       String sql,
-      SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector,
+      SQLInputSourceDatabaseConnector sqlInputSourceDatabaseConnector,
       ObjectMapper objectMapper,
       boolean foldCase,
       File tempFile
@@ -124,7 +124,7 @@ public class SqlEntity implements InputEntity
 
       // Execute the sql query and lazily retrieve the results into the file in json format.
       // foldCase is useful to handle differences in case sensitivity behavior across databases.
-      sqlFirehoseDatabaseConnector.retryWithHandle(
+      sqlInputSourceDatabaseConnector.retryWithHandle(
           (handle) -> {
             ResultIterator<Map<String, Object>> resultIterator = handle.createQuery(
                 sql
@@ -161,8 +161,8 @@ public class SqlEntity implements InputEntity
             jg.close();
             return null;
           },
-          (exception) -> sqlFirehoseDatabaseConnector.isTransientException(exception)
-                         && !(SQLMetadataStorageActionHandler.isStatementException(exception))
+          (exception) -> sqlInputSourceDatabaseConnector.isTransientException(exception)
+                         && !(SQLMetadataConnector.isStatementException(exception))
       );
       return new CleanableFile()
       {

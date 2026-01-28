@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
@@ -45,7 +46,20 @@ public interface ColumnHolder
   }
 
   int getLength();
-  BaseColumn getColumn();
+
+  /**
+   * Returns a column object that can be used to request specialized interfaces.
+   * For a physical column, this will be an instance of {@link BaseColumn}.
+   *
+   * @see BaseColumnHolder which guarantees {@link BaseColumn}
+   */
+  SelectableColumn getColumn();
+
+  @Nullable
+  default Supplier<? extends SelectableColumn> getColumnSupplier()
+  {
+    return this::getColumn;
+  }
 
   @Nullable
   ColumnIndexSupplier getIndexSupplier();

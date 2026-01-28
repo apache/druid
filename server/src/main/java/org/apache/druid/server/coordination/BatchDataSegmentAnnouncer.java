@@ -32,7 +32,8 @@ import com.google.inject.Provider;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.ServiceAnnouncer;
+import org.apache.druid.guice.annotations.SingleThreadedAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -64,7 +65,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final BatchDataSegmentAnnouncerConfig config;
 
   @Nullable //Null if zk is disabled or isSkipSegmentAnnouncementOnZk = true
-  private final Announcer announcer;
+  private final ServiceAnnouncer announcer;
 
   private final ObjectMapper jsonMapper;
   private final String liveSegmentLocation;
@@ -73,7 +74,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final Object lock = new Object();
   private final AtomicLong counter = new AtomicLong(0);
 
-  private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
+  private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<>();
   private final ConcurrentMap<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
@@ -91,7 +92,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       DruidServerMetadata server,
       final BatchDataSegmentAnnouncerConfig config,
       ZkPathsConfig zkPaths,
-      Provider<Announcer> announcerProvider,
+      @SingleThreadedAnnouncer Provider<ServiceAnnouncer> announcerProvider,
       ObjectMapper jsonMapper,
       ZkEnablementConfig zkEnablementConfig
   )
@@ -127,7 +128,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       DruidServerMetadata server,
       final BatchDataSegmentAnnouncerConfig config,
       ZkPathsConfig zkPaths,
-      Announcer announcer,
+      ServiceAnnouncer announcer,
       ObjectMapper jsonMapper
   )
   {
@@ -348,27 +349,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       synchronized (lock) {
         Iterable<DataSegmentChangeRequest> segments = Iterables.transform(
             segmentLookup.keySet(),
-            new Function<DataSegment, DataSegmentChangeRequest>()
-            {
-              @Nullable
-              @Override
-              public SegmentChangeRequestLoad apply(DataSegment input)
-              {
-                return new SegmentChangeRequestLoad(input);
-              }
-            }
+            SegmentChangeRequestLoad::new
         );
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
             taskSinkSchema.values(),
-            new Function<SegmentSchemas, DataSegmentChangeRequest>()
-            {
-              @Override
-              public SegmentSchemasChangeRequest apply(SegmentSchemas input)
-              {
-                return new SegmentSchemasChangeRequest(input);
-              }
-            }
+            SegmentSchemasChangeRequest::new
         );
         Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, sinkSchema);
         SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();
@@ -433,9 +419,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       try {
         return jsonMapper.readValue(
             bytes,
-            new TypeReference<Set<DataSegment>>()
-            {
-            }
+            new TypeReference<>() {}
         );
       }
       catch (Exception e) {

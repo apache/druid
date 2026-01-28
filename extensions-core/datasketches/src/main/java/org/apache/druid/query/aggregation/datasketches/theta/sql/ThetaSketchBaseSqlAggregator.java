@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -38,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -70,7 +72,11 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     // for string columns.
     final RexNode columnRexNode = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
-    final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), columnRexNode);
+    final DruidExpression columnArg = Expressions.toDruidExpression(
+        plannerContext,
+        inputAccessor.getInputRowSignature(),
+        columnRexNode
+    );
     if (columnArg == null) {
       return null;
     }
@@ -95,7 +101,11 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX))
+                        .map(type -> (
+                            SketchModule.THETA_SKETCH_TYPE.equals(type) ||
+                            SketchModule.MERGE_TYPE.equals(type) ||
+                            SketchModule.BUILD_TYPE.equals(type)
+                        ))
                         .orElse(false)) {
       aggregatorFactory = new SketchMergeAggregatorFactory(
           aggregatorName,
@@ -114,6 +124,18 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
             dataType.getSqlTypeName(),
             aggregatorName
         );
+      }
+
+      if (inputType.is(ValueType.COMPLEX)) {
+        if (!isValidComplexInputType(inputType)) {
+          plannerContext.setPlanningError(
+              "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+              + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
+              columnArg.getDruidType(),
+              PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT
+          );
+          return null;
+        }
       }
 
       final DimensionSpec dimensionSpec;
@@ -150,4 +172,13 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  private boolean isValidComplexInputType(ColumnType columnType)
+  {
+    return SketchModule.THETA_SKETCH_TYPE.equals(columnType) ||
+           SketchModule.THETA_SKETCH.equals(columnType.getComplexTypeName()) ||
+           SketchModule.THETA_SKETCH_BUILD_AGG.equals(columnType.getComplexTypeName()) ||
+           SketchModule.THETA_SKETCH_MERGE_AGG.equals(columnType.getComplexTypeName());
+  }
+
 }

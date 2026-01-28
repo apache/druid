@@ -62,7 +62,7 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
         .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .build();
 
-    return TestIndex.loadIncrementalIndex(
+    return TestIndex.loadIncrementalIndexFromCharSource(
         () -> new OnheapIncrementalIndex.Builder()
             .setIndexSchema(schema)
             .setMaxRowCount(10000)

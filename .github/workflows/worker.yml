@@ -1,0 +1,121 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Worker"
+
+on:
+  workflow_call:
+    inputs:
+      jdk:
+        required: false
+        type: string
+        default: '21'
+      script:
+        required: true
+        type: string
+        description: "Script to execute"
+      key:
+        required: false
+        type: string
+        description: "Identifier for job"
+      artifact_prefix:
+        required: false
+        type: string
+        description: "Prefix for the artifact name"
+      artifacts_to_download:
+        required: false
+        type: string
+        description: "Artifacts to download. For example: 'unit-test-reports-*'"
+      execute:
+        required: false
+        type: boolean
+        default: true
+        description: 'Controls execution of the invocation - this is a workaround for github actions matrix element skip limitation'
+
+env:
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  INPUTS_JDK: ${{ inputs.jdk }}
+  INPUTS_KEY: ${{ inputs.key }}
+  GITHUB_RUN_ID: ${{ github.run_id }}
+  GITHUB_RUN_NUMBER: ${{ github.run_number }}
+  GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+  GITHUB_EVENT_REF: ${{ github.event_name }}-${{ github.event.number || github.ref_name }}
+  GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
+
+jobs:
+  execute:
+    name: "${{ inputs.key }}"
+    runs-on: ubuntu-latest
+    if: ${{ inputs.execute }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 500
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: ${{ inputs.jdk }}
+          cache: 'maven'
+
+      - name: Download required artifacts
+        if: ${{ inputs.artifacts_to_download != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifacts_to_download }}
+          merge-multiple: true
+
+      - name: Prepare GITHUB_ENV
+        run: |
+          set -x
+          ./.github/scripts/setup_test_profiling_env.sh ${{ inputs.jdk }} run_id=$GITHUB_RUN_ID run_number=$GITHUB_RUN_NUMBER run_attempt=$GITHUB_RUN_ATTEMPT key=${{ inputs.key }} event_ref=$GITHUB_EVENT_REF run_url=$GITHUB_RUN_URL >> $GITHUB_ENV
+          echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
+          ./.github/scripts/collect_jstacks &
+
+      - name: 'Execute: ${{ inputs.script }}'
+        run: ${{ inputs.script }}
+        timeout-minutes: 60
+
+      - name: Publish Test Report
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        uses: mikepenz/action-junit-report@v5
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+        with:
+          check_name: "Test Report - ${{ inputs.key }}"
+          report_paths: '**/TEST-*.xml'
+          detailed_summary: true
+          flaky_summary: true
+          annotate_only: true
+          fail_on_failure: true
+          check_retries: true
+          truncate_stack_traces: false
+          job_summary: false
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() || inputs.artifact_prefix != '' }}
+        with:
+          name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
+          path: |
+            **/*.hprof
+            **/hs_err_pid*
+            **/replay_pid*
+            **/core.[0-9]*
+            **/TEST-*.xml
+            **/target/jacoco*.exec
+            **/target/jstack*

@@ -19,12 +19,14 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
@@ -37,25 +39,37 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * {@link NestedCommonFormatColumn} for {@link ColumnType#LONG}
  */
 public class ScalarLongColumn implements NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<ScalarLongColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(ScalarLongColumn.class);
+
   private final FixedIndexed<Long> longDictionary;
+  private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final ColumnarLongs valueColumn;
   private final ImmutableBitmap nullValueIndex;
+  private final BitmapFactory bitmapFactory;
 
   public ScalarLongColumn(
       FixedIndexed<Long> longDictionary,
+      Supplier<ColumnarInts> encodedValuesSupplier,
       ColumnarLongs valueColumn,
-      ImmutableBitmap nullValueIndex
+      ImmutableBitmap nullValueIndex,
+      BitmapFactory bitmapFactory
   )
   {
     this.longDictionary = longDictionary;
+    this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumn = valueColumn;
     this.nullValueIndex = nullValueIndex;
+    this.bitmapFactory = bitmapFactory;
   }
 
 
@@ -96,9 +110,6 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       @Override
       public boolean isNull()
       {
-        if (NullHandling.replaceWithDefault()) {
-          return false;
-        }
         final int i = offset.getOffset();
         if (i < offsetMark) {
           // offset was reset, reset iterator state
@@ -142,9 +153,6 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       @Override
       public boolean[] getNullVector()
       {
-        if (NullHandling.replaceWithDefault()) {
-          return null;
-        }
         computeVectorsIfNeeded();
         return nullVector;
       }
@@ -181,5 +189,14 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
   public void close()
   {
     valueColumn.close();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

@@ -20,13 +20,18 @@
 package org.apache.druid.java.util.common.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -36,17 +41,11 @@ import java.util.Map;
 public final class JacksonUtils
 {
   public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT =
-      new TypeReference<Map<String, Object>>()
-      {
-      };
+      new TypeReference<>() {};
   public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING =
-      new TypeReference<Map<String, String>>()
-      {
-      };
+      new TypeReference<>() {};
   public static final TypeReference<Map<String, Boolean>> TYPE_REFERENCE_MAP_STRING_BOOLEAN =
-      new TypeReference<Map<String, Boolean>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private JacksonUtils()
   {
@@ -120,6 +119,50 @@ public final class JacksonUtils
       final JsonSerializer<Object> serializer = getSerializer(serializers, o.getClass());
       serializer.serialize(o, jsonGenerator, serializers);
     }
+  }
+
+  public static String writeValueAsString(ObjectMapper jsonMapper, Object value) throws DruidException
+  {
+    try {
+      return jsonMapper.writeValueAsString(value);
+    }
+    catch (JsonProcessingException e) {
+      throw InternalServerError.exception(e, "Failed to serialize object as JSON");
+    }
+  }
+
+  /**
+   * Reads an object using the {@link JsonParser}. It reuses the provided {@link DeserializationContext} which offers
+   * better performance that calling {@link JsonParser#readValueAs(Class)} because it avoids re-creating the {@link DeserializationContext}
+   * for each readValue call
+   */
+  @Nullable
+  public static <T> T readObjectUsingDeserializationContext(
+      final JsonParser jp,
+      final DeserializationContext deserializationContext,
+      final Class<T> clazz
+  ) throws IOException
+  {
+    if (jp.currentToken() == JsonToken.VALUE_NULL) {
+      return null;
+    }
+    return deserializationContext.readValue(jp, clazz);
+  }
+
+  /**
+   * @see #readObjectUsingDeserializationContext(JsonParser, DeserializationContext, Class)
+   */
+  @Nullable
+  public static Object readObjectUsingDeserializationContext(
+      final JsonParser jp,
+      final DeserializationContext deserializationContext,
+      final JavaType javaType
+  ) throws IOException
+  {
+    if (jp.currentToken() == JsonToken.VALUE_NULL) {
+      return null;
+    }
+    return deserializationContext.readValue(jp, javaType);
   }
 
   /**

@@ -22,6 +22,7 @@ package org.apache.druid.rpc;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -29,6 +30,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Objects;
@@ -40,6 +42,8 @@ public class ServiceLocation
 {
   private static final String HTTP_SCHEME = "http";
   private static final String HTTPS_SCHEME = "https";
+  private static final int HTTP_DEFAULT_PORT = 80;
+  private static final int HTTPS_DEFAULT_PORT = 443;
   private static final Splitter HOST_SPLITTER = Splitter.on(":").limit(2);
 
   private final String host;
@@ -70,6 +74,50 @@ public class ServiceLocation
   public static ServiceLocation fromDruidNode(final DruidNode druidNode)
   {
     return new ServiceLocation(druidNode.getHost(), druidNode.getPlaintextPort(), druidNode.getTlsPort(), "");
+  }
+
+  /**
+   * Create a service location based on a {@link URI}.
+   *
+   * @throws IllegalArgumentException if the URI cannot be mapped to a service location.
+   */
+  public static ServiceLocation fromUri(final URI uri)
+  {
+    if (uri == null || uri.getHost() == null) {
+      throw new IAE("URI[%s] has no host", uri);
+    }
+
+    final String scheme = uri.getScheme();
+    final String host = stripBrackets(uri.getHost());
+    final StringBuilder basePath = new StringBuilder();
+
+    if (uri.getRawPath() != null) {
+      if (uri.getRawQuery() == null && uri.getRawFragment() == null && uri.getRawPath().endsWith("/")) {
+        // Strip trailing slash if the URI has no query or fragment. By convention, this trailing slash is not
+        // part of the service location.
+        basePath.append(uri.getRawPath(), 0, uri.getRawPath().length() - 1);
+      } else {
+        basePath.append(uri.getRawPath());
+      }
+    }
+
+    if (uri.getRawQuery() != null) {
+      basePath.append('?').append(uri.getRawQuery());
+    }
+
+    if (uri.getRawFragment() != null) {
+      basePath.append('#').append(uri.getRawFragment());
+    }
+
+    if (HTTP_SCHEME.equals(scheme)) {
+      final int port = uri.getPort() < 0 ? HTTP_DEFAULT_PORT : uri.getPort();
+      return new ServiceLocation(host, port, -1, basePath.toString());
+    } else if (HTTPS_SCHEME.equals(scheme)) {
+      final int port = uri.getPort() < 0 ? HTTPS_DEFAULT_PORT : uri.getPort();
+      return new ServiceLocation(host, -1, port, basePath.toString());
+    } else {
+      throw new IAE("URI[%s] has invalid scheme[%s]", uri, scheme);
+    }
   }
 
   /**
@@ -118,6 +166,18 @@ public class ServiceLocation
     return host;
   }
 
+  /**
+   * Returns a host:port string for the preferred port (TLS if available; plaintext otherwise).
+   */
+  public String getHostAndPort()
+  {
+    if (tlsPort > 0) {
+      return host + ":" + tlsPort;
+    } else {
+      return host + ":" + plaintextPort;
+    }
+  }
+
   public int getPlaintextPort()
   {
     return plaintextPort;
@@ -131,6 +191,11 @@ public class ServiceLocation
   public String getBasePath()
   {
     return basePath;
+  }
+
+  public ServiceLocation withBasePath(final String newBasePath)
+  {
+    return new ServiceLocation(host, plaintextPort, tlsPort, newBasePath);
   }
 
   public URL toURL(@Nullable final String encodedPathAndQueryString)
@@ -193,4 +258,15 @@ public class ServiceLocation
            '}';
   }
 
+  /**
+   * Strips brackers from the host part of a URI, so we can better handle IPv6 addresses.
+   * e.g. host = "[1:2:3:4:5:6:7:8]" is transformed to "1:2:3:4:5:6:7:8" by this function
+   */
+  static String stripBrackets(String host)
+  {
+    if (host.charAt(0) == '[' && host.charAt(host.length() - 1) == ']') {
+      return host.substring(1, host.length() - 1);
+    }
+    return host;
+  }
 }

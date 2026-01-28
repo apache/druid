@@ -22,6 +22,8 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -44,20 +46,22 @@ public class SqlSegmentsMetadataManagerProviderTest
   public void testLifecycleStartCreatesSegmentTables() throws Exception
   {
     final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(null, null, null);
     final Lifecycle lifecycle = new Lifecycle();
-    final SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    final SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
     SqlSegmentsMetadataManagerProvider provider = new SqlSegmentsMetadataManagerProvider(
+        NoopSegmentMetadataCache.instance(),
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         lifecycle,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig::create,
+        NoopServiceEmitter.instance()
     );
     SegmentsMetadataManager manager = provider.get();
-    Assert.assertTrue(manager instanceof SqlSegmentsMetadataManager);
+    Assert.assertTrue(manager instanceof SqlSegmentsMetadataManagerV2);
 
     final MetadataStorageTablesConfig storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     final String segmentsTable = storageConfig.getSegmentsTable();

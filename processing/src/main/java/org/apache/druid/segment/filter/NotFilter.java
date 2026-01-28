@@ -19,12 +19,12 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.BooleanUnaryFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
@@ -44,19 +44,18 @@ import java.util.Set;
 
 /**
  * Nice filter you have there... NOT!
- *
- * If {@link ExpressionProcessing#useStrictBooleans()} and {@link NullHandling#sqlCompatible()} are both true, this
- * filter inverts the {@code includeUnknown} flag to properly map Druids native two-valued logic (true, false) to SQL
- * three-valued logic (true, false, unknown). At the top level, this flag is always passed in as 'false', and is only
- * flipped by this filter. Other logical filters ({@link AndFilter} and {@link OrFilter}) propagate the value of
+ * <p>
+ * This filter inverts the {@code includeUnknown} flag to properly ap Druids native two-valued logic (true, false) to
+ * SQL three-valued logic (true, false, unknown). At the top level, this flag is always passed in as 'false', and is
+ * only flipped by this filter. Other logical filters ({@link AndFilter} and {@link OrFilter}) propagate the value of
  * {@code includeUnknown} to their children.
- *
+ * <p>
  * For example, if the base filter is equality, by default value matchers and indexes only return true for the rows
  * that are equal to the value. When wrapped in a not filter, the not filter indicates that the equality matchers and
  * indexes should also include the null or 'unknown' values as matches, so that inverting the match does not incorrectly
  * include these null values as matches.
  */
-public class NotFilter implements Filter
+public class NotFilter implements BooleanUnaryFilter
 {
   private final Filter baseFilter;
 
@@ -67,51 +66,16 @@ public class NotFilter implements Filter
 
   @Nullable
   @Override
+  public BitmapColumnIndex getBitmapColumnIndex(int numRows, FilterBundle.Builder baseBuilder)
+  {
+    return getBitmapColumnIndex(numRows, baseBuilder.getBitmapColumnIndex());
+  }
+
+  @Nullable
+  @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    final BitmapColumnIndex baseIndex = baseFilter.getBitmapColumnIndex(selector);
-    if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
-      return new BitmapColumnIndex()
-      {
-        private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
-        @Override
-        public ColumnIndexCapabilities getIndexCapabilities()
-        {
-          return baseIndex.getIndexCapabilities();
-        }
-
-        @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
-        {
-          return bitmapResultFactory.complement(
-              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown && useThreeValueLogic),
-              selector.getNumRows()
-          );
-        }
-
-        @Nullable
-        @Override
-        public <T> T computeBitmapResult(
-            BitmapResultFactory<T> bitmapResultFactory,
-            int applyRowCount,
-            int totalRowCount,
-            boolean includeUnknown
-        )
-        {
-          final T result = baseIndex.computeBitmapResult(
-              bitmapResultFactory,
-              applyRowCount,
-              totalRowCount,
-              !includeUnknown && useThreeValueLogic
-          );
-          if (result == null) {
-            return null;
-          }
-          return bitmapResultFactory.complement(result, selector.getNumRows());
-        }
-      };
-    }
-    return null;
+    return getBitmapColumnIndex(selector.getNumRows(), baseFilter.getBitmapColumnIndex(selector));
   }
 
   @Override
@@ -121,11 +85,10 @@ public class NotFilter implements Filter
 
     return new ValueMatcher()
     {
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        return !baseMatcher.matches(!includeUnknown && useThreeValueLogic);
+        return !baseMatcher.matches(!includeUnknown);
       }
 
       @Override
@@ -144,12 +107,11 @@ public class NotFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
-        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown && useThreeValueLogic);
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown);
 
         scratch.copyFrom(mask);
         scratch.removeAll(baseMatch);
@@ -209,8 +171,62 @@ public class NotFilter implements Filter
     return Objects.hash(1, baseFilter);
   }
 
+  @Override
   public Filter getBaseFilter()
   {
     return baseFilter;
+  }
+
+  @Nullable
+  private static BitmapColumnIndex getBitmapColumnIndex(int numRows, BitmapColumnIndex baseIndex)
+  {
+    if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
+      return new BitmapColumnIndex()
+      {
+        @Override
+        public ColumnIndexCapabilities getIndexCapabilities()
+        {
+          return baseIndex.getIndexCapabilities();
+        }
+
+        @Override
+        public int estimatedComputeCost()
+        {
+          // There's no additional cost on NOT filter, cost will come from child FilterBundle.Builder
+          return 0;
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+        {
+          return bitmapResultFactory.complement(
+              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown),
+              numRows
+          );
+        }
+
+        @Nullable
+        @Override
+        public <T> T computeBitmapResult(
+            BitmapResultFactory<T> bitmapResultFactory,
+            int applyRowCount,
+            int totalRowCount,
+            boolean includeUnknown
+        )
+        {
+          final T result = baseIndex.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              !includeUnknown
+          );
+          if (result == null) {
+            return null;
+          }
+          return bitmapResultFactory.complement(result, numRows);
+        }
+      };
+    }
+    return null;
   }
 }

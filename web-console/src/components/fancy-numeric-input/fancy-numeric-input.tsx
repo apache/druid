@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import type { InputGroupProps2, Intent } from '@blueprintjs/core';
+import type { InputGroupProps, Intent } from '@blueprintjs/core';
 import { Button, ButtonGroup, Classes, ControlGroup, InputGroup, Keys } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 
 import { clamp } from '../../utils';
@@ -68,7 +68,7 @@ export interface FancyNumericInputProps {
   disabled?: boolean;
   readOnly?: boolean;
   placeholder?: string;
-  onBlur?: InputGroupProps2['onBlur'];
+  onBlur?: InputGroupProps['onBlur'];
 
   value: number | undefined;
   defaultValue?: number;
@@ -128,6 +128,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
     if (effectiveValue !== shownNumberClamped) {
       setShownValue(numberToShown(effectiveValue));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveValue]);
 
   const containerClasses = classNames(

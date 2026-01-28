@@ -45,6 +45,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Date;
+import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -314,5 +315,75 @@ public class S3DataSegmentPullerTest
                               .getLastModified();
     EasyMock.verify(s3Client);
     Assert.assertEquals(0, modifiedDate);
+  }
+
+  @Test
+  public void testGetNozip() throws IOException, SegmentLoadingException
+  {
+    final String bucket = "bucket";
+    final String keyPrefix = "prefix/dir/0/";
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+    final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
+
+    final File tmpFile = temporaryFolder.newFile("meta.smoosh");
+    final File tmpFile2 = temporaryFolder.newFile("00000.smoosh");
+
+    try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+      outputStream.write(value);
+    }
+    try (OutputStream outputStream = new FileOutputStream(tmpFile2)) {
+      outputStream.write(value);
+    }
+
+    ListObjectsV2Result list = EasyMock.createMock(ListObjectsV2Result.class);
+    S3ObjectSummary objectSummary1 = EasyMock.createMock(S3ObjectSummary.class);
+    EasyMock.expect(objectSummary1.getBucketName()).andReturn(bucket).anyTimes();
+    EasyMock.expect(objectSummary1.getKey()).andReturn(keyPrefix + "meta.smoosh").anyTimes();
+    S3ObjectSummary objectSummary2 = EasyMock.createMock(S3ObjectSummary.class);
+    EasyMock.expect(objectSummary2.getBucketName()).andReturn(bucket).anyTimes();
+    EasyMock.expect(objectSummary2.getKey()).andReturn(keyPrefix + "00000.smoosh").anyTimes();
+    EasyMock.expect(list.getObjectSummaries()).andReturn(List.of(objectSummary1, objectSummary2)).once();
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject())).andReturn(list).once();
+
+    final S3Object object1 = new S3Object();
+    object1.setBucketName(bucket);
+    object1.setKey(keyPrefix + "meta.smoosh");
+    object1.getObjectMetadata().setLastModified(new Date(0));
+    object1.setObjectContent(new FileInputStream(tmpFile));
+
+    final S3Object object2 = new S3Object();
+    object2.setBucketName(bucket);
+    object2.setKey(keyPrefix + "00000.smoosh");
+    object2.getObjectMetadata().setLastModified(new Date(0));
+    object2.setObjectContent(new FileInputStream(tmpFile));
+
+
+    final File tmpDir = temporaryFolder.newFolder("noZipTestDir");
+
+    EasyMock.expect(s3Client.getObject(EasyMock.eq(object1.getBucketName()), EasyMock.eq(object1.getKey())))
+            .andReturn(object1)
+            .once();
+    EasyMock.expect(s3Client.getObject(EasyMock.eq(object2.getBucketName()), EasyMock.eq(object2.getKey())))
+            .andReturn(object2)
+            .once();
+    S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
+
+    EasyMock.replay(s3Client, list, objectSummary1, objectSummary2);
+    FileUtils.FileCopyResult result = puller.getSegmentFiles(
+        new CloudObjectLocation(
+            bucket,
+            keyPrefix
+        ),
+        tmpDir
+    );
+    EasyMock.verify(s3Client, list, objectSummary1, objectSummary2);
+
+    Assert.assertEquals(value.length + value.length, result.size());
+    File expected = new File(tmpDir, "meta.smoosh");
+    Assert.assertTrue(expected.exists());
+    Assert.assertEquals(value.length, expected.length());
+    expected = new File(tmpDir, "00000.smoosh");
+    Assert.assertTrue(expected.exists());
+    Assert.assertEquals(value.length, expected.length());
   }
 }

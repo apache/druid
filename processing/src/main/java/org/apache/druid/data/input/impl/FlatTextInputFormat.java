@@ -46,6 +46,7 @@ public abstract class FlatTextInputFormat implements InputFormat
   private final String delimiter;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
+  private final boolean tryParseNumbers;
 
   FlatTextInputFormat(
       @Nullable List<String> columns,
@@ -53,7 +54,8 @@ public abstract class FlatTextInputFormat implements InputFormat
       String delimiter,
       @Nullable Boolean hasHeaderRow,
       @Nullable Boolean findColumnsFromHeader,
-      int skipHeaderRows
+      int skipHeaderRows,
+      @Nullable Boolean tryParseNumbers
   )
   {
     this.columns = columns == null ? Collections.emptyList() : columns;
@@ -79,6 +81,8 @@ public abstract class FlatTextInputFormat implements InputFormat
         "Cannot have same delimiter and list delimiter of [%s]",
         delimiter
     );
+    this.tryParseNumbers = tryParseNumbers == null ? false : tryParseNumbers;
+
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
@@ -131,14 +135,17 @@ public abstract class FlatTextInputFormat implements InputFormat
     return skipHeaderRows;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean shouldTryParseNumbers()
+  {
+    return tryParseNumbers;
+  }
+
   @Override
   public long getWeightedSize(String path, long size)
   {
-    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
-    if (CompressionUtils.Format.GZ == compressionFormat) {
-      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
-    }
-    return size;
+    return size * CompressionUtils.estimatedCompressionFactor(CompressionUtils.Format.fromFileName(path));
   }
 
   @Override

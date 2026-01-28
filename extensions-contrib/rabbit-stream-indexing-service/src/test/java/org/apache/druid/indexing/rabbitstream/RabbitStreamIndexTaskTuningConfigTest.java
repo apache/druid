@@ -54,8 +54,10 @@ public class RabbitStreamIndexTaskTuningConfigTest
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
-                TuningConfig.class)),
-        TuningConfig.class);
+                TuningConfig.class
+            )),
+        TuningConfig.class
+    );
 
     Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
@@ -63,7 +65,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    // Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
+    // Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
 
@@ -79,26 +81,28 @@ public class RabbitStreamIndexTaskTuningConfigTest
   public void testSerdeWithNonDefaults() throws Exception
   {
     String jsonStr = "{\n"
-        + "  \"type\": \"rabbit\",\n"
-        + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
-        + "  \"maxRowsInMemory\": 100,\n"
-        + "  \"maxRowsPerSegment\": 100,\n"
-        + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
-        + "  \"maxPendingPersists\": 100,\n"
-        + "  \"reportParseExceptions\": true,\n"
-        + "  \"handoffConditionTimeout\": 100,\n"
-        + "  \"recordBufferSize\": 1000,\n"
-        + "  \"recordBufferOfferTimeout\": 500,\n"
-        + "  \"resetOffsetAutomatically\": false,\n"
-        + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
-        + "}";
+                     + "  \"type\": \"rabbit\",\n"
+                     + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
+                     + "  \"maxRowsInMemory\": 100,\n"
+                     + "  \"maxRowsPerSegment\": 100,\n"
+                     + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
+                     + "  \"maxPendingPersists\": 100,\n"
+                     + "  \"reportParseExceptions\": true,\n"
+                     + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"recordBufferSize\": 1000,\n"
+                     + "  \"recordBufferOfferTimeout\": 500,\n"
+                     + "  \"resetOffsetAutomatically\": false,\n"
+                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
+                     + "}";
 
     RabbitStreamIndexTaskTuningConfig config = (RabbitStreamIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
-                TuningConfig.class)),
-        TuningConfig.class);
+                TuningConfig.class
+            )),
+        TuningConfig.class
+    );
 
     Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
@@ -119,63 +123,68 @@ public class RabbitStreamIndexTaskTuningConfigTest
   public void testtoString() throws Exception
   {
     String jsonStr = "{\n"
-        + "  \"type\": \"rabbit\",\n"
-        + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
-        + "  \"maxRowsInMemory\": 100,\n"
-        + "  \"maxRowsPerSegment\": 100,\n"
-        + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
-        + "  \"maxPendingPersists\": 100,\n"
-        + "  \"reportParseExceptions\": true,\n"
-        + "  \"handoffConditionTimeout\": 100,\n"
-        + "  \"recordBufferSize\": 1000,\n"
-        + "  \"recordBufferOfferTimeout\": 500,\n"
-        + "  \"resetOffsetAutomatically\": false,\n"
-        + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
-        + "}";
+                     + "  \"type\": \"rabbit\",\n"
+                     + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
+                     + "  \"maxRowsInMemory\": 100,\n"
+                     + "  \"maxRowsPerSegment\": 100,\n"
+                     + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
+                     + "  \"maxPendingPersists\": 100,\n"
+                     + "  \"reportParseExceptions\": true,\n"
+                     + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"recordBufferSize\": 1000,\n"
+                     + "  \"recordBufferOfferTimeout\": 500,\n"
+                     + "  \"resetOffsetAutomatically\": false,\n"
+                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
+                     + "}";
 
     RabbitStreamIndexTaskTuningConfig config = (RabbitStreamIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
-                TuningConfig.class)),
-        TuningConfig.class);
+                TuningConfig.class
+            )),
+        TuningConfig.class
+    );
 
     String resStr = "RabbitStreamSupervisorTuningConfig{" +
-        "maxRowsInMemory=100, " +
-        "maxRowsPerSegment=100, " +
-        "maxTotalRows=null, " +
-        "maxBytesInMemory=" + config.getMaxBytesInMemoryOrDefault() + ", " +
-        "skipBytesInMemoryOverheadCheck=false, " +
-        "intermediatePersistPeriod=PT1H, " +
-        "maxPendingPersists=100, " +
-        "indexSpec=IndexSpec{" +
-        "bitmapSerdeFactory=RoaringBitmapSerdeFactory{}, " +
-        "dimensionCompression=lz4, " +
-        "stringDictionaryEncoding=Utf8{}, " +
-        "metricCompression=lz4, " +
-        "longEncoding=longs, " +
-        "jsonCompression=null, " +
-        "segmentLoader=null" +
-        "}, " +
-        "reportParseExceptions=true, " +
-        "handoffConditionTimeout=100, " +
-        "resetOffsetAutomatically=false, " +
-        "segmentWriteOutMediumFactory=null, " +
-        "workerThreads=null, " +
-        "chatThreads=null, " +
-        "chatRetries=8, " +
-        "httpTimeout=PT10S, " +
-        "shutdownTimeout=PT80S, " +
-        "recordBufferSize=1000, " +
-        "recordBufferOfferTimeout=500, " +
-        "offsetFetchPeriod=PT30S, " +
-        "intermediateHandoffPeriod=" + config.getIntermediateHandoffPeriod() + ", " +
-        "logParseExceptions=false, " +
-        "maxParseExceptions=0, " +
-        "maxSavedParseExceptions=0, " +
-        "numPersistThreads=1, " +
-        "maxRecordsPerPoll=null}";
-  
+                    "maxRowsInMemory=100, " +
+                    "maxRowsPerSegment=100, " +
+                    "maxTotalRows=null, " +
+                    "maxBytesInMemory=" + config.getMaxBytesInMemoryOrDefault() + ", " +
+                    "skipBytesInMemoryOverheadCheck=false, " +
+                    "intermediatePersistPeriod=PT1H, " +
+                    "maxPendingPersists=100, " +
+                    "indexSpec=IndexSpec{" +
+                    "bitmapSerdeFactory=null, " +
+                    "metadataCompression=null, " +
+                    "dimensionCompression=null, " +
+                    "stringDictionaryEncoding=null, " +
+                    "metricCompression=null, " +
+                    "longEncoding=null, " +
+                    "complexMetricCompression=null, " +
+                    "autoColumnFormatSpec=null, " +
+                    "jsonCompression=null, " +
+                    "segmentLoader=null" +
+                    "}, " +
+                    "reportParseExceptions=true, " +
+                    "handoffConditionTimeout=100, " +
+                    "resetOffsetAutomatically=false, " +
+                    "segmentWriteOutMediumFactory=null, " +
+                    "workerThreads=null, " +
+                    "chatRetries=8, " +
+                    "httpTimeout=PT10S, " +
+                    "shutdownTimeout=PT80S, " +
+                    "recordBufferSize=1000, " +
+                    "recordBufferOfferTimeout=500, " +
+                    "offsetFetchPeriod=PT30S, " +
+                    "intermediateHandoffPeriod=" + config.getIntermediateHandoffPeriod() + ", " +
+                    "logParseExceptions=false, " +
+                    "maxParseExceptions=0, " +
+                    "maxSavedParseExceptions=0, " +
+                    "numPersistThreads=1, " +
+                    "maxRecordsPerPoll=null, " +
+                    "maxColumnsToMerge=-1}";
+
 
     Assert.assertEquals(resStr, config.toString());
   }

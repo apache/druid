@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.SamplerResponse;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -34,6 +33,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.overlord.sampler.SamplerTestUtils;
@@ -41,6 +41,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -48,11 +49,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -74,10 +73,6 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   private static final String SHARD_ID = "1";
 
   private final SeekableStreamSupervisorSpec supervisorSpec = mock(SeekableStreamSupervisorSpec.class);
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private final RecordSupplier recordSupplier = mock(RecordSupplier.class);
 
@@ -106,36 +101,37 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   @Test(timeout = 10_000L)
   public void testSampleWithInputRowParser() throws Exception
   {
-    final DataSchema dataSchema = new DataSchema(
-        "test_ds",
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        Arrays.asList(
-                            new StringDimensionSchema("dim1"),
-                            new StringDimensionSchema("dim1t"),
-                            new StringDimensionSchema("dim2"),
-                            new LongDimensionSchema("dimLong"),
-                            new FloatDimensionSchema("dimFloat")
-                        )
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of(),
-                    false
-                )
-            ),
-            Map.class
-        ),
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("met1sum", "met1"),
-            new CountAggregatorFactory("rows")
-        },
-        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-        null,
-        OBJECT_MAPPER
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test_ds")
+                                      .withParserMap(
+                                          OBJECT_MAPPER.convertValue(
+                                              new StringInputRowParser(
+                                                  new JSONParseSpec(
+                                                      new TimestampSpec("timestamp", "iso", null),
+                                                      new DimensionsSpec(
+                                                          Arrays.asList(
+                                                              new StringDimensionSchema("dim1"),
+                                                              new StringDimensionSchema("dim1t"),
+                                                              new StringDimensionSchema("dim2"),
+                                                              new LongDimensionSchema("dimLong"),
+                                                              new FloatDimensionSchema("dimFloat")
+                                                          )
+                                                      ),
+                                                      new JSONPathSpec(true, ImmutableList.of()),
+                                                      ImmutableMap.of(),
+                                                      false
+                                                  )
+                                              ),
+                                              Map.class
+                                          )
+                                      )
+                                      .withAggregators(
+                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
+                                          new CountAggregatorFactory("rows")
+                                      )
+                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+                                      .withObjectMapper(OBJECT_MAPPER)
+                                      .build();
 
     final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
         STREAM,
@@ -346,6 +342,7 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           lateMessageRejectionPeriod,
           earlyMessageRejectionPeriod,
           autoScalerConfig,
+          LagAggregator.DEFAULT,
           lateMessageRejectionStartDateTime,
           idleConfig,
           null

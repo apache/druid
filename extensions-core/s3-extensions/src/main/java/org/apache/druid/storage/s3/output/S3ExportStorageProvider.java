@@ -56,6 +56,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
+  @JacksonInject
+  S3UploadManager s3UploadManager;
+
   @JsonCreator
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -66,14 +69,14 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     this.prefix = prefix;
   }
 
+
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File taskTempDir)
   {
-    final String tempDir = s3ExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.s3.tempLocalDir` must be configured for S3 export.");
+    final String exportConfigTempDir = s3ExportConfig.getTempLocalDir();
+    final File tempDirFile = exportConfigTempDir != null ? new File(exportConfigTempDir) : taskTempDir;
+    if (tempDirFile == null) {
+      throw DruidException.defensive("Couldn't find temporary directory for export.");
     }
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
@@ -86,11 +89,11 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     final S3OutputConfig s3OutputConfig = new S3OutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
+        tempDirFile,
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3);
+    return new S3StorageConnector(s3OutputConfig, s3, s3UploadManager);
   }
 
   @VisibleForTesting

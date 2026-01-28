@@ -24,18 +24,18 @@ import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
-import org.apache.druid.guice.CoordinatorDiscoveryModule;
+import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
 import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -47,6 +47,7 @@ import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
 import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
@@ -95,11 +96,22 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
 
   public CoreInjectorBuilder forServer()
   {
+    forServerWithoutJetty();
+    add(JettyServerModule.class);
+    return this;
+  }
+
+  /**
+   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
+   */
+  public CoreInjectorBuilder forServerWithoutJetty()
+  {
     withLogging();
     withLifecycle();
     add(
         ExtensionsModule.SecondaryModule.class,
         new DruidAuthModule(),
+        new PolicyModule(),
         TLSCertificateCheckerModule.class,
         EmitterModule.class,
         HttpClientModule.global(),
@@ -112,18 +124,15 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new SegmentWriteOutMediumModule(),
         new ServerModule(),
         new StorageNodeModule(),
-        new JettyServerModule(),
         new ExpressionModule(),
-        new NestedDataModule(),
+        new BuiltInTypesModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
-        new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),
-        new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
         new AuthenticatorMapperModule(),
@@ -133,7 +142,9 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
-        new StorageConnectorModule()
+        new StorageConnectorModule(),
+        new CatalogCoreModule(),
+        new DefaultServerHolderModule()
     );
     return this;
   }

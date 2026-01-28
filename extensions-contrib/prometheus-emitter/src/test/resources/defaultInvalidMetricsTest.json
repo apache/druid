@@ -1,0 +1,3 @@
+{
+  "query/nonExistent" : { "dimensions" : ["dataSource"], "type" : "nonExistent", "help":  "Non supported type."}
+}

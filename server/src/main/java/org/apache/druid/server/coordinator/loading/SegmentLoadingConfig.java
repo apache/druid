@@ -50,7 +50,7 @@ public class SegmentLoadingConfig
       final int throttlePercentage = 5;
       final int replicationThrottleLimit = Math.max(100, numUsedSegments * throttlePercentage / 100);
       final int numBalancerThreads = CoordinatorDynamicConfig.getDefaultBalancerComputeThreads();
-      log.info(
+      log.debug(
           "Smart segment loading is enabled. Calculated replicationThrottleLimit[%,d]"
           + " (%d%% of used segments[%,d]) and numBalancerThreads[%d].",
           replicationThrottleLimit, throttlePercentage, numUsedSegments, numBalancerThreads

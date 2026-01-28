@@ -122,7 +122,7 @@ public class OrderByColumnSpec
   {
     return Lists.transform(
         Arrays.asList(dimension),
-        new Function<String, OrderByColumnSpec>()
+        new Function<>()
         {
           @Override
           public OrderByColumnSpec apply(@Nullable String input)
@@ -142,7 +142,7 @@ public class OrderByColumnSpec
   {
     return Lists.transform(
         Arrays.asList(dimension),
-        new Function<String, OrderByColumnSpec>()
+        new Function<>()
         {
           @Override
           public OrderByColumnSpec apply(@Nullable String input)

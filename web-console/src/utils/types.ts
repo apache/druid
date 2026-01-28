@@ -18,7 +18,7 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column } from '@druid-toolkit/query';
+import type { Column } from 'druid-query-toolkit';
 
 export function columnToSummary(column: Column): string {
   const lines: string[] = [column.name];
@@ -110,6 +110,12 @@ export function dataTypeToIcon(dataType: string): IconName {
 
     case 'COMPLEX<COMPRESSEDBIGDECIMAL>':
       return IconNames.SORT_NUMERICAL_DESC;
+
+    case 'COMPLEX<TEXT>':
+      return IconNames.LABEL;
+
+    case 'COMPLEX<VECTOR>':
+      return IconNames.REGRESSION_CHART;
 
     default:
       if (typeUpper.startsWith('ARRAY')) return IconNames.ARRAY;

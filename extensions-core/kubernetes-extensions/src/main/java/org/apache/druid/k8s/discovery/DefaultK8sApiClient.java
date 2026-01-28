@@ -145,7 +145,7 @@ public class DefaultK8sApiClient implements K8sApiClient
                   LOGGER.debug("item of type " + item.type + " was NULL when watching nodeRole [%s]", nodeRole);
                 }
 
-                obj = new Watch.Response<DiscoveryDruidNodeAndResourceVersion>(
+                obj = new Watch.Response<>(
                     item.type,
                     result
                 );

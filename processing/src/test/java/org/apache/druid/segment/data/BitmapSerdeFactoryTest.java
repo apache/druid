@@ -20,6 +20,8 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,5 +47,12 @@ public class BitmapSerdeFactoryTest
     Assert.assertTrue(roaringFactory instanceof RoaringBitmapSerdeFactory);
     Assert.assertTrue(mapper.readValue("{\"type\":\"concise\"}", BitmapSerdeFactory.class) instanceof ConciseBitmapSerdeFactory);
     Assert.assertTrue(mapper.readValue("{\"type\":\"BitmapSerde$SomeRandomClass\"}", BitmapSerdeFactory.class) instanceof RoaringBitmapSerdeFactory);
+  }
+
+  @Test
+  public void testForBitmapFactory()
+  {
+    Assert.assertTrue(BitmapSerde.forBitmapFactory(new RoaringBitmapFactory()) instanceof BitmapSerde.DefaultBitmapSerdeFactory);
+    Assert.assertTrue(BitmapSerde.forBitmapFactory(new ConciseBitmapFactory()) instanceof ConciseBitmapSerdeFactory);
   }
 }

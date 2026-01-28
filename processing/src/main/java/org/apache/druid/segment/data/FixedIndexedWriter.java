@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -46,14 +46,16 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
   private final Comparator<T> comparator;
   private final ByteBuffer scratch;
   private final ByteBuffer readBuffer;
-  private int numWritten;
+  private final boolean isSorted;
+  private final int width;
+
+  private int cardinality = 0;
+
   @Nullable
   private WriteOutBytes valuesOut = null;
   private boolean hasNulls = false;
-  private boolean isSorted;
   @Nullable
   private T prevObject = null;
-  private final int width;
 
   public FixedIndexedWriter(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -87,7 +89,7 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
   @Override
   public int getCardinality()
   {
-    return hasNulls ? numWritten + 1 : numWritten;
+    return cardinality;
   }
 
   @Override
@@ -97,34 +99,37 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void write(@Nullable T objectToWrite) throws IOException
+  public int write(@Nullable T objectToWrite) throws IOException
   {
     if (prevObject != null && isSorted && comparator.compare(prevObject, objectToWrite) >= 0) {
-      throw new ISE(
+      throw DruidException.defensive(
           "Values must be sorted and unique. Element [%s] with value [%s] is before or equivalent to [%s]",
-          numWritten,
+          cardinality,
           objectToWrite,
           prevObject
       );
     }
 
     if (objectToWrite == null) {
+      if (cardinality != 0) {
+        throw DruidException.defensive("Null must come first, got it at cardinality[%,d]!=0", cardinality);
+      }
       hasNulls = true;
-      return;
+      return cardinality++;
     }
 
     scratch.clear();
     typeStrategy.write(scratch, objectToWrite, width);
     scratch.flip();
     Channels.writeFully(valuesOut, scratch);
-    numWritten++;
     prevObject = objectToWrite;
+    return cardinality++;
   }
 
   @Override
   public void writeTo(
       WritableByteChannel channel,
-      FileSmoosher smoosher
+      SegmentFileBuilder fileBuilder
   ) throws IOException
   {
     scratch.clear();
@@ -132,7 +137,7 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     scratch.put((byte) 0);
     byte flags = 0x00;
     if (hasNulls) {
-      flags = (byte) (flags | NullHandling.IS_NULL_BYTE);
+      flags = (byte) (flags | TypeStrategies.IS_NULL_BYTE);
     }
     if (isSorted) {
       flags = (byte) (flags | FixedIndexed.IS_SORTED_MASK);
@@ -141,7 +146,7 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     scratch.flip();
     Channels.writeFully(channel, scratch);
     scratch.clear();
-    scratch.putInt(numWritten);
+    scratch.putInt(hasNulls ? cardinality - 1 : cardinality); // we don't actually write the null entry, so subtract 1
     scratch.flip();
     Channels.writeFully(channel, scratch);
     valuesOut.writeTo(channel);
@@ -166,12 +171,13 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
   public Iterator<T> getIterator()
   {
     final ByteBuffer iteratorBuffer = ByteBuffer.allocate(width * PAGE_SIZE).order(readBuffer.order());
-    final int totalCount = hasNulls ? 1 + numWritten : numWritten;
+    final int totalCount = cardinality;
 
     final int startPos = hasNulls ? 1 : 0;
-    return new Iterator<T>()
+    return new Iterator<>()
     {
       int pos = 0;
+
       @Override
       public boolean hasNext()
       {
@@ -197,13 +203,8 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
       {
         iteratorBuffer.clear();
         try {
-          if (numWritten - (pos - startPos) < PAGE_SIZE) {
-            int size = (numWritten - (pos - startPos)) * width;
-            iteratorBuffer.limit(size);
-            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
-          } else {
-            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
-          }
+          iteratorBuffer.limit(Math.min(PAGE_SIZE, (cardinality - pos) * width));
+          valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
           iteratorBuffer.clear();
         }
         catch (IOException e) {

@@ -185,8 +185,9 @@ public class HdfsTaskLogs implements TaskLogs
     Path taskLogDir = new Path(config.getDirectory());
     FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
     if (fs.exists(taskLogDir)) {
+      FileStatus taskLogFileStatus = fs.getFileStatus(taskLogDir);
 
-      if (!fs.isDirectory(taskLogDir)) {
+      if (!taskLogFileStatus.isDirectory()) {
         throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 
@@ -206,6 +207,26 @@ public class HdfsTaskLogs implements TaskLogs
         }
       }
     }
+  }
+
+  @Override
+  public void pushTaskPayload(String taskId, File taskPayloadFile) throws IOException
+  {
+    final Path path = getTaskPayloadFileFromId(taskId);
+    log.info("Pushing payload for task[%s] to location[%s]", taskId, path);
+    pushTaskFile(path, taskPayloadFile);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskId) throws IOException
+  {
+    final Path path = getTaskPayloadFileFromId(taskId);
+    return streamTaskFile(path, 0);
+  }
+
+  private Path getTaskPayloadFileFromId(String taskId)
+  {
+    return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".payload.json"));
   }
 }
 

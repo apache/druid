@@ -42,6 +42,7 @@ public class HllSketchHolderObjectStrategyTest
 
     ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
     HllSketchHolderObjectStrategy objectStrategy = new HllSketchHolderObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
 
     // valid sketch should not explode when copied, which reads the memory
     objectStrategy.fromByteBufferSafe(buf, bytes.length).getSketch().copy();

@@ -19,6 +19,8 @@
 
 package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
@@ -27,6 +29,7 @@ import org.apache.druid.catalog.model.table.TableFunction.ParameterDefn;
 import org.apache.druid.catalog.model.table.TableFunction.ParameterType;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -93,6 +96,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   public static final String PASSWORD_PARAMETER = "password";
   public static final String PASSWORD_ENV_VAR_PARAMETER = "passwordEnvVar";
 
+  public static final String HEADERS = "headers";
   private static final List<ParameterDefn> URI_PARAMS = Collections.singletonList(
       new Parameter(URIS_PARAMETER, ParameterType.VARCHAR_ARRAY, true)
   );
@@ -103,10 +107,15 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
       new Parameter(PASSWORD_ENV_VAR_PARAMETER, ParameterType.VARCHAR, true)
   );
 
+  private static final List<ParameterDefn> HEADERS_PARAMS = Collections.singletonList(
+      new Parameter(HEADERS, ParameterType.VARCHAR, true)
+  );
+
   // Field names in the HttpInputSource
   protected static final String URIS_FIELD = "uris";
   protected static final String PASSWORD_FIELD = "httpAuthenticationPassword";
   protected static final String USERNAME_FIELD = "httpAuthenticationUsername";
+  protected static final String HEADERS_FIELD = "requestHeaders";
 
   @Override
   public String typeValue()
@@ -201,7 +210,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   @Override
   protected List<ParameterDefn> adHocTableFnParameters()
   {
-    return CatalogUtils.concatLists(URI_PARAMS, USER_PWD_PARAMS);
+    return CatalogUtils.concatLists(URI_PARAMS, CatalogUtils.concatLists(USER_PWD_PARAMS, HEADERS_PARAMS));
   }
 
   @Override
@@ -210,6 +219,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     jsonMap.put(InputSource.TYPE_PROPERTY, HttpInputSource.TYPE_KEY);
     convertUriArg(jsonMap, args);
     convertUserPasswordArgs(jsonMap, args);
+    convertHeaderArg(jsonMap, args);
   }
 
   @Override
@@ -226,6 +236,10 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     // Does the table define a user or password?
     if (!sourceMap.containsKey(USERNAME_FIELD) && !sourceMap.containsKey(PASSWORD_FIELD)) {
       params = CatalogUtils.concatLists(params, USER_PWD_PARAMS);
+    }
+
+    if (!sourceMap.containsKey(HEADERS_FIELD)) {
+      params = CatalogUtils.concatLists(params, HEADERS_PARAMS);
     }
 
     // Does the table define a format?
@@ -255,6 +269,9 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     if (!sourceMap.containsKey(USERNAME_FIELD) && !sourceMap.containsKey(PASSWORD_FIELD)) {
       convertUserPasswordArgs(sourceMap, args);
     }
+    if (!sourceMap.containsKey(HEADERS_FIELD)) {
+      convertHeaderArg(sourceMap, args);
+    }
     return convertPartialFormattedTable(table, args, columns, sourceMap);
   }
 
@@ -281,6 +298,26 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     if (uris != null) {
       jsonMap.put(URIS_FIELD, CatalogUtils.stringListToUriList(uris));
     }
+  }
+
+  /**
+   * URIs in SQL is in the form of a string that contains a comma-delimited
+   * set of URIs. Done since SQL doesn't support array scalars.
+   */
+  private void convertHeaderArg(Map<String, Object> jsonMap, Map<String, Object> args)
+  {
+    String requestHeaders = CatalogUtils.getString(args, HEADERS);
+    Map<String, String> headersMap;
+    if (requestHeaders != null) {
+      try {
+        headersMap = DefaultObjectMapper.INSTANCE.readValue(requestHeaders, new TypeReference<>() {});
+      }
+      catch (JsonProcessingException e) {
+        throw new ISE("Failed read map from headers json");
+      }
+      jsonMap.put(HEADERS_FIELD, headersMap);
+    }
+
   }
 
   /**

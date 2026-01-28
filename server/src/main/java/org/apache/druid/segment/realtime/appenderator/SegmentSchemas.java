@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * Encapsulates schema information for multiple segments.
  * <p>
- * Primarily used to announce schema changes for all {@link org.apache.druid.segment.realtime.plumber.Sink}
+ * Primarily used to announce schema changes for all {@link org.apache.druid.segment.realtime.sink.Sink}
  * created by a task in {@link StreamAppenderator}.
  */
 public class SegmentSchemas

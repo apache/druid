@@ -142,7 +142,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       return dbi.withHandle(
-          new HandleCallback<Long>()
+          new HandleCallback<>()
           {
             @Override
             public Long withHandle(Handle handle) throws DuplicateKeyException
@@ -197,7 +197,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       return dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -248,7 +248,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata revised = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -293,7 +293,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata revised = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -354,7 +354,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata result = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws CatalogException
@@ -446,7 +446,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata result = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws CatalogException
@@ -527,7 +527,7 @@ public class SQLCatalogManager implements CatalogManager
   public long markDeleting(TableId id)
   {
     return dbi.withHandle(
-        new HandleCallback<Long>()
+        new HandleCallback<>()
         {
           @Override
           public Long withHandle(Handle handle)
@@ -593,7 +593,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<TableId> allTablePaths()
   {
     return dbi.withHandle(
-        new HandleCallback<List<TableId>>()
+        new HandleCallback<>()
         {
           @Override
           public List<TableId> withHandle(Handle handle)
@@ -621,7 +621,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<String> tableNamesInSchema(String dbSchema)
   {
     return dbi.withHandle(
-        new HandleCallback<List<String>>()
+        new HandleCallback<>()
         {
           @Override
           public List<String> withHandle(Handle handle)
@@ -650,7 +650,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<TableMetadata> tablesInSchema(String dbSchema)
   {
     return dbi.withHandle(
-        new HandleCallback<List<TableMetadata>>()
+        new HandleCallback<>()
         {
           @Override
           public List<TableMetadata> withHandle(Handle handle)
@@ -762,8 +762,7 @@ public class SQLCatalogManager implements CatalogManager
     );
   }
 
-  private static final TypeReference<Map<String, Object>> PROPERTIES_TYPE_REF =
-      new TypeReference<Map<String, Object>>() { };
+  private static final TypeReference<Map<String, Object>> PROPERTIES_TYPE_REF = new TypeReference<>() {};
 
   private static Map<String, Object> propertiesFromBytes(
       final ObjectMapper jsonMapper,
@@ -773,8 +772,7 @@ public class SQLCatalogManager implements CatalogManager
     return fromBytes(jsonMapper, properties, PROPERTIES_TYPE_REF);
   }
 
-  private static final TypeReference<List<ColumnSpec>> COLUMNS_TYPE_REF =
-      new TypeReference<List<ColumnSpec>>() { };
+  private static final TypeReference<List<ColumnSpec>> COLUMNS_TYPE_REF = new TypeReference<>() {};
 
   private static List<ColumnSpec> columnsFromBytes(
       final ObjectMapper jsonMapper,

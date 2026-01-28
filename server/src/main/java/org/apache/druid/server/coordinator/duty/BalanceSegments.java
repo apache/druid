@@ -20,25 +20,25 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
-import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 
 import java.util.Set;
 
 /**
- *
+ * Coordinator Duty to balance segments across Historicals.
  */
 public class BalanceSegments implements CoordinatorDuty
 {
-  private static final EmittingLogger log = new EmittingLogger(BalanceSegments.class);
+  private static final Logger log = new Logger(BalanceSegments.class);
 
   private final Duration coordinatorPeriod;
 
@@ -50,26 +50,17 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if (params.getUsedSegments().isEmpty()) {
-      log.info("Skipping balance as there are no used segments.");
+    if (params.getUsedSegmentCount() <= 0) {
       return params;
     }
-
-    final DruidCluster cluster = params.getDruidCluster();
-    final SegmentLoadingConfig loadingConfig = params.getSegmentLoadingConfig();
 
     final int maxSegmentsToMove = getMaxSegmentsToMove(params);
+    params.getCoordinatorStats().add(Stats.Balancer.MAX_TO_MOVE, maxSegmentsToMove);
     if (maxSegmentsToMove <= 0) {
-      log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
-    } else {
-      log.info(
-          "Balancing segments in tiers [%s] with maxSegmentsToMove[%,d] and maxLifetime[%d].",
-          cluster.getTierNames(), maxSegmentsToMove, loadingConfig.getMaxLifetimeInLoadQueue()
-      );
     }
 
-    cluster.getHistoricals().forEach(
+    params.getDruidCluster().getManagedHistoricals().forEach(
         (tier, servers) -> new TierSegmentBalancer(tier, servers, maxSegmentsToMove, params).run()
     );
 
@@ -97,7 +88,7 @@ public class BalanceSegments implements CoordinatorDuty
       final int numBalancerThreads = params.getSegmentLoadingConfig().getBalancerComputeThreads();
       final int maxSegmentsToMove = SegmentToMoveCalculator
           .computeMaxSegmentsToMovePerTier(totalSegmentsInCluster, numBalancerThreads, coordinatorPeriod);
-      log.info(
+      log.debug(
           "Computed maxSegmentsToMove[%,d] for total [%,d] segments on [%d] historicals.",
           maxSegmentsToMove, totalSegmentsInCluster, numHistoricalsAndSegments.lhs
       );
@@ -122,7 +113,7 @@ public class BalanceSegments implements CoordinatorDuty
     int numHistoricals = 0;
     int numSegments = 0;
 
-    for (Set<ServerHolder> historicals : cluster.getHistoricals().values()) {
+    for (Set<ServerHolder> historicals : cluster.getManagedHistoricals().values()) {
       for (ServerHolder historical : historicals) {
         ++numHistoricals;
         numSegments += historical.getServer().getNumSegments() + historical.getNumQueuedSegments();

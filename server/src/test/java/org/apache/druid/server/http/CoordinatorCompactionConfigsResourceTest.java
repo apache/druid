@@ -19,422 +19,505 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.common.config.TestConfigManagerConfig;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.metadata.MetadataStorageConnector;
+import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.metadata.TestMetadataStorageConnector;
+import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.skife.jdbi.v2.Handle;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.UnaryOperator;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoordinatorCompactionConfigsResourceTest
 {
-  private static final DataSourceCompactionConfig OLD_CONFIG = new DataSourceCompactionConfig(
-      "oldDataSource",
-      null,
-      500L,
-      null,
-      new Period(3600),
-      null,
-      new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-      null,
-      null,
-      null,
-      null,
-      ImmutableMap.of("key", "val")
-  );
-  private static final DataSourceCompactionConfig NEW_CONFIG = new DataSourceCompactionConfig(
-      "newDataSource",
-      null,
-      500L,
-      null,
-      new Period(1800),
-      null,
-      new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null),
-      null,
-      null,
-      null,
-      null,
-      ImmutableMap.of("key", "val")
-  );
-  private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
-
-  private static final CoordinatorCompactionConfig ORIGINAL_CONFIG
-      = CoordinatorCompactionConfig.from(ImmutableList.of(OLD_CONFIG));
-
-  private static final String DATASOURCE_NOT_EXISTS = "notExists";
-
-  @Mock
-  private JacksonConfigManager mockJacksonConfigManager;
+  private static final double DELTA = 1e-9;
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   @Mock
   private HttpServletRequest mockHttpServletRequest;
 
-  @Mock
-  private MetadataStorageConnector mockConnector;
-
-  @Mock
-  private MetadataStorageTablesConfig mockConnectorConfig;
-
-  @Mock
-  private AuditManager mockAuditManager;
-
-  private CoordinatorCompactionConfigsResource coordinatorCompactionConfigsResource;
+  private TestCoordinatorConfigManager configManager;
+  private CoordinatorCompactionConfigsResource resource;
 
   @Before
   public void setup()
   {
-    Mockito.when(mockConnector.lookup(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.eq("name"),
-                     ArgumentMatchers.eq("payload"),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
-                 )
-    ).thenReturn(OLD_CONFIG_IN_BYTES);
-    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
-                     ArgumentMatchers.eq(OLD_CONFIG_IN_BYTES),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
-                 )
-    ).thenReturn(ORIGINAL_CONFIG);
-    Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
-    Mockito.when(mockAuditManager.fetchAuditHistory(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ImmutableList.of());
-    coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
-        new CoordinatorConfigManager(mockJacksonConfigManager, mockConnector, mockConnectorConfig),
-        mockAuditManager
-    );
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
+    final AuditManager auditManager = new TestAuditManager();
+    configManager = TestCoordinatorConfigManager.create(auditManager);
+    resource = new CoordinatorCompactionConfigsResource(configManager);
+    configManager.delegate.start();
+  }
+
+  @After
+  public void tearDown()
+  {
+    configManager.delegate.stop();
   }
 
   @Test
-  public void testSetCompactionTaskLimitWithExistingConfig()
+  public void testGetDefaultClusterConfig()
   {
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
+    Response response = resource.getCompactionConfig();
+    final DruidCompactionConfig defaultConfig
+        = verifyAndGetPayload(response, DruidCompactionConfig.class);
 
-    double compactionTaskSlotRatio = 0.5;
-    int maxCompactionTaskSlots = 9;
-    Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots,
-        true,
-        mockHttpServletRequest
-    );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
-    Assert.assertNotNull(newConfigCaptor.getValue());
-    Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
-    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
-    Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
+    Assert.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
+    Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
+    Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
+    Assert.assertFalse(defaultConfig.isUseSupervisors());
+    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test
-  public void testAddOrUpdateCompactionConfigWithExistingConfig()
+  public void testSetCompactionTaskLimit()
   {
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
+    resource.setCompactionTaskLimit(0.1, 100, mockHttpServletRequest);
 
-    final DataSourceCompactionConfig newConfig = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, true),
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
-    Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
-        newConfig,
-        mockHttpServletRequest
-    );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
-    Assert.assertNotNull(newConfigCaptor.getValue());
-    Assert.assertEquals(2, newConfigCaptor.getValue().getCompactionConfigs().size());
-    Assert.assertEquals(OLD_CONFIG, newConfigCaptor.getValue().getCompactionConfigs().get(0));
-    Assert.assertEquals(newConfig, newConfigCaptor.getValue().getCompactionConfigs().get(1));
+    final DruidCompactionConfig oldConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    Assert.assertEquals(100, oldConfig.getMaxCompactionTaskSlots());
+    Assert.assertEquals(0.1, oldConfig.getCompactionTaskSlotRatio(), 1e-9);
+
+    Response response = resource.setCompactionTaskLimit(0.5, 9, mockHttpServletRequest);
+    verifyStatus(Response.Status.OK, response);
+
+    final DruidCompactionConfig updatedConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+
+    // Verify that the task slot fields have been updated
+    Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
+    Assert.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
+
+    // Verify that other cluster config fields are unchanged
+    Assert.assertEquals(oldConfig.isUseSupervisors(), updatedConfig.isUseSupervisors());
+    Assert.assertEquals(oldConfig.getCompactionPolicy(), updatedConfig.getCompactionPolicy());
+    Assert.assertEquals(oldConfig.getEngine(), updatedConfig.getEngine());
+
+    // Verify that the other fields are unchanged
+    Assert.assertEquals(oldConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
   }
 
   @Test
-  public void testDeleteCompactionConfigWithExistingConfig()
+  public void testGetUnknownDatasourceConfigThrowsNotFound()
   {
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
-    final String datasourceName = "dataSource";
-    final DataSourceCompactionConfig toDelete = new DataSourceCompactionConfig(
-        datasourceName,
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
-    final CoordinatorCompactionConfig originalConfig = CoordinatorCompactionConfig.from(ImmutableList.of(toDelete));
-    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
-                     ArgumentMatchers.eq(OLD_CONFIG_IN_BYTES),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
-                 )
-    ).thenReturn(originalConfig);
-
-    Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
-        datasourceName,
-        mockHttpServletRequest
-    );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), OLD_CONFIG_IN_BYTES);
-    Assert.assertNotNull(newConfigCaptor.getValue());
-    Assert.assertEquals(0, newConfigCaptor.getValue().getCompactionConfigs().size());
+    Response response = resource.getDatasourceCompactionConfig(TestDataSource.WIKI);
+    verifyStatus(Response.Status.NOT_FOUND, response);
   }
 
   @Test
-  public void testUpdateShouldRetryIfRetryableException()
+  public void testAddDatasourceConfig()
   {
-    Mockito.when(
-        mockJacksonConfigManager.set(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.any()
+    final DataSourceCompactionConfig newDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.OK, response);
+
+    final DataSourceCompactionConfig fetchedDatasourceConfig
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
+    Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
+
+    final DruidCompactionConfig fullCompactionConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
+    Assert.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+  }
+
+  @Test
+  public void testAddDatasourceConfigWithMSQEngineIsInvalid()
+  {
+    final DataSourceCompactionConfig newDatasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder()
+                                                .forDataSource(TestDataSource.WIKI)
+                                                .withEngine(CompactionEngine.MSQ)
+                                                .build();
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
+  }
+
+  @Test
+  public void testUpdateDatasourceConfig()
+  {
+    final DataSourceCompactionConfig originalDatasourceConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(Period.hours(1))
+        .withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, true)
         )
-    ).thenReturn(ConfigManager.SetResult.retryableFailure(new ISE("retryable")));
+        .withEngine(CompactionEngine.NATIVE)
+        .build();
 
-    coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
-        NEW_CONFIG,
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(
+        originalDatasourceConfig,
         mockHttpServletRequest
     );
+    verifyStatus(Response.Status.OK, response);
 
-    // Verify that the update is retried upto the max number of retries
-    Mockito.verify(
-        mockJacksonConfigManager,
-        Mockito.times(CoordinatorCompactionConfigsResource.UPDATE_NUM_RETRY)
-    ).set(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.any()
-    );
-  }
-
-  @Test
-  public void testUpdateShouldNotRetryIfNotRetryableException()
-  {
-    Mockito.when(
-        mockJacksonConfigManager.set(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.any()
+    final DataSourceCompactionConfig updatedDatasourceConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withInputSegmentSizeBytes(1000L)
+        .withSkipOffsetFromLatest(Period.hours(3))
+        .withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
         )
-    ).thenReturn(ConfigManager.SetResult.failure(new ISE("retryable")));
+        .withEngine(CompactionEngine.MSQ)
+        .build();
 
-    coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
-        NEW_CONFIG,
+    response = resource.addOrUpdateDatasourceCompactionConfig(updatedDatasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+
+    final DataSourceCompactionConfig latestDatasourceConfig
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
+    Assert.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
+
+    final DruidCompactionConfig fullCompactionConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
+    Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
+    Assert.assertEquals(originalDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+  }
+
+  @Test
+  public void testDeleteDatasourceConfig()
+  {
+    final DataSourceCompactionConfig datasourceConfig
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.OK, response);
+
+    response = resource.deleteCompactionConfig(TestDataSource.WIKI, mockHttpServletRequest);
+    verifyStatus(Response.Status.OK, response);
+
+    response = resource.getDatasourceCompactionConfig(TestDataSource.WIKI);
+    verifyStatus(Response.Status.NOT_FOUND, response);
+  }
+
+  @Test
+  public void testDeleteUnknownDatasourceConfigThrowsNotFound()
+  {
+    Response response = resource.deleteCompactionConfig(TestDataSource.WIKI, mockHttpServletRequest);
+    verifyStatus(Response.Status.NOT_FOUND, response);
+  }
+
+  @Test
+  public void testUpdateIsRetriedIfFailureIsRetryable()
+  {
+    configManager.configUpdateResult
+        = ConfigManager.SetResult.retryableFailure(new Exception("retryable"));
+    resource.addOrUpdateDatasourceCompactionConfig(
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
 
-    // Verify that the update is tried only once
-    Mockito.verify(mockJacksonConfigManager, Mockito.times(1)).set(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.any()
+    Assert.assertEquals(
+        5,
+        configManager.numUpdateAttempts
     );
   }
 
   @Test
-  public void testSetCompactionTaskLimitWithoutExistingConfig()
+  public void testUpdateIsNotRetriedIfFailureIsNotRetryable()
   {
-    Mockito.when(mockConnector.lookup(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.eq("name"),
-                     ArgumentMatchers.eq("payload"),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
-                 )
-    ).thenReturn(null);
-    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
-                     ArgumentMatchers.eq(null),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
-                 )
-    ).thenReturn(CoordinatorCompactionConfig.empty());
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
-
-    double compactionTaskSlotRatio = 0.5;
-    int maxCompactionTaskSlots = 9;
-    Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
-        compactionTaskSlotRatio,
-        maxCompactionTaskSlots,
-        true,
+    configManager.configUpdateResult
+        = ConfigManager.SetResult.failure(new Exception("not retryable"));
+    resource.addOrUpdateDatasourceCompactionConfig(
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         mockHttpServletRequest
     );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assert.assertNull(oldConfigCaptor.getValue());
-    Assert.assertNotNull(newConfigCaptor.getValue());
-    Assert.assertEquals(newConfigCaptor.getValue().getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
-    Assert.assertTrue(newConfigCaptor.getValue().isUseAutoScaleSlots());
-    Assert.assertEquals(compactionTaskSlotRatio, newConfigCaptor.getValue().getCompactionTaskSlotRatio(), 0);
+
+    Assert.assertEquals(1, configManager.numUpdateAttempts);
   }
 
   @Test
-  public void testAddOrUpdateCompactionConfigWithoutExistingConfig()
+  public void testGetDatasourceConfigHistory()
   {
-    Mockito.when(mockConnector.lookup(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.eq("name"),
-                     ArgumentMatchers.eq("payload"),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
-                 )
-    ).thenReturn(null);
-    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
-                     ArgumentMatchers.eq(null),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
-                 )
-    ).thenReturn(CoordinatorCompactionConfig.empty());
-    final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(
-        CoordinatorCompactionConfig.class);
-    Mockito.when(mockJacksonConfigManager.set(
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-                     oldConfigCaptor.capture(),
-                     newConfigCaptor.capture(),
-                     ArgumentMatchers.any()
-                 )
-    ).thenReturn(ConfigManager.SetResult.ok());
+    final InlineSchemaDataSourceCompactionConfig.Builder builder
+        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI);
 
-    final DataSourceCompactionConfig newConfig = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        null,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
-    String author = "maytas";
-    String comment = "hello";
-    Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
-        newConfig,
-        mockHttpServletRequest
-    );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
-    Assert.assertNull(oldConfigCaptor.getValue());
-    Assert.assertNotNull(newConfigCaptor.getValue());
-    Assert.assertEquals(1, newConfigCaptor.getValue().getCompactionConfigs().size());
-    Assert.assertEquals(newConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
+    final DataSourceCompactionConfig configV1 = builder.build();
+    resource.addOrUpdateDatasourceCompactionConfig(configV1, mockHttpServletRequest);
+
+    final DataSourceCompactionConfig configV2 = builder.withEngine(CompactionEngine.NATIVE).build();
+    resource.addOrUpdateDatasourceCompactionConfig(configV2, mockHttpServletRequest);
+
+    final DataSourceCompactionConfig configV3 = builder
+        .withEngine(CompactionEngine.NATIVE)
+        .withSkipOffsetFromLatest(Period.hours(1))
+        .build();
+    resource.addOrUpdateDatasourceCompactionConfig(configV3, mockHttpServletRequest);
+
+    Response response = resource.getCompactionConfigHistory(TestDataSource.WIKI, null, null);
+    verifyStatus(Response.Status.OK, response);
+
+    final List<DataSourceCompactionConfigAuditEntry> history
+        = (List<DataSourceCompactionConfigAuditEntry>) response.getEntity();
+    Assert.assertEquals(3, history.size());
+    Assert.assertEquals(configV1, history.get(0).getCompactionConfig());
+    Assert.assertEquals(configV2, history.get(1).getCompactionConfig());
+    Assert.assertEquals(configV3, history.get(2).getCompactionConfig());
   }
 
   @Test
-  public void testDeleteCompactionConfigWithoutExistingConfigShouldFailAsDatasourceNotExist()
+  public void testGetHistoryOfUnknownDatasourceReturnsEmpty()
   {
-    Mockito.when(mockConnector.lookup(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.eq("name"),
-                     ArgumentMatchers.eq("payload"),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
-                 )
-    ).thenReturn(null);
-    Mockito.when(mockJacksonConfigManager.convertByteToConfig(
-                     ArgumentMatchers.eq(null),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-                     ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
-                 )
-    ).thenReturn(CoordinatorCompactionConfig.empty());
-    Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
-        DATASOURCE_NOT_EXISTS,
-        mockHttpServletRequest
-    );
-    Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), result.getStatus());
+    Response response = resource.getCompactionConfigHistory(TestDataSource.WIKI, null, null);
+    verifyStatus(Response.Status.OK, response);
+    Assert.assertTrue(((List<?>) response.getEntity()).isEmpty());
   }
 
   @Test
-  public void testGetCompactionConfigHistoryForUnknownDataSourceShouldReturnEmptyList()
+  public void testAddInvalidDatasourceConfigThrowsBadRequest()
   {
-    Response response = coordinatorCompactionConfigsResource.getCompactionConfigHistory(
-        DATASOURCE_NOT_EXISTS,
-        null,
-        null
+    final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .withEngine(CompactionEngine.MSQ)
+        .build();
+
+    final Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
+  }
+  @SuppressWarnings("unchecked")
+  private <T> T verifyAndGetPayload(Response response, Class<T> type)
+  {
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertTrue(((Collection) response.getEntity()).isEmpty());
+
+    Assert.assertTrue(type.isInstance(response.getEntity()));
+    return (T) response.getEntity();
+  }
+
+  private void verifyStatus(Response.Status expectedStatus, Response response)
+  {
+    Assert.assertEquals(expectedStatus.getStatusCode(), response.getStatus());
+  }
+
+  /**
+   * Test implementation of AuditManager that keeps audit entries in memory.
+   */
+  private static class TestAuditManager implements AuditManager
+  {
+    private final List<AuditEntry> audits = new ArrayList<>();
+
+    @Override
+    public void doAudit(AuditEntry event, Handle handle)
+    {
+      // do nothing
+    }
+
+    @Override
+    public void doAudit(AuditEntry event)
+    {
+      final String json;
+      try {
+        json = OBJECT_MAPPER.writeValueAsString(event.getPayload().raw());
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+
+      final AuditEntry eventWithSerializedPayload
+          = AuditEntry.builder()
+                      .key(event.getKey())
+                      .type(event.getType())
+                      .auditInfo(event.getAuditInfo())
+                      .auditTime(event.getAuditTime())
+                      .request(event.getRequest())
+                      .serializedPayload(json)
+                      .build();
+      audits.add(eventWithSerializedPayload);
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval)
+    {
+      return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String type, int limit)
+    {
+      return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String type, Interval interval)
+    {
+      return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String key, String type, int limit)
+    {
+      return audits;
+    }
+
+    @Override
+    public int removeAuditLogsOlderThan(long timestamp)
+    {
+      return 0;
+    }
+  }
+
+  /**
+   * Test implementation of CoordinatorConfigManager to track number of update attempts.
+   */
+  private static class TestCoordinatorConfigManager extends CoordinatorConfigManager
+  {
+    private final ConfigManager delegate;
+    private int numUpdateAttempts;
+    private ConfigManager.SetResult configUpdateResult;
+
+    static TestCoordinatorConfigManager create(AuditManager auditManager)
+    {
+      final MetadataStorageTablesConfig tablesConfig = new TestMetadataStorageTablesConfig()
+      {
+        @Override
+        public String getConfigTable()
+        {
+          return "druid_config";
+        }
+      };
+
+      final TestDBConnector dbConnector = new TestDBConnector();
+      final ConfigManager configManager = new ConfigManager(
+          dbConnector,
+          Suppliers.ofInstance(tablesConfig),
+          Suppliers.ofInstance(new TestConfigManagerConfig())
+      );
+
+      return new TestCoordinatorConfigManager(
+          new JacksonConfigManager(configManager, OBJECT_MAPPER, auditManager),
+          configManager,
+          auditManager,
+          dbConnector,
+          tablesConfig
+      );
+    }
+
+    TestCoordinatorConfigManager(
+        JacksonConfigManager jackson,
+        ConfigManager configManager,
+        AuditManager auditManager,
+        TestDBConnector dbConnector,
+        MetadataStorageTablesConfig tablesConfig
+    )
+    {
+      super(jackson, dbConnector, tablesConfig, auditManager);
+      this.delegate = configManager;
+    }
+
+    @Override
+    public ConfigManager.SetResult getAndUpdateCompactionConfig(
+        UnaryOperator<DruidCompactionConfig> operator,
+        AuditInfo auditInfo
+    )
+    {
+      ++numUpdateAttempts;
+      if (configUpdateResult == null) {
+        return super.getAndUpdateCompactionConfig(operator, auditInfo);
+      } else {
+        return configUpdateResult;
+      }
+    }
+  }
+
+  /**
+   * Test implementation for in-memory insert, lookup and compareAndSwap operations.
+   */
+  private static class TestDBConnector extends TestMetadataStorageConnector
+  {
+    private final Map<List<String>, byte[]> values = new HashMap<>();
+
+    @Override
+    public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
+    {
+      values.put(
+          Arrays.asList(tableName, keyColumn, valueColumn, key),
+          value
+      );
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public byte[] lookup(String tableName, String keyColumn, String valueColumn, String key)
+    {
+      return values.get(Arrays.asList(tableName, keyColumn, valueColumn, key));
+    }
+
+    @Override
+    public boolean compareAndSwap(List<MetadataCASUpdate> updates)
+    {
+      for (MetadataCASUpdate update : updates) {
+        final List<String> key = Arrays.asList(
+            update.getTableName(),
+            update.getKeyColumn(),
+            update.getValueColumn(),
+            update.getKey()
+        );
+
+        final byte[] currentValue = values.get(key);
+        if (currentValue == null || Arrays.equals(currentValue, update.getOldValue())) {
+          values.put(key, update.getNewValue());
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    }
   }
 }

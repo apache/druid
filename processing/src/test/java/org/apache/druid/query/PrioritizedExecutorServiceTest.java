@@ -123,7 +123,7 @@ public class PrioritizedExecutorServiceTest
   @Test
   public void testSubmit() throws Exception
   {
-    final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<Integer>();
+    final ConcurrentLinkedQueue<Integer> order = new ConcurrentLinkedQueue<>();
 
     exec.submit(
         new AbstractPrioritizedCallable<Void>(0)
@@ -349,7 +349,7 @@ public class PrioritizedExecutorServiceTest
   )
   {
     final Callable<Boolean> delegate = getCheckingCallable(myOrder, hasRun);
-    return new AbstractPrioritizedCallable<Boolean>(priority)
+    return new AbstractPrioritizedCallable<>(priority)
     {
       @Override
       public Boolean call() throws Exception
@@ -365,7 +365,7 @@ public class PrioritizedExecutorServiceTest
   )
   {
     final Runnable runnable = getCheckingRunnable(myOrder, hasRun);
-    return new Callable<Boolean>()
+    return new Callable<>()
     {
       @Override
       public Boolean call()

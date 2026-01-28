@@ -60,4 +60,10 @@ public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest
   {
     return TDigestSketchAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    return false;
+  }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer;
 
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -40,7 +41,7 @@ public class HadoopDruidIndexerJobTest
   public void test_run()
   {
     HadoopDruidIndexerConfig config = mock(HadoopDruidIndexerConfig.class);
-    MetadataStorageUpdaterJobHandler handler = mock(MetadataStorageUpdaterJobHandler.class);
+    SegmentMetadataPublisher handler = mock(SegmentMetadataPublisher.class);
     try (MockedStatic<JobHelper> jobHelperMock = Mockito.mockStatic(JobHelper.class)) {
       try (final MockedStatic<IndexGeneratorJob> indexGeneratorJobMock = Mockito.mockStatic(IndexGeneratorJob.class)) {
         when(config.isUpdaterJobSpecSet()).thenReturn(false);

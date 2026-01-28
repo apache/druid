@@ -33,7 +33,7 @@ This topic contains configuration information for the Kinesis indexing service s
 
 ## Setup
 
-To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
+To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
 
 Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
@@ -43,7 +43,8 @@ This section outlines the configuration properties that are specific to the Amaz
 
 The following example shows a supervisor spec for a stream with the name `KinesisStream`:
 
-<details><summary>Click to view the example</summary>
+<details>
+<summary>Click to view the example</summary>
 
 ```json
 {
@@ -128,7 +129,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |--------|----|-----------|--------|-------|
 |`stream`|String|The Kinesis stream to read.|Yes||
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints in the [AWS service endpoints](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region) document.|No|`kinesis.us-east-1.amazonaws.com`|
-|`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting sequence numbers from Kinesis. This flag determines whether a supervisor retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
+|`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting sequence numbers from Kinesis. This flag determines whether the supervisor retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determine fetch settings](#determine-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
@@ -139,11 +140,11 @@ The Kinesis indexing service supports both [`inputFormat`](data-formats.md#input
 
 The Kinesis indexing service supports the following values for `inputFormat`:
 
+* `kinesis`
 * `csv`
 * `tvs`
 * `json`
 * `avro_stream`
-* `avro_ocf`
 * `protobuf`
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
@@ -155,7 +156,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`.|No|`false`|
+|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`. For more information on the `resetOffsetAutomatically` property, see [Supervisor tuning configuration](supervisor.md#tuning-configuration).|No|`false`|
 |`recordBufferSizeBytes`|Integer| The size of the buffer (heap memory bytes) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
@@ -249,7 +250,7 @@ At this point, the task creates a new shard for this segment granularity to cont
 
 The Kinesis indexing task also performs incremental hand-offs so that the segments created by the task are not held up until the task duration is over.
 When the task reaches one of the `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod` limits, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations
-without accumulating old segments locally on MiddleManager services.
+without accumulating old segments locally on Middle Manager services.
 
 The Kinesis indexing service may still produce some small segments.
 For example, consider the following scenario:
@@ -315,7 +316,7 @@ This window with early task shutdowns and possible task failures concludes when:
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage.
 - Any remaining tasks that had inactive shards in the assignment have been shut down. These tasks would have been created before the closed shards were completely drained.
 
-Note that when the supervisor is running and detects new partitions, tasks read new partitions from the earliest offsets, irrespective of the `useEarliestSequence` setting. This is because these new shards were immediately discovered and are therefore unlikely to experience a lag.
+Note that when the supervisor is running and detects new partitions, tasks read new partitions from the earliest sequence number, irrespective of the `useEarliestSequence` setting. This is because these new shards were immediately discovered and are therefore unlikely to experience a lag.
 
 If resharding occurs when the supervisor is suspended and `useEarliestSequence` is set to `false`, resuming the supervisor causes tasks to read the new shards from the latest sequence. This is by design so that the consumer can catch up quickly with any lag accumulated while the supervisor was suspended.
 
@@ -324,7 +325,7 @@ If resharding occurs when the supervisor is suspended and `useEarliestSequence` 
 Before you deploy the `druid-kinesis-indexing-service` extension to production, consider the following known issues:
 
 - Kinesis imposes a read throughput limit per shard. If you have multiple supervisors reading from the same Kinesis stream, consider adding more shards to ensure sufficient read throughput for all supervisors.
-- A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.
+- A Kinesis supervisor can sometimes compare the checkpoint sequence number to the retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.
 
 ## Learn more
 

@@ -33,7 +33,8 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -47,7 +48,7 @@ import java.util.NoSuchElementException;
  */
 public class FrameSequenceBuilder
 {
-  private final StorageAdapter adapter;
+  private final CursorFactory cursorFactory;
 
   private FrameType frameType = null;
   private MemoryAllocator allocator = HeapMemoryAllocator.unlimited();
@@ -55,14 +56,25 @@ public class FrameSequenceBuilder
   private int maxRowsPerFrame = Integer.MAX_VALUE;
   private boolean populateRowNumber = false;
 
-  private FrameSequenceBuilder(StorageAdapter adapter)
+  private FrameSequenceBuilder(CursorFactory cursorFactory)
   {
-    this.adapter = adapter;
+    this.cursorFactory = cursorFactory;
   }
 
-  public static FrameSequenceBuilder fromAdapter(final StorageAdapter adapter)
+  public static FrameSequenceBuilder fromCursorFactory(final CursorFactory cursorFactory)
   {
-    return new FrameSequenceBuilder(adapter);
+    return new FrameSequenceBuilder(cursorFactory);
+  }
+
+  /**
+   * Returns what {@link #signature()} would return if {@link #populateRowNumber()} is set.
+   */
+  public static RowSignature signatureWithRowNumber(final RowSignature signature)
+  {
+    return RowSignature.builder()
+                       .addAll(signature)
+                       .add(FrameTestUtil.ROW_NUMBER_COLUMN, ColumnType.LONG)
+                       .build();
   }
 
   public FrameSequenceBuilder frameType(final FrameType frameType)
@@ -106,12 +118,9 @@ public class FrameSequenceBuilder
     final RowSignature baseSignature;
 
     if (populateRowNumber) {
-      baseSignature = RowSignature.builder()
-                                  .addAll(adapter.getRowSignature())
-                                  .add(FrameTestUtil.ROW_NUMBER_COLUMN, ColumnType.LONG)
-                                  .build();
+      baseSignature = signatureWithRowNumber(cursorFactory.getRowSignature());
     } else {
-      baseSignature = adapter.getRowSignature();
+      baseSignature = cursorFactory.getRowSignature();
     }
 
     return FrameWriters.sortableSignature(baseSignature, keyColumns);
@@ -119,75 +128,73 @@ public class FrameSequenceBuilder
 
   public Sequence<Frame> frames()
   {
-    final FrameWriterFactory frameWriterFactory =
-        FrameWriters.makeFrameWriterFactory(
-            frameType,
-            new SingleMemoryAllocatorFactory(allocator),
-            signature(),
-            keyColumns
-        );
+    final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        frameType,
+        new SingleMemoryAllocatorFactory(allocator),
+        signature(),
+        keyColumns,
+        false
+    );
 
-    final Sequence<Cursor> cursors = FrameTestUtil.makeCursorsForAdapter(adapter, populateRowNumber);
+    final CursorHolder cursorHolder = FrameTestUtil.makeCursorForCursorFactory(cursorFactory, populateRowNumber);
+    final Cursor cursor = cursorHolder.asCursor();
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()
+        {
+          @Override
+          public Iterator<Frame> make()
+          {
+            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    return cursors.flatMap(
-        cursor -> new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()
+            return new Iterator<>()
             {
               @Override
-              public Iterator<Frame> make()
+              public boolean hasNext()
               {
-                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                return !cursor.isDone();
+              }
 
-                return new Iterator<Frame>()
-                {
-                  @Override
-                  public boolean hasNext()
-                  {
-                    return !cursor.isDone();
-                  }
+              @Override
+              public Frame next()
+              {
+                if (cursor.isDone()) {
+                  throw new NoSuchElementException();
+                }
 
-                  @Override
-                  public Frame next()
-                  {
-                    if (cursor.isDone()) {
-                      throw new NoSuchElementException();
-                    }
-
-                    try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
-                      while (!cursor.isDone()) {
-                        if (!writer.addSelection()) {
-                          if (writer.getNumRows() == 0) {
-                            throw new FrameRowTooLargeException(allocator.capacity());
-                          }
-
-                          return makeFrame(writer);
-                        }
-
-                        cursor.advance();
-
-                        if (writer.getNumRows() >= maxRowsPerFrame) {
-                          return makeFrame(writer);
-                        }
+                try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+                  while (!cursor.isDone()) {
+                    if (!writer.addSelection()) {
+                      if (writer.getNumRows() == 0) {
+                        throw new FrameRowTooLargeException(allocator.capacity());
                       }
 
                       return makeFrame(writer);
                     }
+
+                    cursor.advance();
+
+                    if (writer.getNumRows() >= maxRowsPerFrame) {
+                      return makeFrame(writer);
+                    }
                   }
 
-                  private Frame makeFrame(final FrameWriter writer)
-                  {
-                    return Frame.wrap(writer.toByteArray());
-                  }
-                };
+                  return makeFrame(writer);
+                }
               }
 
-              @Override
-              public void cleanup(Iterator<Frame> iterFromMake)
+              private Frame makeFrame(final FrameWriter writer)
               {
-                // Nothing to do.
+                return Frame.wrap(writer.toByteArray());
               }
-            }
-        )
-    );
+            };
+          }
+
+          @Override
+          public void cleanup(Iterator<Frame> iterFromMake)
+          {
+            // Nothing to do.
+          }
+        }
+    ).withBaggage(cursorHolder);
   }
 }

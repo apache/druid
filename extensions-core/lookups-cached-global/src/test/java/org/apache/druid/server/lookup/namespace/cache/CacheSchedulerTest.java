@@ -38,6 +38,7 @@ import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -74,7 +75,7 @@ import java.util.concurrent.TimeoutException;
 public class CacheSchedulerTest
 {
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
-      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      new Function<>()
       {
         @Nullable
         @Override
@@ -88,7 +89,7 @@ public class CacheSchedulerTest
         }
       };
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
-      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      new Function<>()
       {
         @Nullable
         @Override
@@ -152,7 +153,7 @@ public class CacheSchedulerTest
             UriExtractionNamespace.class,
             cacheGenerator,
             JdbcExtractionNamespace.class,
-            new JdbcCacheGenerator()
+            new JdbcCacheGenerator(JvmUtils.getRuntimeInfo())
         ),
         cacheManager
     );

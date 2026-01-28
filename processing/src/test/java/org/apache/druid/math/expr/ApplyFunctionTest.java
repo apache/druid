@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,13 +75,8 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
     assertExpr("cartesian_map((x, y) -> 1, [1, 2], [1, 2, 3])", new Long[] {1L, 1L, 1L, 1L, 1L, 1L});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, d)", new String[] {null});
     assertExpr("cartesian_map((x, y) -> concat(x, y), d, f)", new String[0]);
-    if (NullHandling.replaceWithDefault()) {
-      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, "foo", "bar"});
-      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, "foo", "bar", "foo", "foofoo", "foobar", "bar", "barfoo", "barbar"});
-    } else {
-      assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, null, null});
-      assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, null, null, null, "foofoo", "foobar", null, "barfoo", "barbar"});
-    }
+    assertExpr("cartesian_map((x, y) -> concat(x, y), d, e)", new String[]{null, null, null});
+    assertExpr("cartesian_map((x, y) -> concat(x, y), e, e)", new String[] {null, null, null, null, "foofoo", "foobar", null, "barfoo", "barbar"});
   }
 
   @Test
@@ -202,47 +196,12 @@ public class ApplyFunctionTest extends InitializedNullHandlingTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
-
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
-    Assert.assertEquals(expr.stringify(), expectedResult, roundTrip.eval(bindings).value());
-
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    Assert.assertEquals(expr.stringify(), expectedResult, roundTripFlatten.eval(bindings).value());
-
-    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
-    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+    FunctionTest.assertExpr(expression, expectedResult, bindings, ExprMacroTable.nil());
   }
 
   private void assertExpr(final String expression, final Object[] expectedResult)
   {
-    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
-    final Object[] result = expr.eval(bindings).asArray();
-    if (expectedResult.length != 0 || result == null || result.length != 0) {
-      Assert.assertArrayEquals(expression, expectedResult, result);
-    }
-
-    final Expr exprNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
-    final Expr roundTrip = Parser.parse(exprNoFlatten.stringify(), ExprMacroTable.nil());
-    final Object[] resultRoundTrip = roundTrip.eval(bindings).asArray();
-    if (expectedResult.length != 0 || resultRoundTrip == null || resultRoundTrip.length != 0) {
-      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTrip);
-    }
-
-    final Expr roundTripFlatten = Parser.parse(expr.stringify(), ExprMacroTable.nil());
-    final Object[] resultRoundTripFlatten = roundTripFlatten.eval(bindings).asArray();
-    if (expectedResult.length != 0 || resultRoundTripFlatten == null || resultRoundTripFlatten.length != 0) {
-      Assert.assertArrayEquals(expr.stringify(), expectedResult, resultRoundTripFlatten);
-    }
-
-    Assert.assertEquals(expr.stringify(), roundTrip.stringify());
-    Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTrip.getCacheKey());
-    Assert.assertArrayEquals(expr.getCacheKey(), roundTripFlatten.getCacheKey());
+    FunctionTest.assertArrayExpr(expression, expectedResult, bindings, ExprMacroTable.nil());
   }
 
   private void assertExpr(final String expression, final Double[] expectedResult)

@@ -35,6 +35,37 @@ public class InvalidInput extends BaseFailure
     return DruidException.fromFailure(new InvalidInput(t, msg, args));
   }
 
+  /**
+   * evalues a condition. If it's false, it throws the appropriate DruidException
+   *
+   * @param condition - boolean condition to validate
+   * @param msg - passed through to DruidException.exception()
+   * @param args - passed through to DruidException.exception()
+   */
+  public static void conditionalException(boolean condition, String msg, Object... args)
+  {
+    if (!condition) {
+      throw exception(msg, args);
+    }
+  }
+
+  /**
+   * evalues a condition. If it's false, it throws the appropriate DruidException with a given cause
+   *
+   * @param condition - boolean condition to validate
+   * @param t - throwable to pass to InvalidInput.exception()
+   * @param msg - passed through to InvalidInput.exception()
+   * @param args - passed through to InvalidInput.exception()
+   */
+
+  public static void conditionalException(boolean condition, Throwable t, String msg, Object... args)
+  {
+    if (!condition) {
+      throw exception(t, msg, args);
+    }
+  }
+
+
   public InvalidInput(
       Throwable t,
       String msg,

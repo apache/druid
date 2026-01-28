@@ -1,0 +1,57 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import '../../../../../variables';
+
+.measure-dialog {
+  &.#{$bp-ns}-dialog {
+    width: 80vw;
+  }
+
+  .#{$bp-ns}-dialog-body {
+    display: flex;
+    gap: 12px;
+
+    .controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+      .sql-expression-form-group {
+        flex: 1;
+        margin: 0;
+
+        .#{$bp-ns}-form-content {
+          flex: 1;
+
+          .flexible-query-input {
+            height: 100%;
+          }
+        }
+      }
+    }
+
+    .preview-pane {
+      width: 300px;
+    }
+  }
+
+  .#{$bp-ns}-dialog-footer {
+    margin-top: 0;
+  }
+}

@@ -22,26 +22,32 @@ package org.apache.druid.guice.http;
 import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.transport.HttpClientTransportDynamic;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.net.ssl.SSLContext;
+
 import java.lang.annotation.Annotation;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
 public class JettyHttpClientModule implements Module
 {
-  private static final long CLIENT_CONNECT_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(500);
-
   public static JettyHttpClientModule global()
   {
     return new JettyHttpClientModule("druid.global.http", Global.class);
@@ -68,6 +74,10 @@ public class JettyHttpClientModule implements Module
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
+    @Inject
+    @Self
+    private DruidNode node;
+
     public HttpClientProvider(Class<? extends Annotation> annotation)
     {
       super(annotation);
@@ -83,7 +93,9 @@ public class JettyHttpClientModule implements Module
       if (sslContextBinding != null) {
         final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
         sslContextFactory.setSslContext(sslContextBinding.getProvider().get());
-        httpClient = new HttpClient(sslContextFactory);
+        ClientConnector clientConnector = new ClientConnector();
+        clientConnector.setSslContextFactory(sslContextFactory);
+        httpClient = new HttpClient(new HttpClientTransportDynamic(clientConnector));
       } else {
         httpClient = new HttpClient();
       }
@@ -91,11 +103,15 @@ public class JettyHttpClientModule implements Module
       httpClient.setIdleTimeout(config.getReadTimeout().getMillis());
       httpClient.setMaxConnectionsPerDestination(config.getNumConnections());
       httpClient.setMaxRequestsQueuedPerDestination(config.getNumRequestsQueued());
-      httpClient.setConnectTimeout(CLIENT_CONNECT_TIMEOUT_MILLIS);
+      httpClient.setConnectTimeout(config.getClientConnectTimeout());
       httpClient.setRequestBufferSize(config.getRequestBuffersize());
       final QueuedThreadPool pool = new QueuedThreadPool(config.getNumMaxThreads());
       pool.setName(JettyHttpClientModule.class.getSimpleName() + "-threadPool-" + pool.hashCode());
       httpClient.setExecutor(pool);
+      httpClient.setUserAgentField(new HttpField(
+          HttpHeaders.Names.USER_AGENT,
+          StringUtils.format("%s/%s", node.getServiceName(), node.getVersion())
+      ));
 
       final Lifecycle lifecycle = getLifecycleProvider().get();
 

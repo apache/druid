@@ -36,7 +36,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -110,19 +109,14 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
                  && FlattenConcatRule.isNonTrivialStringConcat(Iterables.getOnlyElement(call.getOperands()))) {
         negate = call.isA(SqlKind.IS_NOT_NULL);
         final RexCall concatCall = (RexCall) Iterables.getOnlyElement(call.getOperands());
-        if (NullHandling.sqlCompatible()) {
-          // Convert: [CONCAT(x, '-', y) IS NULL]     => [x IS NULL OR y IS NULL]
-          newCall = RexUtil.composeDisjunction(
-              rexBuilder,
-              Iterables.transform(
-                  concatCall.getOperands(),
-                  operand -> rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, operand)
-              )
-          );
-        } else {
-          // Treat [CONCAT(x, '-', y) IS NULL] as [CONCAT(x, '-', y) = '']
-          newCall = tryDecomposeConcatEquals(concatCall, rexBuilder.makeLiteral(""), rexBuilder);
-        }
+        // Convert: [CONCAT(x, '-', y) IS NULL]     => [x IS NULL OR y IS NULL]
+        newCall = RexUtil.composeDisjunction(
+            rexBuilder,
+            Iterables.transform(
+                concatCall.getOperands(),
+                operand -> rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, operand)
+            )
+        );
       } else {
         negate = false;
         newCall = null;
@@ -239,27 +233,23 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
    */
   private static RexNode impossibleMatch(final List<RexNode> nonLiterals, final RexBuilder rexBuilder)
   {
-    if (NullHandling.sqlCompatible()) {
-      // This expression might be FALSE and might be UNKNOWN depending on whether any of the inputs are null. Use the
-      // construct "x IS NULL AND UNKNOWN" for each arg x to CONCAT, which is FALSE if x is not null and UNKNOWN if
-      // x is null. Then OR them all together, so the entire expression is FALSE if all args are not null, and
-      // UNKNOWN if any arg is null.
-      final RexLiteral unknown =
-          rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN));
-      return RexUtil.composeDisjunction(
-          rexBuilder,
-          Iterables.transform(
-              nonLiterals,
-              operand -> rexBuilder.makeCall(
-                  SqlStdOperatorTable.AND,
-                  rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, operand),
-                  unknown
-              )
-          )
-      );
-    } else {
-      return rexBuilder.makeLiteral(false);
-    }
+    // This expression might be FALSE and might be UNKNOWN depending on whether any of the inputs are null. Use the
+    // construct "x IS NULL AND UNKNOWN" for each arg x to CONCAT, which is FALSE if x is not null and UNKNOWN if
+    // x is null. Then OR them all together, so the entire expression is FALSE if all args are not null, and
+    // UNKNOWN if any arg is null.
+    final RexLiteral unknown =
+        rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN));
+    return RexUtil.composeDisjunction(
+        rexBuilder,
+        Iterables.transform(
+            nonLiterals,
+            operand -> rexBuilder.makeCall(
+                SqlStdOperatorTable.AND,
+                rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, operand),
+                unknown
+            )
+        )
+    );
   }
 
   /**

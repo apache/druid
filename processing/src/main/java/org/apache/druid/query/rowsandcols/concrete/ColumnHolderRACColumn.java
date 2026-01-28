@@ -19,14 +19,13 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.data.AtomicIntegerReadableOffset;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,13 +48,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ColumnHolderRACColumn implements Column, Closeable
 {
-  private final ColumnHolder holder;
+  private final BaseColumnHolder holder;
 
   private BaseColumn baseColumn;
 
-  public ColumnHolderRACColumn(
-      ColumnHolder holder
-  )
+  public ColumnHolderRACColumn(BaseColumnHolder holder)
   {
     this.holder = holder;
   }
@@ -91,7 +88,7 @@ public class ColumnHolderRACColumn implements Column, Closeable
       public boolean isNull(int rowNum)
       {
         offset.set(rowNum);
-        return valueSelector.isNull();
+        return valueSelector.getObject() == null;
       }
 
       @Nullable
@@ -162,27 +159,5 @@ public class ColumnHolderRACColumn implements Column, Closeable
       baseColumn = holder.getColumn();
     }
     return baseColumn;
-  }
-
-  private static class AtomicIntegerReadableOffset implements ReadableOffset
-  {
-    private final AtomicInteger offset;
-
-    public AtomicIntegerReadableOffset(AtomicInteger offset)
-    {
-      this.offset = offset;
-    }
-
-    @Override
-    public int getOffset()
-    {
-      return offset.get();
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
-    }
   }
 }

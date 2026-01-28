@@ -1,0 +1,70 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "CI"
+
+on:
+  workflow_call:
+
+jobs:
+  run-unit-tests:
+    name: "unit tests(main)"
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "17", "21" ]
+        pattern: [ "C*", "D*,H*,N*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
+      artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
+      jdk: ${{ matrix.jdk }}
+      key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
+      execute: ${{ matrix.jdk == '21' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk17') }}
+
+  validate-dist:
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/validate-dist
+      key: "validate-dist"
+
+  reporting-jacoco-coverage-failures:
+    name: "coverage-jacoco"
+    needs: [run-unit-tests, run-separated-tests]
+    uses: ./.github/workflows/worker.yml
+    if: ${{ success() && !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') && github.event_name != 'push' }}
+    with:
+      script: .github/scripts/create-jacoco-coverage-report.sh
+      artifacts_to_download: "unit-test-reports-jdk21*"
+      key: "coverage-jacoco"
+
+  run-separated-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "QTest 0/4"
+            args: "-Dtest=QTest -Dquidem.split=0/4"
+          - name: "QTest 1/4"
+            args: "-Dtest=QTest -Dquidem.split=1/4"
+          - name: "QTest 2/4"
+            args: "-Dtest=QTest -Dquidem.split=2/4"
+          - name: "QTest 3/4"
+            args: "-Dtest=QTest -Dquidem.split=3/4"
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run_unit-tests ${{ matrix.args }} -Dmaven.test.failure.ignore=true
+      key: ${{ matrix.name }}
+      artifact_prefix: "unit-test-reports-jdk21"

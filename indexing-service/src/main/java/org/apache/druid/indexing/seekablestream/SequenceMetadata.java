@@ -331,7 +331,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   private class SequenceMetadataTransactionalSegmentPublisher
-      implements TransactionalSegmentPublisher
+      extends TransactionalSegmentPublisher
   {
     private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> runner;
     private final TaskToolbox toolbox;
@@ -393,17 +393,16 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
           // if we created no segments and didn't change any offsets, just do nothing and return.
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] are the same, skipping metadata commit.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           return SegmentPublishResult.ok(segmentsToPush);
         } else {
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] changed, committing new metadata.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
+              runner.getSupervisorId(),
               runner.getAppenderator().getDataSource(),
               runner.createDataSourceMetadata(startPartitions),
               runner.createDataSourceMetadata(finalPartitions)
@@ -419,16 +418,14 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
-                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata,
-                                                                           segmentSchemaMapping
-        )
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata,
-                                                                 segmentSchemaMapping
-                 );
+                 ? SegmentTransactionalAppendAction
+                     .forSegmentsAndMetadata(segmentsToPush, runner.getSupervisorId(), startMetadata, endMetadata, segmentSchemaMapping)
+                 : SegmentTransactionalInsertAction
+                     .appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), startMetadata, endMetadata, segmentSchemaMapping);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null, segmentSchemaMapping);
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, runner.getSupervisorId(), runner.getAppenderator().getDataSource(), null, null, segmentSchemaMapping);
       }
 
       return toolbox.getTaskActionClient().submit(action);

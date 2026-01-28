@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -35,19 +36,24 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.logging.log4j.ThreadContext;
+
+import java.io.File;
 
 public class Appenderators
 {
+  private static final String THREAD_CONTEXT_TASK_LOG_FILE = "task.log.file";
+  private static final String THREAD_CONTEXT_TASK_ID = "task.log.id";
+
   public static Appenderator createRealtime(
       SegmentLoaderConfig segmentLoaderConfig,
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -59,10 +65,11 @@ public class Appenderators
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
+      PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     return new StreamAppenderator(
@@ -85,30 +92,30 @@ public class Appenderators
             queryProcessingPool,
             Preconditions.checkNotNull(cache, "cache"),
             cacheConfig,
-            cachePopulatorStats
+            cachePopulatorStats,
+            policyEnforcer
         ),
         indexIO,
         indexMerger,
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        taskIntervalUnlocker
     );
   }
 
-  public static Appenderator createOffline(
+  public static Appenderator createBatch(
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -126,81 +133,27 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );
   }
 
-  public static Appenderator createOpenSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
+  /**
+   * Sets the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void setTaskThreadContextForIndexers(String taskId, File logFile)
   {
-    // fallback to original code known to be working, this is just a fallback option in case new
-    // batch appenderator has some early bugs but we will remove this fallback as soon as
-    // we determine that batch appenderator code is stable
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        true,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
+    ThreadContext.put(THREAD_CONTEXT_TASK_ID, taskId);
+    ThreadContext.put(THREAD_CONTEXT_TASK_LOG_FILE, logFile.getAbsolutePath());
   }
 
-  public static Appenderator createClosedSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
+  /**
+   * Clears the thread context variables {@code task.log.id} and {@code task.log.file}
+   * used to route logs of task threads on Indexers to separate log files.
+   */
+  public static void clearTaskThreadContextForIndexers()
   {
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        false,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
+    ThreadContext.remove(THREAD_CONTEXT_TASK_LOG_FILE);
+    ThreadContext.remove(THREAD_CONTEXT_TASK_ID);
   }
 }

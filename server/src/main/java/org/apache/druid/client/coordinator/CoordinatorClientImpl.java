@@ -21,24 +21,45 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupUtils;
+import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordination.LoadableDataSegment;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -113,9 +134,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
           holder -> JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<Iterable<ImmutableSegmentLoadInfo>>()
-              {
-              }
+              new TypeReference<>() {}
           )
       );
       FutureUtils.getUnchecked(segments, true).forEach(retVal::add);
@@ -138,7 +157,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, intervals),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSegment>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -152,7 +171,29 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, dataSources),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceInformation>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new InputStreamResponseHandler()
+        ),
+        in -> new BootstrapSegmentsResponse(
+            new JsonParserIterator<>(
+                // Some servers, like the Broker, may have PruneLoadSpec set to true for optimization reasons.
+                // We specifically use LoadableDataSegment here instead of DataSegment so the callers can still correctly
+                // load the bootstrap segments, as the load specs are guaranteed not to be pruned.
+                jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
+                Futures.immediateFuture(in),
+                jsonMapper
+            )
+        )
     );
   }
 
@@ -160,5 +201,187 @@ public class CoordinatorClientImpl implements CoordinatorClient
   public CoordinatorClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new CoordinatorClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
+  }
+
+  @Override
+  public ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/datasources";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
+  {
+    final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/compaction/status");
+    if (dataSource != null && !dataSource.isEmpty()) {
+      pathBuilder.append("?").append("dataSource=").append(StringUtils.urlEncode(dataSource));
+    }
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            CompactionStatusResponse.class
+        )
+    );
+  }
+
+  @Override
+  public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/config"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            CoordinatorDynamicConfig.class
+        )
+    );
+  }
+
+  @Override
+  public ListenableFuture<Void> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
+  {
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/config")
+            .jsonContent(jsonMapper, dynamicConfig),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public ListenableFuture<Void> updateAllLookups(Object lookups)
+  {
+    final String path = "/druid/coordinator/v1/lookups/config";
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, lookups),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
+  public Map<String, LookupExtractorFactoryContainer> fetchLookupsForTierSync(String tier)
+  {
+    final String path = StringUtils.format(
+        "/druid/coordinator/v1/lookups/config/%s?detailed=true",
+        StringUtils.urlEncode(tier)
+    );
+
+    try {
+      BytesFullResponseHolder responseHolder = client.request(
+          new RequestBuilder(HttpMethod.GET, path),
+          new BytesFullResponseHandler()
+      );
+      return extractLookupFactory(responseHolder);
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
+      @Nullable Set<String> watchedDataSources,
+      boolean includeRealtimeSegments
+  )
+  {
+    final StringBuilder pathBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus");
+
+    final List<String> params = new ArrayList<>();
+
+    if (includeRealtimeSegments) {
+      params.add("includeRealtimeSegments");
+    }
+
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      watchedDataSources.forEach(dataSource -> params.add("datasources=" + StringUtils.urlEncode(dataSource)));
+    }
+
+    params.forEach(param -> pathBuilder.append("&").append(param));
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
+            new InputStreamResponseHandler()
+        ),
+        inputStream -> {
+          return new JsonParserIterator<>(
+              jsonMapper.getTypeFactory().constructType(SegmentStatusInCluster.class),
+              Futures.immediateFuture(inputStream),
+              jsonMapper
+          );
+        }
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, List<Rule>>> getRulesForAllDatasources()
+  {
+    final String path = "/druid/coordinator/v1/rules";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<URI> findCurrentLeader()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/leader"),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        holder -> {
+          try {
+            return new URI(holder.getContent());
+          }
+          catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+          }
+        }
+    );
+  }
+
+  @Override
+  public ListenableFuture<Void> updateRulesForDatasource(String dataSource, List<Rule> rules)
+  {
+    final String path = StringUtils.format("/druid/coordinator/v1/rules/%s", StringUtils.urlEncode(dataSource));
+    return client.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path)
+            .jsonContent(jsonMapper, rules),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  private Map<String, LookupExtractorFactoryContainer> extractLookupFactory(BytesFullResponseHolder holder)
+  {
+    Map<String, Object> lookupNameToGenericConfig = JacksonUtils.readValue(
+        jsonMapper,
+        holder.getContent(),
+        new TypeReference<>() {}
+    );
+    return LookupUtils.tryConvertObjectMapToLookupConfigMap(
+        lookupNameToGenericConfig,
+        jsonMapper
+    );
   }
 }

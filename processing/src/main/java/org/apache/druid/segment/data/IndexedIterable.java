@@ -30,7 +30,7 @@ public class IndexedIterable<T> implements Iterable<T>
 
   public static <T> IndexedIterable<T> create(Indexed<T> indexed)
   {
-    return new IndexedIterable<T>(indexed);
+    return new IndexedIterable<>(indexed);
   }
 
   public IndexedIterable(Indexed<T> indexed)
@@ -41,7 +41,7 @@ public class IndexedIterable<T> implements Iterable<T>
   @Override
   public Iterator<T> iterator()
   {
-    return new Iterator<T>()
+    return new Iterator<>()
     {
       private int currIndex = 0;
 

@@ -103,7 +103,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
 
     return new SequenceInputStream(
 
-        new Enumeration<InputStream>()
+        new Enumeration<>()
         {
           boolean initStream = false;
 

@@ -21,14 +21,18 @@ package org.apache.druid.storage.google.output;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.List;
 
 public class GoogleExportStorageProviderTest
 {
+  private final File tempDir = FileUtils.createTempDir();
+
   private final List<String> validPrefixes = ImmutableList.of(
       "gs://bucket-name/validPath1",
       "gs://bucket-name/validPath2"
@@ -39,7 +43,7 @@ public class GoogleExportStorageProviderTest
   {
     GoogleExportStorageProvider googleExportStorageProvider = new GoogleExportStorageProvider("bucket-name", "validPath1");
     googleExportStorageProvider.googleExportConfig = new GoogleExportConfig("tempLocalDir", null, null, validPrefixes);
-    StorageConnector storageConnector = googleExportStorageProvider.get();
+    StorageConnector storageConnector = googleExportStorageProvider.createStorageConnector(tempDir);
     Assert.assertNotNull(storageConnector);
     Assert.assertTrue(storageConnector instanceof GoogleStorageConnector);
 

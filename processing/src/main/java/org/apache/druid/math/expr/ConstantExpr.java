@@ -21,8 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.Immutable;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -31,7 +30,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -124,9 +122,14 @@ abstract class ConstantExpr<T> implements Expr
   @Override
   public Expr asSingleThreaded(InputBindingInspector inspector)
   {
-    return new ExprEvalBasedConstantExpr<T>(realEval());
+    return new ExprEvalBasedConstantExpr<>(realEval());
   }
 
+  @Override
+  public <E> ExprVectorProcessor<E> asVectorProcessor(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), outputType);
+  }
   /**
    * Constant expression based on a concreate ExprEval.
    *
@@ -247,12 +250,6 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public String toString()
-  {
-    return String.valueOf(value);
-  }
-
-  @Override
   protected ExprEval realEval()
   {
     return ExprEval.ofLong(value);
@@ -330,12 +327,6 @@ class DoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public String toString()
-  {
-    return String.valueOf(value);
-  }
-
-  @Override
   protected ExprEval realEval()
   {
     return ExprEval.ofDouble(value);
@@ -409,7 +400,7 @@ class StringExpr extends ConstantExpr<String>
 {
   StringExpr(@Nullable String value)
   {
-    super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
+    super(ExpressionType.STRING, value);
   }
 
   @Override
@@ -421,20 +412,20 @@ class StringExpr extends ConstantExpr<String>
   @Override
   protected ExprEval realEval()
   {
-    return ExprEval.of(value);
+    return ExprEval.ofString(value);
   }
 
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorProcessors.constant(value, inspector.getMaxVectorSize());
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), ExpressionType.STRING);
   }
 
   @Override
   public String stringify()
   {
     // escape as javascript string since string literals are wrapped in single quotes
-    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
+    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript(value));
   }
 
   @Override
@@ -472,12 +463,6 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 
   @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
-  }
-
-  @Override
   public String stringify()
   {
     if (value == null) {
@@ -495,7 +480,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
                     .map(s -> s == null
                               ? NULL_LITERAL
                               // escape as javascript string since string literals are wrapped in single quotes
-                              : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript((String) s))
+                              : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript((String) s))
                     )
                     .iterator()
           )
@@ -557,12 +542,6 @@ class ComplexExpr extends ConstantExpr<Object>
   protected ExprEval realEval()
   {
     return ExprEval.ofComplex(outputType, value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
   }
 
   @Override

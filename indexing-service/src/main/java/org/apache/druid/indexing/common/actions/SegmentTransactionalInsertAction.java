@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -31,6 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -70,6 +72,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Nullable
   private final String dataSource;
   @Nullable
+  private final String supervisorId;
+  @Nullable
   private final SegmentSchemaMapping segmentSchemaMapping;
 
   public static SegmentTransactionalInsertAction overwriteAction(
@@ -84,27 +88,31 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
         null,
         null,
         null,
+        null,
         segmentSchemaMapping
     );
   }
 
   public static SegmentTransactionalInsertAction appendAction(
       Set<DataSegment> segments,
+      @Nullable String supervisorId,
+      @Nullable String dataSource,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, segmentSchemaMapping);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, supervisorId, dataSource, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
+      String supervisorId,
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource, null);
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, supervisorId, dataSource, null);
   }
 
   @JsonCreator
@@ -113,6 +121,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("dataSource") @Nullable String dataSource,
       @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
@@ -122,7 +131,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
+    this.supervisorId = Configs.valueOrDefault(supervisorId, dataSource);
     this.segmentSchemaMapping = segmentSchemaMapping;
+
+    IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
   }
 
   @JsonProperty
@@ -161,6 +173,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   @JsonProperty
   @Nullable
+  public String getSupervisorId()
+  {
+    return supervisorId;
+  }
+
+  @JsonProperty
+  @Nullable
   public SegmentSchemaMapping getSegmentSchemaMapping()
   {
     return segmentSchemaMapping;
@@ -169,9 +188,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**
@@ -187,6 +204,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       // but still needs to update metadata with the progress that the task made.
       try {
         retVal = toolbox.getIndexerMetadataStorageCoordinator().commitMetadataOnly(
+            supervisorId,
             dataSource,
             startMetadata,
             endMetadata
@@ -221,6 +239,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
                       segments,
+                      supervisorId,
                       startMetadata,
                       endMetadata,
                       segmentSchemaMapping
@@ -305,17 +324,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +
            "segmentsToBeOverwritten=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeOverwritten) +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           ", dataSource=" + dataSource +
+           ", supervisorId=" + supervisorId +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            ", dataSource='" + dataSource + '\'' +

@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.firstlast;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -45,7 +44,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
   @Nullable
   private final VectorObjectSelector objectSelector;
   private final SelectionPredicate selectionPredicate;
-  private final boolean useDefault = NullHandling.replaceWithDefault();
 
 
   /**
@@ -106,8 +104,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
         if (selectionPredicate.apply(selectedPair.lhs, buf.getLong(position))) {
           if (selectedPair.rhs != null) {
             putValue(buf, position, selectedPair.lhs, selectedPair.rhs);
-          } else if (useDefault) {
-            putDefaultValue(buf, position, selectedPair.lhs);
           } else {
             putNull(buf, position, selectedPair.lhs);
           }
@@ -142,8 +138,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
           // Write the value here
           if (valueNullityVector == null || !valueNullityVector[selectedIndex]) {
             putValue(buf, position, timeVector[selectedIndex], valueSelector, selectedIndex);
-          } else if (useDefault) {
-            putDefaultValue(buf, position, timeVector[selectedIndex]);
           } else {
             putNull(buf, position, timeVector[selectedIndex]);
           }
@@ -186,8 +180,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
           if (selectionPredicate.apply(pair.lhs, lastTime)) {
             if (pair.rhs != null) {
               putValue(buf, position, pair.lhs, pair.rhs);
-            } else if (useDefault) {
-              putDefaultValue(buf, position, pair.lhs);
             } else {
               putNull(buf, position, pair.lhs);
             }
@@ -211,8 +203,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
         if (selectionPredicate.apply(timeVector[row], lastTime)) {
           if (valueNullityVector == null || !valueNullityVector[row]) {
             putValue(buf, position, timeVector[row], valueSelector, row);
-          } else if (useDefault) {
-            putDefaultValue(buf, position, timeVector[row]);
           } else {
             putNull(buf, position, timeVector[row]);
           }
@@ -239,15 +229,6 @@ public abstract class FirstLastVectorAggregator<RhsType, PairType extends Serial
    * It is used if valueSelector is supplied
    */
   protected abstract void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index);
-
-  /**
-   * Sets the default value for the type in the byte buffer at the given position. It is only used when replaceNullWithDefault = true,
-   * therefore the callers don't need to handle any other case.
-   *
-   * 'position' refers to the location where the value of the pair will get updated (as opposed to the beginning of
-   * the serialized pair)
-   */
-  protected abstract void putDefaultValue(ByteBuffer buf, int position, long time);
 
   protected abstract void putNull(ByteBuffer buf, int position, long time);
 

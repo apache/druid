@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
@@ -46,10 +46,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SerializablePairLongLongComplexMetricSerdeTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final SerializablePairLongLongComplexMetricSerde COMPRESSED_SERDE =
       new SerializablePairLongLongComplexMetricSerde();
 
@@ -147,7 +143,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used"),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 
@@ -193,7 +189,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
 
     final AtomicReference<SerializablePairLongLong> reference = new AtomicReference<>(null);
     ColumnValueSelector<SerializablePairLongLong> valueSelector =
-        new SingleObjectColumnValueSelector<SerializablePairLongLong>(
+        new SingleObjectColumnValueSelector<>(
             SerializablePairLongLong.class
         )
         {

@@ -21,7 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
@@ -34,14 +34,14 @@ import javax.ws.rs.core.Response;
 @Path("/druid/historical/v1")
 public class HistoricalResource
 {
-  private final SegmentLoadDropHandler segmentLoadDropHandler;
+  private final SegmentCacheBootstrapper segmentCacheBootstrapper;
 
   @Inject
   public HistoricalResource(
-      SegmentLoadDropHandler segmentLoadDropHandler
+      SegmentCacheBootstrapper segmentCacheBootstrapper
   )
   {
-    this.segmentLoadDropHandler = segmentLoadDropHandler;
+    this.segmentCacheBootstrapper = segmentCacheBootstrapper;
   }
 
   @GET
@@ -50,14 +50,14 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("cacheInitialized", segmentLoadDropHandler.isStarted())).build();
+    return Response.ok(ImmutableMap.of("cacheInitialized", segmentCacheBootstrapper.isBootstrappingComplete())).build();
   }
 
   @GET
   @Path("/readiness")
   public Response getReadiness()
   {
-    if (segmentLoadDropHandler.isStarted()) {
+    if (segmentCacheBootstrapper.isBootstrappingComplete()) {
       return Response.ok().build();
     } else {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();

@@ -22,18 +22,23 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
+import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.nested.ScalarDoubleColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarLongColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarStringColumnAndIndexSupplier;
@@ -64,13 +69,13 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   }
 
   public static ByteBuffer loadInternalFile(
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       String fileNameBase,
       String internalFileName
   ) throws IOException
   {
     return fileMapper.mapFile(
-        NestedCommonFormatColumnSerializer.getInternalFileName(fileNameBase, internalFileName)
+        ColumnSerializerUtils.getInternalFileName(fileNameBase, internalFileName)
     );
   }
 
@@ -81,7 +86,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       @JsonProperty("isVariantType") boolean isVariantType,
       @JsonProperty("enforceLogicalType") boolean enforceLogicalType,
       @JsonProperty("byteOrder") ByteOrder byteOrder,
-      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
+      @JsonProperty("columnFormatSpec") @Nullable FormatSpec columnFormatSpec
   )
   {
     return new NestedCommonFormatColumnPartSerde(
@@ -91,6 +97,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         enforceLogicalType,
         byteOrder,
         bitmapSerdeFactory,
+        columnFormatSpec,
         null
     );
   }
@@ -101,6 +108,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private final boolean enforceLogicalType;
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
+  @Nullable
+  private final FormatSpec columnFormatSpec;
 
   @Nullable
   private final Serializer serializer;
@@ -113,6 +122,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       boolean enforceLogicalType,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable FormatSpec columnFormatSpec,
       @Nullable Serializer serializer
   )
   {
@@ -123,6 +133,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     this.byteOrder = byteOrder;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.serializer = serializer;
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @JsonIgnore
@@ -187,18 +198,26 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return bitmapSerdeFactory;
   }
 
+  @Nullable
+  @JsonProperty
+  public FormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
+  }
+
   private class StringColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
           byteOrder,
-          bitmapSerdeFactory,
+          columnFormatSpec != null ? columnFormatSpec.getBitmapEncoding() : bitmapSerdeFactory,
           buffer,
-          builder
+          builder,
+          parent == null ? null : (ScalarStringColumnAndIndexSupplier) parent.getColumnSupplier()
       );
-      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      final ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       capabilitiesBuilder.setDictionaryEncoded(true);
       capabilitiesBuilder.setDictionaryValuesSorted(true);
       capabilitiesBuilder.setDictionaryValuesUnique(true);
@@ -206,21 +225,27 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType,
+          columnFormatSpec
+      ));
     }
   }
 
   private class LongColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
           byteOrder,
-          bitmapSerdeFactory,
+          columnFormatSpec != null ? columnFormatSpec.getBitmapEncoding() : bitmapSerdeFactory,
           buffer,
           builder,
-          columnConfig
+          columnConfig,
+          parent == null ? null : (ScalarLongColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
@@ -229,21 +254,27 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType,
+          columnFormatSpec
+      ));
     }
   }
 
   private class DoubleColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
           byteOrder,
-          bitmapSerdeFactory,
+          columnFormatSpec != null ? columnFormatSpec.getBitmapEncoding() : bitmapSerdeFactory,
           buffer,
           builder,
-          columnConfig
+          columnConfig,
+          parent == null ? null : (ScalarDoubleColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
@@ -252,21 +283,27 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType,
+          columnFormatSpec
+      ));
     }
   }
 
   private class VariantColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
           logicalType,
           byteOrder,
-          bitmapSerdeFactory,
+          columnFormatSpec != null ? columnFormatSpec.getBitmapEncoding() : bitmapSerdeFactory,
           buffer,
-          builder
+          builder.getFileMapper(),
+          parent == null ? null : (VariantColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing
@@ -284,7 +321,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(
           logicalType,
           capabilitiesBuilder.hasNulls().isTrue(),
-          enforceLogicalType
+          enforceLogicalType,
+          columnFormatSpec
       ));
     }
   }
@@ -292,35 +330,38 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private class NestedColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
+      final NestedCommonFormatColumnFormatSpec formatSpec;
+      if (columnFormatSpec == null) {
+        formatSpec = NestedCommonFormatColumnFormatSpec.builder()
+                                                       .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
+                                                       .setBitmapEncoding(bitmapSerdeFactory)
+                                                       .build();
+      } else {
+        formatSpec = columnFormatSpec;
+      }
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
           logicalType,
           hasNulls,
           buffer,
           builder,
           columnConfig,
-          bitmapSerdeFactory,
-          byteOrder
+          formatSpec,
+          byteOrder,
+          parent == null ? null : (NestedDataColumnSupplier) parent.getColumnSupplier()
       );
-      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
       ColumnType simpleType = supplier.getLogicalType();
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);
       builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
-      // in default value mode, SQL planning by default uses selector filters for things like 'is null', which does
-      // not work correctly for complex types (or arrays). so, only hook up this index in sql compatible mode so that
-      // query results are consistent when using an index or the value matcher
-      // additionally, nested columns only have a null value index, so we only bother with the index supplier if there
-      // are actually any null rows, otherwise we use the default 'no indexes' supplier
-      if (NullHandling.sqlCompatible() && hasNulls) {
+      // nested columns only have a null value index on the whole values, so we only bother with the index supplier if
+      // there are actually any null rows, otherwise we use the default 'no indexes' supplier
+      if (hasNulls) {
         builder.setIndexSupplier(supplier, false, false);
       }
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls, enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls, enforceLogicalType, formatSpec));
     }
   }
 
@@ -335,6 +376,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
     @Nullable
     private Serializer serializer = null;
+    @Nullable
+    private NestedCommonFormatColumnFormatSpec columnFormatSpec = null;
 
     public SerializerBuilder withLogicalType(ColumnType logicalType)
     {
@@ -378,6 +421,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
+    public SerializerBuilder withColumnFormatSpec(NestedCommonFormatColumnFormatSpec columnFormatSpec)
+    {
+      this.columnFormatSpec = columnFormatSpec;
+      return this;
+    }
+
     public NestedCommonFormatColumnPartSerde build()
     {
       return new NestedCommonFormatColumnPartSerde(
@@ -387,8 +436,78 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           enforceLogicalType,
           byteOrder,
           bitmapSerdeFactory,
+          FormatSpec.forSerde(columnFormatSpec),
           serializer
       );
+    }
+  }
+
+  /**
+   * Overrides {@link NestedCommonFormatColumnFormatSpec} so that {@link #getBitmapEncoding()} participates in serde
+   * so that it can store the complete object in the column metadata
+   */
+  public static class FormatSpec extends NestedCommonFormatColumnFormatSpec
+  {
+    @Nullable
+    public static FormatSpec forSerde(
+        @Nullable NestedCommonFormatColumnFormatSpec spec
+    )
+    {
+      if (spec == null) {
+        return null;
+      }
+      return new FormatSpec(
+          spec.getObjectFieldsDictionaryEncoding(),
+          spec.getObjectStorageEncoding(),
+          spec.getObjectStorageCompression(),
+          spec.getStringDictionaryEncoding(),
+          spec.getDictionaryEncodedColumnCompression(),
+          spec.getLongColumnEncoding(),
+          spec.getLongColumnCompression(),
+          spec.getDoubleColumnCompression(),
+          spec.getBitmapEncoding(),
+          spec.getLongFieldBitmapIndexType(),
+          spec.getDoubleFieldBitmapIndexType()
+      );
+    }
+
+    @JsonCreator
+    public FormatSpec(
+        @JsonProperty("objectFieldsDictionaryEncoding")@Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+        @JsonProperty("objectStorageEncoding")@Nullable ObjectStorageEncoding objectStorageEncoding,
+        @JsonProperty("objectStorageCompression")@Nullable CompressionStrategy objectStorageCompression,
+        @JsonProperty("stringDictionaryEncoding")@Nullable StringEncodingStrategy stringDictionaryEncoding,
+        @JsonProperty("dictionaryEncodedColumnCompression")@Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+        @JsonProperty("longColumnEncoding")@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
+        @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
+        @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
+        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
+        @JsonProperty("longFieldBitmapIndexType")@Nullable BitmapIndexType longFieldBitmapIndex,
+        @JsonProperty("doubleFieldBitmapIndexType")@Nullable BitmapIndexType doubleFieldBitmapIndex
+    )
+    {
+      super(
+          objectFieldsDictionaryEncoding,
+          objectStorageEncoding,
+          objectStorageCompression,
+          stringDictionaryEncoding,
+          dictionaryEncodedColumnCompression,
+          longColumnEncoding,
+          longColumnCompression,
+          doubleColumnCompression,
+          bitmapEncoding,
+          longFieldBitmapIndex,
+          doubleFieldBitmapIndex
+      );
+    }
+
+    @JsonProperty("bitmapEncoding")
+    @JsonIgnore(false)
+    @Nullable
+    @Override
+    public BitmapSerdeFactory getBitmapEncoding()
+    {
+      return super.getBitmapEncoding();
     }
   }
 }

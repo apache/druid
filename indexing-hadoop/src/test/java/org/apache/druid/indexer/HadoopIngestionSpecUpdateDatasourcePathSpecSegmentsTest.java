@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.hadoop.DatasourceIngestionSpec;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.indexer.path.DatasourcePathSpec;
@@ -34,9 +35,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -274,18 +273,17 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
       throws Exception
   {
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                null,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
-            null,
-            jsonMapper
-        ),
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          null,
+                          ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                      )
+                  )
+                  .withObjectMapper(jsonMapper)
+                  .build(),
         new HadoopIOConfig(
             jsonMapper.convertValue(datasourcePathSpec, Map.class),
             null,

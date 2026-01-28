@@ -97,7 +97,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       final IterType iter
   )
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       OutType retVal = retValue;
 

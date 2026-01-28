@@ -23,12 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ByteRowKeyComparatorTest;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.StructuredData;
@@ -36,10 +34,9 @@ import org.apache.druid.segment.nested.StructuredData;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Data used by {@link FrameWriterTest}.
@@ -50,7 +47,7 @@ public class FrameWriterTestData
       ColumnType.STRING,
       Arrays.asList(
           null,
-          NullHandling.emptyToNullIfNeeded(""), // Empty string in SQL-compatible mode, null otherwise
+          "",
           "brown",
           "dog",
           "fox",
@@ -74,7 +71,7 @@ public class FrameWriterTestData
       ColumnType.STRING,
       Arrays.asList(
           Collections.emptyList(),
-          NullHandling.emptyToNullIfNeeded(""), // Empty string in SQL-compatible mode, null otherwise
+          "",
           "brown",
           "dog",
           "fox",
@@ -100,13 +97,13 @@ public class FrameWriterTestData
       Arrays.asList(
           Collections.emptyList(),
           null,
-          NullHandling.emptyToNullIfNeeded(""),
+          "",
           "foo",
           Arrays.asList("lazy", "dog"),
           "qux",
           Arrays.asList("the", "quick", "brown"),
           Arrays.asList("the", "quick", "brown", null),
-          Arrays.asList("the", "quick", "brown", NullHandling.emptyToNullIfNeeded("")),
+          Arrays.asList("the", "quick", "brown", ""),
           Arrays.asList("the", "quick", "brown", "fox"),
           Arrays.asList("the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"),
           Arrays.asList("the", "quick", "brown", "null"),
@@ -126,12 +123,12 @@ public class FrameWriterTestData
           null,
           ObjectArrays.EMPTY_ARRAY,
           new Object[]{null},
-          new Object[]{NullHandling.emptyToNullIfNeeded("")},
+          new Object[]{""},
           new Object[]{"dog"},
           new Object[]{"lazy"},
           new Object[]{"the", "quick", "brown"},
           new Object[]{"the", "quick", "brown", null},
-          new Object[]{"the", "quick", "brown", NullHandling.emptyToNullIfNeeded("")},
+          new Object[]{"the", "quick", "brown", ""},
           new Object[]{"the", "quick", "brown", "fox"},
           new Object[]{"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"},
           new Object[]{"the", "quick", "brown", "null"},
@@ -142,22 +139,22 @@ public class FrameWriterTestData
 
   public static final Dataset<Long> TEST_LONGS = new Dataset<>(
       ColumnType.LONG,
-      Stream.of(
-          NullHandling.defaultLongValue(),
-          0L,
-          -1L,
-          1L,
-          Long.MAX_VALUE,
+      Arrays.asList(
+          null,
           Long.MIN_VALUE,
-          101L,
           -101L,
-          3L,
+          -3L,
           -2L,
-          2L,
-          1L,
           -1L,
-          -3L
-      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
+          -1L,
+          0L,
+          1L,
+          1L,
+          2L,
+          3L,
+          101L,
+          Long.MAX_VALUE
+      )
   );
 
   public static final Dataset<Object> TEST_ARRAYS_LONG = new Dataset<>(
@@ -167,7 +164,7 @@ public class FrameWriterTestData
           ObjectArrays.EMPTY_ARRAY,
           new Object[]{null},
           new Object[]{null, 6L, null, 5L, null},
-          new Object[]{null, 6L, null, 5L, NullHandling.defaultLongValue()},
+          new Object[]{null, 6L, null, 5L, null},
           new Object[]{null, 6L, null, 5L, 0L, -1L},
           new Object[]{null, 6L, null, 5L, 0L, -1L, Long.MIN_VALUE},
           new Object[]{null, 6L, null, 5L, 0L, -1L, Long.MAX_VALUE},
@@ -180,24 +177,31 @@ public class FrameWriterTestData
 
   public static final Dataset<Float> TEST_FLOATS = new Dataset<>(
       ColumnType.FLOAT,
-      Stream.of(
-          0f,
-          -0f,
-          NullHandling.defaultFloatValue(),
+      Arrays.asList(
+          null,
+          Float.NEGATIVE_INFINITY,
+          -101f,
           -1f,
-          1f,
+          -0.4615f,
+          -0.3311f,
+          -0.183808f,
+          -0.1410658f,
+          -0.07692f,
+          -0f,
+          0f,
           //CHECKSTYLE.OFF: Regexp
           Float.MIN_VALUE,
+          //CHECKSTYLE.ON: Regexp
+          0.004f,
+          1f,
+          101f,
+          2.7e20f,
+          //CHECKSTYLE.OFF: Regexp
           Float.MAX_VALUE,
           //CHECKSTYLE.ON: Regexp
-          Float.NaN,
-          -101f,
-          101f,
           Float.POSITIVE_INFINITY,
-          Float.NEGATIVE_INFINITY,
-          0.004f,
-          2.7e20f
-      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
+          Float.NaN
+      )
   );
 
   //CHECKSTYLE.OFF: Regexp
@@ -208,7 +212,7 @@ public class FrameWriterTestData
           ObjectArrays.EMPTY_ARRAY,
           new Object[]{null},
           new Object[]{null, 6.2f, null, 5.1f, null},
-          new Object[]{null, 6.2f, null, 5.1f, NullHandling.defaultFloatValue()},
+          new Object[]{null, 6.2f, null, 5.1f, null},
           new Object[]{null, 6.2f, null, 5.7f, 0.0f, -1.0f},
           new Object[]{null, 6.2f, null, 5.7f, 0.0f, -1.0f, Float.MIN_VALUE},
           new Object[]{null, 6.2f, null, 5.7f, 0.0f, -1.0f, Float.MAX_VALUE},
@@ -224,24 +228,31 @@ public class FrameWriterTestData
 
   public static final Dataset<Double> TEST_DOUBLES = new Dataset<>(
       ColumnType.DOUBLE,
-      Stream.of(
-          0d,
-          -0d,
-          NullHandling.defaultDoubleValue(),
+      Arrays.asList(
+          null,
+          Double.NEGATIVE_INFINITY,
+          -101d,
+          -0.4615d,
+          -0.3311d,
+          -0.183808d,
+          -0.1410658d,
+          -0.07692d,
+          -0.000001d,
           -1e-122d,
-          1e122d,
+          -0d,
+          0d,
           //CHECKSTYLE.OFF: Regexp
           Double.MIN_VALUE,
+          //CHECKSTYLE.ON: Regexp
+          101d,
+          2.7e100d,
+          1e122d,
+          //CHECKSTYLE.OFF: Regexp
           Double.MAX_VALUE,
           //CHECKSTYLE.ON: Regexp
-          Double.NaN,
-          -101d,
-          101d,
           Double.POSITIVE_INFINITY,
-          Double.NEGATIVE_INFINITY,
-          -0.000001d,
-          2.7e100d
-      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
+          Double.NaN
+      )
   );
 
   //CHECKSTYLE.OFF: Regexp
@@ -252,7 +263,7 @@ public class FrameWriterTestData
           ObjectArrays.EMPTY_ARRAY,
           new Object[]{null},
           new Object[]{null, 6.2d, null, 5.1d, null},
-          new Object[]{null, 6.2d, null, 5.1d, NullHandling.defaultDoubleValue()},
+          new Object[]{null, 6.2d, null, 5.1d, null},
           new Object[]{null, 6.2d, null, 5.7d, 0.0d, -1.0d},
           new Object[]{null, 6.2d, null, 5.7d, 0.0d, -1.0d, Double.MIN_VALUE},
           new Object[]{null, 6.2d, null, 5.7d, 0.0d, -1.0d, Double.MAX_VALUE},
@@ -279,19 +290,19 @@ public class FrameWriterTestData
   // Sortedness of structured data depends on the hash value computed for the objects inside.
   public static final Dataset<StructuredData> TEST_COMPLEX_NESTED = new Dataset<>(
       ColumnType.NESTED_DATA,
-      Stream.of(
+      Arrays.asList(
           null,
-          StructuredData.create("foo"),
           StructuredData.create("bar"),
-          StructuredData.create(ImmutableMap.of("a", 100, "b", 200)),
-          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableList.of("x", "y"))),
-          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableMap.of("x", "y"))),
-          StructuredData.wrap(100.1D),
-          StructuredData.wrap(ImmutableList.of("p", "q", "r")),
+          StructuredData.create("foo"),
           StructuredData.wrap(100),
+          StructuredData.wrap(100.1d),
+          StructuredData.wrap(1000),
           StructuredData.wrap(ImmutableList.of("p", "q", "r")),
-          StructuredData.wrap(1000)
-      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
+          StructuredData.wrap(ImmutableList.of("p", "q", "r")),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableMap.of("x", "y"))),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", 200)),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableList.of("x", "y")))
+      )
   );
 
   /**
@@ -343,6 +354,13 @@ public class FrameWriterTestData
         default:
           throw new ISE("No such sortedness [%s]", sortedness);
       }
+    }
+
+    public Dataset<T> sortedCopy(final Comparator<? super T> comparator)
+    {
+      final List<T> dataCopy = new ArrayList<>(sortedData);
+      dataCopy.sort(comparator);
+      return new Dataset<>(type, dataCopy);
     }
   }
 }

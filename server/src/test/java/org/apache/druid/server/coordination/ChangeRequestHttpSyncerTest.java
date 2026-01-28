@@ -54,15 +54,13 @@ public class ChangeRequestHttpSyncerTest
   public void testSimple() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    TypeReference<ChangeRequestsSnapshot<String>> typeRef = new TypeReference<ChangeRequestsSnapshot<String>>()
-    {
-    };
+    TypeReference<ChangeRequestsSnapshot<String>> typeRef = new TypeReference<>() {};
 
     TestHttpClient httpClient = new TestHttpClient(
         ImmutableList.of(
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -74,7 +72,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -86,7 +84,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             true,
                             "reset the counter",
@@ -98,7 +96,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,
@@ -110,7 +108,7 @@ public class ChangeRequestHttpSyncerTest
             ),
             Futures.immediateFuture(
                 new ByteArrayInputStream(
-                    jsonMapper.writerWithType(typeRef).writeValueAsBytes(
+                    jsonMapper.writerFor(typeRef).writeValueAsBytes(
                         new ChangeRequestsSnapshot(
                             false,
                             null,

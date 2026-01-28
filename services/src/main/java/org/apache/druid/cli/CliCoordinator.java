@@ -32,30 +32,28 @@ import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
-import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.MetadataConfigModule;
+import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SegmentSchemaCacheModule;
+import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
-import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,45 +63,19 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataRuleManagerConfig;
-import org.apache.druid.metadata.MetadataRuleManagerProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
-import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
-import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
-import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerFactory;
-import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
-import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
-import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
-import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
-import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -114,8 +86,9 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
-import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
+import org.apache.druid.server.http.CoordinatorCompactionResource;
+import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
@@ -134,6 +107,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -159,7 +133,7 @@ public class CliCoordinator extends ServerRunnable
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
   private Properties properties;
   private boolean beOverlord;
-  private boolean isSegmentMetadataCacheEnabled;
+  private boolean isSegmentSchemaCacheEnabled;
 
   public CliCoordinator()
   {
@@ -171,7 +145,7 @@ public class CliCoordinator extends ServerRunnable
   {
     this.properties = properties;
     beOverlord = isOverlord(properties);
-    isSegmentMetadataCacheEnabled = isSegmentMetadataCacheEnabled(properties);
+    isSegmentSchemaCacheEnabled = MetadataConfigModule.isSegmentSchemaCacheEnabled(properties);
 
     if (beOverlord) {
       log.info("Coordinator is configured to act as Overlord as well (%s = true).", AS_OVERLORD_PROPERTY);
@@ -193,10 +167,11 @@ public class CliCoordinator extends ServerRunnable
     List<Module> modules = new ArrayList<>();
 
     modules.add(JettyHttpClientModule.global());
+    modules.add(new MetadataManagerModule());
 
-    if (isSegmentMetadataCacheEnabled) {
+    if (isSegmentSchemaCacheEnabled) {
       validateCentralizedDatasourceSchemaConfig(properties);
-      modules.add(new CoordinatorSegmentMetadataCacheModule());
+      modules.add(new SegmentSchemaCacheModule());
       modules.add(new QueryableModule());
     }
 
@@ -214,8 +189,6 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
-            JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
-            JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);
@@ -223,15 +196,11 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
-            JsonConfigProvider.bind(
-                binder,
-                "druid.coordinator.balancer.cachingCost",
-                CachingCostBalancerStrategyConfig.class
-            );
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
+            binder.bind(CoordinatorDynamicConfigSyncer.class).in(ManageLifecycle.class);
             if (beOverlord) {
               binder.bind(RedirectInfo.class).to(CoordinatorOverlordRedirectInfo.class).in(LazySingleton.class);
             } else {
@@ -240,24 +209,16 @@ public class CliCoordinator extends ServerRunnable
 
             LifecycleModule.register(binder, CoordinatorServerView.class);
 
-            if (!isSegmentMetadataCacheEnabled) {
+            if (!isSegmentSchemaCacheEnabled) {
               binder.bind(CoordinatorSegmentMetadataCache.class).toProvider(Providers.of(null));
               binder.bind(DirectDruidClientFactory.class).toProvider(Providers.of(null));
             }
 
-            binder.bind(SegmentsMetadataManager.class)
-                  .toProvider(SegmentsMetadataManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
-            binder.bind(MetadataRuleManager.class)
-                  .toProvider(MetadataRuleManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
+            binder.bind(CloneStatusManager.class).in(LazySingleton.class);
 
-            binder.bind(CoordinatorConfigManager.class);
-            binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
+            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
@@ -266,7 +227,7 @@ public class CliCoordinator extends ServerRunnable
                   .to(CoordinatorJettyServerInitializer.class);
 
             Jerseys.addResource(binder, CoordinatorResource.class);
-            Jerseys.addResource(binder, CompactionResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
@@ -282,19 +243,6 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            if (properties.containsKey("druid.coordinator.merge.on")) {
-              throw new UnsupportedOperationException(
-                  "'druid.coordinator.merge.on' is not supported anymore. "
-                  + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
-                  + "for more details about compaction."
-              );
-            }
-
-            //TODO: make this configurable when there are multiple search policies
-            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
-
             bindAnnouncer(
                 binder,
                 Coordinator.class,
@@ -305,14 +253,13 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
 
             if (!beOverlord) {
-              // These are needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
-              binder.bind(TaskStorage.class).toProvider(Providers.of(null));
-              binder.bind(TaskMaster.class).toProvider(Providers.of(null));
-              binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
               // Bind HeartbeatSupplier only when the service operates independently of Overlord.
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
                   .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
                   .toProvider(HeartbeatSupplier.class);
+              binder.bind(LocalTmpStorageConfig.class)
+                    .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("coordinator"))
+                    .in(LazySingleton.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -327,7 +274,8 @@ public class CliCoordinator extends ServerRunnable
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
               @EscalatedGlobal HttpClient httpClient,
-              Lifecycle lifecycle
+              Lifecycle lifecycle,
+              CoordinatorConfigManager coordinatorConfigManager
           )
           {
             final ExecutorService callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
@@ -337,7 +285,8 @@ public class CliCoordinator extends ServerRunnable
                 factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
                 config.getHttpLoadQueuePeonConfig(),
-                httpClient
+                httpClient,
+                coordinatorConfigManager::getCurrentDynamicConfig
             );
           }
         }
@@ -351,6 +300,10 @@ public class CliCoordinator extends ServerRunnable
       // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
       // the injector to get confused due to having multiple bindings for the same classes.
       modules.add(new LookupSerdeModule());
+      modules.add(new SupervisorCleanupModule());
+      modules.add(new MSQIndexingModule());
+      modules.add(new MSQDurableStorageModule());
+      modules.add(new MSQExternalDataSourceModule());
     }
 
     return modules;
@@ -385,13 +338,13 @@ public class CliCoordinator extends ServerRunnable
           return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
         }
         List<String> coordinatorCustomDutyGroupNames = jsonMapper.readValue(props.getProperty(
-            "druid.coordinator.dutyGroups"), new TypeReference<List<String>>() {});
+            "druid.coordinator.dutyGroups"), new TypeReference<>() {});
         for (String coordinatorCustomDutyGroupName : coordinatorCustomDutyGroupNames) {
           String dutyListProperty = StringUtils.format("druid.coordinator.%s.duties", coordinatorCustomDutyGroupName);
           if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
             throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
           }
-          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
+          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(
@@ -455,45 +408,4 @@ public class CliCoordinator extends ServerRunnable
     }
   }
 
-  private static class CoordinatorSegmentMetadataCacheModule implements Module
-  {
-    @Override
-    public void configure(Binder binder)
-    {
-      JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadata", SegmentMetadataQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.query.scheduler", QuerySchedulerProvider.class, Global.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.query.default", DefaultQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
-      JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
-      JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
-
-      MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
-      toolChests.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryQueryToolChest.class);
-      binder.bind(SegmentMetadataQueryQueryToolChest.class).in(LazySingleton.class);
-      binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
-
-      final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder =
-          DruidBinders.queryRunnerFactoryBinder(binder);
-      queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
-      binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
-
-      binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);
-
-      binder.bind(QueryScheduler.class)
-            .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
-            .in(LazySingleton.class);
-      binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-      binder.bind(SegmentSchemaCache.class).in(LazySingleton.class);
-      binder.bind(QuerySegmentWalker.class).to(SegmentMetadataQuerySegmentWalker.class).in(LazySingleton.class);
-
-      LifecycleModule.register(binder, CoordinatorSegmentMetadataCache.class);
-    }
-
-    @LazySingleton
-    @Provides
-    public QueryWatcher getWatcher(QueryScheduler scheduler)
-    {
-      return scheduler;
-    }
-  }
 }

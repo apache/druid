@@ -22,6 +22,7 @@ package org.apache.druid.server.metrics;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -31,6 +32,7 @@ import org.apache.druid.query.DruidMetrics;
 import java.util.Map;
 import java.util.Set;
 
+@LoadScope(roles = {NodeRole.INDEXER_JSON_NAME, NodeRole.MIDDLE_MANAGER_JSON_NAME})
 public class WorkerTaskCountStatsMonitor extends AbstractMonitor
 {
   private final WorkerTaskCountStatsProvider statsProvider;
@@ -38,6 +40,7 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   private final String workerCategory;
   private final String workerVersion;
   private final boolean isMiddleManager;
+  private final boolean isIndexer;
 
   @Inject
   public WorkerTaskCountStatsMonitor(
@@ -46,13 +49,19 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   )
   {
     this.isMiddleManager = nodeRoles.contains(NodeRole.MIDDLE_MANAGER);
+    this.isIndexer = nodeRoles.contains(NodeRole.INDEXER);
     if (isMiddleManager) {
       this.statsProvider = injector.getInstance(WorkerTaskCountStatsProvider.class);
       this.indexerStatsProvider = null;
       this.workerCategory = statsProvider.getWorkerCategory();
       this.workerVersion = statsProvider.getWorkerVersion();
-    } else {
+    } else if (isIndexer) {
       this.indexerStatsProvider = injector.getInstance(IndexerTaskCountStatsProvider.class);
+      this.statsProvider = null;
+      this.workerCategory = null;
+      this.workerVersion = null;
+    } else {
+      this.indexerStatsProvider = null;
       this.statsProvider = null;
       this.workerCategory = null;
       this.workerVersion = null;
@@ -68,10 +77,12 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       emit(emitter, "worker/taskSlot/idle/count", statsProvider.getWorkerIdleTaskSlotCount());
       emit(emitter, "worker/taskSlot/total/count", statsProvider.getWorkerTotalTaskSlotCount());
       emit(emitter, "worker/taskSlot/used/count", statsProvider.getWorkerUsedTaskSlotCount());
-    } else {
+    } else if (isIndexer) {
       emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
       emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
       emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
+      emit(emitter, "worker/task/failed/count", indexerStatsProvider.getWorkerFailedTasks());
+      emit(emitter, "worker/task/success/count", indexerStatsProvider.getWorkerSuccessfulTasks());
     }
     return true;
   }

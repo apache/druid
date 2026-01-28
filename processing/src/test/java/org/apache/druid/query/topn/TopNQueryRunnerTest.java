@@ -29,7 +29,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -42,11 +41,13 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -58,6 +59,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
@@ -89,6 +91,10 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -96,6 +102,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -129,7 +136,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{7}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
+    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners(true);
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
@@ -152,7 +159,13 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     return parameters;
   }
 
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
+  /**
+   * Create test query runners.
+   *
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              compatible with non-time-ordered segments.
+   */
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners(boolean includeNonTimeOrdered)
   {
     final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
     final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
@@ -167,7 +180,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 defaultPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            includeNonTimeOrdered
         )
     );
     retVal.addAll(
@@ -176,7 +190,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 customPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            includeNonTimeOrdered
         )
     );
 
@@ -191,7 +206,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     return retVal;
   }
 
-  private final QueryRunner<Result<TopNResultValue>> runner;
+  private final TestQueryRunner<Result<TopNResultValue>> runner;
   private final boolean duplicateSingleAggregatorQueries;
   private final List<AggregatorFactory> commonAggregators;
 
@@ -201,7 +216,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   @SuppressWarnings("unused")
   public TopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner,
+      TestQueryRunner<Result<TopNResultValue>> runner,
       boolean specializeGeneric1AggPooledTopN,
       boolean specializeGeneric2AggPooledTopN,
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
@@ -819,6 +834,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastAggregator()
   {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -928,6 +946,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastFloatAggregatorUsingDoubleColumn()
   {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -1037,6 +1058,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastFloatAggregatorUsingFloatColumn()
   {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -1149,7 +1173,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   public void testTopNBySegment()
   {
 
-    final HashMap<String, Object> specialContext = new HashMap<String, Object>();
+    final HashMap<String, Object> specialContext = new HashMap<>();
     specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -1524,22 +1548,22 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
                         "rows", 1L,
-                        "index", new Float(1447.341160).doubleValue(),
-                        "addRowsIndexConstant", new Float(1449.341160).doubleValue(),
+                        "index", 1447.341160F,
+                        "addRowsIndexConstant", 1449.341160F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
                         "rows", 1L,
-                        "index", new Float(1314.839715).doubleValue(),
-                        "addRowsIndexConstant", new Float(1316.839715).doubleValue(),
+                        "index", 1314.839715F,
+                        "addRowsIndexConstant", 1316.839715F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
                         "rows", 1L,
-                        "index", new Float(109.705815).doubleValue(),
-                        "addRowsIndexConstant", new Float(111.705815).doubleValue(),
+                        "index", 109.705815F,
+                        "addRowsIndexConstant", 111.705815F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     )
                 )
@@ -4126,13 +4150,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     Map<String, String> extractionMap = new HashMap<>();
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
-      extractionMap.put("", "NULL");
-    } else {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, false);
-    }
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, false);
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -4192,14 +4210,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     Map<String, String> extractionMap = new HashMap<>();
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn lookupExtractionFn;
-    if (NullHandling.replaceWithDefault()) {
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
-      extractionMap.put("", "NULL");
-    } else {
-      extractionMap.put("", "NOT_USED");
-      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, true);
-    }
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "NULL", true, true);
+    extractionMap.put("", "NOT_USED");
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -5767,9 +5779,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("longNumericNull", 10L)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeRowWithNulls("index_alias", 126L, "longNumericNull", NullHandling.defaultLongValue()),
-                    makeRowWithNulls("index_alias", 166L, "longNumericNull", NullHandling.defaultLongValue())
+                    makeRowWithNulls("index_alias", 114L, "longNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "longNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "longNumericNull", null)
                 )
             )
         )
@@ -5835,9 +5847,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("floatNumericNull", 10f)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", NullHandling.defaultFloatValue()),
-                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", NullHandling.defaultFloatValue())
+                    makeRowWithNulls("index_alias", 114L, "floatNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "floatNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "floatNumericNull", null)
                 )
             )
         )
@@ -5903,9 +5915,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                         .put("index_alias", 147L)
                         .put("doubleNumericNull", 10d)
                         .build(),
-                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", NullHandling.defaultDoubleValue()),
-                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", NullHandling.defaultDoubleValue())
+                    makeRowWithNulls("index_alias", 114L, "doubleNumericNull", null),
+                    makeRowWithNulls("index_alias", 126L, "doubleNumericNull", null),
+                    makeRowWithNulls("index_alias", 166L, "doubleNumericNull", null)
                 )
             )
         )
@@ -5932,7 +5944,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultLongValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10L, "count", 93L),
                     makeRowWithNulls("dim", 20L, "count", 93L),
                     makeRowWithNulls("dim", 40L, "count", 93L),
@@ -5964,7 +5976,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultDoubleValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10.0, "count", 93L),
                     makeRowWithNulls("dim", 20.0, "count", 93L),
                     makeRowWithNulls("dim", 40.0, "count", 93L),
@@ -5996,7 +6008,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.asList(
-                    makeRowWithNulls("dim", NullHandling.defaultFloatValue(), "count", 279L),
+                    makeRowWithNulls("dim", null, "count", 279L),
                     makeRowWithNulls("dim", 10.0f, "count", 93L),
                     makeRowWithNulls("dim", 20.0f, "count", 93L),
                     makeRowWithNulls("dim", 40.0f, "count", 93L),
@@ -6191,6 +6203,1098 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNAggregateTopnMetricFirst()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
+            .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+            .metric(QueryRunnerTestHelper.INDEX_METRIC)
+            .threshold(4)
+            .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+            .aggregators(commonAggregators)
+            .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+            .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+            .build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+            new Result<>(
+                    DateTimes.of("2011-04-01T00:00:00.000Z"),
+                    TopNResultValue.create(
+                            Arrays.<Map<String, Object>>asList(
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                                            "rows", 4L,
+                                            "index", 5351.814783D,
+                                            "addRowsIndexConstant", 5356.814783D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_2
+                                    ),
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                                            "rows", 4L,
+                                            "index", 4875.669692D,
+                                            "addRowsIndexConstant", 4880.669692D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_2
+                                    ),
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                                            "rows", 18L,
+                                            "index", 2231.876812D,
+                                            "addRowsIndexConstant", 2250.876812D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_9
+                                    )
+                            )
+                    )
+            )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNAggregateTopnMetricFirstWithGranularity()
+  {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.MONTH_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .aggregators(
+            new LongFirstAggregatorFactory("first", "index", null),
+            new LongLastAggregatorFactory("last", "index", null)
+        )
+        .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("first", 1000L)
+                                .put("last", 1127L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "upfront")
+                                .put("first", 800L)
+                                .put("last", 943L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("first", 100L)
+                                .put("last", 155L)
+                                .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("first", 1203L)
+                                .put("last", 1292L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "upfront")
+                                .put("first", 1667L)
+                                .put("last", 1101L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("first", 132L)
+                                .put("last", 114L)
+                                .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("first", 1124L)
+                                .put("last", 1366L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "upfront")
+                                .put("first", 1166L)
+                                .put("last", 1063L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("first", 153L)
+                                .put("last", 125L)
+                                .build()
+                )
+            )
+        ),
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "total_market")
+                                .put("first", 1314L)
+                                .put("last", 1029L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "upfront")
+                                .put("first", 1447L)
+                                .put("last", 780L)
+                                .build(),
+                    ImmutableMap.<String, Object>builder()
+                                .put("market", "spot")
+                                .put("first", 135L)
+                                .put("last", 120L)
+                                .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+
+  @Test
+  public void testTopN_time_granularity_empty_buckets()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(QueryRunnerTestHelper.INDEX_LONG_SUM)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "index", 2836L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "index", 2681L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "index", 1102L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "index", 2514L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "index", 2193L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "index", 1120L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_empty_buckets_expression()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .virtualColumns(
+            new ExpressionVirtualColumn(
+                "vc",
+                "market + ' ' + placement",
+                ColumnType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .dimension("vc")
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(QueryRunnerTestHelper.INDEX_LONG_SUM)
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        "vc", "total_market preferred",
+                        "index", 2836L
+                    ),
+                    ImmutableMap.of(
+                        "vc", "upfront preferred",
+                        "index", 2681L
+                    ),
+                    ImmutableMap.of(
+                        "vc", "spot preferred",
+                        "index", 1102L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        "vc", "total_market preferred",
+                        "index", 2514L
+                    ),
+                    ImmutableMap.of(
+                        "vc", "upfront preferred",
+                        "index", 2193L
+                    ),
+                    ImmutableMap.of(
+                        "vc", "spot preferred",
+                        "index", 1120L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_empty_buckets_2pool()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            QueryRunnerTestHelper.INDEX_DOUBLE_MAX
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "index", 2836L,
+                        "doubleMaxIndex", 1522.043733
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "index", 2681L,
+                        "doubleMaxIndex", 1447.34116
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "index", 1102L,
+                        "doubleMaxIndex", 158.747224
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "index", 2514L,
+                        "doubleMaxIndex", 1321.375057
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "index", 2193L,
+                        "doubleMaxIndex", 1144.342401
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "index", 1120L,
+                        "doubleMaxIndex", 166.016049
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_empty_buckets_timeExtract()
+  {
+    // this is pretty wierd to have both query granularity and a time extractionFn... but it is not explicitly
+    // forbidden so might as well test it
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                "dayOfWeek",
+                new TimeFormatExtractionFn("EEEE", null, null, null, false)
+            )
+        )
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Collections.singletonList(
+                    ImmutableMap.of(
+                        "dayOfWeek", "Friday",
+                        "index", 6619L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Collections.singletonList(
+                    ImmutableMap.of(
+                        "dayOfWeek", "Saturday",
+                        "index", 5827L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_empty_buckets_numeric()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(new DefaultDimensionSpec("qualityLong", "qualityLong", ColumnType.LONG))
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.asList(
+                    ImmutableMap.of(
+                        "qualityLong", 1600L,
+                        "index", 2900L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1400L,
+                        "index", 2870L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1200L,
+                        "index", 158L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1000L,
+                        "index", 135L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1500L,
+                        "index", 121L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1300L,
+                        "index", 120L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1800L,
+                        "index", 119L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1100L,
+                        "index", 118L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1700L,
+                        "index", 78L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.asList(
+                    ImmutableMap.of(
+                        "qualityLong", 1600L,
+                        "index", 2505L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1400L,
+                        "index", 2447L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1200L,
+                        "index", 166L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1000L,
+                        "index", 147L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1800L,
+                        "index", 126L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1500L,
+                        "index", 114L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1300L,
+                        "index", 113L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1100L,
+                        "index", 112L
+                    ),
+                    ImmutableMap.of(
+                        "qualityLong", 1700L,
+                        "index", 97L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_multipass_no_pool()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            new StringAnyAggregatorFactory("big", QueryRunnerTestHelper.PLACEMENT_DIMENSION, 4000000, null)
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2836L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2681L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1102L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2514L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2193L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1120L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_multipass_with_pooled()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .context(ImmutableMap.of(QueryContexts.TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY, true))
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            new StringAnyAggregatorFactory("big", QueryRunnerTestHelper.PLACEMENT_DIMENSION, 4000000, null)
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2836L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2681L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1102L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2514L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2193L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1120L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopN_time_granularity_uses_heap_if_too_big()
+  {
+    assumeTimeOrdered();
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(Granularities.HOUR)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.INDEX_METRIC)
+        .threshold(10_000)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .aggregators(
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            new StringAnyAggregatorFactory("big", QueryRunnerTestHelper.PLACEMENT_DIMENSION, 40000000, null)
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2836L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2681L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1102L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-01T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-01T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
+            TopNResultValue.create(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                        "big", "preferred",
+                        "index", 2514L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                        "big", "preferred",
+                        "index", 2193L
+                    ),
+                    ImmutableMap.of(
+                        QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                        "big", "preferred",
+                        "index", 1120L
+                    )
+                )
+            )
+        ),
+        new Result<>(DateTimes.of("2011-04-02T01:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T02:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T03:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T04:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T05:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T06:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T07:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T08:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T09:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T10:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T11:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T12:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T13:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T14:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T15:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T16:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T17:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T18:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T19:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T20:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T21:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T22:00:00.000Z"), TopNResultValue.create(Collections.emptyList())),
+        new Result<>(DateTimes.of("2011-04-02T23:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
+    );
+
+    assertExpectedResults(expectedResults, query);
+  }
+
+  private void assumeTimeOrdered()
+  {
+    try (final CursorHolder cursorHolder =
+             runner.getSegment().as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
+    }
   }
 
   private static Map<String, Object> makeRowWithNulls(

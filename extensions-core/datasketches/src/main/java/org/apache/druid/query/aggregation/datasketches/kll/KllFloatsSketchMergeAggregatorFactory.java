@@ -59,7 +59,7 @@ public class KllFloatsSketchMergeAggregatorFactory extends KllFloatsSketchAggreg
   {
     final ColumnValueSelector<KllFloatsSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpAggregator<KllFloatsSketch>(KllFloatsSketchOperations.EMPTY_SKETCH);
+      return new KllSketchNoOpAggregator<>(KllFloatsSketchOperations.EMPTY_SKETCH);
     }
     return getMergeAggregator(selector);
   }
@@ -69,7 +69,7 @@ public class KllFloatsSketchMergeAggregatorFactory extends KllFloatsSketchAggreg
   {
     final ColumnValueSelector<KllFloatsSketch> selector = metricFactory.makeColumnValueSelector(getFieldName());
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpBufferAggregator<KllFloatsSketch>(KllFloatsSketchOperations.EMPTY_SKETCH);
+      return new KllSketchNoOpBufferAggregator<>(KllFloatsSketchOperations.EMPTY_SKETCH);
     }
     return getMergeBufferAggregator(selector);
   }

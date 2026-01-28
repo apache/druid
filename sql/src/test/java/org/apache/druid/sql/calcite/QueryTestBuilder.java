@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -126,7 +127,7 @@ public class QueryTestBuilder
 
   public QueryTestBuilder queryContext(Map<String, Object> queryContext)
   {
-    this.queryContext = QueryContexts.override(config.baseQueryContext(), queryContext);
+    this.queryContext = QueryContexts.override(this.queryContext, queryContext);
     return this;
   }
 
@@ -162,9 +163,7 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder expectedResults(
-      final List<Object[]> expectedResults
-  )
+  public QueryTestBuilder expectedResults(final List<Object[]> expectedResults)
   {
     return expectedResults(ResultMatchMode.EQUALS, expectedResults);
   }
@@ -310,8 +309,8 @@ public class QueryTestBuilder
 
   public boolean isDecoupledMode()
   {
-    String mode = (String) queryContext.getOrDefault(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
-    return PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
+    String mode = (String) queryContext.getOrDefault(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
   }
 
 }

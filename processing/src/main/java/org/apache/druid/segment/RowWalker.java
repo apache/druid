@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.util.function.ToLongFunction;
 
 /**
- * Used by {@link RowBasedStorageAdapter} and {@link RowBasedCursor} to walk through rows. It allows multiple
+ * Used by {@link RowBasedCursorFactory} and {@link RowBasedCursor} to walk through rows. It allows multiple
  * {@link RowBasedCursor} to share the same underlying Iterable.
  *
  * The class creates a yielder from the sequence to iterate over the rows. However, it doesn't call the sequence's close

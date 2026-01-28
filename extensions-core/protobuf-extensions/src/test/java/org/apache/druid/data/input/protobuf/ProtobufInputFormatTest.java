@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -49,21 +48,19 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class ProtobufInputFormatTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private TimestampSpec timestampSpec;
   private DimensionsSpec dimensionsSpec;
@@ -73,10 +70,9 @@ public class ProtobufInputFormatTest
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
@@ -94,11 +90,11 @@ public class ProtobufInputFormatTest
             new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
         )
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
 
     File descFile = new File(this.getClass()
                                  .getClassLoader()
-                                 .getResource("prototest.desc")
+                                 .getResource("proto_test_event.desc")
                                  .toURI());
     String descString = StringUtils.encodeBase64String(Files.toByteArray(descFile));
     inlineSchemaDecoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
@@ -123,7 +119,7 @@ public class ProtobufInputFormatTest
         NestedInputFormat.class
     );
 
-    Assert.assertEquals(inputFormat, inputFormat2);
+    assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -137,7 +133,7 @@ public class ProtobufInputFormatTest
         jsonMapper.writeValueAsString(inputFormat),
         NestedInputFormat.class
     );
-    Assert.assertEquals(inputFormat, inputFormat2);
+    assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -158,7 +154,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -200,7 +196,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -232,7 +228,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableSet.builder()
                      .add("eventType")
                      .add("foobar")
@@ -271,14 +267,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new AutoTypeColumnSchema("event", null),
-                    new AutoTypeColumnSchema("id", null),
-                    new AutoTypeColumnSchema("someOtherId", null),
-                    new AutoTypeColumnSchema("isValid", null),
-                    new AutoTypeColumnSchema("eventType", null),
-                    new AutoTypeColumnSchema("foo", null),
-                    new AutoTypeColumnSchema("bar", null),
-                    new AutoTypeColumnSchema("someBytesColumn", null)
+                    AutoTypeColumnSchema.of("event"),
+                    AutoTypeColumnSchema.of("id"),
+                    AutoTypeColumnSchema.of("someOtherId"),
+                    AutoTypeColumnSchema.of("isValid"),
+                    AutoTypeColumnSchema.of("eventType"),
+                    AutoTypeColumnSchema.of("foo"),
+                    AutoTypeColumnSchema.of("bar"),
+                    AutoTypeColumnSchema.of("someBytesColumn")
                 )
             ),
             null
@@ -302,7 +298,7 @@ public class ProtobufInputFormatTest
 
     InputRow row = transformingReader.read().next();
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -316,12 +312,12 @@ public class ProtobufInputFormatTest
         row.getDimensions()
     );
 
-    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
-    Assert.assertEquals(
+    assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    assertEquals(
         ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
         row.getRaw("bar")
     );
-    Assert.assertArrayEquals(
+    assertArrayEquals(
         new byte[]{0x01, 0x02, 0x03, 0x04},
         (byte[]) row.getRaw("someBytesColumn")
     );
@@ -369,7 +365,7 @@ public class ProtobufInputFormatTest
 
     InputRow row = transformingReader.read().next();
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableSet.of(
             "someOtherId",
             "someIntColumn",
@@ -386,12 +382,12 @@ public class ProtobufInputFormatTest
         new HashSet<>(row.getDimensions())
     );
 
-    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
-    Assert.assertEquals(
+    assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    assertEquals(
         ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
         row.getRaw("bar")
     );
-    Assert.assertArrayEquals(
+    assertArrayEquals(
         new byte[]{0x01, 0x02, 0x03, 0x04},
         (byte[]) row.getRaw("someBytesColumn")
     );

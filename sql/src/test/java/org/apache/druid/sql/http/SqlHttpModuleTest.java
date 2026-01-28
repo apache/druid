@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -66,12 +67,13 @@ public class SqlHttpModuleTest
         binder -> {
           binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(jsonMpper);
           binder.bind(AuthorizerMapper.class).toInstance(new AuthorizerMapper(Collections.emptyMap()));
-          binder.bind(NativeSqlEngine.class).toProvider(Providers.of(new NativeSqlEngine(null, null)));
+          binder.bind(NativeSqlEngine.class).toProvider(Providers.of(new NativeSqlEngine(null, null, (SqlStatementFactory) null)));
           binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(SqlResourceTest.DUMMY_DRUID_NODE);
           binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
           binder.bind(SqlStatementFactory.class)
                 .annotatedWith(NativeQuery.class)
                 .toInstance(EasyMock.mock(SqlStatementFactory.class));
+          binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
         },
         target
     );
@@ -90,9 +92,7 @@ public class SqlHttpModuleTest
   public void testSqlResourceIsAvailableViaJersey()
   {
     Set<Class<?>> jerseyResourceClasses =
-        injector.getInstance(Key.get(new TypeLiteral<Set<Class<?>>>()
-        {
-        }, JSR311Resource.class));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
     Assert.assertEquals(1, jerseyResourceClasses.size());
     Assert.assertEquals(SqlResource.class, jerseyResourceClasses.iterator().next());
   }

@@ -88,11 +88,12 @@ public class RowKeyComparisonRunLengths
         );
       }
 
-      ColumnType columnType = rowSignature.getColumnType(keyColumn.columnName())
-                                          .orElseThrow(() -> DruidException.defensive("Need column types"));
+      ColumnType columnType =
+          rowSignature.getColumnType(keyColumn.columnName())
+                      .orElseThrow(() -> DruidException.defensive("No type for column[%s]", keyColumn.columnName()));
 
       // First key column to be processed
-      if (runLengthEntryBuilders.size() == 0) {
+      if (runLengthEntryBuilders.isEmpty()) {
         final boolean isByteComparable = isByteComparable(columnType);
         runLengthEntryBuilders.add(
             new RunLengthEntryBuilder(isByteComparable, keyColumn.order())

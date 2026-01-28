@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedInGeneratedCode;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.RE;
@@ -385,7 +385,7 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitNull(ExprParser.NullContext ctx)
   {
-    nodes.put(ctx, new StringExpr(null));
+    nodes.put(ctx, new NullLongExpr());
   }
 
   @Override

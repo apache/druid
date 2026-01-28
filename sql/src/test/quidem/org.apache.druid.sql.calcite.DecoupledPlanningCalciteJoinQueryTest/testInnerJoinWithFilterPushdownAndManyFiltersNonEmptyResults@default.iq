@@ -1,0 +1,301 @@
+# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@default case-crc:18950fb9
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT f1.m1, f2.m1
+FROM foo f1
+INNER JOIN foo f2 ON f1.m1 = f2.m1 where (f1.dim1, f1.dim2) in (('1', 'a'), ('C', 'D'), ('A', 'C'), ('C', 'E'), ('D', 'H'), ('A', 'D'), ('B', 'C'), 
+('H', 'E'), ('I', 'J'), ('I', 'K'), ('J', 'I'), ('Q', 'R'), ('Q', 'S'), ('S', 'Q'), ('X', 'Y'), ('Z', 'U'), ('U', 'Z'), ('P', 'Q'), ('X', 'A'))
+;
++-----+-----+
+| m1  | m1  |
++-----+-----+
+| 4.0 | 4.0 |
++-----+-----+
+(1 row)
+
+!ok
+LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+  LogicalProject(m1=[$5])
+    LogicalFilter(condition=[OR(AND(=($1, '1'), =($2, 'a')), AND(=($1, 'C'), =($2, 'D')), AND(=($1, 'A'), =($2, 'C')), AND(=($1, 'C'), =($2, 'E')), AND(=($1, 'D'), =($2, 'H')), AND(=($1, 'A'), =($2, 'D')), AND(=($1, 'B'), =($2, 'C')), AND(=($1, 'H'), =($2, 'E')), AND(=($1, 'I'), =($2, 'J')), AND(=($1, 'I'), =($2, 'K')), AND(=($1, 'J'), =($2, 'I')), AND(=($1, 'Q'), =($2, 'R')), AND(=($1, 'Q'), =($2, 'S')), AND(=($1, 'S'), =($2, 'Q')), AND(=($1, 'X'), =($2, 'Y')), AND(=($1, 'Z'), =($2, 'U')), AND(=($1, 'U'), =($2, 'Z')), AND(=($1, 'P'), =($2, 'Q')), AND(=($1, 'X'), =($2, 'A')))])
+      LogicalTableScan(table=[[druid, foo]])
+  LogicalProject(m1=[$5])
+    LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidJoin(condition=[=($0, $1)], joinType=[inner])
+  DruidProject(m1=[$5], druid=[logical])
+    DruidFilter(condition=[OR(AND(=($1, '1'), =($2, 'a')), AND(=($1, 'C'), =($2, 'D')), AND(=($1, 'A'), =($2, 'C')), AND(=($1, 'C'), =($2, 'E')), AND(=($1, 'D'), =($2, 'H')), AND(=($1, 'A'), =($2, 'D')), AND(=($1, 'B'), =($2, 'C')), AND(=($1, 'H'), =($2, 'E')), AND(=($1, 'I'), =($2, 'J')), AND(=($1, 'I'), =($2, 'K')), AND(=($1, 'J'), =($2, 'I')), AND(=($1, 'Q'), =($2, 'R')), AND(=($1, 'Q'), =($2, 'S')), AND(=($1, 'S'), =($2, 'Q')), AND(=($1, 'X'), =($2, 'Y')), AND(=($1, 'Z'), =($2, 'U')), AND(=($1, 'U'), =($2, 'Z')), AND(=($1, 'P'), =($2, 'Q')), AND(=($1, 'X'), =($2, 'A')))])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+  DruidProject(m1=[$5], druid=[logical])
+    DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "or",
+          "fields" : [ {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "C" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "C"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "B" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "E"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "C", "H" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "P", "S" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "1"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "a"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "H"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "K"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "R"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "S"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Y"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "A"
+            } ]
+          } ]
+        },
+        "columns" : [ "m1" ],
+        "columnTypes" : [ "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "m1" ],
+        "columnTypes" : [ "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"m1\" == \"j0.m1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "m1", "j0.m1" ],
+  "columnTypes" : [ "FLOAT", "FLOAT" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

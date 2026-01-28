@@ -63,7 +63,7 @@ public class ResourcePool<K, V> implements Closeable
                       final boolean eagerInitialization)
   {
     this.pool = CacheBuilder.newBuilder().build(
-        new CacheLoader<K, ResourceHolderPerKey<K, V>>()
+        new CacheLoader<>()
         {
           @Override
           public ResourceHolderPerKey<K, V> load(K input)
@@ -108,7 +108,7 @@ public class ResourcePool<K, V> implements Closeable
     }
     final V value = holder.get();
 
-    return new ResourceContainer<V>()
+    return new ResourceContainer<>()
     {
       private final AtomicBoolean returned = new AtomicBoolean(false);
 

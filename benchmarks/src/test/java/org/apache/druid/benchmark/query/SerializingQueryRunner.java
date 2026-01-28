@@ -21,28 +21,24 @@ package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.ResultRow;
 
-public class SerializingQueryRunner<T> implements QueryRunner<T>
+public class SerializingQueryRunner implements QueryRunner<ResultRow>
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final ObjectMapper smileMapper;
-  private final QueryRunner<T> baseRunner;
-  private final Class<T> clazz;
+  private final QueryRunner<ResultRow> baseRunner;
+  private final Class<ResultRow> clazz;
 
   public SerializingQueryRunner(
       ObjectMapper smileMapper,
-      Class<T> clazz,
-      QueryRunner<T> baseRunner
+      Class<ResultRow> clazz,
+      QueryRunner<ResultRow> baseRunner
   )
   {
     this.smileMapper = smileMapper;
@@ -51,8 +47,8 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(
-      final QueryPlus<T> queryPlus,
+  public Sequence<ResultRow> run(
+      final QueryPlus<ResultRow> queryPlus,
       final ResponseContext responseContext
   )
   {
@@ -60,7 +56,7 @@ public class SerializingQueryRunner<T> implements QueryRunner<T>
         baseRunner.run(queryPlus, responseContext),
         input -> {
           try {
-            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input), clazz);
+            return JacksonUtils.readValue(smileMapper, smileMapper.writeValueAsBytes(input.getArray()), clazz);
           }
           catch (JsonProcessingException e) {
             throw new RuntimeException(e);

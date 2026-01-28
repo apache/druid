@@ -39,7 +39,7 @@ public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
   )
   {
     super(
-        new IteratorMaker<T, Iterator<T>>()
+        new IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()

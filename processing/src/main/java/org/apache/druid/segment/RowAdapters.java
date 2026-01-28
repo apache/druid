@@ -29,7 +29,7 @@ import java.util.function.ToLongFunction;
  */
 public class RowAdapters
 {
-  private static final RowAdapter<? extends Row> STANDARD_ROW_ADAPTER = new RowAdapter<Row>()
+  private static final RowAdapter<? extends Row> STANDARD_ROW_ADAPTER = new RowAdapter<>()
   {
     @Override
     public ToLongFunction<Row> timestampFunction()

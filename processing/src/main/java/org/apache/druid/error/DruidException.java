@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -47,7 +48,7 @@ import java.util.Map;
  * no change should occur.
  * <p>
  * <h3>Notes about exception messages:</h3>
- *
+ * <p>
  * Firstly, exception messages should always be written with the notions from the style conventions covered in
  * {@code dev/style-conventions.md}.  Whenever possible, we should also try to provide an action to take to resolve
  * the issue.
@@ -130,6 +131,8 @@ import java.util.Map;
 @NotThreadSafe
 public class DruidException extends RuntimeException
 {
+  public static final String CLASS_NAME_STR = DruidException.class.getName();
+
   /**
    * Starts building a "general" DruidException targeting the specified persona.
    *
@@ -167,13 +170,40 @@ public class DruidException extends RuntimeException
 
   /**
    * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
-   * throwing it inside of a defensive check.
+   * throwing it inside a defensive check.
    *
    * @return A builder for a defensive exception.
    */
   public static DruidException defensive(String format, Object... args)
   {
     return defensive().build(format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(Throwable cause, String format, Object... args)
+  {
+    return defensive().build(cause, format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered. Throw to
+   * allow messages to be seen by developers
+   *
+   * @param condition - boolean condition to validate
+   * @param msg - passed through to InvalidInput.exception()
+   * @param args - passed through to InvalidInput.exception()
+   */
+  @SuppressWarnings("unused")
+  public static void conditionalDefensive(boolean condition, String msg, Object... args)
+  {
+    if (!condition) {
+      throw defensive(msg, args);
+    }
   }
 
   private final Persona targetPersona;
@@ -315,19 +345,19 @@ public class DruidException extends RuntimeException
   }
 
   /**
-   * Category of error.  The simplest way to describe this is that it exists as a classification of errors that
+   * Category of error. The simplest way to describe this is that it exists as a classification of errors that
    * enables us to identify the expected response code (e.g. HTTP status code) of a specific DruidException
    */
   public enum Category
   {
     /**
      * Means that the exception is being created defensively, because we want to validate something but expect that
-     * it should never actually be hit.  Using this category is good to provide an indication to future reviewers and
+     * it should never actually be hit. Using this category is good to provide an indication to future reviewers and
      * developers that the case being checked is not intended to actually be able to occur in the wild.
      */
     DEFENSIVE(500),
     /**
-     * Means that the input provided was malformed in some way.  Generally speaking, it is hoped that errors of this
+     * Means that the input provided was malformed in some way. Generally speaking, it is hoped that errors of this
      * category have messages written either targeting the USER or ADMIN personas as those are the general users
      * of the APIs who could generate invalid inputs.
      */
@@ -340,11 +370,15 @@ public class DruidException extends RuntimeException
      * Means that an action that was attempted is forbidden
      */
     FORBIDDEN(403),
-
     /**
-     * Means that the requsted requested resource cannot be found.
+     * Means that the requested resource cannot be found.
      */
     NOT_FOUND(404),
+    /**
+     * Indicates that the request could not be completed due to a conflict with
+     * the current state of the target resource.
+     */
+    CONFLICT(409),
     /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */
@@ -357,6 +391,10 @@ public class DruidException extends RuntimeException
      * Indicates a server-side failure of some sort at runtime
      */
     RUNTIME_FAILURE(500),
+    /**
+     * Indicates that the underlying service is unavailable to serve the request.
+     */
+    SERVICE_UNAVAILABLE(503),
     /**
      * A timeout happened
      */
@@ -452,7 +490,7 @@ public class DruidException extends RuntimeException
 
     public DruidException build(Throwable cause, String formatMe, Object... vals)
     {
-      return new DruidException(
+      final DruidException retVal = new DruidException(
           cause,
           errorCode,
           targetPersona,
@@ -460,6 +498,19 @@ public class DruidException extends RuntimeException
           StringUtils.nonStrictFormat(formatMe, vals),
           deserialized
       );
+
+      StackTraceElement[] stackTrace = retVal.getStackTrace();
+      int firstNonDruidExceptionIndex = 0;
+      while (
+          firstNonDruidExceptionIndex < stackTrace.length
+          && stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+        ++firstNonDruidExceptionIndex;
+      }
+      if (firstNonDruidExceptionIndex > 0) {
+        retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      }
+
+      return retVal;
     }
   }
 
@@ -481,5 +532,4 @@ public class DruidException extends RuntimeException
 
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
-
 }

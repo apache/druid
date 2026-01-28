@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,6 +44,7 @@ public class QueryContexts
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
+  public static final String PER_SEGMENT_TIMEOUT_KEY = "perSegmentTimeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
@@ -64,6 +64,8 @@ public class QueryContexts
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
+  public static final String CLONE_QUERY_MODE = "cloneQueryMode";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -87,8 +89,36 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
-  public static final String WINDOWING_STRICT_VALIDATION = "windowingStrictValidation";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  public static final String ENGINE = "engine";
+  // this flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
+  // anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
+  // in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
+  // behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
+  // out of memory
+  public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
+  /**
+   * Context parameter to enable/disable the extended filtered sum rewrite logic.
+   *
+   * Controls the rewrite of:
+   * <pre>
+   *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
+   * to
+   *    SUM(COL1) FILTER (COND)
+   * </pre>
+   * managed by {@link DruidAggregateCaseToFilterRule}. Defaults to true for performance,
+   * but may produce incorrect results when the condition never matches (expected 0).
+   * This is for testing and can be removed once a correct and high-performance rewrite
+   * is implemented.
+   */
+  public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
+
+
+  // projection context keys
+  public static final String NO_PROJECTIONS = "noProjections";
+  public static final String FORCE_PROJECTION = "forceProjections";
+  public static final String USE_PROJECTION = "useProjection";
+
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
@@ -97,8 +127,22 @@ public class QueryContexts
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  // Dart
+  public static final String CTX_DART_QUERY_ID = "dartQueryId";
+  public static final String CTX_FULL_REPORT = "fullReport";
+
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
+
+  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+
+  public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
+  public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
+
+  public static final String CTX_PREPLANNED = "prePlanned";
+  public static final boolean DEFAULT_PREPLANNED = true;
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -108,6 +152,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
+  public static final int DEFAULT_VECTOR_SIZE = 512;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
@@ -116,6 +161,8 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final CloneQueryMode DEFAULT_CLONE_QUERY_MODE = CloneQueryMode.EXCLUDECLONES;
+  public static final String DEFAULT_ENGINE = "native";
   public static final boolean DEFAULT_ENABLE_REWRITE_JOIN_TO_FILTER = true;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
@@ -126,8 +173,11 @@ public class QueryContexts
   public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
-  public static final boolean DEFAULT_WINDOWING_STRICT_VALIDATION = true;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
+  public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  public static final boolean DEFAULT_CTX_FULL_REPORT = false;
+
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

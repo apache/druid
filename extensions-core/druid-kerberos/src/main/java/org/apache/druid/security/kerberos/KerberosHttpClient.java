@@ -99,7 +99,7 @@ public class KerberosHttpClient extends AbstractHttpClient
         );
         DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
         UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-        String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
+        String challenge = currentUser.doAs(new PrivilegedExceptionAction<>()
         {
           @Override
           public String run() throws Exception
@@ -122,7 +122,7 @@ public class KerberosHttpClient extends AbstractHttpClient
           duration
       );
 
-      Futures.addCallback(internalFuture, new FutureCallback<RetryResponseHolder<Final>>()
+      Futures.addCallback(internalFuture, new FutureCallback<>()
       {
         @Override
         public void onSuccess(RetryResponseHolder<Final> result)

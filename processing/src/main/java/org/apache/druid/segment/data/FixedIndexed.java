@@ -23,8 +23,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
@@ -59,7 +59,7 @@ public class FixedIndexed<T> implements Indexed<T>
     final byte version = buffer.get();
     Preconditions.checkState(version == 0, "Unknown version [%s]", version);
     final byte flags = buffer.get();
-    final boolean hasNull = (flags & NullHandling.IS_NULL_BYTE) == NullHandling.IS_NULL_BYTE ? true : false;
+    final boolean hasNull = (flags & TypeStrategies.IS_NULL_BYTE) == TypeStrategies.IS_NULL_BYTE ? true : false;
     final boolean isSorted = (flags & IS_SORTED_MASK) == IS_SORTED_MASK ? true : false;
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
     final int size = buffer.getInt() + (hasNull ? 1 : 0);

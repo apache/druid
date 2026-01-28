@@ -38,11 +38,11 @@ public class DictionaryMergingIteratorTest
     String[] s3 = {"a", "d", "f"};        // 0 3 5
     String[] s4 = {"a", "b", "c"};
     String[] s5 = {"a", "b", "c", "d", "e", "f"};
-    Indexed<String> i1 = new ListIndexed<String>(s1);
-    Indexed<String> i2 = new ListIndexed<String>(s2);
-    Indexed<String> i3 = new ListIndexed<String>(s3);
-    Indexed<String> i4 = new ListIndexed<String>(s4);
-    Indexed<String> i5 = new ListIndexed<String>(s5);
+    Indexed<String> i1 = new ListIndexed<>(s1);
+    Indexed<String> i2 = new ListIndexed<>(s2);
+    Indexed<String> i3 = new ListIndexed<>(s3);
+    Indexed<String> i4 = new ListIndexed<>(s4);
+    Indexed<String> i5 = new ListIndexed<>(s5);
 
     DictionaryMergingIterator<String> iterator = new DictionaryMergingIterator<>(
         new Indexed[]{i1, i2, i3, i4, i5},

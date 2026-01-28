@@ -31,6 +31,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -198,12 +199,14 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     testSysTable("SELECT * FROM sys.server_segments", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.tasks", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.supervisors", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.server_properties", null, PLANNER_CONFIG_DEFAULT);
 
     testSysTable("SELECT * FROM sys.segments", "segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.servers", "servers", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.server_segments", "server_segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.tasks", "tasks", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.supervisors", "supervisors", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.server_properties", "server_properties", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
   }
 
   private void testSysTable(String sql, String name, PlannerConfig plannerConfig)
@@ -295,6 +298,27 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
             new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
             new ResourceAction(new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE),
             new ResourceAction(new Resource("nested-bar", ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+    );
+  }
+
+  @Test
+  public void testQueryContextSetStatement()
+  {
+    final String sql = "SET baz = 'fo'; SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
+    analyzeResources(
+        PLANNER_CONFIG_DEFAULT,
+        AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build(),
+        sql,
+        Collections.emptyMap(),
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            new ResourceAction(new Resource("sqlCurrentTimestamp", ResourceType.QUERY_CONTEXT), Action.WRITE),
+            new ResourceAction(new Resource("maxScatterGatherBytes", ResourceType.QUERY_CONTEXT), Action.WRITE),
+            new ResourceAction(new Resource("defaultTimeout", ResourceType.QUERY_CONTEXT), Action.WRITE),
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)
+
         )
     );
   }

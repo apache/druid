@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -73,7 +72,6 @@ public class IndexPersistBenchmark
   private static final IndexIO INDEX_IO;
 
   static {
-    NullHandling.initializeForTests();
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(JSON_MAPPER, ColumnConfig.DEFAULT);
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -187,7 +185,7 @@ public class IndexPersistBenchmark
     File indexFile = INDEX_MERGER_V9.persist(
         incIndex,
         tmpDir,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
 

@@ -28,7 +28,7 @@ Apache Druid can consume data streams from the following external streaming sour
 * Amazon Kinesis through the bundled [Kinesis indexing service](kinesis-ingestion.md) extension.
 
 Each indexing service provides real-time data ingestion with exactly-once stream processing guarantee.
-To use either of the streaming ingestion methods, you must first load the associated extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
+To use either of the streaming ingestion methods, you must first load the associated extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
 
 Streaming ingestion is controlled by a continuously running [supervisor](supervisor.md).
 The supervisor oversees the state of indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.

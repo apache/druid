@@ -55,7 +55,7 @@ public interface QueryKeys
     @Override
     public ContainerBuilder<ImmutableSet<?>> newContainerBuilderFor(Class<?> type)
     {
-      return new ContainerBuilder<ImmutableSet<?>>()
+      return new ContainerBuilder<>()
       {
         final ImmutableSet.Builder<Object> builder = new ImmutableSet.Builder<>();
 

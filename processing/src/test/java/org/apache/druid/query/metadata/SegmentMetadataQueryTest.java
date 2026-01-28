@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -39,6 +38,7 @@ import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -48,15 +48,21 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -67,6 +73,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -97,6 +104,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   );
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String DATASOURCE = "testDatasource";
+  private static final AggregateProjectionSchema PROJECTION1_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
+  private static final AggregateProjectionSchema PROJECTION2_SCHEMA = TestIndex.PROJECTIONS.get(1).toMetadataSchema();
+  private static final int PROJECTION1_ROWS = 279;
+  private static final int PROJECTION2_ROWS = 93;
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
@@ -200,26 +211,29 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                           SegmentMetadataQuery.AnalysisType.SIZE,
                           SegmentMetadataQuery.AnalysisType.INTERVAL,
                           SegmentMetadataQuery.AnalysisType.MINMAX,
-                          SegmentMetadataQuery.AnalysisType.AGGREGATORS
+                          SegmentMetadataQuery.AnalysisType.AGGREGATORS,
+                          SegmentMetadataQuery.AnalysisType.PROJECTIONS
                       )
                       .merge(true)
                       .build();
 
-    int preferedSize1 = 0;
-    int placementSize2 = 0;
-    int overallSize1 = 153543;
-    int overallSize2 = 153543;
+    int placementSize = 0;
+    int overallSize = 153543;
     if (bitmaps) {
-      preferedSize1 = mmap1 ? 10881 : 10764;
-      placementSize2 = mmap2 ? 10881 : 0;
-      overallSize1 = mmap1 ? 201345 : 200831;
-      overallSize2 = mmap2 ? 201345 : 200831;
+      placementSize = 10881;
+      overallSize = 201345;
     }
 
     final Map<String, AggregatorFactory> expectedAggregators = new HashMap<>();
     for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
+    final Map<String, AggregateProjectionMetadata> expectedProjections = ImmutableMap.of(
+        PROJECTION1_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS),
+        PROJECTION2_SCHEMA.getName(),
+        new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS)
+    );
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
@@ -256,7 +270,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    preferedSize1,
+                    placementSize,
                     1,
                     "preferred",
                     "preferred",
@@ -264,9 +278,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        overallSize1,
+        overallSize,
         1209,
         expectedAggregators,
+        expectedProjections,
         null,
         null,
         null
@@ -306,7 +321,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    placementSize2,
+                    placementSize,
                     1,
                     null,
                     null,
@@ -314,10 +329,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        // null_column will be included only for incremental index, which makes a little bigger result than expected
-        overallSize2,
+        overallSize,
         1209,
         expectedAggregators,
+        expectedProjections,
         null,
         null,
         null
@@ -329,6 +344,33 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   public void testSegmentMetadataQuery()
   {
     List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery)).toList();
+
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryOnRestricted()
+  {
+    Query<?> restricted = testQuery.withDataSource(RestrictedDataSource.create(
+        new TableDataSource(DATASOURCE),
+        NoRestrictionPolicy.instance()
+    ));
+    List<?> results = runner1.run(QueryPlus.wrap(restricted)).toList();
+
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryOnUnion()
+  {
+    Query<?> restricted = testQuery.withDataSource(new UnionDataSource(ImmutableList.of(
+        new TableDataSource(DATASOURCE),
+        RestrictedDataSource.create(
+            new TableDataSource(DATASOURCE),
+            NoRestrictionPolicy.instance()
+        )
+    )));
+    List<?> results = runner1.run(QueryPlus.wrap(restricted)).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
@@ -349,8 +391,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "placementish",
@@ -361,14 +403,15 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -423,8 +466,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     1,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "placementish",
@@ -435,14 +478,15 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     9,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -497,8 +541,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     1,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "quality_uniques",
@@ -517,6 +561,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -558,18 +603,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 10881 : 10764;
-      size2 = mmap2 ? 10881 : 10764;
+      size = 10881;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         1,
         "preferred",
         "preferred",
@@ -581,18 +624,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge2()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 6882 : 6808;
-      size2 = mmap2 ? 6882 : 6808;
+      size = 6882;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         3,
         "spot",
         "upfront",
@@ -604,18 +645,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge3()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 9765 : 9660;
-      size2 = mmap2 ? 9765 : 9660;
+      size = 9765;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         9,
         "automotive",
         "travel",
@@ -670,6 +709,12 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
+        ImmutableMap.of(
+            PROJECTION1_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS * 2),
+            PROJECTION2_SCHEMA.getName(),
+            new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS * 2)
+        ),
         null,
         null,
         null
@@ -717,14 +762,15 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         null,
@@ -783,8 +829,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -792,6 +838,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
+        null,
         null,
         null,
         null
@@ -849,8 +896,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -858,6 +905,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
+        null,
         null,
         null,
         null
@@ -912,8 +960,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -921,7 +969,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null,
-        new TimestampSpec("ds", "auto", null),
+        null,
+        new TimestampSpec("ts", "iso", null),
         null,
         null
     );
@@ -974,14 +1023,15 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null,
         Granularities.NONE,
@@ -1023,7 +1073,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testBySegmentResults()
   {
-    Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> bySegmentResult = new Result<>(
         expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
         new BySegmentResultValueClass(
             Collections.singletonList(
@@ -1490,7 +1540,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         ValueType.LONG.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1507,7 +1557,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.DOUBLE,
         ValueType.DOUBLE.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1525,7 +1575,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.FLOAT,
         ValueType.FLOAT.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1545,8 +1595,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         true,
         0,
         1,
-        NullHandling.defaultStringValue(),
-        NullHandling.defaultStringValue(),
+        null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);
@@ -1555,6 +1605,84 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithInvalidDatasourceTypes()
   {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new SegmentMetadataQuery(
+                RestrictedDataSource.create(
+                    TableDataSource.create(DATASOURCE),
+                    RowFilterPolicy.from(new NullFilter("column", null))
+                ),
+                new LegacySegmentSpec("2015-01-01/2015-01-02"),
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null
+            )
+        ),
+        DruidExceptionMatcher
+            .forbidden()
+            .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
+    );
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new SegmentMetadataQuery(
+                new UnionDataSource(
+                    ImmutableList.of(
+                        TableDataSource.create("foo"),
+                        RestrictedDataSource.create(
+                            TableDataSource.create(DATASOURCE),
+                            RowFilterPolicy.from(new NullFilter("column", null))
+                        )
+                    )),
+                new LegacySegmentSpec("2015-01-01/2015-01-02"),
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null
+            )
+        ),
+        DruidExceptionMatcher
+            .forbidden()
+            .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
+    );
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new SegmentMetadataQuery(
+                new UnionDataSource(
+                    ImmutableList.of(
+                        TableDataSource.create(DATASOURCE),
+                        InlineDataSource.fromIterable(
+                            ImmutableList.of(new Object[0]),
+                            RowSignature.builder().add("column", ColumnType.STRING).build()
+                        )
+                    )),
+                new LegacySegmentSpec("2015-01-01/2015-01-02"),
+                null,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null
+            )
+        ),
+        DruidExceptionMatcher
+            .invalidInput()
+            .expectMessageIs(
+                "Invalid dataSource type [InlineDataSource{signature={column:STRING}}]. SegmentMetadataQuery only supports table or union datasources.")
+    );
+
     MatcherAssert.assertThat(
         Assert.assertThrows(
             DruidException.class,
@@ -1612,7 +1740,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     JoinType.LEFT,
                     null,
                     ExprMacroTable.nil(),
-                    null
+                    null,
+                    JoinAlgorithm.BROADCAST
                 ),
                 new LegacySegmentSpec("2015-01-01/2015-01-02"),
                 null,
@@ -1627,7 +1756,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         DruidExceptionMatcher
             .invalidInput()
             .expectMessageIs(
-                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null}]. SegmentMetadataQuery only supports table or union datasources.")
+                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null, joinAlgorithm=null}]. SegmentMetadataQuery only supports table or union datasources.")
     );
   }
 

@@ -88,7 +88,7 @@ public class TimeseriesQueryRunnerBonusTest
 
     results = runTimeseriesCount(oneRowIndex);
 
-    Assert.assertEquals("index size", 1, oneRowIndex.size());
+    Assert.assertEquals("index size", 1, oneRowIndex.numRows());
     Assert.assertEquals("result size", 1, results.size());
     Assert.assertEquals("result timestamp", DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp());
     Assert.assertEquals("result count metric", 1, (long) results.get(0).getValue().getLongMetric("rows"));
@@ -103,7 +103,7 @@ public class TimeseriesQueryRunnerBonusTest
 
     results = runTimeseriesCount(oneRowIndex);
 
-    Assert.assertEquals("index size", 2, oneRowIndex.size());
+    Assert.assertEquals("index size", 2, oneRowIndex.numRows());
     Assert.assertEquals("result size", 1, results.size());
     Assert.assertEquals("result timestamp", DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp());
     Assert.assertEquals("result count metric", 2, (long) results.get(0).getValue().getLongMetric("rows"));

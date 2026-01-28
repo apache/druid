@@ -32,18 +32,20 @@ sidebar_label: "JSON functions"
 
 Druid supports nested columns, which provide optimized storage and indexes for nested data structures. See [Nested columns](./nested-columns.md) for more information.
 
-You can use the following JSON functions to extract, transform, and create `COMPLEX<json>` values.
+You can use the following JSON functions to extract, transform, and create `COMPLEX<json>` objects.
+
 
 | Function | Notes |
 | --- | --- |
 |`JSON_KEYS(expr, path)`| Returns an array of field names from `expr` at the specified `path`.|
-|`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.|
-|`JSON_PATHS(expr)`| Returns an array of all paths which refer to literal values in `expr` in JSONPath format. |
+|`JSON_MERGE(expr1, expr2[, expr3 ...])`| Merges two or more JSON `STRING` or `COMPLEX<json>` values into one, preserving the rightmost value when there are key overlaps. Returns `NULL` if any argument is `NULL`. Always returns a `COMPLEX<json>` object.|
+|`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object from one or more expressions. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` objects. The function can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.|
+|`JSON_PATHS(expr)`| Returns an array of all paths which refer to primitive values in `expr` in JSONPath format. |
 |`JSON_QUERY(expr, path)`| Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`. |
-|`JSON_QUERY_ARRAY(expr, path)`| Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).|
-|`JSON_VALUE(expr, path [RETURNING sqlType])`| Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.|
-|`PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.|
-|`TRY_PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.|
+|`JSON_QUERY_ARRAY(expr, path)`| Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If the value isn't an `ARRAY`, the function translates it into a single element `ARRAY` containing the value at `path`. Mainly used to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).|
+|`JSON_VALUE(expr, path [RETURNING sqlType])`| Extracts a primitive value from `expr` at the specified `path`. If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type. If `RETURNING` isn't included, the function attempts to infer the type based on the context. If the function can't infer the type, it defaults to `VARCHAR`. Primitive arrays can also be returned, but only if `RETURNING` is specified as an `ARRAY` type, e.g. `RETURNING VARCHAR ARRAY`.|
+|`PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This function deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is invalid JSON or not a `VARCHAR`, it returns an error.|
+|`TRY_PARSE_JSON(expr)`|Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is invalid JSON or not a `VARCHAR`, it returns a `NULL` value.|
 |`TO_JSON_STRING(expr)`|Serializes `expr` into a JSON string.|
 
 ### JSONPath syntax

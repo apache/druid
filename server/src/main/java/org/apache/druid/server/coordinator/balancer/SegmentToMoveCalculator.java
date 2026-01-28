@@ -41,8 +41,13 @@ import java.util.stream.Collectors;
 public class SegmentToMoveCalculator
 {
   /**
+   * Maximum number of balancer threads that can be passed to {@link #computeMaxSegmentsToMovePerTier}.
+   */
+  public static final int MAX_BALANCER_THREADS = 100;
+
+  /**
    * At least this number of segments must be picked for moving in every cycle
-   * to keep the cluster well balanced.
+   * to keep the cluster well-balanced.
    */
   private static final int MIN_SEGMENTS_TO_MOVE = 100;
 
@@ -66,7 +71,7 @@ public class SegmentToMoveCalculator
   )
   {
     final int totalSegments = historicals.stream().mapToInt(
-        server -> server.getProjectedSegments().getTotalSegmentCount()
+        server -> server.getProjectedSegmentCounts().getTotalSegmentCount()
     ).sum();
 
     // Move at least some segments to ensure that the cluster is always balancing itself
@@ -132,7 +137,7 @@ public class SegmentToMoveCalculator
   )
   {
     Preconditions.checkArgument(
-        numBalancerThreads > 0 && numBalancerThreads <= 100,
+        numBalancerThreads > 0 && numBalancerThreads <= MAX_BALANCER_THREADS,
         "Number of balancer threads must be in range (0, 100]."
     );
     if (totalSegments <= 0) {
@@ -150,7 +155,7 @@ public class SegmentToMoveCalculator
     int maxComputationsInThousands = (numBalancerThreads * num30sPeriods) << 20;
     int maxSegmentsToMove = (maxComputationsInThousands / totalSegments) * 1000;
 
-    if (upperBound < lowerBound) {
+    if (upperBound < lowerBound || maxSegmentsToMove < lowerBound) {
       return Math.min(lowerBound, totalSegments);
     } else {
       return Math.min(maxSegmentsToMove, upperBound);
@@ -182,8 +187,8 @@ public class SegmentToMoveCalculator
     int totalSegmentCount = 0;
     long totalUsageBytes = 0;
     for (ServerHolder server : servers) {
-      totalSegmentCount += server.getProjectedSegments().getTotalSegmentCount();
-      totalUsageBytes += server.getProjectedSegments().getTotalSegmentBytes();
+      totalSegmentCount += server.getProjectedSegmentCounts().getTotalSegmentCount();
+      totalUsageBytes += server.getProjectedSegmentCounts().getTotalSegmentBytes();
     }
 
     if (totalSegmentCount <= 0 || totalUsageBytes <= 0) {
@@ -204,7 +209,7 @@ public class SegmentToMoveCalculator
   {
     // Find all the datasources
     final Set<String> datasources = servers.stream().flatMap(
-        s -> s.getProjectedSegments().getDatasourceToTotalSegmentCount().keySet().stream()
+        s -> s.getProjectedSegmentCounts().getDatasourceToTotalSegmentCount().keySet().stream()
     ).collect(Collectors.toSet());
     if (datasources.isEmpty()) {
       return 0;
@@ -215,7 +220,7 @@ public class SegmentToMoveCalculator
     final Object2IntMap<String> datasourceToMinSegments = new Object2IntOpenHashMap<>();
     for (ServerHolder server : servers) {
       final Object2IntMap<String> datasourceToSegmentCount
-          = server.getProjectedSegments().getDatasourceToTotalSegmentCount();
+          = server.getProjectedSegmentCounts().getDatasourceToTotalSegmentCount();
       for (String datasource : datasources) {
         int count = datasourceToSegmentCount.getInt(datasource);
         datasourceToMaxSegments.mergeInt(datasource, count, Math::max);
@@ -238,7 +243,7 @@ public class SegmentToMoveCalculator
     int minNumSegments = Integer.MAX_VALUE;
     int maxNumSegments = 0;
     for (ServerHolder server : servers) {
-      int countForSkewedDatasource = server.getProjectedSegments()
+      int countForSkewedDatasource = server.getProjectedSegmentCounts()
                                            .getDatasourceToTotalSegmentCount()
                                            .getInt(mostUnbalancedDatasource);
 
@@ -248,7 +253,7 @@ public class SegmentToMoveCalculator
 
     final int numSegmentsToMove = maxCountDifference.getKey() / 2;
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
           numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
       );
@@ -271,7 +276,7 @@ public class SegmentToMoveCalculator
     long maxUsageBytes = 0;
     long minUsageBytes = Long.MAX_VALUE;
     for (ServerHolder server : servers) {
-      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
+      final SegmentCountsPerInterval projectedSegments = server.getProjectedSegmentCounts();
 
       // Track the maximum and minimum values
       long serverUsageBytes = projectedSegments.getTotalSegmentBytes();
@@ -290,7 +295,7 @@ public class SegmentToMoveCalculator
                                   ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
 
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of avg size [%,d MB] in tier[%s] to fix"
           + " disk usage gap between min[%d GB][%.1f%%] and max[%d GB][%.1f%%].",
           numSegmentsToMove, ((long) averageSegmentSize) >> 20, tier,

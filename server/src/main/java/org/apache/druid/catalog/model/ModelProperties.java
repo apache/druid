@@ -364,7 +364,7 @@ public interface ModelProperties
       super(
           name,
           "string list",
-          new TypeReference<List<String>>() {}
+          new TypeReference<>() {}
       );
     }
   }

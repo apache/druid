@@ -1,8 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`SuggestionMenu matches snapshot 1`] = `
+exports[`SuggestionMenu matches snapshot when empty 1`] = `
 <ul
-  class="bp4-menu suggestion-menu"
+  class="suggestion-menu bp5-menu"
   role="menu"
 >
   <li
@@ -10,12 +10,37 @@ exports[`SuggestionMenu matches snapshot 1`] = `
     role="none"
   >
     <a
-      class="bp4-menu-item bp4-popover-dismiss"
+      aria-disabled="true"
+      class="bp5-menu-item bp5-disabled"
+      role="menuitem"
+      tabindex="-1"
+    >
+      <div
+        class="bp5-text-overflow-ellipsis bp5-fill"
+      >
+        (empty)
+      </div>
+    </a>
+  </li>
+</ul>
+`;
+
+exports[`SuggestionMenu matches snapshot with something 1`] = `
+<ul
+  class="suggestion-menu bp5-menu"
+  role="menu"
+>
+  <li
+    class=""
+    role="none"
+  >
+    <a
+      class="bp5-menu-item bp5-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp4-fill bp4-text-overflow-ellipsis"
+        class="bp5-text-overflow-ellipsis bp5-fill"
       >
         dog
       </div>
@@ -26,12 +51,12 @@ exports[`SuggestionMenu matches snapshot 1`] = `
     role="none"
   >
     <a
-      class="bp4-menu-item bp4-popover-dismiss"
+      class="bp5-menu-item bp5-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp4-fill bp4-text-overflow-ellipsis"
+        class="bp5-text-overflow-ellipsis bp5-fill"
       >
         cat
       </div>
@@ -42,60 +67,59 @@ exports[`SuggestionMenu matches snapshot 1`] = `
     role="none"
   >
     <a
-      class="bp4-menu-item bp4-popover-dismiss"
+      class="bp5-menu-item bp5-popover-dismiss"
       role="menuitem"
       tabindex="0"
     >
       <div
-        class="bp4-fill bp4-text-overflow-ellipsis"
+        class="bp5-text-overflow-ellipsis bp5-fill"
       >
         skunk
       </div>
     </a>
   </li>
   <li
-    class="bp4-submenu"
+    class="bp5-submenu"
     role="none"
   >
     <span
-      class="bp4-popover-wrapper"
+      class="bp5-popover-target"
+      role="menuitem"
+      tabindex="0"
     >
-      <span
-        aria-haspopup="true"
-        class="bp4-popover-target"
-        role="menuitem"
-        tabindex="0"
+      <a
+        aria-haspopup="menu"
+        class="bp5-menu-item"
+        role="none"
+        tabindex="-1"
       >
-        <a
-          class="bp4-menu-item"
-          role="none"
-          tabindex="-1"
+        <div
+          class="bp5-text-overflow-ellipsis bp5-fill"
         >
-          <div
-            class="bp4-fill bp4-text-overflow-ellipsis"
+          Fruit
+        </div>
+        <span
+          class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
+        >
+          <svg
+            data-icon="caret-right"
+            height="16"
+            role="img"
+            viewBox="0 0 16 16"
+            width="16"
           >
-            Fruit
-          </div>
-          <span
-            aria-hidden="true"
-            class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
-            icon="caret-right"
-          >
-            <svg
-              data-icon="caret-right"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
-            >
-              <path
-                d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
-                fill-rule="evenodd"
-              />
-            </svg>
-          </span>
-        </a>
-      </span>
+            <title>
+              Open sub menu
+            </title>
+            <path
+              d="M220 160C220 163 218.6 165.6 216.6 167.4L216.6 167.4L136.6 237.4L136.6 237.4C134.8 239 132.6 240 130 240C124.4 240 120 235.6 120 230V90C120 84.4 124.4 80 130 80C132.6 80 134.8 81 136.6 82.6C136.6 82.6 136.6 82.6 136.6 82.6L216.6 152.6L216.6 152.6C218.6 154.4 220 157 220 160z"
+              fill-rule="evenodd"
+              style="transform-origin: center;"
+              transform="scale(0.05, -0.05) translate(-160, -160)"
+            />
+          </svg>
+        </span>
+      </a>
     </span>
   </li>
 </ul>

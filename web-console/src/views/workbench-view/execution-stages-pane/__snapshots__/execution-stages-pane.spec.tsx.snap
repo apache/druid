@@ -61,6 +61,15 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     [
       {
         "Cell": [Function],
+        "accessor": "stageNumber",
+        "className": "graph-cell",
+        "id": "graph",
+        "minWidth": 20,
+        "show": false,
+        "width": 20,
+      },
+      {
+        "Cell": [Function],
         "Header": <React.Fragment>
           Stage
           <br />
@@ -71,7 +80,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": "stageNumber",
         "className": "padded",
         "id": "stage",
-        "width": 140,
+        "width": 160,
       },
       {
         "Cell": [Function],
@@ -93,7 +102,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": [Function],
         "className": "padded",
         "id": "rows_processed",
-        "width": 160,
+        "width": 200,
       },
       {
         "Cell": [Function],
@@ -110,21 +119,38 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "width": 150,
       },
       {
-        "Header": "Phase",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "phase",
-        "width": 130,
-      },
-      {
         "Cell": [Function],
         "Header": "Timing",
         "accessor": [Function],
-        "className": "padded",
         "id": "timing",
         "width": 170,
       },
       {
+        "Cell": [Function],
+        "Header": <React.Fragment>
+          CPU utilization
+          <br />
+          <i>
+            <span
+              className="cpu-label"
+            >
+              Counter
+            </span>
+            <span
+              className="cpu-counter"
+            >
+              Wall time
+            </span>
+          </i>
+        </React.Fragment>,
+        "accessor": [Function],
+        "className": "padded",
+        "id": "cpu",
+        "show": false,
+        "width": 240,
+      },
+      {
+        "Cell": [Function],
         "Header": <React.Fragment>
           Num
           <br />
@@ -135,22 +161,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "width": 75,
       },
       {
-        "Header": <React.Fragment>
-          Output
-          <br />
-          partitions
-        </React.Fragment>,
+        "Cell": [Function],
+        "Header": "Output",
         "accessor": "partitionCount",
         "className": "padded",
-        "width": 75,
-      },
-      {
-        "Cell": [Function],
-        "Header": "Cluster by",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "clusterBy",
-        "minWidth": 400,
+        "width": 120,
       },
     ]
   }
@@ -244,7 +259,6 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                 ],
                 "type": "intervals",
               },
-              "legacy": false,
               "queryType": "scan",
               "resultFormat": "compactedList",
               "virtualColumns": [

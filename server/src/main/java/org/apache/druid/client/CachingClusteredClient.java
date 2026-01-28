@@ -38,7 +38,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -58,6 +57,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -65,16 +65,15 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -117,7 +116,7 @@ import java.util.stream.Collectors;
 public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
@@ -131,7 +130,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
   @Inject
   public CachingClusteredClient(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       TimelineServerView serverView,
       Cache cache,
       @Smile ObjectMapper objectMapper,
@@ -144,7 +143,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ServiceEmitter emitter
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
@@ -180,7 +179,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -219,7 +218,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -265,7 +264,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
-    private final DataSourceAnalysis dataSourceAnalysis;
+    private final ExecutionVertex ev;
     private final List<Interval> intervals;
     private final CacheKeyManager<T> cacheKeyManager;
 
@@ -274,9 +273,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
       this.query = queryPlus.getQuery();
-      this.toolChest = warehouse.getToolChest(query);
-      this.strategy = toolChest.getCacheStrategy(query);
-      this.dataSourceAnalysis = query.getDataSource().getAnalysis();
+      this.toolChest = conglomerate.getToolChest(query);
+      this.strategy = toolChest.getCacheStrategy(query, objectMapper);
+      this.ev = ExecutionVertex.of(query);
 
       this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
       this.populateCache = CacheUtil.isPopulateSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
@@ -286,9 +285,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
       // For nested queries, we need to look at the intervals of the inner most query.
-      this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
-                                         .map(QuerySegmentSpec::getIntervals)
-                                         .orElseGet(() -> query.getIntervals());
+      this.intervals = ev
+          .getEffectiveQuerySegmentSpec()
+          .getIntervals();
       this.cacheKeyManager = new CacheKeyManager<>(
           query,
           strategy,
@@ -333,7 +332,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
-          dataSourceAnalysis
+          ev.getBaseTableDataSource()
       );
       if (!maybeTimeline.isPresent()) {
         return new ClusterQueryResult<>(Sequences.empty(), 0);
@@ -345,13 +344,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
+      final CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       @Nullable
       final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
       if (prevEtag != null) {
         @Nullable
-        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, queryCacheKey);
+        final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, cloneQueryMode, queryCacheKey);
         if (null != currentEtag) {
           responseContext.putEntityTag(currentEtag);
         }
@@ -368,7 +368,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       queryPlus = queryPlus.withQueryMetrics(toolChest);
       queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
-      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
+      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(
+          segmentServers,
+          cloneQueryMode
+      );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
@@ -384,7 +387,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
       final QueryContext queryContext = query.context();
       if (parallelMergeConfig.useParallelMergePool() && queryContext.getEnableParallelMerges() && mergeFn != null) {
-        return new ParallelMergeCombiningSequence<>(
+        final ParallelMergeCombiningSequence<T> parallelSequence = new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
             query.getResultOrdering(),
@@ -414,6 +417,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
               }
             }
         );
+        scheduler.registerQueryFuture(query, parallelSequence.getCancellationFuture());
+        return parallelSequence;
       } else {
         return Sequences
             .simple(sequencesByInterval)
@@ -446,12 +451,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (trySecondaryPartititionPruning) {
         dimensionRangeCache = new HashMap<>();
         filterFieldsForPruning =
-            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), dataSourceAnalysis);
+            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), ev::isBaseColumn);
       } else {
         dimensionRangeCache = null;
         filterFieldsForPruning = null;
       }
 
+      boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
@@ -468,6 +474,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
+          if (isRealtimeSegmentOnly && !server.isRealtimeSegment()) {
+            continue; // Skip historical segments when only realtime segments are requested
+          }
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
@@ -594,11 +603,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return cachePopulatorKeyMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
     }
 
-    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<SegmentServerSelector> segments)
+    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(
+        Set<SegmentServerSelector> segments,
+        CloneQueryMode cloneQueryMode
+    )
     {
       final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = new TreeMap<>();
       for (SegmentServerSelector segmentServer : segments) {
-        final QueryableDruidServer queryableDruidServer = segmentServer.getServer().pick(query);
+        final QueryableDruidServer queryableDruidServer = segmentServer.getServer()
+                                                                       .pick(query, cloneQueryMode);
 
         if (queryableDruidServer == null) {
           log.makeAlert(
@@ -628,7 +641,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
         final byte[] cachedResult = cachedResultPair.rhs;
         Sequence<Object> cachedSequence = new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
+            new BaseSequence.IteratorMaker<>()
             {
               @Override
               public Iterator<Object> make()
@@ -810,13 +823,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
     @Nullable
     String computeResultLevelCachingEtag(
         final Set<SegmentServerSelector> segments,
+        final CloneQueryMode cloneQueryMode,
         @Nullable byte[] queryCacheKey
     )
     {
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        QueryableDruidServer queryableServer = p.getServer().pick(query);
+        QueryableDruidServer queryableServer = p.getServer().pick(query, cloneQueryMode);
         if (queryableServer == null || !queryableServer.getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;

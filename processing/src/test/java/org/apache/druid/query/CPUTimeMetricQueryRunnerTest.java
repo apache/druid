@@ -41,7 +41,7 @@ public class CPUTimeMetricQueryRunnerTest
   @Test
   public void testCpuTimeMetric()
   {
-    final StubServiceEmitter emitter = new StubServiceEmitter("s", "h");
+    final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
     final AtomicLong accumulator = new AtomicLong();
 
     final List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
@@ -69,7 +69,7 @@ public class CPUTimeMetricQueryRunnerTest
     );
 
     Assert.assertEquals(expectedResults, results.toList());
-    Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
 
     final Event event = Iterables.getOnlyElement(emitter.getEvents());
 

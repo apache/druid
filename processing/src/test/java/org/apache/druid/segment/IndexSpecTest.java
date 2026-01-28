@@ -22,15 +22,12 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Map;
 
 public class IndexSpecTest
 {
@@ -66,47 +63,16 @@ public class IndexSpecTest
   @Test
   public void testDefaults()
   {
-    final IndexSpec spec = IndexSpec.DEFAULT;
+    final IndexSpec spec = IndexSpec.getDefault().getEffectiveSpec();
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getMetricCompression());
     Assert.assertEquals(LongEncodingStrategy.LONGS, spec.getLongEncoding());
   }
 
   @Test
-  public void testAsMap()
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final IndexSpec spec = IndexSpec.DEFAULT;
-    final Map<String, Object> map = spec.asMap(objectMapper);
-    Assert.assertEquals(
-        spec.getBitmapSerdeFactory(),
-        objectMapper.convertValue(map.get("bitmap"), BitmapSerdeFactory.class)
-    );
-    Assert.assertEquals(
-        spec.getDimensionCompression(),
-        objectMapper.convertValue(map.get("dimensionCompression"), CompressionStrategy.class)
-    );
-    Assert.assertEquals(
-        spec.getMetricCompression(),
-        objectMapper.convertValue(map.get("metricCompression"), CompressionStrategy.class)
-    );
-    Assert.assertEquals(
-        spec.getLongEncoding(),
-        objectMapper.convertValue(map.get("longEncoding"), LongEncodingStrategy.class)
-    );
-  }
-
-  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(IndexSpec.class)
-                  .withPrefabValues(
-                      IndexSpec.class,
-                      IndexSpec.DEFAULT,
-                      IndexSpec.builder()
-                               .withJsonCompression(CompressionStrategy.ZSTD)
-                               .build()
-                  )
                   .usingGetClass()
                   .verify();
   }

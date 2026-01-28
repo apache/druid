@@ -22,67 +22,21 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-public class NaivePartitioningOperatorFactory implements OperatorFactory
+public class NaivePartitioningOperatorFactory extends AbstractPartitioningOperatorFactory
 {
-  private final List<String> partitionColumns;
-
   @JsonCreator
   public NaivePartitioningOperatorFactory(
       @JsonProperty("partitionColumns") List<String> partitionColumns
   )
   {
-    this.partitionColumns = partitionColumns == null ? new ArrayList<>() : partitionColumns;
-  }
-
-  @JsonProperty("partitionColumns")
-  public List<String> getPartitionColumns()
-  {
-    return partitionColumns;
+    super(partitionColumns);
   }
 
   @Override
   public Operator wrap(Operator op)
   {
     return new NaivePartitioningOperator(partitionColumns, op);
-  }
-
-  @Override
-  public boolean validateEquivalent(OperatorFactory other)
-  {
-    if (other instanceof NaivePartitioningOperatorFactory) {
-      return partitionColumns.equals(((NaivePartitioningOperatorFactory) other).getPartitionColumns());
-    }
-    return false;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NaivePartitioningOperatorFactory{" +
-           "partitionColumns=" + partitionColumns +
-           '}';
-  }
-
-  @Override
-  public final int hashCode()
-  {
-    return Objects.hash(partitionColumns);
-  }
-
-  @Override
-  public final boolean equals(Object obj)
-  {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null || obj.getClass() != getClass()) {
-      return false;
-    }
-    NaivePartitioningOperatorFactory other = (NaivePartitioningOperatorFactory) obj;
-    return Objects.equals(partitionColumns, other.partitionColumns);
   }
 }

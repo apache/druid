@@ -20,8 +20,9 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.timeline.partition.ShardSpec;
 
 import javax.annotation.Nullable;
@@ -116,13 +117,19 @@ public class DimFilterUtils
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache
   )
   {
+    if (dimFilter == null) {
+      // ImmutableSet retains order from "input".
+      return ImmutableSet.copyOf(input);
+    }
+
+    // LinkedHashSet retains order from "input".
     Set<T> retSet = new LinkedHashSet<>();
 
     for (T obj : input) {
       ShardSpec shard = converter.apply(obj);
       boolean include = true;
 
-      if (dimFilter != null && shard != null) {
+      if (shard != null) {
         Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
@@ -148,20 +155,17 @@ public class DimFilterUtils
   }
 
   /**
-   * Returns a copy of "fields" only including base fields from {@link DataSourceAnalysis}.
-   *
-   * @param fields             field list, must be nonnull
-   * @param dataSourceAnalysis analyzed datasource
+   * Returns a copy of "fields" filtered by the predicate function.
    */
   public static Set<String> onlyBaseFields(
       final Set<String> fields,
-      final DataSourceAnalysis dataSourceAnalysis
+      final Predicate<String> isBaseColumnFn
   )
   {
     final Set<String> retVal = new HashSet<>();
 
     for (final String field : fields) {
-      if (dataSourceAnalysis.isBaseColumn(field)) {
+      if (isBaseColumnFn.apply(field)) {
         retVal.add(field);
       }
     }

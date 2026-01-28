@@ -146,7 +146,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     arrayWriter.open();
     writeToBuffer(arrayBuffer, arrayWriter);
 
-    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY, null);
     globalStrings = () -> strings.singleThreaded();
     globalLongs = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     globalDoubles = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
@@ -1241,7 +1241,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     doubleWriter.open();
     writeToBuffer(doubleBuffer, doubleWriter);
 
-    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY);
+    GenericIndexed<ByteBuffer> strings = GenericIndexed.read(stringBuffer, GenericIndexed.UTF8_STRATEGY, null);
     Supplier<Indexed<ByteBuffer>> stringIndexed = () -> strings.singleThreaded();
     Supplier<FixedIndexed<Long>> longIndexed = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES);
     Supplier<FixedIndexed<Double>> doubleIndexed = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES);
@@ -1293,7 +1293,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     NestedFieldColumnIndexSupplier<?> indexSupplier = new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1397,7 +1398,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1481,7 +1483,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1561,7 +1564,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1646,7 +1650,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1726,7 +1731,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1811,7 +1817,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(
@@ -1903,7 +1910,8 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         Integer.BYTES
     );
 
-    GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
+    GenericIndexed<ImmutableBitmap> bitmaps =
+        GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy(), null);
 
     return new NestedFieldColumnIndexSupplier<>(
         new FieldTypeInfo.TypeSet(

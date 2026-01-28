@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
@@ -99,34 +100,26 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       new Record().withData(jb("2012", "g", "y", "10", "20.0", "1.0")).withSequenceNumber("8"),
       new Record().withData(jb("2011", "h", "y", "10", "20.0", "1.0")).withSequenceNumber("9")
   );
-  private static final List<OrderedPartitionableRecord<String, String, ByteEntity>> ALL_RECORDS = ImmutableList.<OrderedPartitionableRecord<String, String, ByteEntity>>builder()
-                                                               .addAll(SHARD0_RECORDS.stream()
-                                                                                     .map(x -> new OrderedPartitionableRecord<>(
-                                                                                         STREAM,
-                                                                                         SHARD_ID0,
-                                                                                         x.getSequenceNumber(),
-                                                                                         Collections
-                                                                                             .singletonList(
-                                                                                                 new ByteEntity(
-                                                                                                     x.getData()))
-                                                                                     ))
-                                                                                     .collect(
-                                                                                         Collectors
-                                                                                             .toList()))
-                                                               .addAll(SHARD1_RECORDS.stream()
-                                                                                     .map(x -> new OrderedPartitionableRecord<>(
-                                                                                         STREAM,
-                                                                                         SHARD_ID1,
-                                                                                         x.getSequenceNumber(),
-                                                                                         Collections
-                                                                                             .singletonList(
-                                                                                                 new ByteEntity(
-                                                                                                     x.getData()))
-                                                                                     ))
-                                                                                     .collect(
-                                                                                         Collectors
-                                                                                             .toList()))
-                                                               .build();
+  private static final List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> ALL_RECORDS = ImmutableList.<OrderedPartitionableRecord<String, String, KinesisRecordEntity>>builder()
+      .addAll(SHARD0_RECORDS.stream()
+          .map(x -> new OrderedPartitionableRecord<>(
+              STREAM,
+              SHARD_ID0,
+              x.getSequenceNumber(),
+              Collections.singletonList(new KinesisRecordEntity(new Record().withData(new ByteEntity(x.getData()).getBuffer())))
+          ))
+          .collect(
+              Collectors
+                  .toList()))
+      .addAll(SHARD1_RECORDS.stream()
+          .map(x -> new OrderedPartitionableRecord<>(
+              STREAM,
+              SHARD_ID1,
+              x.getSequenceNumber(),
+              Collections.singletonList(new KinesisRecordEntity(new Record().withData(new ByteEntity(x.getData()).getBuffer())))
+          ))
+          .collect(Collectors.toList()))
+      .build();
 
 
   private static ByteBuffer jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
@@ -316,7 +309,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   // filter out EOS markers
-  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> cleanRecords(List<OrderedPartitionableRecord<String, String, ByteEntity>> records)
+  private static List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> cleanRecords(List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> records)
   {
     return records.stream()
                   .filter(x -> !x.getSequenceNumber()
@@ -398,7 +391,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
             POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -457,7 +450,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
     Assert.assertFalse(recordSupplier.isAnyFetchActive());
 
-    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -531,7 +524,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();
@@ -687,7 +680,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    OrderedPartitionableRecord<String, String, ByteEntity> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, KinesisRecordEntity> firstRecord = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(
         ALL_RECORDS.get(7),
@@ -705,7 +698,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     }
 
 
-    OrderedPartitionableRecord<String, String, ByteEntity> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
+    OrderedPartitionableRecord<String, String, KinesisRecordEntity> record2 = recordSupplier.poll(POLL_TIMEOUT_MILLIS).get(0);
 
     Assert.assertEquals(ALL_RECORDS.get(9), record2);
     // only one partition in this test. second results come from getRecordsResult0, which has SHARD0_LAG_MILLIS
@@ -776,7 +769,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Thread.sleep(100);
     }
 
-    List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
         POLL_TIMEOUT_MILLIS));
 
     verifyAll();

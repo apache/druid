@@ -70,7 +70,7 @@ public class JSONFlatDataParserTest
     sink.writeLines(
         Iterables.transform(
             MAPPINGS,
-            new Function<Map<String, Object>, CharSequence>()
+            new Function<>()
             {
               @Override
               public CharSequence apply(Map<String, Object> input)

@@ -41,6 +41,7 @@ import org.joda.time.Interval;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -372,6 +373,39 @@ public class QueryContextTest
     assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
+  @Test
+  public void testIsDecoupled()
+  {
+    assertFalse(QueryContext.empty().isDecoupledMode());
+    assertTrue(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+            )
+        ).isDecoupledMode()
+    );
+    assertFalse(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                "garbage"
+            )
+        ).isDecoupledMode()
+    );
+  }
+
+  @Test
+  public void testExtendedFilteredSumRewrite()
+  {
+    assertTrue(QueryContext.empty().isExtendedFilteredSumRewrite());
+    assertFalse(
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED, false))
+            .isExtendedFilteredSumRewrite()
+    );
+  }
+
   // This test is a bit silly. It is retained because another test uses the
   // LegacyContextQuery test.
   @Test
@@ -393,6 +427,35 @@ public class QueryContextTest
                                 .context(ImmutableMap.of("foo", "bar"))
                                 .build();
     assertNotNull(timeseries.getContext());
+  }
+
+  @Test
+  public void testIsRealtimeSegmentsOnly()
+  {
+    assertFalse(QueryContext.empty().isRealtimeSegmentsOnly());
+    assertTrue(
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+            .isRealtimeSegmentsOnly()
+    );
+  }
+
+  @Test
+  public void testSerialization() throws Exception
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            "key1", "true",
+            "key2", true
+        )
+    );
+
+    String ctxStr = JSON_MAPPER.writeValueAsString(context);
+    assertEquals("{\"key1\":\"true\",\"key2\":true}", ctxStr);
+    QueryContext ctx2 = JSON_MAPPER.readValue(ctxStr, QueryContext.class);
+    assertEquals(context, ctx2);
+    assertEquals(true, ctx2.get("key2"));
+    assertEquals("true", ctx2.get("key1"));
   }
 
   public static class LegacyContextQuery implements Query<Integer>
@@ -462,12 +525,6 @@ public class QueryContextTest
     public Map<String, Object> getContext()
     {
       return context;
-    }
-
-    @Override
-    public boolean isDescending()
-    {
-      return false;
     }
 
     @Override

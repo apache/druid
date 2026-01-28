@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.query.filter.ColumnIndexSelector;
+
 import javax.annotation.Nullable;
 
 /**
@@ -41,6 +43,37 @@ public interface ColumnIndexSupplier
    * which can greatly reduce the total number of rows which need to be scanned and processed.
    *
    * Objects returned by this method are not thread-safe.
+   *
+   * There are several built-in index classes which can be passed as an argument to this method when used from
+   * {@link org.apache.druid.query.filter.Filter#getBitmapColumnIndex(ColumnIndexSelector)}. Implementors of this
+   * interface should provide as many of them as possible to participate fully in as many
+   * {@link org.apache.druid.query.filter.Filter} as possible, as different filters require different index types,
+   * and may prefer some over others.
+   *
+   * Indexes for matching a row to a specific value:
+   * @see org.apache.druid.segment.index.semantic.NullValueIndex
+   * @see org.apache.druid.segment.index.semantic.ValueIndexes
+   *
+   * Indexes for matching a row to any of a set of values:
+   * @see org.apache.druid.segment.index.semantic.ValueSetIndexes
+   * @see org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes
+   *
+   * Indexes for matching a row to a range of values:
+   * @see org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes
+   * @see org.apache.druid.segment.index.semantic.NumericRangeIndexes
+   *
+   * Indexes for matching an array element of a row to a specific value:
+   * @see org.apache.druid.segment.index.semantic.ArrayElementIndexes
+   *
+   * Indexes for matching a row using a {@link org.apache.druid.query.filter.DruidPredicateFactory}:
+   * @see org.apache.druid.segment.index.semantic.DruidPredicateIndexes
+   *
+   * Speciality indexes:
+   * @see org.apache.druid.segment.index.semantic.SpatialIndex
+   *
+   * Low level access to implementation specific index stuff not particularly suitable for use in filtering:
+   * @see org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex
+   * @see org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex
    */
   @Nullable
   <T> T as(Class<T> clazz);

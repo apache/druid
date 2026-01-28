@@ -68,20 +68,13 @@ jobs:
           java-version: ${{ inputs.runtime_jdk }}
           distribution: 'zulu'
 
-      - name: Restore Maven repository
-        id: maven-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
-
       - name: Maven build
-        if: steps.maven-restore.outputs.cache-hit != 'true'
         run: |
           ./it.sh ci
 
       - name: Run IT
         id: run-it
+        timeout-minutes: 90
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
         run: |
@@ -113,7 +106,7 @@ jobs:
       - name: Collect service logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |
-          tar cvzf ./service-logs.tgz ~/shared/logs
+          tar cvzf ./service-logs.tgz ~/shared/logs ~/shared/tasklogs
 
       - name: Upload Druid service logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}

@@ -20,9 +20,9 @@
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class NullableLongGroupByVectorColumnSelector implements GroupByVectorColumnSelector
@@ -54,12 +54,12 @@ public class NullableLongGroupByVectorColumnSelector implements GroupByVectorCol
 
     if (nulls != null) {
       for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-        keySpace.putByte(j, nulls[i] ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
+        keySpace.putByte(j, nulls[i] ? TypeStrategies.IS_NULL_BYTE : TypeStrategies.IS_NOT_NULL_BYTE);
         keySpace.putLong(j + 1, vector[i]);
       }
     } else {
       for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-        keySpace.putByte(j, NullHandling.IS_NOT_NULL_BYTE);
+        keySpace.putByte(j, TypeStrategies.IS_NOT_NULL_BYTE);
         keySpace.putLong(j + 1, vector[i]);
       }
     }
@@ -75,7 +75,7 @@ public class NullableLongGroupByVectorColumnSelector implements GroupByVectorCol
       final int resultRowPosition
   )
   {
-    if (keyMemory.memory().getByte(keyMemory.position() + keyOffset) == NullHandling.IS_NULL_BYTE) {
+    if (keyMemory.memory().getByte(keyMemory.position() + keyOffset) == TypeStrategies.IS_NULL_BYTE) {
       resultRow.set(resultRowPosition, null);
     } else {
       resultRow.set(resultRowPosition, keyMemory.memory().getLong(keyMemory.position() + keyOffset + 1));

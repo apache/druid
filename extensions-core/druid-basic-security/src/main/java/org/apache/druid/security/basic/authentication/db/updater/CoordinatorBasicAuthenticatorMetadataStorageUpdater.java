@@ -74,7 +74,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
   private final BasicAuthenticatorCacheNotifier cacheNotifier;
-  private final int numRetries = 5;
+  private static final int NUM_RETRIES = 5;
 
   private final Map<String, BasicAuthenticatorUserMapBundle> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;
@@ -168,7 +168,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           exec,
           new Duration(commonCacheConfig.getPollingPeriod()),
           new Duration(commonCacheConfig.getPollingPeriod()),
-          new Callable<ScheduledExecutors.Signal>()
+          new Callable<>()
           {
             @Override
             public ScheduledExecutors.Signal call()
@@ -294,7 +294,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private void createUserInternal(String prefix, String userName)
   {
     int attempts = 0;
-    while (attempts < numRetries) {
+    while (attempts < NUM_RETRIES) {
       if (createUserOnce(prefix, userName)) {
         return;
       } else {
@@ -308,7 +308,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private void deleteUserInternal(String prefix, String userName)
   {
     int attempts = 0;
-    while (attempts < numRetries) {
+    while (attempts < NUM_RETRIES) {
       if (deleteUserOnce(prefix, userName)) {
         return;
       } else {
@@ -349,7 +349,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
     }
 
     int attempts = 0;
-    while (attempts < numRetries) {
+    while (attempts < NUM_RETRIES) {
       if (setUserCredentialOnce(prefix, userName, credentials)) {
         return;
       } else {

@@ -38,6 +38,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
@@ -49,7 +50,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -59,19 +60,73 @@ import java.util.concurrent.Executors;
  */
 public class DruidProcessingModule implements Module
 {
+  public static final String PROCESSING_PROPERTY_PREFIX = "druid.processing";
+
   private static final Logger log = new Logger(DruidProcessingModule.class);
 
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    registerConfigsAndMonitor(binder);
   }
 
   @Provides
   @LazySingleton
   public CachePopulator getCachePopulator(
       @Smile ObjectMapper smileMapper,
+      CachePopulatorStats cachePopulatorStats,
+      CacheConfig cacheConfig
+  )
+  {
+    return createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
+  }
+
+  @Provides
+  @ManageLifecycle
+  public QueryProcessingPool getProcessingExecutorPool(
+      DruidProcessingConfig config,
+      ExecutorServiceMonitor executorServiceMonitor,
+      Lifecycle lifecycle
+  )
+  {
+    return createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
+  }
+
+  @Provides
+  @LazySingleton
+  @Global
+  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
+  {
+    return createIntermediateResultsPool(config, runtimeInfo);
+  }
+
+  @Provides
+  @LazySingleton
+  @Merging
+  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
+  {
+    return createMergeBufferPool(config, runtimeInfo);
+  }
+
+  @Provides
+  @LazySingleton
+  @Merging
+  public GroupByResourcesReservationPool getGroupByResourcesReservationPool(
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      GroupByQueryConfig groupByQueryConfig
+  )
+  {
+    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
+  }
+
+  public static void registerConfigsAndMonitor(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, PROCESSING_PROPERTY_PREFIX, DruidProcessingConfig.class);
+    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+  }
+
+  public static CachePopulator createCachePopulator(
+      ObjectMapper smileMapper,
       CachePopulatorStats cachePopulatorStats,
       CacheConfig cacheConfig
   )
@@ -92,9 +147,7 @@ public class DruidProcessingModule implements Module
     }
   }
 
-  @Provides
-  @ManageLifecycle
-  public QueryProcessingPool getProcessingExecutorPool(
+  public static QueryProcessingPool createProcessingExecutorPool(
       DruidProcessingConfig config,
       ExecutorServiceMonitor executorServiceMonitor,
       Lifecycle lifecycle
@@ -105,16 +158,17 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
+        config.getNumTimeoutThreads() > 0 ? ScheduledExecutors.fixed(config.getNumTimeoutThreads(), "PrioritizedExecutorService-Timeout-%d") : null,
         executorServiceMonitor
     );
   }
 
-  @Provides
-  @LazySingleton
-  @Global
-  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public static NonBlockingPool<ByteBuffer> createIntermediateResultsPool(
+      final DruidProcessingConfig config,
+      final RuntimeInfo runtimeInfo
+  )
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
@@ -123,33 +177,22 @@ public class DruidProcessingModule implements Module
     );
   }
 
-  @Provides
-  @LazySingleton
-  @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  public static BlockingPool<ByteBuffer> createMergeBufferPool(
+      final DruidProcessingConfig config,
+      final RuntimeInfo runtimeInfo
+  )
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
     );
   }
 
-  @Provides
-  @LazySingleton
-  @Merging
-  public GroupByResourcesReservationPool getGroupByResourcesReservationPool(
-      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
-      GroupByQueryConfig groupByQueryConfig
-  )
-  {
-    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
-  }
-
-  private void verifyDirectMemory(DruidProcessingConfig config)
+  private static void verifyDirectMemory(final DruidProcessingConfig config, final RuntimeInfo runtimeInfo)
   {
     try {
-      final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      final long maxDirectMemory = runtimeInfo.getDirectMemorySizeBytes();
       final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
                                 (config.getNumMergeBuffers() + config.getNumThreads() + 1);
 

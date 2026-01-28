@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -30,14 +30,17 @@ import java.nio.channels.WritableByteChannel;
 public interface Serializer
 {
   /**
-   * Returns the number of bytes, that this Serializer will write to the output _channel_ (not smoosher) on a {@link
-   * #writeTo} call.
+   * Returns the number of bytes, that this Serializer will write to the output _channel_ (not smoosher) on a
+   * {@link #writeTo} call.
    */
   long getSerializedSize() throws IOException;
 
   /**
-   * Writes serialized form of this object to the given channel. If parallel data streams are needed, they could be
-   * created with the provided smoosher.
+   * Writes the serialized form of this object. The entire object may be written to the provided channel, or the object
+   * may be split over the provided channel and files added to the {@link SegmentFileBuilder], where additional channels
+   * can be created via {@link SegmentFileBuilder#addWithChannel(String, long) }. The latter approach is useful when the
+   * serialized form of the object is too large for a single smoosh container. At the time this javadoc was written,
+   * the max smoosh container size is limit to the max {@link java.nio.ByteBuffer} size.
    */
-  void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
+  void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException;
 }

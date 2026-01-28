@@ -55,7 +55,7 @@ public final class MetaSerdeHelper<T>
   public MetaSerdeHelper<T> maybeWriteByte(Predicate<T> condition, ByteFieldWriter<T> fieldWriter)
   {
     return writeSomething(
-        new FieldWriter<T>()
+        new FieldWriter<>()
         {
           @Override
           public void writeTo(ByteBuffer buffer, T x)
@@ -77,7 +77,7 @@ public final class MetaSerdeHelper<T>
   public MetaSerdeHelper<T> writeByteArray(Function<T, byte[]> getByteArray)
   {
     return writeSomething(
-        new FieldWriter<T>()
+        new FieldWriter<>()
         {
           @Override
           public void writeTo(ByteBuffer buffer, T x)
@@ -112,7 +112,11 @@ public final class MetaSerdeHelper<T>
 
   public int size(T x)
   {
-    return fieldWriters.stream().mapToInt(w -> w.size(x)).sum();
+    int retVal = 0;
+    for (FieldWriter<T> fieldWriter : fieldWriters) {
+      retVal += fieldWriter.size(x);
+    }
+    return retVal;
   }
 
   public interface FieldWriter<T>

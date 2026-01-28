@@ -15,33 +15,21 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame:
-        peerType: "ROWS"
-        lowUnbounded: true
-        lowOffset: 0
-        uppUnbounded: true
-        uppOffset: 0
-        orderBy: null
+      frame: { type: "rows" }
       aggregations:
-        - { "type": "doubleSum", "name": "w1", "fieldName": "_d1" }
+        - { "type": "doubleSum", "name": "w1", "fieldName": "d1" }
   - type: "naiveSort"
     columns:
-      - column: "_d1"
+      - column: "d1"
         direction: "ASC"
   - type: "naivePartition"
-    partitionColumns: [ "_d1" ]
+    partitionColumns: [ "d1" ]
   - type: "window"
     processor:
       type: "framedAgg"
-      frame:
-        peerType: "ROWS"
-        lowUnbounded: true
-        lowOffset: 0
-        uppUnbounded: true
-        uppOffset: 0
-        orderBy: null
+      frame: { type: "rows" }
       aggregations:
-        - { "type": "doubleSum", "name": "w0", "fieldName": "_d0" }
+        - { "type": "doubleSum", "name": "w0", "fieldName": "d0" }
 expectedResults:
   - [1.0, 1.0, 1.0, 21.0]
   - [2.0, 2.0, 2.0, 21.0]

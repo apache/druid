@@ -21,175 +21,139 @@
 // Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
 // This file was modified to make the list of keywords more closely adhere to what is found in DruidSQL
 
-import type { Ace } from 'ace-builds';
 import ace from 'ace-builds/src-noconflict/ace';
+import { dedupe } from 'druid-query-toolkit';
 
-import * as druidKeywords from '../../lib/keywords';
-import * as druidFunctions from '../../lib/sql-docs';
+import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
+import type { AvailableFunctions } from '../helpers';
 
-import type { ItemDescription } from './make-doc-html';
-import { makeDocHtml } from './make-doc-html';
+export function initAceDsqlMode(availableSqlFunctions: AvailableFunctions | undefined) {
+  ace.define(
+    'ace/mode/dsql_highlight_rules',
+    ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
+    function (acequire: any, exports: any) {
+      'use strict';
 
-ace.define(
-  'ace/mode/dsql_highlight_rules',
-  ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function (acequire: any, exports: any) {
-    'use strict';
+      const oop = acequire('../lib/oop');
+      const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    const oop = acequire('../lib/oop');
-    const TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
+      const SqlHighlightRules = function (this: any) {
+        // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
+        const keywords = SQL_KEYWORDS.join('|').replace(/\s/g, '|');
 
-    const SqlHighlightRules = function (this: any) {
-      // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
-      const keywords = druidKeywords.SQL_KEYWORDS.concat(druidKeywords.SQL_EXPRESSION_PARTS)
-        .join('|')
-        .replace(/\s/g, '|');
+        // Stuff like: 'true|false'
+        const builtinConstants = SQL_CONSTANTS.join('|');
 
-      // Stuff like: 'true|false'
-      const builtinConstants = druidKeywords.SQL_CONSTANTS.join('|');
+        // Stuff like: 'avg|count|first|last|max|min'
+        const builtinFunctions = dedupe([
+          ...SQL_DYNAMICS,
+          ...Array.from(SQL_FUNCTIONS.keys()),
+          ...(availableSqlFunctions?.keys() || []),
+        ]).join('|');
 
-      // Stuff like: 'avg|count|first|last|max|min'
-      const builtinFunctions = druidKeywords.SQL_DYNAMICS.concat(
-        Object.keys(druidFunctions.SQL_FUNCTIONS),
-      ).join('|');
+        // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
+        const dataTypes = Array.from(SQL_DATA_TYPES.keys()).join('|');
 
-      // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      const dataTypes = Object.keys(druidFunctions.SQL_DATA_TYPES).join('|');
-
-      const keywordMapper = this.createKeywordMapper(
-        {
-          'support.function': builtinFunctions,
-          'keyword': keywords,
-          'constant.language': builtinConstants,
-          'storage.type': dataTypes,
-        },
-        'identifier',
-        true,
-      );
-
-      this.$rules = {
-        start: [
+        const keywordMapper = this.createKeywordMapper(
           {
-            token: 'comment.issue',
-            regex: '--:ISSUE:.*$',
+            'support.function': builtinFunctions,
+            'keyword': keywords,
+            'constant.language': builtinConstants,
+            'storage.type': dataTypes,
           },
-          {
-            token: 'comment',
-            regex: '--.*$',
-          },
-          {
-            token: 'comment',
-            start: '/\\*',
-            end: '\\*/',
-          },
-          {
-            token: 'variable.column', // " quoted reference
-            regex: '".*?"',
-          },
-          {
-            token: 'string', // ' string literal
-            regex: "'.*?'",
-          },
-          {
-            token: 'constant.numeric', // float
-            regex: '[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b',
-          },
-          {
-            token: keywordMapper,
-            regex: '[a-zA-Z_$][a-zA-Z0-9_$]*\\b',
-          },
-          {
-            token: 'keyword.operator',
-            regex: '\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|=',
-          },
-          {
-            token: 'paren.lparen',
-            regex: '[\\(]',
-          },
-          {
-            token: 'paren.rparen',
-            regex: '[\\)]',
-          },
-          {
-            token: 'text',
-            regex: '\\s+',
-          },
-        ],
-      };
-      this.normalizeRules();
-    };
+          'identifier',
+          true,
+        );
 
-    oop.inherits(SqlHighlightRules, TextHighlightRules);
-
-    exports.SqlHighlightRules = SqlHighlightRules;
-  },
-);
-
-ace.define(
-  'ace/mode/dsql',
-  ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/dsql_highlight_rules'],
-  function (acequire: any, exports: any) {
-    'use strict';
-
-    const oop = acequire('../lib/oop');
-    const TextMode = acequire('./text').Mode;
-    const SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
-
-    const completions = ([] as Ace.Completion[]).concat(
-      druidKeywords.SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      druidKeywords.SQL_EXPRESSION_PARTS.map(v => ({
-        name: v,
-        value: v,
-        score: 0,
-        meta: 'keyword',
-      })),
-      druidKeywords.SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
-      druidKeywords.SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      Object.entries(druidFunctions.SQL_DATA_TYPES).map(([name, [runtime, description]]) => {
-        const item: ItemDescription = {
-          name,
-          description,
-          syntax: `Druid runtime type: ${runtime}`,
-        };
-        return {
-          name,
-          value: name,
-          score: 0,
-          meta: 'type',
-          docHTML: makeDocHtml(item),
-          docText: description,
-        };
-      }),
-      Object.entries(druidFunctions.SQL_FUNCTIONS).flatMap(([name, versions]) => {
-        return versions.map(([args, description]) => {
-          const item = { name, description, syntax: `${name}(${args})` };
-          return {
-            name,
-            value: versions.length > 1 ? `${name}(${args})` : name,
-            score: 1100, // Use a high score to appear over the 'local' suggestions that have a score of 1000
-            meta: 'function',
-            docHTML: makeDocHtml(item),
-            docText: description,
-            completer: {
-              insertMatch: (editor: any, data: any) => {
-                editor.completer.insertMatch({ value: data.name });
-              },
+        this.$rules = {
+          start: [
+            {
+              token: 'comment.issue',
+              regex: '--:ISSUE:.*$',
             },
-          } as Ace.Completion;
-        });
-      }),
-    );
+            {
+              token: 'comment',
+              regex: '--.*$',
+            },
+            {
+              token: 'comment',
+              start: '/\\*',
+              end: '\\*/',
+            },
+            {
+              token: 'variable.column', // " quoted reference
+              regex: '".*?"',
+            },
+            {
+              token: 'string', // ' string literal
+              regex: "'.*?'",
+            },
+            {
+              token: 'constant.numeric', // float
+              regex: '[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b',
+            },
+            {
+              token: keywordMapper,
+              regex: '[a-zA-Z_$][a-zA-Z0-9_$]*\\b',
+            },
+            {
+              token: 'keyword.operator',
+              regex: '\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|=',
+            },
+            {
+              token: 'paren.lparen',
+              regex: '[\\(]',
+            },
+            {
+              token: 'paren.rparen',
+              regex: '[\\)]',
+            },
+            {
+              token: 'text',
+              regex: '\\s+',
+            },
+          ],
+        };
+        this.normalizeRules();
+      };
 
-    const Mode = function (this: any) {
-      this.HighlightRules = SqlHighlightRules;
-      this.$behaviour = this.$defaultBehaviour;
-      this.$id = 'ace/mode/dsql';
+      oop.inherits(SqlHighlightRules, TextHighlightRules);
 
-      this.lineCommentStart = '--';
-      this.getCompletions = () => completions;
-    };
-    oop.inherits(Mode, TextMode);
+      exports.SqlHighlightRules = SqlHighlightRules;
+    },
+  );
 
-    exports.Mode = Mode;
-  },
-);
+  ace.define(
+    'ace/mode/dsql',
+    [
+      'require',
+      'exports',
+      'module',
+      'ace/lib/oop',
+      'ace/mode/text',
+      'ace/mode/dsql_highlight_rules',
+    ],
+    function (acequire: any, exports: any) {
+      'use strict';
+
+      const oop = acequire('../lib/oop');
+      const TextMode = acequire('./text').Mode;
+      const SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
+
+      const Mode = function (this: any) {
+        this.HighlightRules = SqlHighlightRules;
+        this.$behaviour = this.$defaultBehaviour;
+        this.$id = 'ace/mode/dsql';
+
+        this.lineCommentStart = '--';
+        this.getCompletions = () => {
+          return [];
+        };
+      };
+      oop.inherits(Mode, TextMode);
+
+      exports.Mode = Mode;
+    },
+  );
+}

@@ -39,14 +39,9 @@ expectedOperators:
         - { "type": "cumeDist", "group": [ "a0" ], "outputColumn": "w9" }
         - type: "framedAgg"
           frame:
-            peerType: "RANGE"
-            lowUnbounded: true
-            lowOffset: 0
-            uppUnbounded: false
-            uppOffset: 0
-            orderBy:
-              - column: a0
-                direction: ASC
+            type: groups
+            upperOffset: 0
+            orderByColumns: [ a0 ]
           aggregations:
             - { "type": "longSum", "name": "w0", "fieldName": "a0" }
 

@@ -24,8 +24,8 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 
 public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
 {
@@ -61,7 +61,30 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
     
     try {
       //noinspection unchecked
-      queryClient.query(getQueryURL(broker), query);
+      queryClient.query(getQueryURL(broker), query, "Is datasource loaded");
+      return true;
+    }
+    catch (Exception e) {
+      LOG.debug(e, "Check query failed");
+      return false;
+    }
+  }
+
+  public boolean verifyTimeColumnIsPresent(String datasource)
+  {
+    final SqlQuery query = new SqlQuery(
+        "SELECT __time FROM \"" + datasource + "\" LIMIT 1",
+        null,
+        false,
+        false,
+        false,
+        null,
+        null
+    );
+
+    try {
+      //noinspection unchecked
+      queryClient.query(getQueryURL(broker), query, "Is time column present");
       return true;
     }
     catch (Exception e) {

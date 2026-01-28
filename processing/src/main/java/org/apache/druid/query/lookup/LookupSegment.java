@@ -26,7 +26,6 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
-import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -43,11 +42,11 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
                   .add(LookupColumnSelectorFactory.KEY_COLUMN, ColumnType.STRING)
                   .add(LookupColumnSelectorFactory.VALUE_COLUMN, ColumnType.STRING)
                   .build();
+  private final String lookupName;
 
   public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
   {
     super(
-        SegmentId.dummy(lookupName),
         Sequences.simple(() -> {
           final LookupExtractor extractor = lookupExtractorFactory.get();
 
@@ -57,7 +56,7 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
 
           return extractor.asMap().entrySet().iterator();
         }),
-        new RowAdapter<Map.Entry<String, String>>()
+        new RowAdapter<>()
         {
           @Override
           public ToLongFunction<Map.Entry<String, String>> timestampFunction()
@@ -80,5 +79,12 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
         },
         ROW_SIGNATURE
     );
+    this.lookupName = lookupName;
+  }
+
+  @Override
+  public String getDebugString()
+  {
+    return getClass().getSimpleName() + ":" + lookupName;
   }
 }

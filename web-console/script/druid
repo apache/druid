@@ -56,7 +56,8 @@ function _build_distribution() {
   (
     # Add HEAD as an allowed HTTP method since this is how we check when the Druid service is ready.
     cd "$(_get_code_root)" \
-    && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
+    && mvn -pl '!distribution' -Pskip-static-checks,skip-tests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Danimal.sniffer.skip=true -Denforcer.skip=true -Dcyclonedx.skip=true -q -T1C install \
+    && mvn -pl 'distribution' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Danimal.sniffer.skip=true -Denforcer.skip=true -Dcyclonedx.skip=true -q install \
     && cd distribution/target \
     && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
     && cd apache-druid-$(_get_druid_version) \
@@ -64,9 +65,14 @@ function _build_distribution() {
     && cp "$(_get_code_root)/extensions-core/testing-tools/target/druid-testing-tools-$(_get_druid_version).jar" extensions/druid-testing-tools/ \
     && mkdir -p extensions/druid-compressed-bigdecimal \
     && cp "$(_get_code_root)/extensions-contrib/compressed-bigdecimal/target/druid-compressed-bigdecimal-$(_get_druid_version).jar" extensions/druid-compressed-bigdecimal/ \
-    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-multi-stage-query\", \"druid-testing-tools\", \"druid-bloom-filter\", \"druid-datasketches\", \"druid-histogram\", \"druid-stats\", \"druid-compressed-bigdecimal\"]" >> conf/druid/auto/_common/common.runtime.properties \
+    && sed -i.bak 's/druid\.extensions\.loadList=\[\([^]]*\)\]/druid.extensions.loadList=[\1, "druid-testing-tools", "druid-bloom-filter", "druid-histogram", "druid-stats", "druid-compressed-bigdecimal", "druid-deltalake-extensions"]/' conf/druid/auto/_common/common.runtime.properties \
+    && rm conf/druid/auto/_common/common.runtime.properties.bak \
     && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/auto/_common/common.runtime.properties \
     && echo -e "\n\ndruid.export.storage.baseDir=/" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.sql.planner.enableSysQueriesTable=true" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.msq.dart.enabled=true" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.msq.dart.controller.maxRetainedReportCount=100" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.msq.dart.controller.maxRetainedReportDuration=PT3600S" >> conf/druid/auto/_common/common.runtime.properties \
   )
 }
 

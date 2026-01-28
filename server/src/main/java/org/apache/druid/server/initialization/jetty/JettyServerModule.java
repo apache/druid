@@ -48,14 +48,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
@@ -64,11 +61,13 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ErrorHandler;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -81,11 +80,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -94,7 +89,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -127,6 +121,7 @@ public class JettyServerModule extends JerseyServletModule
     binder.bind(ForbiddenExceptionMapper.class).in(LazySingleton.class);
     binder.bind(BadRequestExceptionMapper.class).in(LazySingleton.class);
     binder.bind(ServiceUnavailableExceptionMapper.class).in(LazySingleton.class);
+    binder.bind(HttpExceptionMapper.class).in(LazySingleton.class);
 
     serve("/*").with(GuiceContainer.class);
 
@@ -213,7 +208,7 @@ public class JettyServerModule extends JerseyServletModule
     threadPool.setDaemon(true);
     jettyServerThreadPool = threadPool;
 
-    final Server server = new Server(threadPool);
+    final Server server = new Server(jettyServerThreadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
     // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
@@ -224,6 +219,7 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
+      httpConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -242,10 +238,13 @@ public class JettyServerModule extends JerseyServletModule
 
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
-      if (sslContextFactoryBinding == null) {
-        // Never trust all certificates by default
-        sslContextFactory = new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
+      boolean hasBinding = sslContextFactoryBinding != null;
+      sslContextFactory = hasBinding
+                          ? sslContextFactoryBinding.getProvider().get()
+                          : new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
 
+      // Never trust all certificates by default
+      if (!hasBinding || tlsServerConfig.isForceApplyConfig()) {
         sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
         sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
@@ -303,17 +302,22 @@ public class JettyServerModule extends JerseyServletModule
             );
           }
         }
-      } else {
-        sslContextFactory = sslContextFactoryBinding.getProvider().get();
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      httpsConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
-      httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+
+      // see https://github.com/jetty/jetty.project/pull/5398
+      // This new strict enforcement can break some clients. Allow turning it off via config if necessary
+      final SecureRequestCustomizer secureRequestCustomizer = new SecureRequestCustomizer();
+      secureRequestCustomizer.setSniHostCheck(config.isEnforceStrictSNIHostChecking());
+
+      httpsConfiguration.addCustomizer(secureRequestCustomizer);
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(
@@ -363,7 +367,7 @@ public class JettyServerModule extends JerseyServletModule
     if (gracefulStop > 0) {
       server.setStopTimeout(gracefulStop);
     }
-    server.addLifeCycleListener(new LifeCycle.Listener()
+    server.addEventListener(new LifeCycle.Listener()
     {
       @Override
       public void lifeCycleStarting(LifeCycle event)
@@ -466,24 +470,19 @@ public class JettyServerModule extends JerseyServletModule
       server.setErrorHandler(new ErrorHandler()
       {
         @Override
-        public boolean isShowServlet()
-        {
-          return false;
-        }
-
-        @Override
-        public void handle(
-            String target,
+        public boolean handle(
             Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response
-        ) throws IOException, ServletException
+            Response response,
+            Callback callback
+        ) throws Exception
         {
-          request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
-          super.handle(target, baseRequest, request, response);
+          baseRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
+          return super.handle(baseRequest, response, callback);
         }
       });
     }
+
+    server.setRequestLog(new JettyRequestLog());
 
     return server;
   }
@@ -499,8 +498,7 @@ public class JettyServerModule extends JerseyServletModule
   private static int getTCPAcceptQueueSize()
   {
     if (SystemUtils.IS_OS_LINUX) {
-      try {
-        BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
+      try (BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"))) {
         String acceptQueueSize = in.readLine();
         if (acceptQueueSize != null) {
           return Integer.parseInt(acceptQueueSize);
@@ -515,29 +513,26 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public JettyMonitor getJettyMonitor()
   {
-    return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
+    return new JettyMonitor();
   }
 
   public static class JettyMonitor extends AbstractMonitor
   {
-    private final Map<String, String[]> dimensions;
-
-    public JettyMonitor(String dataSource, String taskId)
-    {
-      this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(dataSource, taskId);
-    }
-
     @Override
     public boolean doMonitor(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.setMetric("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       if (jettyServerThreadPool != null) {
         emitter.emit(builder.setMetric("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
         emitter.emit(builder.setMetric("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+
+        emitter.emit(builder.setMetric("jetty/threadPool/ready", jettyServerThreadPool.getReadyThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/utilized", jettyServerThreadPool.getUtilizedThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/utilizationRate", jettyServerThreadPool.getUtilizationRate()));
+
         emitter.emit(builder.setMetric("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
         emitter.emit(builder.setMetric("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
         emitter.emit(builder.setMetric("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
@@ -597,7 +592,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @VisibleForTesting
-  public static void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  protected static void setJettyServerThreadPool(QueuedThreadPool threadPool)
   {
     jettyServerThreadPool = threadPool;
   }

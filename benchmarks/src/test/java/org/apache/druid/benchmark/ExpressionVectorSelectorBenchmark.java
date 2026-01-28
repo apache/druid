@@ -20,9 +20,7 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -33,8 +31,10 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -72,10 +72,6 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class ExpressionVectorSelectorBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"1000000"})
   private int rowsPerSegment;
 
@@ -125,7 +121,7 @@ public class ExpressionVectorSelectorBenchmark
     );
 
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(new ColumnCache(index, closer));
+    outputType = parsed.getOutputType(new ColumnCache(index, VirtualColumns.EMPTY, closer));
     checkSanity();
   }
 
@@ -150,15 +146,14 @@ public class ExpressionVectorSelectorBenchmark
             )
         )
     );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+    final CursorHolder cursorHolder = closer.register(
+        new QueryableIndexCursorFactory(index).makeCursorHolder(buildSpec)
+    );
     if (vectorize) {
-      VectorCursor cursor = new QueryableIndexStorageAdapter(index).makeVectorCursor(
-          null,
-          index.getDataInterval(),
-          virtualColumns,
-          false,
-          512,
-          null
-      );
+      VectorCursor cursor = cursorHolder.asVectorCursor();
       if (outputType.isNumeric()) {
         VectorValueSelector selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
         if (outputType.is(ExprType.DOUBLE)) {
@@ -174,29 +169,34 @@ public class ExpressionVectorSelectorBenchmark
             cursor.advance();
           }
         }
-        closer.register(cursor);
       }
     } else {
-      Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
-          null,
-          index.getDataInterval(),
-          virtualColumns,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      int rowCount = cursors
-          .map(cursor -> {
-            final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-            int rows = 0;
-            while (!cursor.isDone()) {
-              blackhole.consume(selector.getObject());
-              rows++;
-              cursor.advance();
-            }
-            return rows;
-          }).accumulate(0, (acc, in) -> acc + in);
+      final Cursor cursor = cursorHolder.asCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      int rowCount = 0;
+      if (outputType.isNumeric()) {
+        if (outputType.is(ExprType.DOUBLE)) {
+          while (!cursor.isDone()) {
+            blackhole.consume(selector.isNull());
+            blackhole.consume(selector.getDouble());
+            rowCount++;
+            cursor.advance();
+          }
+        } else {
+          while (!cursor.isDone()) {
+            blackhole.consume(selector.isNull());
+            blackhole.consume(selector.getLong());
+            rowCount++;
+            cursor.advance();
+          }
+        }
+      } else {
+        while (!cursor.isDone()) {
+          blackhole.consume(selector.getObject());
+          rowCount++;
+          cursor.advance();
+        }
+      }
 
       blackhole.consume(rowCount);
     }
@@ -204,6 +204,6 @@ public class ExpressionVectorSelectorBenchmark
 
   private void checkSanity()
   {
-    ExpressionVectorSelectorsTest.sanityTestVectorizedExpressionSelectors(expression, outputType, index, closer, rowsPerSegment);
+    ExpressionVectorSelectorsTest.sanityTestVectorizedExpressionSelectors(expression, outputType, index, rowsPerSegment);
   }
 }

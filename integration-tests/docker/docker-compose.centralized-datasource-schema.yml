@@ -39,10 +39,14 @@ services:
       - druid_centralizedDatasourceSchema_backFillEnabled=true
       - druid_centralizedDatasourceSchema_backFillPeriod=15000
       - druid_coordinator_segmentMetadata_metadataRefreshPeriod=PT15S
+      - druid_manager_segments_useIncrementalCache=always
     depends_on:
-      - druid-overlord
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
+      druid-overlord:
+        condition: service_started
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
 
   druid-overlord:
     extends:
@@ -51,9 +55,12 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
       - druid_centralizedDatasourceSchema_enabled=true
+      - druid_manager_segments_useIncrementalCache=always
     depends_on:
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
 
   druid-historical:
     extends:
@@ -81,7 +88,7 @@ services:
       service: druid-broker
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_sql_planner_metadataRefreshPeriod=PT20S
+      - druid_sql_planner_metadataRefreshPeriod=PT30S
       - druid_sql_planner_disableSegmentMetadataQueries=true
     depends_on:
       - druid-coordinator

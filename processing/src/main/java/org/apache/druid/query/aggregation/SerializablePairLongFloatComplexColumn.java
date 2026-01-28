@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.serde.cell.ByteBufferProvider;
 import org.apache.druid.segment.serde.cell.CellReader;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -63,6 +64,7 @@ public class SerializablePairLongFloatComplexColumn implements ComplexColumn
   }
 
   @Override
+  @Nullable
   public Object getRowValue(int rowNum)
   {
     return serde.deserialize(cellReader.getCell(rowNum));

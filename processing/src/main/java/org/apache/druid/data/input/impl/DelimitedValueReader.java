@@ -51,7 +51,7 @@ public class DelimitedValueReader extends TextReader.Bytes
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final Function<String, Object> multiValueFunction;
+  private final Function<String, Object> transformationFunction;
   private final DelimitedValueParser parser;
 
   /**
@@ -82,14 +82,19 @@ public class DelimitedValueReader extends TextReader.Bytes
       boolean findColumnsFromHeader,
       int skipHeaderRows,
       DelimitedValueParser parser,
-      boolean useListBasedInputRows
+      boolean useListBasedInputRows,
+      boolean tryParseNumbers
   )
   {
     super(inputRowSchema, source);
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
+    this.transformationFunction = ParserUtils.getTransformationFunction(
+        finalListDelimeter,
+        Splitter.on(finalListDelimeter),
+        tryParseNumbers
+    );
 
     if (!findColumnsFromHeader && columns != null) {
       // If findColumnsFromHeader, inputRowSignature will be set later.
@@ -134,7 +139,7 @@ public class DelimitedValueReader extends TextReader.Bytes
   private List<Object> readLineAsList(byte[] line) throws IOException
   {
     final List<String> parsed = parser.parseLine(line);
-    return new ArrayList<>(Lists.transform(parsed, multiValueFunction));
+    return new ArrayList<>(Lists.transform(parsed, transformationFunction));
   }
 
   private Map<String, Object> readLineAsMap(byte[] line) throws IOException
@@ -142,7 +147,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     final List<String> parsed = parser.parseLine(line);
     return Utils.zipMapPartial(
         Preconditions.checkNotNull(inputRowSignature, "inputRowSignature").getColumnNames(),
-        Iterables.transform(parsed, multiValueFunction)
+        Iterables.transform(parsed, transformationFunction)
     );
   }
 

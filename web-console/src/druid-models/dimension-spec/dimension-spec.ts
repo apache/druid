@@ -18,9 +18,11 @@
 
 import type { Field } from '../../components';
 import { filterMap, typeIsKnown } from '../../utils';
-import type { SampleResponse } from '../../utils/sampler';
+import type { SampleResponse, TimeColumnAction } from '../../utils/sampler';
 import { getHeaderNamesFromSampleResponse } from '../../utils/sampler';
+import type { ArrayIngestMode } from '../array-ingest-mode/array-ingest-mode';
 import { guessColumnTypeFromSampleResponse } from '../ingestion-spec/ingestion-spec';
+import { TIME_COLUMN } from '../timestamp-spec/timestamp-spec';
 
 export interface DimensionsSpec {
   readonly dimensions?: (string | DimensionSpec)[];
@@ -28,6 +30,7 @@ export interface DimensionsSpec {
   readonly spatialDimensions?: any[];
   readonly includeAllDimensions?: boolean;
   readonly useSchemaDiscovery?: boolean;
+  readonly forceSegmentSortByTime?: boolean;
 }
 
 export interface DimensionSpec {
@@ -40,6 +43,7 @@ export interface DimensionSpec {
 
 // This is a web console internal made up column type that represents a multi value dimension
 const MADE_UP_MV_COLUMN_TYPE = 'mv-string';
+
 function makeMadeUpMvDimensionSpec(name: string): DimensionSpec {
   return {
     type: 'string',
@@ -61,6 +65,7 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     type: 'string',
     required: true,
     suggestions: KNOWN_TYPES,
+    disabled: d => d.name === TIME_COLUMN,
   },
   {
     name: 'createBitmapIndex',
@@ -161,10 +166,15 @@ export function getDimensionSpecs(
   sampleResponse: SampleResponse,
   columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
-  forceMvdInsteadOfArray: boolean,
+  arrayIngestMode: ArrayIngestMode,
   hasRollup: boolean,
+  timeColumnAction: TimeColumnAction,
 ): (string | DimensionSpec)[] {
-  return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, 'ignore'), h => {
+  return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, timeColumnAction), h => {
+    if (h === TIME_COLUMN) {
+      return { type: 'long', name: h };
+    }
+
     const columnTypeHint = columnTypeHints[h];
     const guessedColumnType = guessColumnTypeFromSampleResponse(
       sampleResponse,
@@ -173,7 +183,7 @@ export function getDimensionSpecs(
     );
     let columnType = columnTypeHint || guessedColumnType;
 
-    if (forceMvdInsteadOfArray) {
+    if (arrayIngestMode === 'mvd') {
       if (columnType.startsWith('ARRAY')) {
         columnType = MADE_UP_MV_COLUMN_TYPE;
       }

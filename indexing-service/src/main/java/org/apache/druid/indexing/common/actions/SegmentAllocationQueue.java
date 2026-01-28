@@ -24,9 +24,8 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -41,11 +40,14 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,22 +76,41 @@ public class SegmentAllocationQueue
 
   private final long maxWaitTimeMillis;
 
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final IndexerMetadataStorageCoordinator metadataStorage;
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final ServiceEmitter emitter;
 
   /**
-   * Single-threaded executor to process allocation queue.
+   * Single-threaded executor to pick up jobs from allocation queue and assign
+   * to worker threads.
    */
-  private final ScheduledExecutorService executor;
+  private final ScheduledExecutorService managerExec;
+
+  /**
+   * Multithreaded executor to process allocation jobs.
+   */
+  private final ScheduledExecutorService workerExec;
+
+  /**
+   * Thread-safe set of datasources for which a segment allocation is currently in-progress.
+   */
+  private final Set<String> runningDatasources = Collections.synchronizedSet(new HashSet<>());
+
+  /**
+   * Indicates if a processing of the queue is already scheduled.
+   */
+  private final AtomicBoolean isProcessingScheduled = new AtomicBoolean(false);
 
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
+  private final TaskLockConfig config;
+  private final boolean reduceMetadataIO;
+
   @Inject
   public SegmentAllocationQueue(
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       TaskLockConfig taskLockConfig,
       IndexerMetadataStorageCoordinator metadataStorage,
       ServiceEmitter emitter,
@@ -100,16 +121,29 @@ public class SegmentAllocationQueue
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
+    this.reduceMetadataIO = taskLockConfig.isBatchAllocationReduceMetadataIO();
+    this.config = taskLockConfig;
 
-    this.executor = taskLockConfig.isBatchSegmentAllocation()
-                    ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
+    if (taskLockConfig.isBatchSegmentAllocation()) {
+      this.managerExec = executorFactory.create(1, "SegmentAllocQueue-Manager-%s");
+      this.workerExec = executorFactory.create(
+          taskLockConfig.getBatchAllocationNumThreads(),
+          "SegmentAllocQueue-Worker-%s"
+      );
+    } else {
+      this.managerExec = null;
+      this.workerExec = null;
+    }
   }
 
   @LifecycleStart
   public void start()
   {
     if (isEnabled()) {
-      log.info("Initializing segment allocation queue.");
+      log.info(
+          "Initializing segment allocation queue with [%d] worker threads.",
+          config.getBatchAllocationNumThreads()
+      );
       scheduleQueuePoll(maxWaitTimeMillis);
     }
   }
@@ -119,7 +153,8 @@ public class SegmentAllocationQueue
   {
     if (isEnabled()) {
       log.info("Tearing down segment allocation queue.");
-      executor.shutdownNow();
+      managerExec.shutdownNow();
+      workerExec.shutdownNow();
     }
   }
 
@@ -150,16 +185,18 @@ public class SegmentAllocationQueue
 
   public boolean isEnabled()
   {
-    return executor != null && !executor.isShutdown();
+    return managerExec != null && !managerExec.isShutdown();
   }
 
   /**
-   * Schedules a poll of the allocation queue that runs on the {@link #executor}.
-   * It is okay to schedule multiple polls since the executor is single threaded.
+   * Schedules a poll of the allocation queue that runs on the {@link #managerExec},
+   * if not already scheduled.
    */
   private void scheduleQueuePoll(long delay)
   {
-    executor.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    if (isProcessingScheduled.compareAndSet(false, true)) {
+      managerExec.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
+    }
   }
 
   /**
@@ -250,46 +287,56 @@ public class SegmentAllocationQueue
     });
   }
 
+  /**
+   * Processes batches in the {@link #processingQueue} that are already due.
+   * This method must be invoked on the {@link #managerExec}.
+   */
   private void processBatchesDue()
   {
     clearQueueIfNotLeader();
+    isProcessingScheduled.set(false);
 
-    // Process all the batches that are already due
-    int numProcessedBatches = 0;
-    AllocateRequestBatch nextBatch = processingQueue.peekFirst();
-    while (nextBatch != null && nextBatch.isDue()) {
-      // Process the next batch in the queue
-      processingQueue.pollFirst();
-      final AllocateRequestBatch currentBatch = nextBatch;
-      boolean processed;
-      try {
-        processed = processBatch(currentBatch);
-      }
-      catch (Throwable t) {
-        currentBatch.failPendingRequests(t);
-        processed = true;
-        log.error(t, "Error while processing batch[%s].", currentBatch.key);
-      }
+    // Process the batches that are already due
+    int numSubmittedBatches = 0;
+    int numSkippedBatches = 0;
 
-      // Requeue if not fully processed yet
-      if (processed) {
-        ++numProcessedBatches;
+    // Although thread-safe, this iterator might not see entries added by other
+    // concurrent threads. Those entries will be handled in the next processBatchesDue().
+    final Iterator<AllocateRequestBatch> queueIterator = processingQueue.iterator();
+    while (queueIterator.hasNext() && runningDatasources.size() < config.getBatchAllocationNumThreads()) {
+      final AllocateRequestBatch nextBatch = queueIterator.next();
+      final String dataSource = nextBatch.key.dataSource;
+      if (nextBatch.isDue()) {
+        if (runningDatasources.contains(dataSource)) {
+          // Skip this batch as another batch for the same datasource is in progress
+          markBatchAsSkipped(nextBatch);
+          ++numSkippedBatches;
+        } else {
+          // Process this batch
+          queueIterator.remove();
+          runningDatasources.add(dataSource);
+          workerExec.submit(() -> runBatchOnWorker(nextBatch));
+          emitBatchMetric("task/action/batch/submitted", 1L, nextBatch.key);
+          ++numSubmittedBatches;
+        }
       } else {
-        requeueBatch(currentBatch);
+        break;
       }
-
-      nextBatch = processingQueue.peek();
     }
+    log.debug("Submitted [%d] batches, skipped [%d] batches.", numSubmittedBatches, numSkippedBatches);
 
-    // Schedule the next round of processing if the queue is not empty
-    if (processingQueue.isEmpty()) {
-      log.debug("Processed [%d] batches, not scheduling again since queue is empty.", numProcessedBatches);
+    // Schedule the next round of processing if there are available worker threads
+    if (runningDatasources.size() >= config.getBatchAllocationNumThreads()) {
+      log.debug("Not scheduling again since all worker threads are busy.");
+    } else if (numSkippedBatches >= processingQueue.size() || processingQueue.isEmpty()) {
+      // All remaining entries in the queue were skipped
+      log.debug("Not scheduling again since there are no eligible batches (skipped [%d]).", numSkippedBatches);
     } else {
-      nextBatch = processingQueue.peek();
+      final AllocateRequestBatch nextBatch = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextBatch.getQueueTime();
       long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
       scheduleQueuePoll(nextScheduleDelay);
-      log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
+      log.debug("Next execution in [%d ms]", nextScheduleDelay);
     }
   }
 
@@ -311,6 +358,48 @@ public class SegmentAllocationQueue
     if (failedBatches > 0) {
       log.info("Not leader. Failed [%d] batches, remaining in queue [%d].", failedBatches, processingQueue.size());
     }
+  }
+
+  /**
+   * Runs the given batch. This method must be invoked on the {@link #workerExec}.
+   */
+  private void runBatchOnWorker(AllocateRequestBatch batch)
+  {
+    boolean processed;
+    try {
+      processed = processBatch(batch);
+    }
+    catch (Throwable t) {
+      batch.failPendingRequests(t);
+      processed = true;
+      log.error(t, "Error while processing batch[%s].", batch.key);
+    }
+    finally {
+      runningDatasources.remove(batch.key.dataSource);
+    }
+
+    // Requeue if not fully processed yet
+    if (!processed) {
+      requeueBatch(batch);
+    }
+
+    scheduleQueuePoll(0);
+  }
+
+  /**
+   * Marks the given batch as skipped.
+   */
+  private void markBatchAsSkipped(AllocateRequestBatch batch)
+  {
+    keyToBatch.compute(
+        batch.key,
+        (batchKey, latestBatchForKey) -> {
+          if (latestBatchForKey != null) {
+            latestBatchForKey.markSkipped();
+          }
+          return latestBatchForKey;
+        }
+    );
   }
 
   /**
@@ -338,7 +427,7 @@ public class SegmentAllocationQueue
     }
 
     log.debug(
-        "Processing [%d] requests for batch [%s], queue time [%s].",
+        "Processing [%d] requests for batch[%s], queue time[%s].",
         requestBatch.size(), requestKey, requestBatch.getQueueTime()
     );
 
@@ -352,21 +441,21 @@ public class SegmentAllocationQueue
 
     emitBatchMetric("task/action/batch/attempts", 1L, requestKey);
     emitBatchMetric("task/action/batch/runTime", (System.currentTimeMillis() - startTimeMillis), requestKey);
-    log.info("Successfully processed [%d / %d] requests in batch [%s].", successCount, batchSize, requestKey);
+    log.debug("Successfully processed [%d / %d] requests in batch[%s].", successCount, batchSize, requestKey);
 
     if (requestBatch.isEmpty()) {
       return true;
     }
 
     // Requeue the batch only if used segments have changed
-    log.debug("There are [%d] failed requests in batch [%s].", requestBatch.size(), requestKey);
+    log.debug("There are [%d] failed requests in batch[%s].", requestBatch.size(), requestKey);
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
       log.warn(
-          "Completing [%d] failed requests in batch [%s] with null value as there"
+          "Completing [%d] failed requests in batch[%s] with null value as there"
           + " are conflicting segments. Cannot retry allocation until the set of"
-          + " used segments overlapping the allocation interval [%s] changes.",
+          + " used segments overlapping the allocation interval[%s] changes.",
           size(), requestKey, requestKey.preferredAllocationInterval
       );
 
@@ -380,13 +469,11 @@ public class SegmentAllocationQueue
 
   private Set<DataSegment> retrieveUsedSegments(AllocateRequestKey key)
   {
-    return new HashSet<>(
-        metadataStorage.retrieveUsedSegmentsForInterval(
-            key.dataSource,
-            key.preferredAllocationInterval,
-            Segments.ONLY_VISIBLE
-        )
-    );
+    return metadataStorage.getSegmentTimelineForAllocation(
+        key.dataSource,
+        key.preferredAllocationInterval,
+        (key.lockGranularity == LockGranularity.TIME_CHUNK) && reduceMetadataIO
+    ).findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
 
   private int allocateSegmentsForBatch(AllocateRequestBatch requestBatch, Set<DataSegment> usedSegments)
@@ -451,9 +538,9 @@ public class SegmentAllocationQueue
     }
 
     if (!requestsWithPartialOverlap.isEmpty()) {
-      log.info(
-          "Found [%d] requests in batch [%s] with row intervals that partially overlap existing segments."
-          + " These cannot be processed until the set of used segments changes. Example request: [%s]",
+      log.warn(
+          "Found [%d] requests in batch[%s] with row intervals that partially overlap existing segments."
+          + " These cannot be processed until the set of used segments changes. Example request[%s]",
           requestsWithPartialOverlap.size(), requestBatch.key, requestsWithPartialOverlap.get(0)
       );
     }
@@ -484,7 +571,7 @@ public class SegmentAllocationQueue
 
     final AllocateRequestKey requestKey = requestBatch.key;
     log.debug(
-        "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
+        "Trying allocation for [%d] requests, interval[%s] in batch[%s]",
         requests.size(), tryInterval, requestKey
     );
 
@@ -493,7 +580,8 @@ public class SegmentAllocationQueue
         requestKey.dataSource,
         tryInterval,
         requestKey.skipSegmentLineageCheck,
-        requestKey.lockGranularity
+        requestKey.lockGranularity,
+        reduceMetadataIO
     );
 
     int successfulRequests = 0;
@@ -529,14 +617,14 @@ public class SegmentAllocationQueue
   {
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, request.getTask());
-    metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
+    metricBuilder.setDimension(DruidMetrics.TASK_ACTION_TYPE, SegmentAllocateAction.TYPE);
     emitter.emit(metricBuilder.setMetric(metric, value));
   }
 
   private void emitBatchMetric(String metric, long value, AllocateRequestKey key)
   {
     final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-    metricBuilder.setDimension("taskActionType", SegmentAllocateAction.TYPE);
+    metricBuilder.setDimension(DruidMetrics.TASK_ACTION_TYPE, SegmentAllocateAction.TYPE);
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, key.dataSource);
     metricBuilder.setDimension(DruidMetrics.INTERVAL, key.preferredAllocationInterval.toString());
     emitter.emit(metricBuilder.setMetric(metric, value));
@@ -550,6 +638,7 @@ public class SegmentAllocationQueue
     private long queueTimeMillis;
     private final AllocateRequestKey key;
     private boolean started = false;
+    private boolean skipped = false;
 
     /**
      * Map from allocate requests (represents a single SegmentAllocateAction)
@@ -577,6 +666,7 @@ public class SegmentAllocationQueue
     {
       queueTimeMillis = System.currentTimeMillis();
       started = false;
+      skipped = false;
     }
 
     void markStarted()
@@ -587,6 +677,14 @@ public class SegmentAllocationQueue
     boolean isStarted()
     {
       return started;
+    }
+
+    void markSkipped()
+    {
+      if (!skipped) {
+        skipped = true;
+        emitBatchMetric("task/action/batch/skipped", 1L, key);
+      }
     }
 
     boolean isFull()
@@ -649,15 +747,15 @@ public class SegmentAllocationQueue
         emitTaskMetric("task/action/success/count", 1L, request);
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
-        log.info(
-            "Allocation failed on attempt [%d] due to error [%s]. Can still retry action [%s].",
+        log.debug(
+            "Allocation failed on attempt [%d] due to error[%s]. Can still retry action[%s].",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Exhausted max attempts [%d] for allocation with latest error [%s]."
-            + " Completing action [%s] with a null value.",
+            "Exhausted max attempts[%d] for allocation with latest error[%s]."
+            + " Completing action[%s] with a null value.",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
         requestToFuture.remove(request).complete(null);

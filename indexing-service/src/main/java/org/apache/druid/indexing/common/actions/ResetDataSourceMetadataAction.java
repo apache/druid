@@ -21,20 +21,30 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
+import javax.annotation.Nullable;
+
 public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
 {
+  private final String supervisorId;
   private final String dataSource;
   private final DataSourceMetadata resetMetadata;
 
   public ResetDataSourceMetadataAction(
+      @JsonProperty("supervisorId") @Nullable String supervisorId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("resetMetadata") DataSourceMetadata resetMetadata
   )
   {
-    this.dataSource = dataSource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null");
+    this.supervisorId = Preconditions.checkNotNull(
+        Configs.valueOrDefault(supervisorId, dataSource),
+        "supervisorId cannot be null"
+    );
     this.resetMetadata = resetMetadata;
   }
 
@@ -42,6 +52,12 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  public String getSupervisorId()
+  {
+    return supervisorId;
   }
 
   @JsonProperty
@@ -53,21 +69,13 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<Boolean>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
   public Boolean perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getSupervisorManager().resetSupervisor(dataSource, resetMetadata);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
+    return toolbox.getSupervisorManager().resetSupervisor(supervisorId, resetMetadata);
   }
 
   @Override
@@ -75,6 +83,7 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   {
     return "ResetDataSourceMetadataAction{" +
            "dataSource='" + dataSource + '\'' +
+           ", supervisorId='" + supervisorId + '\'' +
            ", resetMetadata=" + resetMetadata +
            '}';
   }

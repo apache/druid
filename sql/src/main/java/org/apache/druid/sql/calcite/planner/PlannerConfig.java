@@ -34,13 +34,13 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_KEY_USE_LEXICOGRAPHIC_TOPN = "useLexicographicTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
   public static final int NUM_FILTER_NOT_USED = -1;
-
   @JsonProperty
   private int maxTopNLimit = 100_000;
 
@@ -49,6 +49,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useApproximateTopN = true;
+
+  @JsonProperty
+  private boolean useLexicographicTopN = false;
 
   @JsonProperty
   private boolean requireTimeCondition = false;
@@ -75,11 +78,10 @@ public class PlannerConfig
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
 
   @JsonProperty
-  private String nativeQuerySqlPlanningMode = NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+  private String nativeQuerySqlPlanningMode = QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
 
-  private boolean serializeComplexValues = true;
+  @JsonProperty
+  private boolean enableSysQueriesTable = false;
 
   public int getMaxNumericInFilters()
   {
@@ -106,6 +108,11 @@ public class PlannerConfig
     return useApproximateTopN;
   }
 
+  public boolean isUseLexicographicTopN()
+  {
+    return useLexicographicTopN;
+  }
+
   public boolean isRequireTimeCondition()
   {
     return requireTimeCondition;
@@ -114,11 +121,6 @@ public class PlannerConfig
   public DateTimeZone getSqlTimeZone()
   {
     return sqlTimeZone;
-  }
-
-  public boolean shouldSerializeComplexValues()
-  {
-    return serializeComplexValues;
   }
 
   public boolean isComputeInnerJoinCostAsFilter()
@@ -150,6 +152,14 @@ public class PlannerConfig
     return nativeQuerySqlPlanningMode;
   }
 
+  /**
+   * Returns whether the sys.queries table is enabled.
+   */
+  public boolean isEnableSysQueriesTable()
+  {
+    return enableSysQueriesTable;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -161,44 +171,46 @@ public class PlannerConfig
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final PlannerConfig that = (PlannerConfig) o;
-    return maxTopNLimit == that.maxTopNLimit &&
-           useApproximateCountDistinct == that.useApproximateCountDistinct &&
-           useApproximateTopN == that.useApproximateTopN &&
-           requireTimeCondition == that.requireTimeCondition &&
-           serializeComplexValues == that.serializeComplexValues &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useNativeQueryExplain == that.useNativeQueryExplain &&
-           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
-           useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
-           computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
-           authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
-           maxNumericInFilters == that.maxNumericInFilters &&
-           nativeQuerySqlPlanningMode.equals(that.nativeQuerySqlPlanningMode);
+    PlannerConfig that = (PlannerConfig) o;
+    return maxTopNLimit == that.maxTopNLimit
+           && useApproximateCountDistinct == that.useApproximateCountDistinct
+           && useApproximateTopN == that.useApproximateTopN
+           && useLexicographicTopN == that.useLexicographicTopN
+           && requireTimeCondition == that.requireTimeCondition
+           && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
+           && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
+           && authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly
+           && useNativeQueryExplain == that.useNativeQueryExplain
+           && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
+           && maxNumericInFilters == that.maxNumericInFilters
+           && enableSysQueriesTable == that.enableSysQueriesTable
+           && Objects.equals(sqlTimeZone, that.sqlTimeZone)
+           && Objects.equals(nativeQuerySqlPlanningMode, that.nativeQuerySqlPlanningMode);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         maxTopNLimit,
         useApproximateCountDistinct,
         useApproximateTopN,
+        useLexicographicTopN,
         requireTimeCondition,
         sqlTimeZone,
-        serializeComplexValues,
+        useGroupingSetForExactDistinct,
+        computeInnerJoinCostAsFilter,
+        authorizeSystemTablesDirectly,
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
-        nativeQuerySqlPlanningMode
+        maxNumericInFilters,
+        nativeQuerySqlPlanningMode,
+        enableSysQueriesTable
     );
   }
 
@@ -209,11 +221,12 @@ public class PlannerConfig
            "maxTopNLimit=" + maxTopNLimit +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
+           ", useLexicographicTopN=" + useLexicographicTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
-           ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
+           ", enableSysQueriesTable=" + enableSysQueriesTable +
            '}';
   }
 
@@ -238,6 +251,7 @@ public class PlannerConfig
     private int maxTopNLimit;
     private boolean useApproximateCountDistinct;
     private boolean useApproximateTopN;
+    private boolean useLexicographicTopN;
     private boolean requireTimeCondition;
     private DateTimeZone sqlTimeZone;
     private boolean useGroupingSetForExactDistinct;
@@ -246,8 +260,8 @@ public class PlannerConfig
     private boolean useNativeQueryExplain;
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
-    private boolean serializeComplexValues;
     private String nativeQuerySqlPlanningMode;
+    private boolean enableSysQueriesTable;
 
     public Builder(PlannerConfig base)
     {
@@ -257,6 +271,7 @@ public class PlannerConfig
       maxTopNLimit = base.getMaxTopNLimit();
       useApproximateCountDistinct = base.isUseApproximateCountDistinct();
       useApproximateTopN = base.isUseApproximateTopN();
+      useLexicographicTopN = base.isUseLexicographicTopN();
       requireTimeCondition = base.isRequireTimeCondition();
       sqlTimeZone = base.getSqlTimeZone();
       useGroupingSetForExactDistinct = base.isUseGroupingSetForExactDistinct();
@@ -265,8 +280,8 @@ public class PlannerConfig
       useNativeQueryExplain = base.isUseNativeQueryExplain();
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
-      serializeComplexValues = base.shouldSerializeComplexValues();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
+      enableSysQueriesTable = base.isEnableSysQueriesTable();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -299,6 +314,12 @@ public class PlannerConfig
       return this;
     }
 
+    public Builder useLexicographicTopN(boolean option)
+    {
+      this.useLexicographicTopN = option;
+      return this;
+    }
+
     public Builder useGroupingSetForExactDistinct(boolean option)
     {
       this.useGroupingSetForExactDistinct = option;
@@ -323,12 +344,6 @@ public class PlannerConfig
       return this;
     }
 
-    public Builder serializeComplexValues(boolean option)
-    {
-      this.serializeComplexValues = option;
-      return this;
-    }
-
     public Builder useNativeQueryExplain(boolean option)
     {
       this.useNativeQueryExplain = option;
@@ -338,6 +353,12 @@ public class PlannerConfig
     public Builder nativeQuerySqlPlanningMode(String mode)
     {
       this.nativeQuerySqlPlanningMode = mode;
+      return this;
+    }
+
+    public Builder enableSysQueriesTable(boolean option)
+    {
+      this.enableSysQueriesTable = option;
       return this;
     }
 
@@ -357,6 +378,11 @@ public class PlannerConfig
           queryContext,
           CTX_KEY_USE_APPROXIMATE_TOPN,
           useApproximateTopN
+      );
+      useLexicographicTopN = QueryContexts.parseBoolean(
+          queryContext,
+          CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
+          useLexicographicTopN
       );
       computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
           queryContext,
@@ -383,8 +409,13 @@ public class PlannerConfig
           maxNumericInFilters);
       nativeQuerySqlPlanningMode = QueryContexts.parseString(
           queryContext,
-          CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+          QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
+      );
+      requireTimeCondition = QueryContexts.parseBoolean(
+          queryContext,
+          CTX_REQUIRE_TIME_CONDITION,
+          requireTimeCondition
       );
       return this;
     }
@@ -417,6 +448,7 @@ public class PlannerConfig
       config.maxTopNLimit = maxTopNLimit;
       config.useApproximateCountDistinct = useApproximateCountDistinct;
       config.useApproximateTopN = useApproximateTopN;
+      config.useLexicographicTopN = useLexicographicTopN;
       config.requireTimeCondition = requireTimeCondition;
       config.sqlTimeZone = sqlTimeZone;
       config.useGroupingSetForExactDistinct = useGroupingSetForExactDistinct;
@@ -425,8 +457,8 @@ public class PlannerConfig
       config.useNativeQueryExplain = useNativeQueryExplain;
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
-      config.serializeComplexValues = serializeComplexValues;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
+      config.enableSysQueriesTable = enableSysQueriesTable;
       return config;
     }
   }
@@ -450,6 +482,12 @@ public class PlannerConfig
       overrides.put(
           CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
           String.valueOf(useGroupingSetForExactDistinct)
+      );
+    }
+    if (def.requireTimeCondition != requireTimeCondition) {
+      overrides.put(
+          CTX_REQUIRE_TIME_CONDITION,
+          String.valueOf(requireTimeCondition)
       );
     }
 

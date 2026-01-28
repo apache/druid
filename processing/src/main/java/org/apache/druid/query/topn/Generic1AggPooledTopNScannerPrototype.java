@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -46,30 +47,35 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
       BufferAggregator aggregator,
       int aggregatorSize,
       Cursor cursor,
+      CursorGranularizer granularizer,
       int[] positions,
       ByteBuffer resultsBuffer
   )
   {
     long processedRows = 0;
     int positionToAllocate = 0;
-    while (!cursor.isDoneOrInterrupted()) {
-      final IndexedInts dimValues = dimensionSelector.getRow();
-      final int dimSize = dimValues.size();
-      for (int i = 0; i < dimSize; i++) {
-        int dimIndex = dimValues.get(i);
-        int position = positions[dimIndex];
-        if (position >= 0) {
-          aggregator.aggregate(resultsBuffer, position);
-        } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
-          positions[dimIndex] = positionToAllocate;
-          position = positionToAllocate;
-          aggregator.init(resultsBuffer, position);
-          aggregator.aggregate(resultsBuffer, position);
-          positionToAllocate += aggregatorSize;
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDoneOrInterrupted()) {
+        final IndexedInts dimValues = dimensionSelector.getRow();
+        final int dimSize = dimValues.size();
+        for (int i = 0; i < dimSize; i++) {
+          int dimIndex = dimValues.get(i);
+          int position = positions[dimIndex];
+          if (position >= 0) {
+            aggregator.aggregate(resultsBuffer, position);
+          } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
+            positions[dimIndex] = positionToAllocate;
+            position = positionToAllocate;
+            aggregator.init(resultsBuffer, position);
+            aggregator.aggregate(resultsBuffer, position);
+            positionToAllocate += aggregatorSize;
+          }
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+          break;
         }
       }
-      processedRows++;
-      cursor.advanceUninterruptibly();
     }
     return processedRows;
   }

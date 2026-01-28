@@ -43,7 +43,6 @@ import java.util.Map;
 public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);
-  private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256; // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch?tabs=microsoft-entra-id
 
   private final AzureDataSegmentConfig segmentConfig;
   private final AzureInputDataConfig inputDataConfig;

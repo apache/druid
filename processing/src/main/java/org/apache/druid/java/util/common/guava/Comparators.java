@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
@@ -30,7 +31,7 @@ import java.util.Comparator;
  */
 public class Comparators
 {
-  private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<Object>()
+  private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<>()
   {
     @SuppressWarnings("ComparatorMethodParameterNotUsed")
     @Override
@@ -51,13 +52,30 @@ public class Comparators
     return (Ordering<T>) ALWAYS_EQUAL;
   }
 
+  /**
+   * Creates an ordering which always gives priority to the specified value.
+   * Other values are considered equal to each other.
+   */
+  public static <T> Ordering<T> alwaysFirst(T value)
+  {
+    Preconditions.checkNotNull(value, "value cannot be null");
+
+    return Ordering.from((o1, o2) -> {
+      if (value.equals(o1)) {
+        return value.equals(o2) ? 0 : -1;
+      } else {
+        return value.equals(o2) ? 1 : 0;
+      }
+    });
+  }
+
   @SuppressWarnings("unchecked")
   public static <T extends Comparable<? super T>> Ordering<T> naturalNullsFirst()
   {
     return NATURAL_NULLS_FIRST;
   }
 
-  private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<Interval>()
+  private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<>()
   {
     private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
 
@@ -79,7 +97,7 @@ public class Comparators
     }
   };
 
-  private static final Comparator<Interval> INTERVAL_BY_END_THEN_START = new Comparator<Interval>()
+  private static final Comparator<Interval> INTERVAL_BY_END_THEN_START = new Comparator<>()
   {
     private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
 

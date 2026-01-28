@@ -24,25 +24,27 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Nested column {@link DimensionSchema}. If {@link #formatVersion} is set to 4, or null and
- * {@link DefaultColumnFormatConfig#nestedColumnFormatVersion} is set to 4, then {@link NestedDataColumnHandlerV4} is
- * used, else {@link NestedCommonFormatColumnHandler} is used instead and this is equivalent to using
- * {@link AutoTypeColumnSchema}
+ * Nested column {@link DimensionSchema}. This uses {@link NestedCommonFormatColumnHandler} and is equivalent to using
+ * {@link AutoTypeColumnSchema}, but remains for backwards compatibility.
  */
 public class NestedDataColumnSchema extends DimensionSchema
 {
   final int formatVersion;
+  @Nullable
+  final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
   @JsonCreator
   public NestedDataColumnSchema(
       @JsonProperty("name") String name,
       @JsonProperty("formatVersion") @Nullable Integer version,
+      @JsonProperty("columnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec,
       @JacksonInject DefaultColumnFormatConfig defaultFormatConfig
   )
   {
@@ -56,7 +58,16 @@ public class NestedDataColumnSchema extends DimensionSchema
       // but as far as this is concerned it is v5
       formatVersion = 5;
     }
-    DefaultColumnFormatConfig.validateNestedFormatVersion(this.formatVersion);
+    DefaultColumnFormatConfig.validateNestedFormatVersion(formatVersion);
+    if (columnFormatSpec == null) {
+      if (defaultFormatConfig.getIndexSpec() != null) {
+        this.columnFormatSpec = defaultFormatConfig.getIndexSpec().getAutoColumnFormatSpec();
+      } else {
+        this.columnFormatSpec = IndexSpec.getDefault().getAutoColumnFormatSpec();
+      }
+    } else {
+      this.columnFormatSpec = columnFormatSpec;
+    }
   }
 
   public NestedDataColumnSchema(
@@ -67,12 +78,19 @@ public class NestedDataColumnSchema extends DimensionSchema
     super(name, null, true);
     this.formatVersion = version;
     DefaultColumnFormatConfig.validateNestedFormatVersion(this.formatVersion);
+    this.columnFormatSpec = IndexSpec.getDefault().getAutoColumnFormatSpec();
   }
 
   @JsonProperty("formatVersion")
   public int getFormatVersion()
   {
     return formatVersion;
+  }
+
+  @JsonProperty("columnFormatSpec")
+  public NestedCommonFormatColumnFormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
   }
 
   @Override
@@ -90,11 +108,7 @@ public class NestedDataColumnSchema extends DimensionSchema
   @Override
   public DimensionHandler getDimensionHandler()
   {
-    if (formatVersion == 4) {
-      return new NestedDataColumnHandlerV4(getName());
-    } else {
-      return new NestedCommonFormatColumnHandler(getName(), null);
-    }
+    return new NestedCommonFormatColumnHandler(getName(), null, columnFormatSpec);
   }
 
   @Override
@@ -110,13 +124,14 @@ public class NestedDataColumnSchema extends DimensionSchema
       return false;
     }
     NestedDataColumnSchema that = (NestedDataColumnSchema) o;
-    return Objects.equals(formatVersion, that.formatVersion);
+    return Objects.equals(formatVersion, that.formatVersion) &&
+           Objects.equals(columnFormatSpec, that.columnFormatSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), formatVersion);
+    return Objects.hash(super.hashCode(), formatVersion, columnFormatSpec);
   }
 
   @Override
@@ -124,6 +139,7 @@ public class NestedDataColumnSchema extends DimensionSchema
   {
     return "NestedDataColumnSchema{" +
            "formatVersion=" + formatVersion +
+           "columnFormatSpec=" + columnFormatSpec +
            '}';
   }
 }

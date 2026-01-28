@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
@@ -50,7 +49,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
     Context.exit();
 
 
-    return new Function<Object, String>()
+    return new Function<>()
     {
       @Override
       public String apply(Object input)
@@ -123,7 +122,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   public String apply(@Nullable Object value)
   {
     Function<Object, String> fn = getCompiledScript();
-    return NullHandling.emptyToNullIfNeeded(fn.apply(value));
+    return fn.apply(value);
   }
 
   /**
@@ -154,7 +153,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable String value)
   {
-    return this.apply((Object) NullHandling.emptyToNullIfNeeded(value));
+    return this.apply((Object) value);
   }
 
   @Override

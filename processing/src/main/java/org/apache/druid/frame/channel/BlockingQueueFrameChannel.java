@@ -23,10 +23,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.frame.Frame;
+import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
@@ -43,7 +44,7 @@ import java.util.Optional;
 public class BlockingQueueFrameChannel
 {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private static final Optional<Either<Throwable, FrameWithPartition>> END_MARKER = Optional.empty();
+  private static final Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>> END_MARKER = Optional.empty();
 
   private final int maxQueuedFrames;
   private final Object lock = new Object();
@@ -52,7 +53,7 @@ public class BlockingQueueFrameChannel
   private final Readable readable;
 
   @GuardedBy("lock")
-  private final ArrayDeque<Optional<Either<Throwable, FrameWithPartition>>> queue;
+  private final ArrayDeque<Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>>> queue;
 
   @GuardedBy("lock")
   private SettableFuture<?> readyForWritingFuture = null;
@@ -129,7 +130,7 @@ public class BlockingQueueFrameChannel
   private class Writable implements WritableFrameChannel
   {
     @Override
-    public void write(FrameWithPartition frame)
+    public void write(RowsAndColumns rac, int partitionNumber)
     {
       synchronized (lock) {
         if (isFinished()) {
@@ -138,7 +139,7 @@ public class BlockingQueueFrameChannel
           // Caller should have checked if this channel was ready for writing.
           throw new ISE("Channel has no capacity");
         } else {
-          if (!queue.offer(Optional.of(Either.value(frame)))) {
+          if (!queue.offer(Optional.of(Either.value(ObjectIntPair.of(rac, partitionNumber))))) {
             // If this happens, it's a bug in this class's capacity-counting.
             throw new ISE("Channel had capacity, but could not add frame");
           }
@@ -196,8 +197,8 @@ public class BlockingQueueFrameChannel
     public boolean isClosed()
     {
       synchronized (lock) {
-        final Optional<Either<Throwable, FrameWithPartition>> lastElement = queue.peekLast();
-        return lastElement != null && END_MARKER.equals(lastElement);
+        final Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>> lastElement = queue.peekLast();
+        return END_MARKER.equals(lastElement);
       }
     }
   }
@@ -219,9 +220,9 @@ public class BlockingQueueFrameChannel
     }
 
     @Override
-    public Frame read()
+    public RowsAndColumns read()
     {
-      final Optional<Either<Throwable, FrameWithPartition>> next;
+      final Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>> next;
 
       synchronized (lock) {
         if (isFinished()) {
@@ -237,7 +238,7 @@ public class BlockingQueueFrameChannel
         notifyWriter();
       }
 
-      return next.get().valueOrThrow().frame();
+      return next.get().valueOrThrow().left();
     }
 
     @Override

@@ -27,11 +27,11 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -84,9 +84,9 @@ public class ITWikipediaQueryTest
 
   /**
    * A combination of request Content-Type and Accept HTTP header
-   * The first is Content-Type which can not be null while the 2nd is Accept which could be null
+   * The first is Content-Type that cannot be null while the 2nd is Accept that could be null
    * <p>
-   * When Accept is null, its value defaults to value of Content-Type
+   * When Accept is null, its value defaults to the value of Content-Type
    */
   @DataProvider
   public static Object[][] encodingCombination()

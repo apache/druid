@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -126,6 +127,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   }
 
   @Override
+  public void loadQueuedSegmentsSkipCallbacks()
+  {
+    sim.cluster().loadQueuedSegmentsSkipCallbacks();
+  }
+
+  @Override
   public void removeServer(DruidServer server)
   {
     sim.cluster().removeServer(server);
@@ -141,6 +148,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   public void addSegments(List<DataSegment> segments)
   {
     sim.cluster().addSegments(segments);
+  }
+
+  @Override
+  public void deleteSegments(List<DataSegment> segments)
+  {
+    sim.cluster().deleteSegments(segments);
   }
 
   @Override
@@ -201,12 +214,6 @@ public abstract class CoordinatorSimulationBaseTest implements
 
   // Utility and constant holder classes
 
-  static class DS
-  {
-    static final String WIKI = "wiki";
-    static final String KOALA = "koala";
-  }
-
   static class Tier
   {
     static final String T1 = "tier_t1";
@@ -222,6 +229,7 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String DELETED_COUNT = "segment/deleted/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
+    static final String SUCCESS_ACTIONS = "segment/loadQueue/success";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
 
     static final String OVERSHADOWED_COUNT = "segment/overshadowed/count";
@@ -230,33 +238,33 @@ public abstract class CoordinatorSimulationBaseTest implements
   static class Segments
   {
     /**
-     * Segments of datasource {@link DS#WIKI}, size 500 MB each,
+     * Segments of datasource {@link TestDataSource#WIKI}, size 500 MB each,
      * spanning 1 day containing 10 partitions each.
      */
     static final List<DataSegment> WIKI_10X1D =
-        CreateDataSegments.ofDatasource(DS.WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
                           .eachOfSizeInMb(500);
 
     /**
-     * Segments of datasource {@link DS#WIKI}, size 500 MB each,
+     * Segments of datasource {@link TestDataSource#WIKI}, size 500 MB each,
      * spanning 100 days containing 10 partitions each.
      */
     static final List<DataSegment> WIKI_10X100D =
-        CreateDataSegments.ofDatasource(DS.WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(100, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
                           .eachOfSizeInMb(500);
 
     /**
-     * Segments of datasource {@link DS#KOALA}, size 500 MB each,
+     * Segments of datasource {@link TestDataSource#KOALA}, size 500 MB each,
      * spanning 100 days containing 100 partitions each.
      */
     static final List<DataSegment> KOALA_100X100D =
-        CreateDataSegments.ofDatasource(DS.KOALA)
+        CreateDataSegments.ofDatasource(TestDataSource.KOALA)
                           .forIntervals(100, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(100)

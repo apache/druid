@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#--------------------------------------------------------------------
+
+# Updates the versions for the master branch
+# https://github.com/apache/druid/blob/master/distribution/asf-release-process-guide.md
+
+[ "$#" -lt 1 ] && echo -e "usage: $0 <new_version> [<docs_version>]\n  note: omit docs_version during master update" && exit 1
+
+set -e
+set -x
+
+VERSION=$1
+DOCS_VERSION=${2:-latest}
+
+sed -i -r "s|public/web-console-[^<]+.js|public/web-console-${VERSION}.js|" web-console/unified-console.html
+sed -i -r "s|DRUID_DOCS_VERSION = '[^']+'|DRUID_DOCS_VERSION = '${DOCS_VERSION}'|" web-console/src/links.ts
+sed -i -r "s|apache/druid:[0-9\.]+|apache/druid:${VERSION}|" distribution/docker/docker-compose.yml
+
+# make node available to shell
+mvn install -pl web-console -DskipTests
+export PATH+=:$PWD/web-console/target/node/
+
+cd web-console
+npm version $VERSION
+npm install
+npm run jest -- -u
+cd ..
+mvn -q versions:set -DnewVersion=${VERSION}-SNAPSHOT
+
+echo "Versions updated!"

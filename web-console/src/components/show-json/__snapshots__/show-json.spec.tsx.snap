@@ -8,40 +8,52 @@ exports[`ShowJson matches snapshot 1`] = `
     class="top-actions"
   >
     <div
-      class="bp4-button-group right-buttons"
+      class="bp5-button-group right-buttons"
     >
       <button
-        class="bp4-button bp4-disabled bp4-minimal"
+        class="bp5-button bp5-disabled bp5-minimal"
         disabled=""
         tabindex="-1"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
+        >
+          Refresh
+        </span>
+      </button>
+      <button
+        class="bp5-button bp5-disabled bp5-minimal"
+        disabled=""
+        tabindex="-1"
+        type="button"
+      >
+        <span
+          class="bp5-button-text"
         >
           Download
         </span>
       </button>
       <button
-        class="bp4-button bp4-disabled bp4-minimal"
+        class="bp5-button bp5-disabled bp5-minimal"
         disabled=""
         tabindex="-1"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           Copy
         </span>
       </button>
       <button
-        class="bp4-button bp4-disabled bp4-minimal"
+        class="bp5-button bp5-disabled bp5-minimal"
         disabled=""
         tabindex="-1"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           View raw
         </span>

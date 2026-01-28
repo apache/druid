@@ -30,6 +30,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableDoubleColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import java.io.File;
 import java.util.Comparator;
 
 public class DoubleDimensionHandler implements DimensionHandler<Double, Double, Double>
@@ -70,22 +71,24 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   }
 
   @Override
-  public DimensionIndexer<Double, Double, Double> makeIndexer(boolean useMaxMemoryEstimates)
+  public DimensionIndexer<Double, Double, Double> makeIndexer()
   {
-    return new DoubleDimensionIndexer();
+    return new DoubleDimensionIndexer(dimensionName);
   }
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
     return new DoubleDimensionMergerV9(
-        dimensionName,
+        outputName,
         indexSpec,
         segmentWriteOutMedium
     );

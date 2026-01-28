@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -37,9 +38,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -217,18 +216,18 @@ public class HadoopDruidIndexerConfigTest
 
   private static class HadoopIngestionSpecBuilder
   {
-    private static final DataSchema DATA_SCHEMA = new DataSchema(
-        "foo",
-        null,
-        new AggregatorFactory[0],
-        new UniformGranularitySpec(
-            Granularities.MINUTE,
-            Granularities.MINUTE,
-            ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-        ),
-        null,
-        HadoopDruidIndexerConfigTest.JSON_MAPPER
-    );
+    private static final DataSchema DATA_SCHEMA =
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.MINUTE,
+                          Granularities.MINUTE,
+                          ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                      )
+                  )
+                  .withObjectMapper(HadoopDruidIndexerConfigTest.JSON_MAPPER)
+                  .build();
 
     private static final HadoopIOConfig HADOOP_IO_CONFIG = new HadoopIOConfig(
         ImmutableMap.of("paths", "bar", "type", "static"),
@@ -265,7 +264,6 @@ public class HadoopDruidIndexerConfigTest
           null,
           null,
           null,
-          false,
           false,
           false,
           false,

@@ -48,12 +48,13 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 | `druid.emitter.kafka.clusterName`                  | Optional value to specify the name of your Druid cluster. It can help make groups in your monitoring environment.                         | no        | none                  |
 | `druid.emitter.kafka.extra.dimensions` | Optional JSON configuration to specify a map of extra string dimensions for the events emitted. These can help make groups in your monitoring environment. | no | none |
 | `druid.emitter.kafka.producer.hiddenProperties`    | JSON configuration to specify sensitive Kafka producer properties such as username and password.  This property accepts a [DynamicConfigProvider](../../operations/dynamic-config-provider.md) implementation. | no | none |
+| `druid.emitter.kafka.producer.shutdownTimeout`    | Duration in milliseconds the Kafka producer waits for pending requests to finish before shutting down. | no | Long.MAX_VALUE |
 
 ### Example
 
 ```
 druid.emitter.kafka.bootstrap.servers=hostname1:9092,hostname2:9092
-druid.emitter.kafka.event.types=["metrics", alerts", "requests", "segment_metadata"]
+druid.emitter.kafka.event.types=["metrics", "alerts", "requests", "segment_metadata"]
 druid.emitter.kafka.metric.topic=druid-metric
 druid.emitter.kafka.alert.topic=druid-alert
 druid.emitter.kafka.request.topic=druid-request-logs

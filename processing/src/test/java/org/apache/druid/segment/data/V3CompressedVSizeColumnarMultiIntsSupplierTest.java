@@ -85,7 +85,8 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
     return wrapSupplier(
         V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
             buffer,
-            ByteOrder.nativeOrder()
+            ByteOrder.nativeOrder(),
+            null
         ),
         closer
     );

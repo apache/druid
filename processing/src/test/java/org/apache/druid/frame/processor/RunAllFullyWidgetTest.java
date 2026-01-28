@@ -41,7 +41,7 @@ import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -69,7 +69,8 @@ import java.util.stream.IntStream;
 @RunWith(Parameterized.class)
 public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameProcessorExecutorTestSuite
 {
-  private final int bouncerPoolSize;
+  private final int lowerBouncerPoolSize;
+  private final int higherBouncerPoolSize;
   private final int maxOutstandingProcessors;
   private final boolean delayed;
   private final AtomicLong closed = new AtomicLong();
@@ -82,25 +83,46 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @GuardedBy("this")
   private int concurrentNow = 0;
 
-  public RunAllFullyWidgetTest(int numThreads, int bouncerPoolSize, int maxOutstandingProcessors, boolean delayed)
+  public RunAllFullyWidgetTest(
+      int numThreads,
+      int lowerBouncerPoolSize,
+      int higherBouncerPoolSize,
+      int maxOutstandingProcessors,
+      boolean delayed
+  )
   {
     super(numThreads);
-    this.bouncerPoolSize = bouncerPoolSize;
+    this.lowerBouncerPoolSize = lowerBouncerPoolSize;
+    this.higherBouncerPoolSize = higherBouncerPoolSize;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
     this.delayed = delayed;
   }
 
   @Parameterized.Parameters(name =
-      "numThreads = {0}, bouncerPoolSize = {1}, maxOutstandingProcessors = {2}, delayed = {3}")
+      "numThreads = {0}, "
+      + "lowerBouncerPoolSize = {1}, "
+      + "higherBouncerPoolSize = {2}, "
+      + "maxOutstandingProcessors = {3}, "
+      + "delayed = {4}")
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
 
     for (int numThreads : new int[]{1, 3, 12}) {
-      for (int bouncerPoolSize : new int[]{1, 3, 12, Integer.MAX_VALUE}) {
-        for (int maxOutstandingProcessors : new int[]{1, 3, 12}) {
-          for (boolean delayed : new boolean[]{false, true}) {
-            constructors.add(new Object[]{numThreads, bouncerPoolSize, maxOutstandingProcessors, delayed});
+      for (int lowerBouncerPoolSize : new int[]{1, 3, 12, Integer.MAX_VALUE}) {
+        for (int higherBouncerPoolSize : new int[]{-1, 1, 3, 12, Integer.MAX_VALUE}) {
+          for (int maxOutstandingProcessors : new int[]{1, 3, 12}) {
+            for (boolean delayed : new boolean[]{false, true}) {
+              constructors.add(
+                  new Object[]{
+                      numThreads,
+                      lowerBouncerPoolSize,
+                      higherBouncerPoolSize,
+                      maxOutstandingProcessors,
+                      delayed
+                  }
+              );
+            }
           }
         }
       }
@@ -114,7 +136,10 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   public void setUp() throws Exception
   {
     super.setUp();
-    bouncer = bouncerPoolSize == Integer.MAX_VALUE ? Bouncer.unlimited() : new Bouncer(bouncerPoolSize);
+    bouncer = new Bouncer(lowerBouncerPoolSize);
+    if (higherBouncerPoolSize != -1) {
+      bouncer = new Bouncer(higherBouncerPoolSize, bouncer);
+    }
 
     synchronized (this) {
       concurrentNow = 0;
@@ -130,12 +155,19 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
 
     synchronized (this) {
       Assert.assertEquals(0, concurrentNow);
-      MatcherAssert.assertThat(concurrentHighWatermark, Matchers.lessThanOrEqualTo(bouncerPoolSize));
+      MatcherAssert.assertThat(concurrentHighWatermark, Matchers.lessThanOrEqualTo(lowerBouncerPoolSize));
+      if (higherBouncerPoolSize != -1) {
+        MatcherAssert.assertThat(concurrentHighWatermark, Matchers.lessThanOrEqualTo(higherBouncerPoolSize));
+      }
       MatcherAssert.assertThat(concurrentHighWatermark, Matchers.lessThanOrEqualTo(maxOutstandingProcessors));
     }
 
     Assert.assertEquals("Bouncer current running count", 0, bouncer.getCurrentCount());
-    Assert.assertEquals("Bouncer max pool size", bouncerPoolSize, bouncer.getMaxCount());
+    Assert.assertEquals(
+        "Bouncer max pool size",
+        higherBouncerPoolSize == -1 ? lowerBouncerPoolSize : Math.min(lowerBouncerPoolSize, higherBouncerPoolSize),
+        bouncer.getMaxCount()
+    );
     Assert.assertEquals("Encountered single close (from ensureClose)", 1, closed.get());
   }
 
@@ -160,8 +192,8 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     // Doesn't matter what's in this frame.
     final Frame frame =
         Iterables.getOnlyElement(
-            FrameSequenceBuilder.fromAdapter(new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex()))
-                                .frameType(FrameType.ROW_BASED)
+            FrameSequenceBuilder.fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex()))
+                                .frameType(FrameType.latestRowBased())
                                 .frames()
                                 .toList()
         );
@@ -402,13 +434,16 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @SuppressWarnings("BusyWait")
   public void test_runAllFully_futureCancel() throws InterruptedException
   {
-    final int expectedRunningProcessors = Math.min(Math.min(bouncerPoolSize, maxOutstandingProcessors), numThreads);
+    final int expectedRunningProcessors =
+        Math.min(Math.min(bouncer.getMaxCount(), maxOutstandingProcessors), numThreads);
 
     final List<SleepyFrameProcessor> processors =
         IntStream.range(0, 10 * expectedRunningProcessors)
                  .mapToObj(i -> new SleepyFrameProcessor())
                  .collect(Collectors.toList());
 
+    final String cancellationId = "xyzzy";
+    exec.registerCancellationId(cancellationId);
     final ListenableFuture<Long> future = exec.runAllFully(
         possiblyDelay(
             ensureClose(
@@ -418,7 +453,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         ),
         maxOutstandingProcessors,
         bouncer,
-        "xyzzy"
+        cancellationId
     );
 
     for (int i = 0; i < expectedRunningProcessors; i++) {
@@ -635,7 +670,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
 
       Futures.addCallback(
           future,
-          new FutureCallback<Optional<ProcessorAndCallback<T>>>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(Optional<ProcessorAndCallback<T>> result)

@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import org.apache.datasketches.hll.HllSketch;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
@@ -55,10 +54,6 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class DataSketchesHllBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final AggregatorFactory aggregatorFactory = new HllSketchMergeAggregatorFactory(
       "hll",
       "hll",

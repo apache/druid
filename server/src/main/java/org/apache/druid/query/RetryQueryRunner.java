@@ -108,7 +108,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
     runnableAfterFirstAttempt.run();
 
-    return new YieldingSequenceBase<T>()
+    return new YieldingSequenceBase<>()
     {
       @Override
       public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
@@ -167,9 +167,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
     return jsonMapper.convertValue(
         maybeMissingSegments,
-        new TypeReference<List<SegmentDescriptor>>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 

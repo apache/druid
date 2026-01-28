@@ -37,7 +37,9 @@ public class RowSerdeTest
   {
     Object[][] data = new Object[][]{
         {NonPartitionedDeltaTable.DELTA_TABLE_PATH},
-        {PartitionedDeltaTable.DELTA_TABLE_PATH}
+        {PartitionedDeltaTable.DELTA_TABLE_PATH},
+        {ComplexTypesDeltaTable.DELTA_TABLE_PATH},
+        {SnapshotDeltaTable.DELTA_TABLE_PATH}
     };
     return Arrays.asList(data);
   }

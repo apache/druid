@@ -57,7 +57,7 @@ public class RunAllFullyWidget<T, ResultType>
 {
   private static final Logger log = new Logger(RunAllFullyWidget.class);
 
-  private final ProcessorManager<T, ResultType> processorManager;
+  private final ProcessorManager<T, ? extends ResultType> processorManager;
   private final FrameProcessorExecutor exec;
   private final int maxOutstandingProcessors;
   private final Bouncer bouncer;
@@ -65,7 +65,7 @@ public class RunAllFullyWidget<T, ResultType>
   private final String cancellationId;
 
   RunAllFullyWidget(
-      ProcessorManager<T, ResultType> processorManager,
+      ProcessorManager<T, ? extends ResultType> processorManager,
       FrameProcessorExecutor exec,
       int maxOutstandingProcessors,
       Bouncer bouncer,
@@ -94,6 +94,9 @@ public class RunAllFullyWidget<T, ResultType>
     }
     catch (Throwable e) {
       CloseableUtils.closeAndSuppressExceptions(processorManager, e::addSuppressed);
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       return Futures.immediateFailedFuture(e);
     }
 
@@ -276,7 +279,7 @@ public class RunAllFullyWidget<T, ResultType>
 
         Futures.addCallback(
             future,
-            new FutureCallback<T>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(T result)
@@ -306,9 +309,11 @@ public class RunAllFullyWidget<T, ResultType>
                 }
 
                 if (isDone) {
-                  finished.compareAndSet(null, Either.value(processorManager.result()));
-
                   synchronized (runAllFullyLock) {
+                    if (finished.get() == null) {
+                      finished.compareAndSet(null, Either.value(processorManager.result()));
+                    }
+
                     cleanupIfNoMoreProcessors();
                   }
                 } else {

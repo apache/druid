@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -78,7 +80,7 @@ public class FilteringCloseableInputRowIteratorTest
     final Predicate<InputRow> filter = row -> (Integer) row.getRaw("dim1") == 10;
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         CloseableIterators.withEmptyBaggage(ROWS.iterator()),
-        filter,
+        InputRowFilter.fromPredicate(filter),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -95,7 +97,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testParseExceptionInDelegateNext()
   {
     // This iterator throws ParseException every other call to next().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int nextIdx = 0;
@@ -125,7 +127,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -144,7 +146,7 @@ public class FilteringCloseableInputRowIteratorTest
         ROWS.iterator()
     );
     // This filter throws ParseException every other call to test().
-    final Predicate<InputRow> filter = new Predicate<InputRow>()
+    final Predicate<InputRow> filter = new Predicate<>()
     {
       boolean throwParseException = false;
 
@@ -163,7 +165,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        filter,
+        InputRowFilter.fromPredicate(filter),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -183,7 +185,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testParseExceptionInDelegateHasNext()
   {
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;
@@ -214,7 +216,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -229,7 +231,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testNonParseExceptionInDelegateHasNext()
   {
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;
@@ -260,7 +262,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -281,7 +283,7 @@ public class FilteringCloseableInputRowIteratorTest
     );
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         delegate,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -294,7 +296,7 @@ public class FilteringCloseableInputRowIteratorTest
   {
 
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;
@@ -330,7 +332,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -349,6 +351,103 @@ public class FilteringCloseableInputRowIteratorTest
     Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
   }
 
+
+  @Test
+  public void testRowFilterWithReasons()
+  {
+    // RowFilter that returns different reasons based on dim1 value
+    final InputRowFilter rowFilter = row -> {
+      int dim1 = (Integer) row.getRaw("dim1");
+      if (dim1 == 10) {
+        return InputRowFilterResult.ACCEPTED;
+      } else if (dim1 == 20) {
+        return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
+      } else {
+        return InputRowFilterResult.CUSTOM_FILTER;
+      }
+    };
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        rowFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    // Only rows with dim1=10 should pass
+    Assert.assertEquals(4, filteredRows.size());
+    for (InputRow row : filteredRows) {
+      Assert.assertEquals(10, row.getRaw("dim1"));
+    }
+
+    // Check total thrown away
+    Assert.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // Check per-reason counts
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(2, byReason.size());
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason())); // dim1=20
+    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason())); // dim1=30
+  }
+
+  @Test
+  public void testRowFilterFromPredicate()
+  {
+    // Use the static helper to convert a Predicate to RowFilter
+    final Predicate<InputRow> predicate = row -> (Integer) row.getRaw("dim1") == 10;
+    final InputRowFilter rowFilter = InputRowFilter.fromPredicate(predicate);
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        rowFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    Assert.assertEquals(4, filteredRows.size());
+    Assert.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // All thrown away should have FILTERED reason when using fromPredicate
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(1, byReason.size());
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+  }
+
+  @Test
+  public void testRowFilterAnd()
+  {
+    // First filter: reject nulls (simulated by checking dim1)
+    final InputRowFilter nullFilter = row -> row == null ? InputRowFilterResult.NULL_OR_EMPTY_RECORD : InputRowFilterResult.ACCEPTED;
+
+    // Second filter: reject if dim1 != 10
+    final InputRowFilter valueFilter = row -> (Integer) row.getRaw("dim1") == 10 ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
+
+    // Combine filters
+    final InputRowFilter combinedFilter = nullFilter.and(valueFilter);
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        combinedFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    Assert.assertEquals(4, filteredRows.size());
+    Assert.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // All rejected rows should have FILTERED reason (from second filter)
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+  }
 
   private static InputRow newRow(DateTime timestamp, Object dim1Val, Object dim2Val)
   {

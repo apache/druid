@@ -20,10 +20,12 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -35,6 +37,7 @@ import java.util.Objects;
  * Note that this class is not the same as {@link GranularitySpec}. This class simply holds Granularity configs
  * and pass it to compaction task spec. This class does not do bucketing, group events or knows how to partition data.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserCompactionTaskGranularityConfig
 {
   private final Granularity segmentGranularity;
@@ -69,6 +72,20 @@ public class UserCompactionTaskGranularityConfig
   public Boolean isRollup()
   {
     return rollup;
+  }
+
+  @Nullable
+  public static UserCompactionTaskGranularityConfig from(GranularitySpec granularitySpec)
+  {
+    if (granularitySpec == null) {
+      return null;
+    } else {
+      return new UserCompactionTaskGranularityConfig(
+          granularitySpec.getSegmentGranularity(),
+          granularitySpec.getQueryGranularity(),
+          granularitySpec.isRollup()
+      );
+    }
   }
 
   @Override

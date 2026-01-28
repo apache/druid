@@ -55,6 +55,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
               workerId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87-worker0_0',
               state: 'SUCCESS',
               durationMs: 8789,
+              pendingMs: 123,
             },
           ],
         },
@@ -145,7 +146,6 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
                 ],
                 resultFormat: 'compactedList',
                 columns: ['agent_type', 'v0'],
-                legacy: false,
                 context: {
                   __resultFormat: 'array',
                   __timeColumn: 'v0',
@@ -383,7 +383,6 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
           ],
           resultFormat: 'compactedList',
           columns: ['agent_type', 'v0'],
-          legacy: false,
           context: {
             __resultFormat: 'array',
             __user: 'allowAll',
@@ -445,7 +444,6 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
       },
       sqlResultsContext: {
         timeZone: 'UTC',
-        serializeComplexValues: true,
         stringifyArrays: true,
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],

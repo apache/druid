@@ -42,7 +42,7 @@ public class SinkQueryRunners<T> implements Iterable<QueryRunner<T>>
   public Iterator<QueryRunner<T>> iterator()
   {
     Iterator<Pair<Interval, QueryRunner<T>>> runnerIntervalIterator = runners.iterator();
-    return new Iterator<QueryRunner<T>>()
+    return new Iterator<>()
     {
       @Override
       public boolean hasNext()

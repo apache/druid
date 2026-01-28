@@ -40,8 +40,8 @@ import org.apache.calcite.util.ConversionUtil;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -77,8 +77,8 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
-  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
-  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
+  public static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
+  public static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
       new DateTimeFormatterBuilder()
           .append(ISODateTimeFormat.dateParser())
           .appendLiteral(' ')
@@ -126,7 +126,7 @@ public class Calcites
     final StringBuilder builder = new StringBuilder("'");
     for (int i = 0; i < s.length(); i++) {
       final char c = s.charAt(i);
-      if (Character.isLetterOrDigit(c) || c == ' ') {
+      if (Character.isLetterOrDigit(c) || (c >= 32 && c < 127 && c != '\'' && c != '\\')) {
         builder.append(c);
         if (c > 127) {
           isPlainAscii = false;
@@ -206,7 +206,7 @@ public class Calcites
       return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
       return ColumnType.LONG;
-    } else if (isStringType(sqlTypeName)) {
+    } else if (isStringType(sqlTypeName) || sqlTypeName == SqlTypeName.NULL) {
       return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       if (type instanceof RowSignatures.ComplexSqlType) {
@@ -217,6 +217,9 @@ public class Calcites
       ColumnType elementType = getValueTypeForRelDataTypeFull(type.getComponentType());
       if (elementType != null) {
         return ColumnType.ofArray(elementType);
+      }
+      if (type.getComponentType().getSqlTypeName() == SqlTypeName.NULL) {
+        return ColumnType.LONG_ARRAY;
       }
       return null;
     } else {
@@ -244,12 +247,22 @@ public class Calcites
   }
 
   /**
-   * Returns the natural StringComparator associated with the RelDataType
+   * Returns the natural StringComparator associated with the RelDataType, or null if the type is not convertible to
+   * {@link ColumnType} by {@link #getColumnTypeForRelDataType(RelDataType)}.
    */
+  @Nullable
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
-    final ColumnType valueType = getColumnTypeForRelDataType(dataType);
-    return getStringComparatorForValueType(valueType);
+    if (dataType.getSqlTypeName() == SqlTypeName.NULL) {
+      return StringComparators.NATURAL;
+    } else {
+      final ColumnType valueType = getColumnTypeForRelDataType(dataType);
+      if (valueType == null) {
+        return null;
+      }
+
+      return getStringComparatorForValueType(valueType);
+    }
   }
 
   /**
@@ -436,8 +449,8 @@ public class Calcites
   public static DateTime calciteDateTimeLiteralToJoda(final RexNode literal, final DateTimeZone timeZone)
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
-    if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
-      throw new IAE("Expected literal but got[%s]", literal.getKind());
+    if (literal.getKind() != SqlKind.LITERAL) {
+      throw DruidException.defensive("Expected literal but got[%s]", literal.getKind());
     }
 
     if (typeName == SqlTypeName.TIMESTAMP) {
@@ -447,7 +460,7 @@ public class Calcites
       final DateString dateString = (DateString) RexLiteral.value(literal);
       return CALCITE_DATE_PARSER.parse(dateString.toString()).withZoneRetainFields(timeZone);
     } else {
-      throw new IAE("Expected TIMESTAMP or DATE but got[%s]", typeName);
+      throw DruidException.defensive("Expected TIMESTAMP or DATE but got[%s]", typeName);
     }
   }
 

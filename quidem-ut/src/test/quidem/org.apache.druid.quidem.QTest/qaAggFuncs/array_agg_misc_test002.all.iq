@@ -1,0 +1,80 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaAggFuncs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_agg_funcs;
++-----+
+| cnt |
++-----+
+|  18 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A01
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_agg(tab0s0) AS c1,
+          array_agg(tab0l0) AS c2,
+          array_agg(tab0d0) AS c3,
+          array_agg(tab0f0) AS c4,
+          array_agg(__time) AS c5
+   FROM test_agg_funcs)
+WHERE (NOT array_contains(c1, '99999')
+       OR c1 IS NULL)
+  AND (NOT array_contains(c2, 99999)
+       OR c2 IS NULL)
+  AND (NOT array_contains(c3, 99999)
+       OR c3 IS NULL)
+  AND (NOT array_contains(c4, 99999)
+       OR c4 IS NULL)
+  AND (NOT array_contains(c5, ARRAY[timestamp '1970-01-01 01:01:01'])
+       OR c5 IS NULL);
++-----+
+| cnt |
++-----+
+|   1 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A02
+#-------------------------------------------------------------------------
+SELECT array_agg(tab0s0) c1,
+       tab0l0,
+       tab0d0
+FROM test_agg_funcs;
+is not being grouped
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test002 TEST_ID: A03
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM
+  (SELECT array_agg(tab0s0) AS c1,
+          tab0l0 AS c2,
+          tab0d0 AS c3
+   FROM test_agg_funcs
+   GROUP BY tab0s0,
+            tab0l0,
+            tab0d0)
+WHERE (NOT array_contains(c1, '99999')
+       OR c1 IS NULL);
++-----+
+| cnt |
++-----+
+|   9 |
++-----+
+(1 row)
+
+!ok
+

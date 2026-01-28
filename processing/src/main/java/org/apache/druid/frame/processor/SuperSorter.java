@@ -36,12 +36,12 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongRBTreeSet;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -69,29 +69,38 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import java.util.stream.IntStream;
 
 /**
- * Sorts and partitions a dataset using parallel external merge sort.
+ * Sorts and partitions a dataset using parallel, possibly-external merge sort.
  *
  * Input is provided as a set of {@link ReadableFrameChannel} and output is provided as {@link OutputChannels}.
  * Work is performed on a provided {@link FrameProcessorExecutor}.
  *
  * The most central point for SuperSorter logic is the {@link #runWorkersIfPossible} method, which determines what
- * needs to be done next based on the current state of the SuperSorter. The logic is:
+ * needs to be done next based on the current state of the SuperSorter.
  *
- * 1) Read input channels into {@link #inputBuffer} using {@link FrameChannelBatcher}, launched via
- * {@link #runNextBatcher()}, up to a limit of {@link #maxChannelsPerProcessor} per batcher.
+ * First, input channels are read into {@link #inputBuffer} using {@link FrameChannelBatcher}, launched via
+ * {@link #runNextBatcher()}.
+ *
+ * If the sorter finishes reading its input before reaching {@link #getMaxInputBufferFramesForDirectMerging()} number of
+ * frames in the {@link #inputBuffer}, the sorter operates in "direct mode". In this mode, {@link #totalMergingLevels}
+ * is 1. Mergers launched by {@link #runNextDirectMerger()} directly merge input frames into output channels, fully
+ * in-memory. No temporary files are used. Each direct merger reads *all* frames, but only rows corresponding to a
+ * single output partition.
+ *
+ * Otherwise, the sorter operates in "external mode". In this mode, {@link #totalMergingLevels} is 2 or more. Logic
+ * for external mode is:
+ *
+ * 1) Read inputs into {@link #inputBuffer} using {@link FrameChannelBatcher} (same as direct mode).
  *
  * 2) Merge and write frames from {@link #inputBuffer} into {@link FrameFile} scratch files using
  * {@link FrameChannelMerger} launched via {@link #runNextLevelZeroMerger()}.
  *
  * 3a) Merge level 0 scratch files into level 1 scratch files using {@link FrameChannelMerger} launched from
- * {@link #runNextMiddleMerger()}, processing up to {@link #maxChannelsPerProcessor} files per merger.
+ * {@link #runNextMiddleMerger()}, processing up to {@link #maxChannelsPerMerger} files per merger.
  * Continue this process through increasing level numbers, with the size of scratch files increasing by a factor
- * of {@link #maxChannelsPerProcessor} each level.
+ * of {@link #maxChannelsPerMerger} each level.
  *
  * 3b) For the penultimate level, the {@link FrameChannelMerger} launched by {@link #runNextMiddleMerger()} writes
  * partitioned {@link FrameFile} scratch files. The penultimate level cannot be written until
@@ -107,14 +116,14 @@ import java.util.stream.IntStream;
  *
  * Potential future work (things we could optimize if necessary):
  *
- * - Collapse merging to a single level if level zero has one merger, and we want to write one output partition.
- * - Skip batching, and inject directly into level 0, if input channels are already individually fully-sorted.
+ * - Identify sorted runs of frames in the {@link #inputBuffer}, group them into smaller sets of channels.
  * - Combine (for example: aggregate) while merging.
  */
 public class SuperSorter
 {
   private static final Logger log = new Logger(SuperSorter.class);
 
+  public static final long UNLIMITED = -1;
   public static final int UNKNOWN_LEVEL = -1;
   public static final long UNKNOWN_TOTAL = -1;
 
@@ -123,13 +132,14 @@ public class SuperSorter
   private final List<KeyColumn> sortKey;
   private final ListenableFuture<ClusterByPartitions> outputPartitionsFuture;
   private final FrameProcessorExecutor exec;
+  private final FrameProcessorDecorator processorDecorator;
   private final OutputChannelFactory outputChannelFactory;
   private final OutputChannelFactory intermediateOutputChannelFactory;
-  private final int maxChannelsPerProcessor;
+  private final FrameType outputFrameType;
+  private final int maxChannelsPerMerger;
   private final int maxActiveProcessors;
-  private final long rowLimit;
   private final String cancellationId;
-
+  private final boolean removeNullBytes;
   private final Object runWorkersLock = new Object();
 
   @GuardedBy("runWorkersLock")
@@ -174,6 +184,9 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   SuperSorterProgressTracker superSorterProgressTracker;
 
+  @GuardedBy("runWorkersLock")
+  private long rowLimit;
+
   /**
    * See {@link #setNoWorkRunnable}.
    */
@@ -197,12 +210,15 @@ public class SuperSorter
    * @param exec                             executor to perform work in
    * @param outputChannelFactory             factory for partitioned, sorted output channels
    * @param intermediateOutputChannelFactory factory for intermediate data produced by sorting levels
+   * @param outputFrameType                  frame type for all output channels (intermediate and final)
    * @param maxActiveProcessors              maximum number of merging processors to execute at once in the provided
    *                                         {@link FrameProcessorExecutor}
-   * @param maxChannelsPerProcessor          maximum number of channels to merge at once per merging processor
-   * @param rowLimit                         limit to apply during sorting. The limit is merely advisory: the actual number
-   *                                         of rows returned may be larger than the limit. The limit is applied across
-   *                                         all partitions, not to each partition individually.
+   * @param maxChannelsPerMerger             maximum number of channels to merge at once, for regular mergers
+   *                                         (does not apply to direct mergers; see
+   *                                         {@link #getMaxInputBufferFramesForDirectMerging()})
+   * @param rowLimit                         limit to apply during sorting. The limit is applied across all partitions,
+   *                                         not to each partition individually. Use {@link #UNLIMITED} if there is
+   *                                         no limit.
    * @param cancellationId                   cancellation id to use when running processors in the provided
    *                                         {@link FrameProcessorExecutor}.
    * @param superSorterProgressTracker       progress tracker
@@ -213,13 +229,16 @@ public class SuperSorter
       final List<KeyColumn> sortKey,
       final ListenableFuture<ClusterByPartitions> outputPartitionsFuture,
       final FrameProcessorExecutor exec,
+      final FrameProcessorDecorator processorDecorator,
       final OutputChannelFactory outputChannelFactory,
       final OutputChannelFactory intermediateOutputChannelFactory,
+      final FrameType outputFrameType,
       final int maxActiveProcessors,
-      final int maxChannelsPerProcessor,
+      final int maxChannelsPerMerger,
       final long rowLimit,
       @Nullable final String cancellationId,
-      final SuperSorterProgressTracker superSorterProgressTracker
+      final SuperSorterProgressTracker superSorterProgressTracker,
+      final boolean removeNullBytes
   )
   {
     this.inputChannels = inputChannels;
@@ -227,13 +246,16 @@ public class SuperSorter
     this.sortKey = sortKey;
     this.outputPartitionsFuture = outputPartitionsFuture;
     this.exec = exec;
+    this.processorDecorator = processorDecorator;
     this.outputChannelFactory = outputChannelFactory;
     this.intermediateOutputChannelFactory = intermediateOutputChannelFactory;
-    this.maxChannelsPerProcessor = maxChannelsPerProcessor;
+    this.outputFrameType = outputFrameType;
+    this.maxChannelsPerMerger = maxChannelsPerMerger;
     this.maxActiveProcessors = maxActiveProcessors;
     this.rowLimit = rowLimit;
     this.cancellationId = cancellationId;
     this.superSorterProgressTracker = superSorterProgressTracker;
+    this.removeNullBytes = removeNullBytes;
 
     for (int i = 0; i < inputChannels.size(); i++) {
       inputChannelsToRead.add(i);
@@ -243,8 +265,12 @@ public class SuperSorter
       throw new IAE("maxActiveProcessors[%d] < 1", maxActiveProcessors);
     }
 
-    if (maxChannelsPerProcessor < 2) {
-      throw new IAE("maxChannelsPerProcessor[%d] < 2", maxChannelsPerProcessor);
+    if (maxChannelsPerMerger < 2) {
+      throw new IAE("maxChannelsPerMerger[%d] < 2", maxChannelsPerMerger);
+    }
+
+    if (rowLimit != UNLIMITED && rowLimit <= 0) {
+      throw new IAE("rowLimit[%d] must be positive", rowLimit);
     }
   }
 
@@ -275,7 +301,7 @@ public class SuperSorter
               setAllDoneIfPossible();
             }
           },
-          exec.getExecutorService()
+          exec.asExecutor(cancellationId)
       );
 
       return FutureUtils.futureWithBaggage(
@@ -337,9 +363,16 @@ public class SuperSorter
       return;
     }
 
+    setTotalMergingLevelsIfPossible();
+
     try {
-      while (activeProcessors < maxActiveProcessors &&
-             (runNextUltimateMerger() || runNextMiddleMerger() || runNextLevelZeroMerger() || runNextBatcher())) {
+      // Attempt to run mergers in reverse order, so we merge later layers first.
+      while (activeProcessors < maxActiveProcessors
+             && (runNextDirectMerger()
+                 || runNextUltimateMerger()
+                 || runNextMiddleMerger()
+                 || runNextLevelZeroMerger()
+                 || runNextBatcher())) {
         activeProcessors += 1;
 
         if (log.isDebugEnabled()) {
@@ -362,28 +395,46 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private void setAllDoneIfPossible()
   {
-    if (totalInputFrames == 0 && outputPartitionsFuture.isDone()) {
-      // No input data -- generate empty output channels.
-      final ClusterByPartitions partitions = getOutputPartitions();
-      final List<OutputChannel> channels = new ArrayList<>(partitions.size());
+    if (isAllDone()) {
+      // Already done, no need to set allDone again.
+      return;
+    }
 
-      for (int partitionNum = 0; partitionNum < partitions.size(); partitionNum++) {
-        channels.add(outputChannelFactory.openNilChannel(partitionNum));
-      }
+    try {
+      if (totalInputFrames == 0 && outputPartitionsFuture.isDone()) {
+        // No input data -- generate empty output channels.
+        final ClusterByPartitions partitions = getOutputPartitions();
+        final List<OutputChannel> channels = new ArrayList<>(partitions.size());
 
-      // OK to use wrap, not wrapReadOnly, because nil channels are already read-only.
-      allDone.set(OutputChannels.wrap(channels));
-    } else if (totalMergingLevels != UNKNOWN_LEVEL
-               && outputsReadyByLevel.containsKey(totalMergingLevels - 1)
-               && outputsReadyByLevel.get(totalMergingLevels - 1).size() == getOutputPartitions().size()) {
-      // We're done!!
-      try {
+        for (int partitionNum = 0; partitionNum < partitions.size(); partitionNum++) {
+          channels.add(outputChannelFactory.openNilChannel(partitionNum));
+        }
+
+        // OK to use wrap, not wrapReadOnly, because nil channels are already read-only.
+        allDone.set(OutputChannels.wrap(channels));
+      } else if (rowLimit == 0 && activeProcessors == 0) {
+        // We had a row limit, and got it all the way down to zero.
+        // Generate empty output channels for any partitions that we haven't written yet.
+        for (int partitionNum = 0; partitionNum < outputChannels.size(); partitionNum++) {
+          if (outputChannels.get(partitionNum) == null) {
+            outputChannels.set(partitionNum, outputChannelFactory.openNilChannel(partitionNum));
+            superSorterProgressTracker.addMergedBatchesForLevel(totalMergingLevels - 1, 1);
+          }
+        }
+
+        // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
+        allDone.set(OutputChannels.wrap(outputChannels));
+      } else if (totalMergingLevels != UNKNOWN_LEVEL
+                 && outputsReadyByLevel.containsKey(totalMergingLevels - 1)
+                 && (outputsReadyByLevel.get(totalMergingLevels - 1).size() ==
+                     getTotalMergersInLevel(totalMergingLevels - 1))) {
+        // We're done!!
         // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
         allDone.set(OutputChannels.wrap(outputChannels));
       }
-      catch (Throwable e) {
-        allDone.setException(e);
-      }
+    }
+    catch (Throwable e) {
+      allDone.setException(e);
     }
   }
 
@@ -396,7 +447,7 @@ public class SuperSorter
       batcherIsRunning = true;
 
       runWorker(
-          new FrameChannelBatcher(inputChannels, maxChannelsPerProcessor),
+          new FrameChannelBatcher(inputChannels, maxChannelsPerMerger),
           result -> {
             final List<Frame> batch = result.lhs;
             final IntSet keepReading = result.rhs;
@@ -409,8 +460,9 @@ public class SuperSorter
               if (inputChannelsToRead.isEmpty()) {
                 inputChannels.forEach(ReadableFrameChannel::close);
                 setTotalInputFrames(inputFramesReadSoFar);
+                setTotalMergingLevelsIfPossible();
                 runWorkersIfPossible();
-              } else if (inputBuffer.size() >= maxChannelsPerProcessor) {
+              } else if (inputBuffer.size() >= maxChannelsPerMerger) {
                 runWorkersIfPossible();
               }
 
@@ -424,29 +476,70 @@ public class SuperSorter
   }
 
   /**
+   * Launch a merger that reads from {@link #inputBuffer} and directly writes an output channel. This method only
+   * does anything when the sorter is in "direct mode", i.e. when all input fits in memory. See class-level javadoc
+   * for more details.
+   */
+  @GuardedBy("runWorkersLock")
+  private boolean runNextDirectMerger()
+  {
+    // Direct merging is a single-level merge (totalMergingLevels == 1).
+    if (!(totalMergingLevels == 1
+          && allInputRead()
+          && ultimateMergersRunSoFar < getTotalMergersInLevel(0))) {
+      return false;
+    }
+
+    if (isLimited() && (rowLimit == 0 || activeProcessors > 0)) {
+      // Run final-layer mergers one at a time, to ensure limit is applied across the entire dataset.
+      return false;
+    }
+
+    final List<ReadableFrameChannel> in = new ArrayList<>();
+
+    for (final Frame frame : inputBuffer) {
+      in.add(singleReadableFrameChannel(frame));
+    }
+
+    runMerger(0, ultimateMergersRunSoFar++, in, Collections.emptyList());
+    return true;
+  }
+
+  /**
    * Level zero mergers read batches of frames from the "inputBuffer". These frames are individually sorted, but there
    * is no ordering between the frames. Their output is a sorted sequence of frames.
    */
   @GuardedBy("runWorkersLock")
   private boolean runNextLevelZeroMerger()
   {
-    if (inputBuffer.isEmpty() || (inputBuffer.size() < maxChannelsPerProcessor && !allInputRead())) {
+    if (totalMergingLevels == 1) {
+      // When there's just one merging level, the inputBuffer is merged by runNextDirectMerger, not this method.
+      return false;
+    }
+
+    if (inputBuffer.isEmpty()) {
+      // Nothing to merge.
+      return false;
+    }
+
+    if (totalMergingLevels == UNKNOWN_LEVEL && inputBuffer.size() < getMaxInputBufferFramesForDirectMerging()) {
+      // Buffer up as much as possible until we've determined the merging structure, or until the buffer is full.
       return false;
     }
 
     final List<ReadableFrameChannel> in = new ArrayList<>();
 
-    while (in.size() < maxChannelsPerProcessor) {
+    while (in.size() < maxChannelsPerMerger) {
       final Frame frame = inputBuffer.poll();
 
       if (frame == null) {
         break;
       }
 
-      in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
+      in.add(singleReadableFrameChannel(frame));
     }
 
-    runMerger(0, levelZeroMergersRunSoFar++, in, null, ImmutableList.of());
+    runMerger(0, levelZeroMergersRunSoFar++, in, ImmutableList.of());
     return true;
   }
 
@@ -459,30 +552,36 @@ public class SuperSorter
       final LongSortedSet inputsReady = outputsReadyByLevel.get(inLevel);
 
       if (totalMergingLevels != UNKNOWN_LEVEL && outLevel >= totalMergingLevels - 1) {
-        // This is the ultimate level. Skip it, since it will be launched by runNextUltimateMerger.
+        // This is the ultimate level. Skip it, since it will be launched by either runNextDirectMerger (if one
+        // merging level) or runNextUltimateMerger (if more than one merging level).
         continue;
       }
 
       if (totalMergingLevels == UNKNOWN_LEVEL
-          && LongMath.divide(inputsReady.size(), maxChannelsPerProcessor, RoundingMode.CEILING)
-             <= maxChannelsPerProcessor) {
+          && LongMath.divide(inputsReady.size(), maxChannelsPerMerger, RoundingMode.CEILING) <= maxChannelsPerMerger) {
         // This *might* be the penultimate level. Skip until we know for sure. (i.e., until all input frames have
         // been read.)
         continue;
       }
 
-      final ClusterByPartitions outPartitions;
+      final int channelsPerMerger;
 
       if (totalMergingLevels != UNKNOWN_LEVEL && outLevel == totalMergingLevels - 2) {
-        // This is the penultimate level.
-        if (!outputPartitionsFuture.isDone()) {
-          // Can't launch penultimate level until output partitions are known.
+        // Definitely the penultimate level. Channels per merger may be less than maxChannelsPerMerger.
+        if (outputPartitionsFuture.isDone()) {
+          channelsPerMerger = Ints.checkedCast(
+              LongMath.divide(
+                  totalInputs,
+                  getTotalMergersInLevel(outLevel),
+                  RoundingMode.CEILING
+              )
+          );
+        } else {
+          // Can't run penultimate level until output partitions are known.
           continue;
         }
-
-        outPartitions = getOutputPartitions();
       } else {
-        outPartitions = null;
+        channelsPerMerger = maxChannelsPerMerger;
       }
 
       // See if there's work to do.
@@ -492,7 +591,7 @@ public class SuperSorter
       long currentSetStart = -1, currentSetIndex = -1;
       while (iter.hasNext()) {
         final long w = iter.nextLong();
-        if (w % maxChannelsPerProcessor == 0) {
+        if (w % channelsPerMerger == 0) {
           // w is the start of a set
           currentSetStart = w;
           currentSetIndex = -1;
@@ -503,11 +602,11 @@ public class SuperSorter
           long pos = w - currentSetStart;
 
           if (pos == currentSetIndex + 1 &&
-              (pos == maxChannelsPerProcessor - 1 || (totalInputs != UNKNOWN_TOTAL && w == totalInputs - 1))) {
+              (pos == channelsPerMerger - 1 || (totalInputs != UNKNOWN_TOTAL && w == totalInputs - 1))) {
             // We found a set to merge. Let's collect the input channels and launch the merger.
             final List<ReadableFrameChannel> in = new ArrayList<>();
             final List<PartitionedReadableFrameChannel> partitionedReadableFrameChannels = new ArrayList<>();
-            for (long i = currentSetStart; i < currentSetStart + maxChannelsPerProcessor; i++) {
+            for (long i = currentSetStart; i < currentSetStart + channelsPerMerger; i++) {
               if (inputsReady.remove(i)) {
                 String levelAndRankKey = mergerOutputFileName(inLevel, i);
                 PartitionedReadableFrameChannel partitionedReadableFrameChannel =
@@ -521,9 +620,8 @@ public class SuperSorter
 
             runMerger(
                 outLevel,
-                currentSetStart / maxChannelsPerProcessor,
+                currentSetStart / channelsPerMerger,
                 in,
-                outPartitions,
                 partitionedReadableFrameChannels
             );
             return true;
@@ -544,9 +642,15 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private boolean runNextUltimateMerger()
   {
-    if (totalMergingLevels == UNKNOWN_LEVEL
-        || !outputPartitionsFuture.isDone()
-        || ultimateMergersRunSoFar >= getOutputPartitions().size()) {
+    if (!(totalMergingLevels != UNKNOWN_LEVEL
+          && totalMergingLevels >= 2
+          && outputPartitionsFuture.isDone()
+          && ultimateMergersRunSoFar < getOutputPartitions().size())) {
+      return false;
+    }
+
+    if (isLimited() && (rowLimit == 0 || activeProcessors > 0)) {
+      // Run final-layer mergers one at a time, to ensure limit is applied across the entire dataset.
       return false;
     }
 
@@ -575,12 +679,7 @@ public class SuperSorter
       );
     }
 
-    if (outputChannels == null) {
-      outputChannels = Arrays.asList(new OutputChannel[getOutputPartitions().size()]);
-    }
-
-    runMerger(outLevel, ultimateMergersRunSoFar, in, null, ImmutableList.of());
-    ultimateMergersRunSoFar++;
+    runMerger(outLevel, ultimateMergersRunSoFar++, in, ImmutableList.of());
     return true;
   }
 
@@ -589,28 +688,49 @@ public class SuperSorter
       final int level,
       final long rank,
       final List<ReadableFrameChannel> in,
-      @Nullable final ClusterByPartitions partitions,
       final List<PartitionedReadableFrameChannel> partitionedReadableChannelsToClose
   )
   {
     try {
       final WritableFrameChannel writableChannel;
       final MemoryAllocatorFactory frameAllocatorFactory;
-      String levelAndRankKey = mergerOutputFileName(level, rank);
+      final ClusterByPartitions outPartitions;
+      final String levelAndRankKey = mergerOutputFileName(level, rank);
+      final boolean isFinalOutput = totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1;
 
-      if (totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
+      if (isFinalOutput) {
+        // Writing final partitioned output.
+        final int outputPartitionCount = getOutputPartitions().size();
         final int intRank = Ints.checkedCast(rank);
+
+        if (outputChannels == null) {
+          outputChannels = Arrays.asList(new OutputChannel[outputPartitionCount]);
+        }
+
         final OutputChannel outputChannel = outputChannelFactory.openChannel(intRank);
-        outputChannels.set(intRank, outputChannel.readOnly());
-        frameAllocatorFactory = new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator());
         writableChannel = outputChannel.getWritableChannel();
+        frameAllocatorFactory = new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator());
+        outputChannels.set(intRank, outputChannel.readOnly());
+
+        if (totalMergingLevels == 1) {
+          // Reading from the inputBuffer. (i.e. "direct mode"; see class-level javadoc for more details.)
+          outPartitions = new ClusterByPartitions(Collections.singletonList(getOutputPartitions().get(intRank)));
+        } else {
+          // Reading from intermediate partitioned channels.
+          outPartitions = null;
+        }
       } else {
-        PartitionedOutputChannel partitionedOutputChannel = intermediateOutputChannelFactory.openPartitionedChannel(
-            levelAndRankKey,
-            true
-        );
+        // Writing some intermediate layer.
+        PartitionedOutputChannel partitionedOutputChannel =
+            intermediateOutputChannelFactory.openPartitionedChannel(levelAndRankKey, true);
         writableChannel = partitionedOutputChannel.getWritableChannel();
         frameAllocatorFactory = new SingleMemoryAllocatorFactory(partitionedOutputChannel.getFrameMemoryAllocator());
+
+        if (level == totalMergingLevels - 2) {
+          outPartitions = getOutputPartitions();
+        } else {
+          outPartitions = null;
+        }
 
         // We add the readOnly() channel even though we require the writableChannel and the frame allocator because
         // the original partitionedOutputChannel would contain the reference to those, which would get cleaned up
@@ -624,22 +744,32 @@ public class SuperSorter
               frameReader,
               writableChannel,
               FrameWriters.makeFrameWriterFactory(
-                  FrameType.ROW_BASED, // Row-based frames are generally preferred as inputs to mergers
+                  outputFrameType,
                   frameAllocatorFactory,
                   frameReader.signature(),
                   // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own
-                  Collections.emptyList()
+                  Collections.emptyList(),
+                  removeNullBytes
               ),
               sortKey,
-              partitions,
+              outPartitions,
               rowLimit
           );
 
-      runWorker(worker, ignored1 -> {
+      runWorker(worker, outputRows -> {
         synchronized (runWorkersLock) {
           outputsReadyByLevel.computeIfAbsent(level, ignored2 -> new LongRBTreeSet())
                              .add(rank);
           superSorterProgressTracker.addMergedBatchesForLevel(level, 1);
+
+          if (isLimited() && totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
+            rowLimit -= outputRows;
+
+            if (rowLimit < 0) {
+              throw DruidException.defensive("rowLimit[%d] below zero after outputRows[%d]", rowLimit, outputRows);
+            }
+          }
+
           for (PartitionedReadableFrameChannel partitionedReadableFrameChannel : partitionedReadableChannelsToClose) {
             try {
               partitionedReadableFrameChannel.close();
@@ -662,8 +792,8 @@ public class SuperSorter
   private <T> void runWorker(final FrameProcessor<T> worker, final Consumer<T> outConsumer)
   {
     Futures.addCallback(
-        exec.runFully(worker, cancellationId),
-        new FutureCallback<T>()
+        exec.runFully(processorDecorator.decorate(worker), cancellationId),
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(T result)
@@ -692,7 +822,7 @@ public class SuperSorter
         },
         // Must run in exec, instead of in the same thread, to avoid running callback immediately if the
         // worker happens to finish super-quickly.
-        exec.getExecutorService()
+        exec.asExecutor(cancellationId)
     );
   }
 
@@ -701,33 +831,68 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private void setTotalInputFrames(final long totalInputFrames)
   {
+    if (this.totalInputFrames != UNKNOWN_TOTAL) {
+      throw DruidException.defensive(
+          "Cannot set totalInputFrames twice (first[%s], second[%s])",
+          this.totalInputFrames,
+          totalInputFrames
+      );
+    }
+
     this.totalInputFrames = totalInputFrames;
 
     // Mark the progress tracker as trivially complete, if there is nothing to sort.
     if (totalInputFrames == 0) {
       superSorterProgressTracker.markTriviallyComplete();
     }
+  }
 
-    // Set totalMergingLevels too
-    long totalMergersInLevel = totalInputFrames;
-    int level = 0;
-
-    while (totalMergersInLevel > maxChannelsPerProcessor) {
-      totalMergersInLevel = LongMath.divide(totalMergersInLevel, maxChannelsPerProcessor, RoundingMode.CEILING);
-      superSorterProgressTracker.setTotalMergersForLevel(level, totalMergersInLevel);
-      level++;
+  @GuardedBy("runWorkersLock")
+  private void setTotalMergingLevelsIfPossible()
+  {
+    if (totalMergingLevels != UNKNOWN_LEVEL
+        || totalInputFrames == UNKNOWN_TOTAL
+        || !outputPartitionsFuture.isDone()) {
+      return;
     }
 
-    // Must have at least three levels. (Zero, penultimate, ultimate.)
-    totalMergingLevels = Math.max(level + 1, 3);
+    if (levelZeroMergersRunSoFar == 0) {
+      // All frames fit in memory.
+      totalMergingLevels = 1;
+      superSorterProgressTracker.setTotalMergingLevels(1);
+      superSorterProgressTracker.setTotalMergersForLevel(0, getOutputPartitions().size());
+      return;
+    }
 
-    // Add remaining levels to the tracker, if required
-    IntStream.range(level, totalMergingLevels)
-             .forEach(curLevel -> {
-               synchronized (runWorkersLock) {
-                 superSorterProgressTracker.setTotalMergersForLevel(curLevel, 1);
-               }
-             });
+    // Need to do a multi-level merge. Figure out how many levels.
+    int level = 0;
+    long inputsForLevel = totalInputFrames;
+
+    while (inputsForLevel > maxChannelsPerMerger) {
+      final long totalMergersInLevel =
+          LongMath.divide(inputsForLevel, maxChannelsPerMerger, RoundingMode.CEILING);
+      superSorterProgressTracker.setTotalMergersForLevel(level, totalMergersInLevel);
+
+      level++;
+      inputsForLevel = totalMergersInLevel;
+    }
+
+    if (level <= 1) {
+      if (getOutputPartitions().size() > 1) {
+        // Use three levels so the final merge layer (which writes the final output channels) can read from
+        // a cleanly partitioned penultimate layer.
+        totalMergingLevels = 3;
+      } else {
+        // Use two levels: no need to have a partitioned penultimate layer.
+        totalMergingLevels = 2;
+      }
+    } else {
+      totalMergingLevels = level + 1;
+    }
+
+    for (int i = level; i < totalMergingLevels; i++) {
+      superSorterProgressTracker.setTotalMergersForLevel(i, 1);
+    }
 
     superSorterProgressTracker.setTotalMergingLevels(totalMergingLevels);
   }
@@ -738,16 +903,7 @@ public class SuperSorter
       throw new ISE("Output partitions are not ready yet");
     }
 
-    try {
-      return outputPartitionsFuture.get();
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-    catch (ExecutionException e) {
-      throw new RuntimeException(e);
-    }
+    return FutureUtils.getUnchecked(outputPartitionsFuture, true);
   }
 
   @GuardedBy("runWorkersLock")
@@ -758,12 +914,42 @@ public class SuperSorter
     } else if (level >= totalMergingLevels) {
       throw new ISE("Invalid level %d", level);
     } else if (level == totalMergingLevels - 1) {
-      return outputPartitionsFuture.isDone() ? getOutputPartitions().size() : UNKNOWN_TOTAL;
+      if (outputPartitionsFuture.isDone()) {
+        return totalInputFrames == 0 ? 0 : getOutputPartitions().size();
+      } else {
+        return UNKNOWN_TOTAL;
+      }
+    } else if (level > 0 && level == totalMergingLevels - 2) {
+      if (outputPartitionsFuture.isDone()) {
+        // Smallest number of mergers we can possibly use in the penultimate level.
+        final long totalInputs = getTotalMergersInLevel(level - 1);
+        final long minMergers =
+            LongMath.divide(totalInputs, maxChannelsPerMerger, RoundingMode.CEILING);
+
+        // Ensure we have a maximal degree of parallelism: possibly use more mergers than minMergers.
+        long targetNumMergers = Math.max(
+            minMergers,
+            Math.min(
+                maxActiveProcessors,
+                getOutputPartitions().size()
+            )
+        );
+
+        // Lower targetNumMergers if runNextMiddleManager would not actually be able to launch this many.
+        return LongMath.divide(
+            totalInputs,
+            LongMath.divide(totalInputs, targetNumMergers, RoundingMode.CEILING),
+            RoundingMode.CEILING
+        );
+      } else {
+        return UNKNOWN_TOTAL;
+      }
     } else {
       long totalMergersInLevel = totalInputFrames;
 
       for (int i = 0; i <= level; i++) {
-        totalMergersInLevel = LongMath.divide(totalMergersInLevel, maxChannelsPerProcessor, RoundingMode.CEILING);
+        totalMergersInLevel =
+            LongMath.divide(totalMergersInLevel, maxChannelsPerMerger, RoundingMode.CEILING);
       }
 
       return totalMergersInLevel;
@@ -837,6 +1023,20 @@ public class SuperSorter
   }
 
   /**
+   * Maximum number of frames permissible in the {@link #inputBuffer} for "direct mode" (see class-level javadoc).
+   */
+  private int getMaxInputBufferFramesForDirectMerging()
+  {
+    return maxChannelsPerMerger * maxActiveProcessors;
+  }
+
+  @GuardedBy("runWorkersLock")
+  private boolean isLimited()
+  {
+    return rowLimit != UNLIMITED;
+  }
+
+  /**
    * Returns a string encapsulating the current state of this object.
    */
   public String stateString()
@@ -854,7 +1054,7 @@ public class SuperSorter
     }
   }
 
-  private static ReadableFrameChannel singleReadableFrameChannel(final FrameWithPartition frame)
+  private static ReadableFrameChannel singleReadableFrameChannel(final Frame frame)
   {
     try {
       final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();

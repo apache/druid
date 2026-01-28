@@ -31,6 +31,7 @@ public final class PartitionIds
   public static final int ROOT_GEN_END_PARTITION_ID = 32768; // exclusive
   /**
    * Start partitionId available for non-root generation segments.
+   * Used only with segment locks.
    */
   public static final int NON_ROOT_GEN_START_PARTITION_ID = 32768;
   /**

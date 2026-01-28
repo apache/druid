@@ -52,9 +52,13 @@ This property takes precedence over `maxSubqueryRows`.
 You can set both `maxSubqueryRows` and `maxSubqueryBytes` at cluster level and override them in individual queries. 
 See [Overriding default query context values](../configuration#overriding-default-query-context-values) for more information.
 
+Make sure you enable the Broker monitor `SubqueryCountStatsMonitor` so that Druid emits metrics for subquery statistics.
+To do this, add `org.apache.druid.server.metrics.SubqueryCountStatsMonitor` to the `druid.monitoring.monitors` property in your Broker's `runtime.properties` configuration file.
+See [Metrics monitors](../configuration/index.md#metrics-monitors-for-each-service) for more information.
+
 ## Learn more
 
 See the following topics for more information:
 
-- [Query context](../querying/query-context.md) for information on setting query context parameters.
+- [Query context reference](../querying/query-context-reference.md) for information on query context parameters.
 - [Broker configuration reference](../configuration#guardrails-for-materialization-of-subqueries) for more information on `maxSubqueryRows` and `maxSubqueryBytes`.

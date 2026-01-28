@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -37,6 +38,7 @@ public interface Generic1AggPooledTopNScanner
       BufferAggregator aggregator,
       int aggregatorSize,
       Cursor cursor,
+      CursorGranularizer granularizer,
       int[] positions,
       ByteBuffer resultsBuffer
   );

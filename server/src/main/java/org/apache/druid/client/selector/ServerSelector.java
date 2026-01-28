@@ -19,10 +19,12 @@
 
 package org.apache.druid.client.selector;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -40,24 +42,29 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ServerSelector implements Overshadowable<ServerSelector>
 {
-
+  @GuardedBy("this")
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
 
+  @GuardedBy("this")
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers;
 
   private final TierSelectorStrategy strategy;
 
   private final AtomicReference<DataSegment> segment;
 
+  private final HistoricalFilter filter;
+
   public ServerSelector(
       DataSegment segment,
-      TierSelectorStrategy strategy
+      TierSelectorStrategy strategy,
+      HistoricalFilter filter
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.filter = filter;
   }
 
   public DataSegment getSegment()
@@ -119,13 +126,16 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
-  public List<DruidServerMetadata> getCandidates(final int numCandidates)
+  public List<DruidServerMetadata> getCandidates(
+      final int numCandidates,
+      final CloneQueryMode cloneQueryMode
+  )
   {
     List<DruidServerMetadata> candidates;
     synchronized (this) {
       if (numCandidates > 0) {
         candidates = new ArrayList<>(numCandidates);
-        strategy.pick(historicalServers, segment.get(), numCandidates)
+        strategy.pick(filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get(), numCandidates)
             .stream()
             .map(server -> server.getServer().getMetadata())
             .forEach(candidates::add);
@@ -138,35 +148,39 @@ public class ServerSelector implements Overshadowable<ServerSelector>
         }
         return candidates;
       } else {
-        return getAllServers();
+        return getAllServers(cloneQueryMode);
       }
     }
   }
 
-  public List<DruidServerMetadata> getAllServers()
+  public List<DruidServerMetadata> getAllServers(CloneQueryMode cloneQueryMode)
   {
-    List<DruidServerMetadata> servers = new ArrayList<>();
-    historicalServers.values()
-        .stream()
-        .flatMap(Collection::stream)
-        .map(server -> server.getServer().getMetadata())
-        .forEach(servers::add);
+    final List<DruidServerMetadata> servers = new ArrayList<>();
 
-    realtimeServers.values()
-        .stream()
-        .flatMap(Collection::stream)
-        .map(server -> server.getServer().getMetadata())
-        .forEach(servers::add);
+    synchronized (this) {
+      filter.getQueryableServers(historicalServers, cloneQueryMode)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(server -> server.getServer().getMetadata())
+            .forEach(servers::add);
+
+      realtimeServers.values()
+                     .stream()
+                     .flatMap(Collection::stream)
+                     .map(server -> server.getServer().getMetadata())
+                     .forEach(servers::add);
+    }
 
     return servers;
   }
 
   @Nullable
-  public <T> QueryableDruidServer<? extends QueryRunner<T>> pick(@Nullable Query<T> query)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query, CloneQueryMode cloneQueryMode)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
-        return strategy.pick(query, historicalServers, segment.get());
+        return strategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
       }
       return strategy.pick(query, realtimeServers, segment.get());
     }
@@ -214,5 +228,15 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public boolean hasData()
   {
     return segment.get().hasData();
+  }
+
+  /**
+   * Checks if the segment is currently served by a realtime server, and is not served by a historical.
+   */
+  public boolean isRealtimeSegment()
+  {
+    synchronized (this) {
+      return (!realtimeServers.isEmpty()) && historicalServers.isEmpty();
+    }
   }
 }

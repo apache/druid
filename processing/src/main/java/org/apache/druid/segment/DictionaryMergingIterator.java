@@ -163,12 +163,6 @@ public class DictionaryMergingIterator<T extends Comparable<T>> implements Close
   }
 
   @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException("remove");
-  }
-
-  @Override
   public void close()
   {
     long mergeBufferTotalSize = 0;

@@ -19,18 +19,13 @@
 
 package org.apache.druid.indexing;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 
 public class NoopSupervisorSpecTest
 {
@@ -43,24 +38,6 @@ public class NoopSupervisorSpecTest
       Supervisor supervisor = noopSupervisorSpec.createSupervisor();
       SupervisorTaskAutoScaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
-      Callable<Integer> noop = new Callable<Integer>() {
-          @Override
-          public Integer call()
-          {
-            return -1;
-          }
-      };
-
-      int count = supervisor.getActiveTaskGroupsCount();
-      Assert.assertEquals(count, -1);
-
-      LagStats lagStats = supervisor.computeLagStats();
-      long totalLag = lagStats.getTotalLag();
-      long avgLag = lagStats.getAvgLag();
-      long maxLag = lagStats.getMaxLag();
-      Assert.assertEquals(totalLag, 0);
-      Assert.assertEquals(avgLag, 0);
-      Assert.assertEquals(maxLag, 0);
     }
     catch (Exception ex) {
       e = ex;
@@ -73,31 +50,5 @@ public class NoopSupervisorSpecTest
   {
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
     Assert.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());
-  }
-
-  @Test
-  public void testNoppSupervisorResetOffsetsDoNothing()
-  {
-    NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
-    Supervisor noOpSupervisor = expectedSpec.createSupervisor();
-    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
-    noOpSupervisor.resetOffsets(null);
-    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, noOpSupervisor.getState());
-
-    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
-    noOpSupervisor.resetOffsets(new ObjectMetadata("someObject"));
-    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, noOpSupervisor.getState());
-  }
-
-  @Test
-  public void testNoppSupervisorStopTaskEarlyDoNothing()
-  {
-    NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
-    Supervisor noOpSupervisor = expectedSpec.createSupervisor();
-    Assert.assertThrows(UnsupportedOperationException.class,
-        () -> noOpSupervisor.handoffTaskGroupsEarly(ImmutableList.of())
-    );
   }
 }

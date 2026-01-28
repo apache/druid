@@ -58,7 +58,10 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   @Override
   public void setSparseIndexed()
   {
-    isSparse = true;
+    if (!isSparse) {
+      dimLookup.add(null);
+      isSparse = true;
+    }
   }
 
   public int getSortedEncodedValueFromUnsorted(Integer unsortedIntermediateValue)
@@ -75,7 +78,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   @Override
   public CloseableIndexed<ActualType> getSortedIndexedValues()
   {
-    return new CloseableIndexed<ActualType>()
+    return new CloseableIndexed<>()
     {
       @Override
       public int size()
@@ -225,17 +228,6 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
       }
     }
     return new SortedDimensionSelector();
-  }
-
-  /**
-   * returns true if all values are encoded in {@link #dimLookup}
-   */
-  protected boolean dictionaryEncodesAllValues()
-  {
-    // name lookup is possible in advance if we explicitly process a value for every row, or if we've encountered an
-    // actual null value and it is present in our dictionary. otherwise the dictionary will be missing ids for implicit
-    // null values
-    return !isSparse || dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID;
   }
 
   protected SortedDimensionDictionary<ActualType> sortedLookup()

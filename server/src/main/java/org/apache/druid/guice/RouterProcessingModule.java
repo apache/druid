@@ -28,15 +28,12 @@ import org.apache.druid.collections.DummyNonBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.ExecutorServiceMonitor;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.NoopQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
 
@@ -46,6 +43,8 @@ import java.nio.ByteBuffer;
  * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and
  * caching, which Router uses, and related to processing and caching, which Router doesn't use, but they inject the
  * resources.
+ *
+ * @see DruidProcessingModule
  */
 public class RouterProcessingModule implements Module
 {
@@ -54,8 +53,7 @@ public class RouterProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides
@@ -65,7 +63,7 @@ public class RouterProcessingModule implements Module
     if (config.isNumThreadsConfigured()) {
       log.warn("numThreads[%d] configured, that is ignored on Router", config.getNumThreads());
     }
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return NoopQueryProcessingPool.instance();
   }
 
   @Provides

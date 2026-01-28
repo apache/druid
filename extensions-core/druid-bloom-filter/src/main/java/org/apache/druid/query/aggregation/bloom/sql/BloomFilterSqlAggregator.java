@@ -81,7 +81,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String aggName = StringUtils.format("%s:agg", name);
     final RexNode maxNumEntriesOperand = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
     if (!maxNumEntriesOperand.isA(SqlKind.LITERAL)) {
@@ -157,7 +156,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
     }
 
     aggregatorFactory = new BloomFilterAggregatorFactory(
-        aggName,
+        name,
         spec,
         maxNumEntries
     );

@@ -55,6 +55,7 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -75,7 +76,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__join__")
   {
     @Override
-    public boolean isConcrete()
+    public boolean isProcessable()
     {
       return false;
     }
@@ -151,7 +152,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final RowSignature leftSignature = leftQuery.getOutputRowSignature();
     final DataSource leftDataSource;
-    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
+    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel, joinRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
       if (leftFilter != null) {
         throw new ISE("Filter on left table is supposed to be null if left child is a query source");
@@ -225,7 +226,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         ),
         toDruidJoinType(joinRel.getJoinType()),
         getDimFilter(plannerContext, leftDesc.rowSignature, leftFilter),
-        plannerContext.getJoinableFactoryWrapper()
+        plannerContext.getJoinableFactoryWrapper(),
+        QueryUtils.getJoinAlgorithm(joinRel, plannerContext)
     );
 
     SourceDesc sourceDesc = new SourceDesc(joinDataSource, signature, virtualColumnRegistry);
@@ -247,6 +249,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
+        true,
         sourceDesc.virtualColumnRegistry
     );
   }
@@ -262,6 +265,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
+        false,
         false
     );
   }
@@ -360,7 +364,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       joinCost *= CostEstimates.MULTIPLIER_OUTER_QUERY;
     } else {
       // Penalize subqueries if we don't have to do them.
-      if (computeLeftRequiresSubquery(getPlannerContext(), getSomeDruidChild(left))) {
+      if (computeLeftRequiresSubquery(getPlannerContext(), getSomeDruidChild(left), joinRel)) {
         joinCost += CostEstimates.COST_SUBQUERY;
       } else {
         if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
@@ -400,9 +404,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left, final Join joinRel)
   {
-    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+    if (QueryUtils.getJoinAlgorithm(joinRel, plannerContext).requiresSubquery()) {
       return true;
     }
 
@@ -423,7 +427,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
              && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
-  static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
+  public static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
   {
     final ArrayList<DataSource> copy = new ArrayList<>(Arrays.asList(dataSources));
 
@@ -442,7 +446,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
-  static Pair<String, RowSignature> computeJoinRowSignature(
+  public static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
       final RowSignature rightSignature,
       final Set<String> prefixes

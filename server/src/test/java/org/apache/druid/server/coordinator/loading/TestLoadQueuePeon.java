@@ -57,6 +57,12 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
+  public long getLoadRateKbps()
+  {
+    return 0;
+  }
+
+  @Override
   public CoordinatorRunStats getAndResetStats()
   {
     return stats;

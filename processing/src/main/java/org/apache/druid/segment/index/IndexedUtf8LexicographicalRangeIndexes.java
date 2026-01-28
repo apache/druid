@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateMatch;
@@ -78,7 +77,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       {
         final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
         final int start = range.leftInt(), end = range.rightInt();
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
 
@@ -100,7 +99,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       @Override
       protected ImmutableBitmap getUnknownsBitmap()
       {
-        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        if (dictionary.get(0) == null) {
           return bitmaps.get(0);
         }
         return null;
@@ -125,7 +124,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           int currIndex = start;
           int found;
@@ -172,7 +171,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       @Override
       protected ImmutableBitmap getUnknownsBitmap()
       {
-        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        if (dictionary.get(0) == null) {
           return bitmaps.get(0);
         }
         return null;
@@ -202,8 +201,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
     if (startValue == null) {
       startIndex = firstValue;
     } else {
-      final String startValueToUse = NullHandling.emptyToNullIfNeeded(startValue);
-      final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(startValueToUse));
+      final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(startValue));
       if (found >= firstValue) {
         startIndex = startStrict ? found + 1 : found;
       } else {
@@ -214,8 +212,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
     if (endValue == null) {
       endIndex = dictionary.size();
     } else {
-      final String endValueToUse = NullHandling.emptyToNullIfNeeded(endValue);
-      final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(endValueToUse));
+      final int found = dictionary.indexOf(StringUtils.toUtf8ByteBuffer(endValue));
       if (found >= firstValue) {
         endIndex = endStrict ? found : found + 1;
       } else {

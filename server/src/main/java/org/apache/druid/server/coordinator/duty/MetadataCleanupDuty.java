@@ -82,7 +82,9 @@ public abstract class MetadataCleanupDuty implements CoordinatorDuty
       try {
         DateTime minCreatedTime = now.minus(cleanupConfig.getDurationToRetain());
         int deletedEntries = cleanupEntriesCreatedBefore(minCreatedTime);
-        log.info("Removed [%,d] [%s] created before [%s].", deletedEntries, entryType, minCreatedTime);
+        if (deletedEntries > 0) {
+          log.info("Removed [%,d] [%s] created before [%s].", deletedEntries, entryType, minCreatedTime);
+        }
 
         params.getCoordinatorStats().add(cleanupCountStat, deletedEntries);
       }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.frame.key;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -53,20 +53,20 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
 
   private final List<Object> objects = Arrays.asList(
       5L,
-      NullHandling.defaultLongValue(),
+      null,
       6f,
-      NullHandling.defaultFloatValue(),
+      null,
       "foo",
       null,
       Arrays.asList("bar", "qux"),
       7d,
-      NullHandling.defaultDoubleValue(),
+      null,
       new Object[]{"abc", "xyz"}
   );
 
-  private final RowKey key = KeyTestUtils.createKey(signature, objects.toArray());
+  private final RowKey key = KeyTestUtils.createKey(signature, FrameType.latestRowBased(), objects.toArray());
 
-  private final RowKeyReader keyReader = RowKeyReader.create(signature);
+  private final RowKeyReader keyReader = RowKeyReader.create(signature, FrameType.latestRowBased());
 
   @Test
   public void test_read_all()
@@ -121,6 +121,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         KeyTestUtils.createKey(
             RowSignature.builder().add(signature.getColumnName(0), signature.getColumnType(0).get()).build(),
+            FrameType.latestRowBased(),
             objects.get(0)
         ),
         keyReader.trim(key, 1)
@@ -136,7 +137,11 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
              .forEach(i -> trimmedSignature.add(signature.getColumnName(i), signature.getColumnType(i).get()));
 
     Assert.assertEquals(
-        KeyTestUtils.createKey(trimmedSignature.build(), objects.subList(0, numFields).toArray()),
+        KeyTestUtils.createKey(
+            trimmedSignature.build(),
+            FrameType.latestRowBased(),
+            objects.subList(0, numFields).toArray()
+        ),
         keyReader.trim(key, numFields)
     );
   }

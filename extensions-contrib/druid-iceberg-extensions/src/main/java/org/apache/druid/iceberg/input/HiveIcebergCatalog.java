@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.iceberg.BaseMetastoreCatalog;
+import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hive.HiveCatalog;
 
 import javax.annotation.Nullable;
@@ -45,7 +45,6 @@ import java.util.Map;
  */
 public class HiveIcebergCatalog extends IcebergCatalog
 {
-  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   public static final String TYPE_KEY = "hive";
 
   @JsonProperty
@@ -62,7 +61,7 @@ public class HiveIcebergCatalog extends IcebergCatalog
 
   private final Configuration configuration;
 
-  private BaseMetastoreCatalog hiveCatalog;
+  private Catalog hiveCatalog;
 
   private static final Logger log = new Logger(HiveIcebergCatalog.class);
 
@@ -88,7 +87,7 @@ public class HiveIcebergCatalog extends IcebergCatalog
   }
 
   @Override
-  public BaseMetastoreCatalog retrieveCatalog()
+  public Catalog retrieveCatalog()
   {
     if (hiveCatalog == null) {
       hiveCatalog = setupCatalog();

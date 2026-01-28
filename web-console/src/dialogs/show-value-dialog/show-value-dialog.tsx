@@ -16,11 +16,21 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Classes,
+  Dialog,
+  FormGroup,
+  Intent,
+  TextArea,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React from 'react';
+import * as JSONBig from 'json-bigint-native';
+import React, { useMemo, useState } from 'react';
+import AceEditor from 'react-ace';
 
 import { AppToaster } from '../../singletons';
 
@@ -35,6 +45,15 @@ export interface ShowValueDialogProps {
 
 export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowValueDialogProps) {
   const { title, onClose, str, size } = props;
+  const [tab, setTab] = useState<'formatted' | 'raw'>('formatted');
+
+  const parsed = useMemo(() => {
+    try {
+      return JSONBig.parse(str);
+    } catch {}
+  }, [str]);
+
+  const hasParsed = typeof parsed !== 'undefined';
 
   function handleCopy() {
     copy(str, { format: 'text/plain' });
@@ -51,10 +70,41 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
       onClose={onClose}
       title={title || 'Full value'}
     >
-      <TextArea value={str} spellCheck={false} />
-      <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-        <Button icon={IconNames.DUPLICATE} text="Copy" onClick={handleCopy} />
-        <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+      <div className={Classes.DIALOG_BODY}>
+        {hasParsed && (
+          <FormGroup>
+            <ButtonGroup fill>
+              <Button
+                text="Formatted"
+                active={tab === 'formatted'}
+                onClick={() => setTab('formatted')}
+              />
+              <Button text="Raw" active={tab === 'raw'} onClick={() => setTab('raw')} />
+            </ButtonGroup>
+          </FormGroup>
+        )}
+        {hasParsed && tab === 'formatted' && (
+          <AceEditor
+            mode="hjson"
+            theme="solarized_dark"
+            className="query-string"
+            name="ace-editor"
+            fontSize={12}
+            width="100%"
+            height="100%"
+            showGutter
+            showPrintMargin={false}
+            value={JSONBig.stringify(parsed, undefined, 2)}
+            readOnly
+          />
+        )}
+        {(!hasParsed || tab === 'raw') && <TextArea value={str} spellCheck={false} />}
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button icon={IconNames.DUPLICATE} text="Copy" onClick={handleCopy} />
+          <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
+        </div>
       </div>
     </Dialog>
   );

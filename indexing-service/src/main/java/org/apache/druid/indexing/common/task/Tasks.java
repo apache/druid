@@ -19,18 +19,11 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.curator.shaded.com.google.common.base.Verify;
+import com.google.common.base.Verify;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 public class Tasks
@@ -39,20 +32,27 @@ public class Tasks
   public static final int DEFAULT_BATCH_INDEX_TASK_PRIORITY = 50;
   public static final int DEFAULT_MERGE_TASK_PRIORITY = 25;
 
+  /**
+   * Priority of embedded kill tasks. Kept lower than batch and realtime tasks
+   * to allow them to preempt embbedded kill tasks.
+   */
+  public static final int DEFAULT_EMBEDDED_KILL_TASK_PRIORITY = 25;
+
   static {
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
 
   public static final int DEFAULT_TASK_PRIORITY = 0;
   public static final long DEFAULT_LOCK_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
+  public static final long DEFAULT_SUB_TASK_TIMEOUT_MILLIS = 0;
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
-  public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = false;
   public static final TaskLockType DEFAULT_TASK_LOCK_TYPE = TaskLockType.EXCLUSIVE;
   public static final boolean DEFAULT_USE_CONCURRENT_LOCKS = false;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
+  public static final String SUB_TASK_TIMEOUT_KEY = "subTaskTimeoutMillis";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
   public static final String USE_SHARED_LOCK = "useSharedLock";
@@ -60,20 +60,8 @@ public class Tasks
   public static final String USE_CONCURRENT_LOCKS = "useConcurrentLocks";
 
   /**
-   * Context flag denoting if maximum possible values should be used to estimate
-   * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
-   * more details.
-   *
-   * The value of this flag is true by default which corresponds to the old method
-   * of estimation.
-   */
-  public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
-
-  /**
-   * This context is used in compaction. When it is set in the context, the segments created by the task
-   * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
-   * See {@link org.apache.druid.timeline.DataSegment} and {@link
-   * org.apache.druid.server.coordinator.compact.NewestSegmentFirstIterator} for more details.
+   * Context flag to denote if segments published to metadata by a task should
+   * have the {@code lastCompactionState} field set.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
@@ -81,26 +69,12 @@ public class Tasks
     Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
   }
 
-  public static SortedSet<Interval> computeCondensedIntervals(SortedSet<Interval> intervals)
-  {
-    final SortedSet<Interval> condensedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
-    List<Interval> toBeAccumulated = new ArrayList<>();
-    for (Interval interval : intervals) {
-      if (toBeAccumulated.size() == 0) {
-        toBeAccumulated.add(interval);
-      } else {
-        if (toBeAccumulated.get(toBeAccumulated.size() - 1).abuts(interval)) {
-          toBeAccumulated.add(interval);
-        } else {
-          condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-          toBeAccumulated.clear();
-          toBeAccumulated.add(interval);
-        }
-      }
-    }
-    if (toBeAccumulated.size() > 0) {
-      condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-    }
-    return condensedIntervals;
+  /**
+   * Context k:v pair that holds the fingerprint of the indexing state to be stored with the segment
+   */
+  public static final String INDEXING_STATE_FINGERPRINT_KEY = "indexingStateFingerprint";
+
+  static {
+    Verify.verify(INDEXING_STATE_FINGERPRINT_KEY.equals(CompactSegments.INDEXING_STATE_FINGERPRINT_KEY));
   }
 }

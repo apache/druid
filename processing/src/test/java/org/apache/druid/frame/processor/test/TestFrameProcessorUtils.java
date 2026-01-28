@@ -26,14 +26,10 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.util.List;
@@ -44,40 +40,31 @@ public final class TestFrameProcessorUtils
   {
   }
 
-  public static StorageAdapter toStorageAdapter(List<InputRow> inputRows)
+  public static CursorFactory toCursorFactory(List<InputRow> inputRows)
   {
     final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
-            new IncrementalIndexSchema(
-                0,
-                new TimestampSpec("__time", "millis", null),
-                Granularities.NONE,
-                VirtualColumns.EMPTY,
-                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-                new AggregatorFactory[0],
-                false
-            )
+            IncrementalIndexSchema.builder()
+                                  .withTimestampSpec(new TimestampSpec("__time", "millis", null))
+                                  .withDimensionsSpec(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                                  .withRollup(false)
+                                  .build()
         )
         .setMaxRowCount(1000)
         .build();
 
-    try {
-      for (InputRow inputRow : inputRows) {
-        index.add(inputRow);
-      }
-    }
-    catch (IndexSizeExceededException e) {
-      throw new RuntimeException(e);
+    for (InputRow inputRow : inputRows) {
+      index.add(inputRow);
     }
 
-    return new IncrementalIndexStorageAdapter(index);
+    return new IncrementalIndexCursorFactory(index);
   }
 
   public static Frame toFrame(List<InputRow> inputRows)
   {
-    final StorageAdapter storageAdapter = toStorageAdapter(inputRows);
-    return Iterables.getOnlyElement(FrameSequenceBuilder.fromAdapter(storageAdapter)
-                                                        .frameType(FrameType.ROW_BASED)
+    final CursorFactory cursorFactory = toCursorFactory(inputRows);
+    return Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                                                        .frameType(FrameType.latestRowBased())
                                                         .frames()
                                                         .toList());
   }

@@ -25,12 +25,9 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.segment.columnar.FrameQueryableIndex;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -39,12 +36,14 @@ import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -114,62 +113,58 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final Sequence<Cursor> cursors = Sequences.concat(
+    final Sequence<CursorFactory> cursorFactories = Sequences.simple(
         frameBasedInlineDataSource
             .getFrames()
             .stream()
             .map(frameSignaturePair -> {
               Frame frame = frameSignaturePair.getFrame();
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
-              FrameStorageAdapter frameStorageAdapter =
-                  new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
-              return frameStorageAdapter.makeCursors(
-                                            null,
-                                            Intervals.ETERNITY,
-                                            VirtualColumns.EMPTY,
-                                            Granularities.ALL,
-                                            false,
-                                            null
-                                        );
+              return FrameReader.create(rowSignature).makeCursorFactory(frame);
             })
             .collect(Collectors.toList())
     );
 
     final Sequence<Integer> sequence = Sequences.map(
-        cursors,
-        cursor -> {
-          if (cursor == null) {
-            return 0;
-          }
-          int rowNumber = 0;
-          ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-
-          // this should really be optimized to use dimension selectors where possible to populate indexes from bitmap
-          // indexes, but, an optimization for another day
-          final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
-              .stream()
-              .map(columnSelectorFactory::makeColumnValueSelector)
-              .collect(Collectors.toList());
-
-          while (!cursor.isDone()) {
-            for (int keyColumnSelectorIndex = 0; keyColumnSelectorIndex < selectors.size(); keyColumnSelectorIndex++) {
-              final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
-              final int columnPosition = rowSignature.indexOf(keyColumnName);
-              final RowBasedIndexBuilder keyColumnIndexBuilder = indexBuilders.get(columnPosition);
-              keyColumnIndexBuilder.add(selectors.get(keyColumnSelectorIndex).getObject());
+        cursorFactories,
+        cursorFactory -> {
+          try (final CursorHolder holder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+            final Cursor cursor = holder.asCursor();
+            if (cursor == null) {
+              return 0;
             }
 
-            if (rowNumber % 100_000 == 0) {
-              if (rowNumber == 0) {
-                LOG.debug("Indexed first row for frame based datasource");
-              } else {
-                LOG.debug("Indexed row %s for frame based datasource", rowNumber);
+            int rowNumber = 0;
+            ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+
+            // this should really be optimized to use dimension selectors where possible to populate indexes from bitmap
+            // indexes, but, an optimization for another day
+            final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
+                .stream()
+                .map(columnSelectorFactory::makeColumnValueSelector)
+                .collect(Collectors.toList());
+
+            while (!cursor.isDone()) {
+              for (int keyColumnSelectorIndex = 0; keyColumnSelectorIndex
+                                                   < selectors.size(); keyColumnSelectorIndex++) {
+                final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
+                final int columnPosition = rowSignature.indexOf(keyColumnName);
+                final RowBasedIndexBuilder keyColumnIndexBuilder = indexBuilders.get(columnPosition);
+                keyColumnIndexBuilder.add(selectors.get(keyColumnSelectorIndex).getObject());
               }
+
+              if (rowNumber % 100_000 == 0) {
+                if (rowNumber == 0) {
+                  LOG.debug("Indexed first row for frame based datasource");
+                } else {
+                  LOG.debug("Indexed row %s for frame based datasource", rowNumber);
+                }
+              }
+              rowNumber++;
+              cursor.advance();
             }
-            rowNumber++;
-            cursor.advance();
+            return rowNumber;
           }
-          return rowNumber;
         }
     );
 
@@ -227,7 +222,7 @@ public class FrameBasedIndexedTable implements IndexedTable
     final Set<Closeable> closeables = new HashSet<>();
 
     for (QueryableIndex frameQueryableIndex : frameQueryableIndexes) {
-      ColumnHolder columnHolder = frameQueryableIndex.getColumnHolder(columnName);
+      BaseColumnHolder columnHolder = frameQueryableIndex.getColumnHolder(columnName);
       if (columnHolder == null) {
         columnValueSelectors.add(NilColumnValueSelector.instance());
       } else {
@@ -268,19 +263,13 @@ public class FrameBasedIndexedTable implements IndexedTable
   }
 
   @Override
-  public boolean isCacheable()
-  {
-    return false;
-  }
-
-  @Override
   public void close()
   {
 
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     return Optional.of(
         () -> {

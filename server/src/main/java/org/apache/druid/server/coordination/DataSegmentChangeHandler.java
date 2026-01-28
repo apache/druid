@@ -28,5 +28,6 @@ import javax.annotation.Nullable;
 public interface DataSegmentChangeHandler
 {
   void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
+
   void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
 }

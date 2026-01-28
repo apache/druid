@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -31,12 +31,18 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.time.Duration;
 import java.util.Objects;
 
-public abstract class SeekableStreamIndexTaskTuningConfig implements AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig
 {
+  public static final int DEFAULT_MAX_COLUMNS_TO_MERGE = -1;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
+  private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
+  private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
+  private static final boolean DEFAULT_RELEASE_LOCKS_ON_HANDOFF = false;
+  private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
 
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
@@ -62,6 +68,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final int maxSavedParseExceptions;
 
   private final int numPersistThreads;
+  private final int maxColumnsToMerge;
+  private final boolean releaseLocksOnHandoff;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -84,33 +92,31 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
-      @Nullable Integer numPersistThreads
+      @Nullable Integer numPersistThreads,
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean releaseLocksOnHandoff
   )
   {
-    // Cannot be a static because default basePersistDirectory is unique per-instance
-    final RealtimeTuningConfig defaults = RealtimeTuningConfig.makeDefaultTuningConfig(basePersistDirectory);
-
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-    this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
+    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME : maxRowsInMemory;
     this.partitionsSpec = new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
     // initializing this to 0, it will be lazily initialized to a value
     // @see #getMaxBytesInMemoryOrDefault()
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
                                           DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
-    this.intermediatePersistPeriod = intermediatePersistPeriod == null
-                                     ? defaults.getIntermediatePersistPeriod()
-                                     : intermediatePersistPeriod;
+    this.intermediatePersistPeriod =
+        intermediatePersistPeriod == null ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD : intermediatePersistPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
-    this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
+    this.indexSpec = indexSpec == null ? IndexSpec.getDefault() : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null
-                                 ? defaults.isReportParseExceptions()
+                                 ? DEFAULT_REPORT_PARSE_EXCEPTIONS
                                  : reportParseExceptions;
     this.handoffConditionTimeout = handoffConditionTimeout == null
-                                   ? defaults.getHandoffConditionTimeout()
+                                   ? DEFAULT_HANDOFF_CONDITION_TIMEOUT
                                    : handoffConditionTimeout;
     this.resetOffsetAutomatically = resetOffsetAutomatically == null
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
@@ -137,8 +143,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
-    this.numPersistThreads = numPersistThreads == null ?
-                                DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
+    if (numPersistThreads == null) {
+      this.numPersistThreads = AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS;
+    } else {
+      this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
+    }
+    this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_RELEASE_LOCKS_ON_HANDOFF);
   }
 
   @Override
@@ -163,13 +174,11 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @JsonProperty
-  @Override
   public boolean isSkipBytesInMemoryOverheadCheck()
   {
     return skipBytesInMemoryOverheadCheck;
   }
 
-  @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {
@@ -177,7 +186,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @JsonProperty
-  @Override
   @Nullable
   public Long getMaxTotalRows()
   {
@@ -190,20 +198,17 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return partitionsSpec;
   }
 
-  @Override
   @JsonProperty
   public Period getIntermediatePersistPeriod()
   {
     return intermediatePersistPeriod;
   }
 
-  @Override
   public File getBasePersistDirectory()
   {
     return basePersistDirectory;
   }
 
-  @Override
   @JsonProperty
   @Deprecated
   public int getMaxPendingPersists()
@@ -225,7 +230,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return indexSpecForIntermediatePersists;
   }
 
-  @Override
   @JsonProperty
   public boolean isReportParseExceptions()
   {
@@ -244,7 +248,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return resetOffsetAutomatically;
   }
 
-  @Override
   @JsonProperty
   @Nullable
   public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
@@ -282,14 +285,24 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return skipSequenceNumberAvailabilityCheck;
   }
 
-  @Override
   @JsonProperty
   public int getNumPersistThreads()
   {
     return numPersistThreads;
   }
 
-  @Override
+  @JsonProperty
+  public int getMaxColumnsToMerge()
+  {
+    return maxColumnsToMerge;
+  }
+
+  @JsonProperty
+  public boolean isReleaseLocksOnHandoff()
+  {
+    return releaseLocksOnHandoff;
+  }
+
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -315,6 +328,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
+           maxColumnsToMerge == that.maxColumnsToMerge &&
+           releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -347,7 +362,9 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
-        numPersistThreads
+        numPersistThreads,
+        maxColumnsToMerge,
+        releaseLocksOnHandoff
     );
   }
 

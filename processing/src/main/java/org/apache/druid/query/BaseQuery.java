@@ -22,20 +22,23 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -57,7 +60,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
-  private final boolean descending;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
@@ -66,17 +68,15 @@ public abstract class BaseQuery<T> implements Query<T>
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, descending, context, Granularities.ALL);
+    this(dataSource, querySegmentSpec, context, Granularities.ALL);
   }
 
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context,
       Granularity granularity
   )
@@ -88,7 +88,6 @@ public abstract class BaseQuery<T> implements Query<T>
     this.dataSource = dataSource;
     this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
-    this.descending = descending;
     this.granularity = granularity;
   }
 
@@ -97,14 +96,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public DataSource getDataSource()
   {
     return dataSource;
-  }
-
-  @JsonProperty
-  @Override
-  @JsonInclude(Include.NON_DEFAULT)
-  public boolean isDescending()
-  {
-    return descending;
   }
 
   @JsonProperty("intervals")
@@ -116,16 +107,8 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
-    return getQuerySegmentSpecForLookUp(this).lookup(this, walker);
-  }
-
-  @VisibleForTesting
-  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
-  {
-    DataSource queryDataSource = query.getDataSource();
-    return queryDataSource.getAnalysis()
-                             .getBaseQuerySegmentSpec()
-                             .orElseGet(query::getQuerySegmentSpec);
+    ExecutionVertex ev = ExecutionVertex.of(this);
+    return ev.getEffectiveQuerySegmentSpec().lookup(this, walker);
   }
 
   @Override
@@ -138,16 +121,26 @@ public abstract class BaseQuery<T> implements Query<T>
   public Duration getDuration()
   {
     if (duration == null) {
+      duration = calculateDuration(querySegmentSpec.getIntervals());
+    }
+    return duration;
+  }
+
+  public static Duration calculateDuration(Collection<Interval> intervals)
+  {
+    try {
       Duration totalDuration = new Duration(0);
-      for (Interval interval : querySegmentSpec.getIntervals()) {
+      for (Interval interval : intervals) {
         if (interval != null) {
           totalDuration = totalDuration.plus(interval.toDuration());
         }
       }
-      duration = totalDuration;
+      return totalDuration;
     }
-
-    return duration;
+    catch (ArithmeticException e) {
+      // Overflow due to addition. Return the largest duration possible.
+      return Intervals.ETERNITY.toDuration();
+    }
   }
 
   @Override
@@ -206,8 +199,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @SuppressWarnings("unchecked") // assumes T is Comparable; see method javadoc
   public Ordering<T> getResultOrdering()
   {
-    Ordering retVal = Ordering.natural();
-    return descending ? retVal.reverse() : retVal;
+    return (Ordering<T>) Ordering.natural();
   }
 
   @Nullable
@@ -254,8 +246,7 @@ public abstract class BaseQuery<T> implements Query<T>
     BaseQuery<?> baseQuery = (BaseQuery<?>) o;
 
     // Must use getDuration() instead of "duration" because duration is lazily computed.
-    return descending == baseQuery.descending &&
-           Objects.equals(dataSource, baseQuery.dataSource) &&
+    return Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
            Objects.equals(getDuration(), baseQuery.getDuration()) &&
@@ -266,6 +257,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public int hashCode()
   {
     // Must use getDuration() instead of "duration" because duration is lazily computed.
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
+    return Objects.hash(dataSource, context, querySegmentSpec, getDuration(), granularity);
   }
 }

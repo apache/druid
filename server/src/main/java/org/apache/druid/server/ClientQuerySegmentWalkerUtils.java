@@ -19,6 +19,8 @@
 
 package org.apache.druid.server;
 
+import org.apache.druid.query.ResultSerializationMode;
+
 /**
  * Utilities for {@link ClientQuerySegmentWalker}
  */
@@ -35,7 +37,13 @@ public class ClientQuerySegmentWalkerUtils
      * walker ensures that the cumulative number of rows of the results of subqueries of the given query donot exceed
      * the limit specified in the context or as the server default
      */
-    ROW_LIMIT,
+    ROW_LIMIT {
+      @Override
+      public ResultSerializationMode serializationMode()
+      {
+        return ResultSerializationMode.ROWS;
+      }
+    },
 
     /**
      * Subqueries limited by the BYTE_LIMIT are materialized as {@link org.apache.druid.frame.Frame}s on heap. Frames
@@ -44,10 +52,18 @@ public class ClientQuerySegmentWalkerUtils
      * Frames in the broker memory) of a given query do not exceed the limit specified in the context or as the server
      * default
      */
-    MEMORY_LIMIT
+    MEMORY_LIMIT {
+      @Override
+      public ResultSerializationMode serializationMode()
+      {
+        return ResultSerializationMode.FRAMES;
+      }
+    };
+
+    public abstract ResultSerializationMode serializationMode();
   }
 
-  /**
+   /**
    * Returns the limit type to be used for a given subquery.
    * It returns MEMORY_LIMIT only if:
    *  1. The user has enabled the 'maxSubqueryBytes' explicitly in the query context or as the server default

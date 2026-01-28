@@ -93,7 +93,7 @@ public class SimpleProvisioningStrategyTest
         simpleWorkerProvisioningConfig,
         DSuppliers.of(workerConfig),
         schedulerConfig,
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()

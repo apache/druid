@@ -21,9 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +40,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -55,26 +54,25 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -113,14 +111,13 @@ public class BatchAppenderator implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
-  private final boolean useMaxMemoryEstimates;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -164,14 +161,13 @@ public class BatchAppenderator implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -189,7 +185,6 @@ public class BatchAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
-    this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
   }
@@ -236,7 +231,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     if (pushExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      // use a blocking single threaded executor to throttle the input source when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-push",
@@ -263,7 +258,7 @@ public class BatchAppenderator implements Appenderator
       final InputRow row,
       @Nullable final Supplier<Committer> committerSupplier,
       final boolean allowIncrementalPersists
-  ) throws IndexSizeExceededException, SegmentNotWritableException
+  ) throws SegmentNotWritableException
   {
 
     throwPersistErrorIfExists();
@@ -294,18 +289,9 @@ public class BatchAppenderator implements Appenderator
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
 
-    try {
-      addResult = sink.add(row, false); // allow incrememtal persis is always true for batch
-      sinkRowsInMemoryAfterAdd = addResult.getRowCount();
-      bytesInMemoryAfterAdd = addResult.getBytesInMemory();
-    }
-    catch (IndexSizeExceededException e) {
-      // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
-      // can't add the row (it just failed). This should never actually happen, though, because we check
-      // sink.canAddRow after returning from add.
-      log.error(e, "Sink for segment[%s] was unexpectedly full!", identifier);
-      throw e;
-    }
+    addResult = sink.add(row);
+    sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+    bytesInMemoryAfterAdd = addResult.getBytesInMemory();
 
     if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
@@ -397,7 +383,7 @@ public class BatchAppenderator implements Appenderator
 
       Futures.addCallback(
           persistAll(null),
-          new FutureCallback<Object>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(@Nullable Object result)
@@ -480,9 +466,7 @@ public class BatchAppenderator implements Appenderator
           identifier.getVersion(),
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
-          maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          maxBytesTuningConfig
       );
       bytesCurrentlyInMemory += calculateSinkMemoryInUsed();
       sinks.put(identifier, retVal);
@@ -563,6 +547,7 @@ public class BatchAppenderator implements Appenderator
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     ListenableFuture<Object> future = persistExecutor.submit(
         () -> {
+          setTaskThreadContext();
           log.info("Spawning intermediate persist");
 
           // figure out hydrants (indices) to persist:
@@ -602,6 +587,7 @@ public class BatchAppenderator implements Appenderator
             log.info("No indexes will be persisted");
           }
           final Stopwatch persistStopwatch = Stopwatch.createStarted();
+          final long startPersistCpuNanos = JvmUtils.safeGetThreadCpuTime();
           try {
             for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
               metrics.incrementRowOutputCount(persistHydrant(pair.lhs, pair.rhs));
@@ -631,9 +617,10 @@ public class BatchAppenderator implements Appenderator
             throw e;
           }
           finally {
-            metrics.incrementNumPersists();
-            long persistMillis = persistStopwatch.elapsed(TimeUnit.MILLISECONDS);
+            metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
+            final long persistMillis = persistStopwatch.millisElapsed();
             metrics.incrementPersistTimeMillis(persistMillis);
+            metrics.incrementNumPersists();
             persistStopwatch.stop();
             // make sure no push can start while persisting:
             log.info("Persisted rows[%,d] and bytes[%,d] and removed all sinks & hydrants from memory in[%d] millis",
@@ -645,7 +632,7 @@ public class BatchAppenderator implements Appenderator
         }
     );
 
-    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    final long startDelay = runExecStopwatch.millisElapsed();
     metrics.incrementPersistBackPressureMillis(startDelay);
     if (startDelay > PERSIST_WARN_DELAY) {
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
@@ -689,8 +676,8 @@ public class BatchAppenderator implements Appenderator
 
     return Futures.transform(
         persistAll(null), // make sure persists is done before push...
-        (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
-
+        commitMetadata -> {
+          setTaskThreadContext();
           log.info("Push started, processsing[%d] sinks", identifiers.size());
 
           int totalHydrantsMerged = 0;
@@ -744,6 +731,7 @@ public class BatchAppenderator implements Appenderator
           log.info("Push done: total sinks merged[%d], total hydrants merged[%d]",
                    identifiers.size(), totalHydrantsMerged
           );
+
           return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchemaMapping);
         },
         pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees
@@ -809,21 +797,23 @@ public class BatchAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final long mergeFinishTime;
-      final long startTime = System.nanoTime();
+      final DataSegment mergedSegment;
+      final Stopwatch mergeStopwatch = Stopwatch.createStarted();
+      final long mergeTimeMillis;
+      final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       long rowsinMergedSegment = 0L;
       Closer closer = Closer.create();
       try {
         for (FireHydrant fireHydrant : sink) {
-          Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final Segment segment = fireHydrant.acquireSegment();
+          final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
           if (queryableIndex != null) {
             rowsinMergedSegment += queryableIndex.getNumRows();
           }
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
-          closer.register(segmentAndCloseable.rhs);
+          closer.register(segment);
         }
 
         mergedFile = indexMerger.mergeQueryableIndex(
@@ -839,10 +829,21 @@ public class BatchAppenderator implements Appenderator
             tuningConfig.getMaxColumnsToMerge()
         );
 
-        mergeFinishTime = System.nanoTime();
         metrics.incrementMergedRows(rowsinMergedSegment);
 
-        log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
+        metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        mergeTimeMillis = mergeStopwatch.millisElapsed();
+        metrics.setMergeTime(mergeTimeMillis);
+
+        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        QueryableIndex index = indexIO.loadIndex(mergedFile);
+        closer.register(index);
+        mergedSegment =
+            sink.getSegment()
+                .toBuilder()
+                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
+                .totalRows(index.getNumRows())
+                .build();
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -851,18 +852,10 @@ public class BatchAppenderator implements Appenderator
         closer.close();
       }
 
+      final Stopwatch pushStopwatch = Stopwatch.createStarted();
+
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
-      final DataSegment segment = dataSegmentPusher.push(
-          mergedFile,
-          sink.getSegment()
-              .withDimensions(
-                  IndexMerger.getMergedDimensionsFromQueryableIndexes(
-                      indexes,
-                      schema.getDimensionsSpec()
-                  )
-              ),
-          false
-      );
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, mergedSegment, false);
 
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
       // mapped file references
@@ -879,19 +872,20 @@ public class BatchAppenderator implements Appenderator
       // cleanup, sink no longer needed
       removeDirectory(computePersistDir(identifier));
 
-      final long pushFinishTime = System.nanoTime();
+      final long pushTimeMillis = pushStopwatch.millisElapsed();
       metrics.incrementPushedRows(rowsinMergedSegment);
 
       log.info(
-          "Segment[%s] of %,d bytes "
+          "Segment[%s] of %,d bytes and %,d rows "
           + "built from %d incremental persist(s) in %,dms; "
           + "pushed to deep storage in %,dms. "
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
+          segment.getTotalRows(),
           indexes.size(),
-          (mergeFinishTime - startTime) / 1000000,
-          (pushFinishTime - mergeFinishTime) / 1000000,
+          mergeTimeMillis,
+          pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
@@ -1074,8 +1068,6 @@ public class BatchAppenderator implements Appenderator
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         maxBytesTuningConfig,
-        useMaxMemoryEstimates,
-        null,
         hydrants
     );
     retVal.finishWriting(); // this sink is not writable
@@ -1174,7 +1166,7 @@ public class BatchAppenderator implements Appenderator
 
     try {
       final long startTime = System.nanoTime();
-      int numRows = indexToPersist.getIndex().size();
+      int numRows = indexToPersist.getIndex().numRows();
 
       // since the sink may have been persisted before it may have lost its
       // hydrant count, we remember that value in the sinks' metadata, so we have

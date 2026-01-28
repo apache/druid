@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -31,18 +31,28 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -61,7 +71,8 @@ public class TaskMonitorTest
   private final TaskMonitor<TestTask, SimpleSubTaskReport> monitor = new TaskMonitor<>(
       new TestOverlordClient(),
       3,
-      SPLIT_NUM
+      SPLIT_NUM,
+      0
   );
 
   @Before
@@ -186,6 +197,26 @@ public class TaskMonitorTest
     }
   }
 
+  @Test
+  public void testTimeout() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    TaskMonitor<TestTask, SimpleSubTaskReport> timeoutMonitor = new TaskMonitor<>(
+            new TestOverlordClient(),
+            0,
+            1,
+            10L
+    );
+    timeoutMonitor.start(50);
+    ListenableFuture<SubTaskCompleteEvent<TestTask>> future = timeoutMonitor.submit(
+            new TestTaskSpec("timeoutSpec", "groupId", "supervisorId", null, new IntegerInputSplit(0), 100L, 0, false)
+    );
+    SubTaskCompleteEvent<TestTask> result = future.get(1, TimeUnit.SECONDS);
+    Assert.assertNotNull(result.getLastStatus());
+    Assert.assertEquals(TaskState.FAILED, result.getLastStatus().getStatusCode());
+    Assert.assertEquals(TaskState.FAILED, result.getLastState());
+    timeoutMonitor.stop();
+  }
+
   private class TestTaskSpec extends SubTaskSpec<TestTask>
   {
     private final long runTime;
@@ -264,6 +295,8 @@ public class TaskMonitorTest
 
   private class TestOverlordClient extends NoopOverlordClient
   {
+    private final Set<String> cancelled = ConcurrentHashMap.newKeySet();
+
     @Override
     public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
@@ -272,13 +305,29 @@ public class TaskMonitorTest
       if (task.throwUnknownTypeIdError) {
         throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
       }
-      taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
+      TaskToolbox taskToolbox = makeToolbox();
+      taskRunner.submit(() -> tasks.put(task.getId(), task.run(taskToolbox).getStatusCode()));
       return Futures.immediateFuture(null);
+    }
+
+    private TaskToolbox makeToolbox()
+    {
+      ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
+      IndexIO indexIO = new IndexIO(jsonMapper, ColumnConfig.DEFAULT);
+      return new TaskToolbox.Builder()
+          .indexIO(indexIO)
+          .emitter(new StubServiceEmitter())
+          .indexMerger(new IndexMergerV9(jsonMapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+          .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+          .build();
     }
 
     @Override
     public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
+      final TaskState state = cancelled.contains(taskId)
+              ? TaskState.FAILED
+              : tasks.get(taskId);
       final TaskStatusResponse retVal = new TaskStatusResponse(
           taskId,
           new TaskStatusPlus(
@@ -287,7 +336,7 @@ public class TaskMonitorTest
               "testTask",
               DateTimes.EPOCH,
               DateTimes.EPOCH,
-              tasks.get(taskId),
+              state,
               RunnerTaskState.RUNNING,
               -1L,
               TaskLocation.unknown(),
@@ -297,6 +346,13 @@ public class TaskMonitorTest
       );
 
       return Futures.immediateFuture(retVal);
+    }
+
+    @Override
+    public ListenableFuture<Void> cancelTask(String taskId)
+    {
+      cancelled.add(taskId);
+      return Futures.immediateFuture(null);
     }
   }
 

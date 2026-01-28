@@ -1,0 +1,146 @@
+# testUnionAllQueriesWithLimit case-crc:30654774
+# quidem testcase reason: UNION_ALL_QUERY
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT * FROM (SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo) LIMIT 2;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
+|      6 |
++--------+
+(2 rows)
+
+!ok
+LogicalSort(fetch=[2])
+  LogicalUnion(all=[true])
+    LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{}], EXPR$0=[SUM($4)])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidSort(fetch=[2], druid=[logical])
+  DruidUnion(all=[true])
+    DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{}], EXPR$0=[SUM($4)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "union",
+      "queries" : [ {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "context" : {
+          "debug" : "true",
+          "defaultTimeout" : "300000",
+          "maxScatterGatherBytes" : "9223372036854775807",
+          "outputformat" : "MYSQL",
+          "plannerStrategy" : "DECOUPLED",
+          "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+          "sqlQueryId" : "dummy",
+          "sqlStringifyArrays" : false
+        }
+      }, {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longSum",
+          "name" : "a0",
+          "fieldName" : "cnt"
+        } ],
+        "context" : {
+          "debug" : "true",
+          "defaultTimeout" : "300000",
+          "maxScatterGatherBytes" : "9223372036854775807",
+          "outputformat" : "MYSQL",
+          "plannerStrategy" : "DECOUPLED",
+          "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+          "sqlQueryId" : "dummy",
+          "sqlStringifyArrays" : false
+        }
+      }, {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "context" : {
+          "debug" : "true",
+          "defaultTimeout" : "300000",
+          "maxScatterGatherBytes" : "9223372036854775807",
+          "outputformat" : "MYSQL",
+          "plannerStrategy" : "DECOUPLED",
+          "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+          "sqlQueryId" : "dummy",
+          "sqlStringifyArrays" : false
+        }
+      } ],
+      "context" : null
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "limit" : 2,
+  "columns" : [ "a0" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

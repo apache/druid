@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,6 +47,23 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
     eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.nilBindings());
+  }
+
+  @Test
+  public void testInvalidRegexpExtractPattern()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->
+            eval(
+                "regexp_extract('pod-1234-node', '[ab-0-9]')",
+                InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "An invalid pattern [[ab-0-9]] was provided for the [regexp_extract] function,"
+            + " error: [Illegal character range near index 4"
+        )
+    );
   }
 
   @Test
@@ -113,9 +132,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testNullPattern()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
 
     final ExprEval<?> result = eval(
         "regexp_extract(a, null)",
@@ -131,7 +148,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, '')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals(NullHandling.emptyToNullIfNeeded(""), result.value());
+    Assert.assertEquals("", result.value());
   }
 
   @Test
@@ -151,9 +168,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
 
     final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.nilBindings());
     Assert.assertNull(result.value());

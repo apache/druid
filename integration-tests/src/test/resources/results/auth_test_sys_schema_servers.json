@@ -8,8 +8,12 @@
     "tier": "_default_tier",
     "curr_size": 2208932412,
     "max_size": 5000000000,
-    "is_leader": %%NON_LEADER%%,
-    "start_time": "0"
+    "is_leader": null,
+    "start_time": "0",
+    "version": "0.0.0",
+    "labels": null,
+    "available_processors": 0,
+    "total_memory": 0
   },
   {
     "server": "%%BROKER%%:8282",
@@ -20,7 +24,11 @@
     "tier": "_default_tier",
     "curr_size": 0,
     "max_size": 1000000000,
-    "is_leader": %%NON_LEADER%%,
-    "start_time": "0"
+    "is_leader": null,
+    "start_time": "0",
+    "version": "0.0.0",
+    "labels": null,
+    "available_processors": 0,
+    "total_memory": 0
   }
 ]

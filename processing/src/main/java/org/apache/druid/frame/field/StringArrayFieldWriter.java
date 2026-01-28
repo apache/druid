@@ -33,10 +33,12 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class StringArrayFieldWriter implements FieldWriter
 {
   private final BaseObjectColumnValueSelector<?> selector;
+  private final boolean removeNullBytes;
 
-  public StringArrayFieldWriter(final BaseObjectColumnValueSelector<?> selector)
+  public StringArrayFieldWriter(final BaseObjectColumnValueSelector<?> selector, final boolean removeNullBytes)
   {
     this.selector = selector;
+    this.removeNullBytes = removeNullBytes;
   }
 
   @Override
@@ -46,7 +48,8 @@ public class StringArrayFieldWriter implements FieldWriter
         memory,
         position,
         maxSize,
-        FrameWriterUtils.getUtf8ByteBuffersFromStringArraySelector(selector)
+        FrameWriterUtils.getUtf8ByteBuffersFromStringArraySelector(selector),
+        removeNullBytes
     );
   }
 

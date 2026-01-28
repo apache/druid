@@ -23,6 +23,8 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.testng.Assert;
 
 public final class DataLoaderHelper
 {
@@ -50,6 +52,9 @@ public final class DataLoaderHelper
         () -> sqlTestQueryHelper.isDatasourceLoadedInSQL(datasource),
         StringUtils.format("Waiting for [%s] to be ready for SQL queries", datasource)
     );
+
+    Assert.assertTrue(sqlTestQueryHelper.verifyTimeColumnIsPresent(datasource));
+
     LOG.info("Datasource [%s] ready for SQL queries", datasource);
   }
 }

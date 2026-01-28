@@ -34,6 +34,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -93,7 +94,8 @@ public class GroupByRowProcessor
       final GroupByQueryResources resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     final Closer closeOnExit = Closer.create();
@@ -106,7 +108,8 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage().getBytes()
+        querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+        perQueryStats
     );
 
     closeOnExit.register(temporaryStorage);
@@ -116,7 +119,7 @@ public class GroupByRowProcessor
         subquery,
         querySpecificConfig,
         processingConfig,
-        new Supplier<ByteBuffer>()
+        new Supplier<>()
         {
           @Override
           public ByteBuffer get()
@@ -128,7 +131,8 @@ public class GroupByRowProcessor
         },
         temporaryStorage,
         spillMapper,
-        mergeBufferSize
+        mergeBufferSize,
+        perQueryStats
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;

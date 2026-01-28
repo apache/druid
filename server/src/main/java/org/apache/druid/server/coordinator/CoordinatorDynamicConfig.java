@@ -23,10 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.server.coordinator.balancer.SegmentToMoveCalculator;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -51,8 +54,6 @@ public class CoordinatorDynamicConfig
   public static final String CONFIG_KEY = "coordinator.config";
 
   private final long markSegmentAsUnusedDelayMillis;
-  private final long mergeBytesLimit;
-  private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
@@ -71,6 +72,9 @@ public class CoordinatorDynamicConfig
 
   private final Map<String, String> debugDimensions;
   private final Map<Dimension, String> validDebugDimensions;
+
+  private final Set<String> turboLoadingNodes;
+  private final Map<String, String> cloneServers;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -98,8 +102,6 @@ public class CoordinatorDynamicConfig
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
           long markSegmentAsUnusedDelayMillis,
-      @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
-      @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
@@ -122,13 +124,13 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
       @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
-      @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
+      @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
+      @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
+      @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
   )
   {
     this.markSegmentAsUnusedDelayMillis =
         markSegmentAsUnusedDelayMillis;
-    this.mergeBytesLimit = mergeBytesLimit;
-    this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.smartSegmentLoading = Builder.valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING);
 
@@ -168,6 +170,8 @@ public class CoordinatorDynamicConfig
     );
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
+    this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
+    this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -206,22 +210,17 @@ public class CoordinatorDynamicConfig
     }
   }
 
+  public SegmentLoadingMode getLoadingModeForServer(String serverName)
+  {
+    return turboLoadingNodes.contains(serverName) ?
+           SegmentLoadingMode.TURBO :
+           SegmentLoadingMode.NORMAL;
+  }
+
   @JsonProperty("millisToWaitBeforeDeleting")
   public long getMarkSegmentAsUnusedDelayMillis()
   {
     return markSegmentAsUnusedDelayMillis;
-  }
-
-  @JsonProperty
-  public long getMergeBytesLimit()
-  {
-    return mergeBytesLimit;
-  }
-
-  @JsonProperty
-  public int getMergeSegmentsLimit()
-  {
-    return mergeSegmentsLimit;
   }
 
   @JsonProperty
@@ -294,7 +293,7 @@ public class CoordinatorDynamicConfig
    * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning'
    * servers, and segments will be moved away from them to be placed on non-decommissioning servers.
    *
-   * @return list of host:port entries
+   * @return Set of host:port entries
    */
   @JsonProperty
   public Set<String> getDecommissioningNodes()
@@ -326,14 +325,38 @@ public class CoordinatorDynamicConfig
     return replicateAfterLoadTimeout;
   }
 
+  /**
+   * Map from target Historical server to source Historical server which should be cloned by the target. The target
+   * Historical does not participate in regular segment assignment or balancing. Instead, the Coordinator mirrors any
+   * segment assignment made to the source Historical onto the target Historical, so that the target becomes an exact
+   * copy of the source. Segments on the target Historical do not count towards replica counts either. If the source
+   * disappears, the target remains in the last known state of the source server until removed from the cloneServers.
+   */
+  @JsonProperty
+  public Map<String, String> getCloneServers()
+  {
+    return cloneServers;
+  }
+
+  /**
+   * List of servers to put in turbo-loading mode. These servers will use a larger thread pool to load
+   * segments. This causes decreases the average time taken to load segments. However, this also means less resources
+   * available to query threads which may cause a drop in query performance.
+   *
+   * @return Set of host:port entries
+   */
+  @JsonProperty
+  public Set<String> getTurboLoadingNodes()
+  {
+    return turboLoadingNodes;
+  }
+
   @Override
   public String toString()
   {
     return "CoordinatorDynamicConfig{" +
            "leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments="
            + markSegmentAsUnusedDelayMillis +
-           ", mergeBytesLimit=" + mergeBytesLimit +
-           ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
@@ -346,6 +369,8 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
+           ", turboLoadingNodes=" + turboLoadingNodes +
+           ", cloneServers=" + cloneServers +
            '}';
   }
 
@@ -362,8 +387,6 @@ public class CoordinatorDynamicConfig
     CoordinatorDynamicConfig that = (CoordinatorDynamicConfig) o;
 
     return markSegmentAsUnusedDelayMillis == that.markSegmentAsUnusedDelayMillis
-           && mergeBytesLimit == that.mergeBytesLimit
-           && mergeSegmentsLimit == that.mergeSegmentsLimit
            && maxSegmentsToMove == that.maxSegmentsToMove
            && balancerComputeThreads == that.balancerComputeThreads
            && replicantLifetime == that.replicantLifetime
@@ -371,6 +394,7 @@ public class CoordinatorDynamicConfig
            && replicateAfterLoadTimeout == that.replicateAfterLoadTimeout
            && maxSegmentsInNodeLoadingQueue == that.maxSegmentsInNodeLoadingQueue
            && useRoundRobinSegmentAssignment == that.useRoundRobinSegmentAssignment
+           && smartSegmentLoading == that.smartSegmentLoading
            && pauseCoordination == that.pauseCoordination
            && Objects.equals(
                specificDataSourcesToKillUnusedSegmentsIn,
@@ -381,7 +405,9 @@ public class CoordinatorDynamicConfig
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
-           && Objects.equals(debugDimensions, that.debugDimensions);
+           && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
+           && Objects.equals(debugDimensions, that.debugDimensions)
+           && Objects.equals(cloneServers, that.cloneServers);
   }
 
   @Override
@@ -389,20 +415,23 @@ public class CoordinatorDynamicConfig
   {
     return Objects.hash(
         markSegmentAsUnusedDelayMillis,
-        mergeBytesLimit,
-        mergeSegmentsLimit,
         maxSegmentsToMove,
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
         maxSegmentsInNodeLoadingQueue,
+        useRoundRobinSegmentAssignment,
+        smartSegmentLoading,
+        replicateAfterLoadTimeout,
         specificDataSourcesToKillUnusedSegmentsIn,
         killTaskSlotRatio,
         maxKillTaskSlots,
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
         pauseCoordination,
-        debugDimensions
+        debugDimensions,
+        turboLoadingNodes,
+        cloneServers
     );
   }
 
@@ -417,14 +446,15 @@ public class CoordinatorDynamicConfig
    */
   public static int getDefaultBalancerComputeThreads()
   {
-    return Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
+    return Math.min(
+        Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2),
+        SegmentToMoveCalculator.MAX_BALANCER_THREADS
+    );
   }
 
   private static class Defaults
   {
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
-    static final long MERGE_BYTES_LIMIT = 524_288_000L;
-    static final int MERGE_SEGMENTS_LIMIT = 100;
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 500;
@@ -441,8 +471,6 @@ public class CoordinatorDynamicConfig
   public static class Builder
   {
     private Long markSegmentAsUnusedDelayMillis;
-    private Long mergeBytesLimit;
-    private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
@@ -458,6 +486,8 @@ public class CoordinatorDynamicConfig
     private Boolean replicateAfterLoadTimeout;
     private Boolean useRoundRobinSegmentAssignment;
     private Boolean smartSegmentLoading;
+    private Set<String> turboLoadingNodes;
+    private Map<String, String> cloneServers;
 
     public Builder()
     {
@@ -466,8 +496,6 @@ public class CoordinatorDynamicConfig
     @JsonCreator
     public Builder(
         @JsonProperty("millisToWaitBeforeDeleting") @Nullable Long markSegmentAsUnusedDelayMillis,
-        @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
-        @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
@@ -482,12 +510,12 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
         @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
-        @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
+        @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
+        @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
+        @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
-      this.mergeBytesLimit = mergeBytesLimit;
-      this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
@@ -503,6 +531,8 @@ public class CoordinatorDynamicConfig
       this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
       this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
+      this.turboLoadingNodes = turboLoadingNodes;
+      this.cloneServers = cloneServers;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -520,6 +550,12 @@ public class CoordinatorDynamicConfig
     public Builder withSmartSegmentLoading(boolean smartSegmentLoading)
     {
       this.smartSegmentLoading = smartSegmentLoading;
+      return this;
+    }
+
+    public Builder withTurboLoadingNodes(Set<String> turboLoadingNodes)
+    {
+      this.turboLoadingNodes = turboLoadingNodes;
       return this;
     }
 
@@ -589,6 +625,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withCloneServers(Map<String, String> cloneServers)
+    {
+      this.cloneServers = cloneServers;
+      return this;
+    }
+
     /**
      * Builds a CoordinatoryDynamicConfig using either the configured values, or
      * the default value if not configured.
@@ -600,8 +642,6 @@ public class CoordinatorDynamicConfig
               markSegmentAsUnusedDelayMillis,
               Defaults.LEADING_MILLIS_BEFORE_MARK_UNUSED
           ),
-          valueOrDefault(mergeBytesLimit, Defaults.MERGE_BYTES_LIMIT),
-          valueOrDefault(mergeSegmentsLimit, Defaults.MERGE_SEGMENTS_LIMIT),
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
@@ -616,7 +656,9 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, Defaults.REPLICATE_AFTER_LOAD_TIMEOUT),
           valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
-          debugDimensions
+          debugDimensions,
+          turboLoadingNodes,
+          cloneServers
       );
     }
 
@@ -632,8 +674,6 @@ public class CoordinatorDynamicConfig
               markSegmentAsUnusedDelayMillis,
               defaults.getMarkSegmentAsUnusedDelayMillis()
           ),
-          valueOrDefault(mergeBytesLimit, defaults.getMergeBytesLimit()),
-          valueOrDefault(mergeSegmentsLimit, defaults.getMergeSegmentsLimit()),
           valueOrDefault(maxSegmentsToMove, defaults.getMaxSegmentsToMove()),
           valueOrDefault(replicantLifetime, defaults.getReplicantLifetime()),
           valueOrDefault(replicationThrottleLimit, defaults.getReplicationThrottleLimit()),
@@ -648,7 +688,9 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, defaults.getReplicateAfterLoadTimeout()),
           valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
-          valueOrDefault(debugDimensions, defaults.getDebugDimensions())
+          valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
+          valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
+          valueOrDefault(cloneServers, defaults.getCloneServers())
       );
     }
   }

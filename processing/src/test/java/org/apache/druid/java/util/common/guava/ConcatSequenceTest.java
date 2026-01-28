@@ -108,7 +108,7 @@ public class ConcatSequenceTest
     final int[] closedCount = {0};
     final Sequence<Integer> seq = Sequences.concat(
         new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Sequence<Integer>, Iterator<Sequence<Integer>>>()
+            new BaseSequence.IteratorMaker<>()
             {
               @Override
               public Iterator<Sequence<Integer>> make()
@@ -132,7 +132,7 @@ public class ConcatSequenceTest
         9,
         seq.accumulate(
             1,
-            new Accumulator<Integer, Integer>()
+            new Accumulator<>()
             {
               @Override
               public Integer accumulate(Integer accumulated, Integer in)
@@ -148,7 +148,7 @@ public class ConcatSequenceTest
 
     final Yielder<Integer> yielder = seq.toYielder(
         1,
-        new YieldingAccumulator<Integer, Integer>()
+        new YieldingAccumulator<>()
         {
           @Override
           public Integer accumulate(Integer accumulated, Integer in)
@@ -171,7 +171,7 @@ public class ConcatSequenceTest
     final AtomicInteger closedCount = new AtomicInteger(0);
     final Sequence<Integer> seq = Sequences.concat(
         new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Sequence<Integer>, Iterator<Sequence<Integer>>>()
+            new BaseSequence.IteratorMaker<>()
             {
               @Override
               public Iterator<Sequence<Integer>> make()
@@ -207,21 +207,21 @@ public class ConcatSequenceTest
                     ImmutableList.of(4, 5, 6)
                 )
             ),
-            new Function<ImmutableList<Integer>, Sequence<Integer>>()
+            new Function<>()
             {
               @Override
               public Sequence<Integer> apply(final ImmutableList<Integer> input)
               {
                 if (lastSeqFullyRead.getAndSet(false)) {
                   return Sequences.simple(
-                      new Iterable<Integer>()
+                      new Iterable<>()
                       {
                         private Iterator<Integer> baseIter = input.iterator();
 
                         @Override
                         public Iterator<Integer> iterator()
                         {
-                          return new Iterator<Integer>()
+                          return new Iterator<>()
                           {
                             @Override
                             public boolean hasNext()
@@ -258,12 +258,12 @@ public class ConcatSequenceTest
 
     Yielder<Integer> yielder = seq.toYielder(
         null,
-        new YieldingAccumulator<Integer, Integer>()
+        new YieldingAccumulator<>()
         {
           @Override
           public Integer accumulate(Integer accumulated, Integer in)
           {
-            yield();
+            this.yield();
             return in;
           }
         }

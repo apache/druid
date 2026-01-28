@@ -113,7 +113,7 @@ public class SpecificTaskServiceLocator implements ServiceLocator
 
         Futures.addCallback(
             taskStatusFuture,
-            new FutureCallback<Map<String, TaskStatus>>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(final Map<String, TaskStatus> taskStatusMap)
@@ -241,7 +241,7 @@ public class SpecificTaskServiceLocator implements ServiceLocator
 
         Futures.addCallback(
             taskStatusFuture,
-            new FutureCallback<TaskStatusResponse>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(final TaskStatusResponse taskStatusResponse)

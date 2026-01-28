@@ -16,46 +16,17 @@
  * limitations under the License.
  */
 
-import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
-import { SqlColumn, SqlQuery } from '@druid-toolkit/query';
-import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
-import type { ParameterDefinition } from '@druid-toolkit/visuals-core/src/models/parameter';
-
 import { nonEmptyArray } from '../../../utils';
-
-export interface Dataset {
-  table: SqlTable;
-  columns: ExpressionMeta[];
-}
-
-export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean): T[] {
-  const e = eq || ((a, b) => a === b);
-  return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
-}
-
-export function addTableScope(expression: SqlExpression, newTableScope: string): SqlExpression {
-  return expression.walk(ex => {
-    if (ex instanceof SqlColumn && !ex.getTableName()) {
-      return ex.changeTableName(newTableScope);
-    }
-    return ex;
-  }) as SqlExpression;
-}
-
-export function getInitQuery(table: SqlExpression, where: SqlExpression): SqlQuery {
-  return SqlQuery.from(table.as('t')).applyIf(String(where) !== 'TRUE', q =>
-    q.changeWhereExpression(addTableScope(where, 't')),
-  );
-}
+import type { ParameterDefinition } from '../models';
 
 export function normalizeType(paramType: ParameterDefinition['type']): ParameterDefinition['type'] {
   switch (paramType) {
-    case 'aggregates':
-      return 'aggregate';
-    case 'columns':
-      return 'column';
-    case 'splitCombines':
-      return 'splitCombine';
+    case 'expressions':
+      return 'expression';
+
+    case 'measures':
+      return 'measure';
+
     default:
       return paramType;
   }
@@ -68,14 +39,12 @@ export function adjustTransferValue(
 ) {
   const comboType: `${ParameterDefinition['type']}->${ParameterDefinition['type']}` = `${sourceType}->${targetType}`;
   switch (comboType) {
-    case 'aggregate->aggregates':
-    case 'column->columns':
-    case 'splitCombine->splitCombines':
+    case 'measure->measures':
+    case 'expression->expressions':
       return [value];
 
-    case 'aggregates->aggregate':
-    case 'columns->column':
-    case 'splitCombines->splitCombine':
+    case 'measures->measure':
+    case 'expressions->expression':
       return nonEmptyArray(value) ? value[0] : undefined;
 
     default:

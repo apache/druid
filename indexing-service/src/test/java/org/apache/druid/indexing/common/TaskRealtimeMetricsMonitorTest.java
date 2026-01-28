@@ -21,27 +21,22 @@ package org.apache.druid.indexing.common;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.MonitorUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.realtime.FireDepartment;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-@RunWith(MockitoJUnitRunner.class)
 public class TaskRealtimeMetricsMonitorTest
 {
   private static final Map<String, String[]> DIMENSIONS = ImmutableMap.of(
@@ -53,35 +48,32 @@ public class TaskRealtimeMetricsMonitorTest
 
   private static final Map<String, Object> TAGS = ImmutableMap.of("author", "Author Name", "version", 10);
 
-  @Mock(answer = Answers.RETURNS_MOCKS)
-  private FireDepartment fireDepartment;
-  @Mock(answer = Answers.RETURNS_MOCKS)
+  private SegmentGenerationMetrics segmentGenerationMetrics;
   private RowIngestionMeters rowIngestionMeters;
-  @Mock
-  private ServiceEmitter emitter;
-  private Map<String, ServiceMetricEvent> emittedEvents;
+  private StubServiceEmitter emitter;
   private TaskRealtimeMetricsMonitor target;
 
   @Before
   public void setUp()
   {
-    emittedEvents = new HashMap<>();
-    Mockito.doCallRealMethod().when(emitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-    Mockito
-        .doAnswer(invocation -> {
-          ServiceMetricEvent e = invocation.getArgument(0);
-          emittedEvents.put(e.getMetric(), e);
-          return null;
-        })
-        .when(emitter).emit(ArgumentMatchers.any(Event.class));
-    target = new TaskRealtimeMetricsMonitor(fireDepartment, rowIngestionMeters, DIMENSIONS, TAGS);
+    segmentGenerationMetrics = new SegmentGenerationMetrics();
+    rowIngestionMeters = new SimpleRowIngestionMeters();
+    emitter = new StubServiceEmitter();
+    target = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        rowIngestionMeters,
+        createMetricEventBuilder()
+    );
   }
 
   @Test
   public void testdoMonitorShouldEmitUserProvidedTags()
   {
     target.doMonitor(emitter);
-    for (ServiceMetricEvent sme : emittedEvents.values()) {
+
+    List<ServiceMetricEvent> events = emitter.getMetricEvents("ingest/events/unparseable");
+    Assert.assertFalse(events.isEmpty());
+    for (ServiceMetricEvent sme : events) {
       Assert.assertEquals(TAGS, sme.getUserDims().get(DruidMetrics.TAGS));
     }
   }
@@ -89,9 +81,150 @@ public class TaskRealtimeMetricsMonitorTest
   @Test
   public void testdoMonitorWithoutTagsShouldNotEmitTags()
   {
-    target = new TaskRealtimeMetricsMonitor(fireDepartment, rowIngestionMeters, DIMENSIONS, null);
-    for (ServiceMetricEvent sme : emittedEvents.values()) {
+    ServiceMetricEvent.Builder builderWithoutTags = new ServiceMetricEvent.Builder();
+    MonitorUtils.addDimensionsToBuilder(builderWithoutTags, DIMENSIONS);
+
+    target = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        rowIngestionMeters,
+        builderWithoutTags
+    );
+    target.doMonitor(emitter);
+
+    List<ServiceMetricEvent> events = emitter.getMetricEvents("ingest/events/unparseable");
+    Assert.assertFalse(events.isEmpty());
+    for (ServiceMetricEvent sme : events) {
       Assert.assertFalse(sme.getUserDims().containsKey(DruidMetrics.TAGS));
     }
+  }
+
+  @Test
+  public void testMessageGapAggStats()
+  {
+    target.doMonitor(emitter);
+    Assert.assertTrue(emitter.getMetricEvents("ingest/events/minMessageGap").isEmpty());
+    Assert.assertTrue(emitter.getMetricEvents("ingest/events/maxMessageGap").isEmpty());
+    Assert.assertTrue(emitter.getMetricEvents("ingest/events/avgMessageGap").isEmpty());
+
+    emitter.flush();
+    segmentGenerationMetrics.reportMessageGap(1);
+    target.doMonitor(emitter);
+
+    Assert.assertFalse(emitter.getMetricEvents("ingest/events/minMessageGap").isEmpty());
+    Assert.assertFalse(emitter.getMetricEvents("ingest/events/maxMessageGap").isEmpty());
+    Assert.assertFalse(emitter.getMetricEvents("ingest/events/avgMessageGap").isEmpty());
+  }
+
+  @Test
+  public void testThrownAwayEmitsReasonDimension()
+  {
+    SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        realMeters,
+        createMetricEventBuilder()
+    );
+
+    monitor.doMonitor(emitter);
+
+    Map<String, Long> thrownAwayByReason = new HashMap<>();
+    for (ServiceMetricEvent event : emitter.getMetricEvents("ingest/events/thrownAway")) {
+      Object reason = event.getUserDims().get("reason");
+      thrownAwayByReason.put(reason.toString(), event.getValue().longValue());
+    }
+
+    Assert.assertEquals(Long.valueOf(2), thrownAwayByReason.get("null"));
+    Assert.assertEquals(Long.valueOf(3), thrownAwayByReason.get("beforeMinimumMessageTime"));
+    Assert.assertEquals(Long.valueOf(1), thrownAwayByReason.get("afterMaximumMessageTime"));
+    Assert.assertEquals(Long.valueOf(4), thrownAwayByReason.get("filtered"));
+  }
+
+  @Test
+  public void testThrownAwayReasonDimensionOnlyEmittedWhenNonZero()
+  {
+    SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        realMeters,
+        createMetricEventBuilder()
+    );
+
+    monitor.doMonitor(emitter);
+
+    Map<String, Long> thrownAwayByReason = new HashMap<>();
+    for (ServiceMetricEvent event : emitter.getMetricEvents("ingest/events/thrownAway")) {
+      Object reason = event.getUserDims().get("reason");
+      thrownAwayByReason.put(reason.toString(), event.getValue().longValue());
+    }
+
+    // Only reasons with non-zero counts should be emitted
+    Assert.assertEquals(2, thrownAwayByReason.size());
+    Assert.assertTrue(thrownAwayByReason.containsKey("null"));
+    Assert.assertTrue(thrownAwayByReason.containsKey("filtered"));
+    Assert.assertFalse(thrownAwayByReason.containsKey("beforeMinimumMessageTime"));
+    Assert.assertFalse(thrownAwayByReason.containsKey("afterMaximumMessageTime"));
+  }
+
+  @Test
+  public void testThrownAwayReasonDeltaAcrossMonitorCalls()
+  {
+    SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
+
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        realMeters,
+        createMetricEventBuilder()
+    );
+
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    monitor.doMonitor(emitter);
+
+    long firstCallNullCount = 0;
+    for (ServiceMetricEvent event : emitter.getMetricEvents("ingest/events/thrownAway")) {
+      if ("null".equals(event.getUserDims().get("reason"))) {
+        firstCallNullCount = event.getValue().longValue();
+      }
+    }
+    Assert.assertEquals(2, firstCallNullCount);
+
+    emitter.flush();
+    realMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    realMeters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
+    monitor.doMonitor(emitter);
+
+    // Find counts from second call - should be deltas only
+    Map<String, Long> secondCallCounts = new HashMap<>();
+    for (ServiceMetricEvent event : emitter.getMetricEvents("ingest/events/thrownAway")) {
+      Object reason = event.getUserDims().get("reason");
+      secondCallCounts.put(reason.toString(), event.getValue().longValue());
+    }
+
+    // Should emit only the delta (1 more NULL, 2 new FILTERED)
+    Assert.assertEquals(Long.valueOf(1), secondCallCounts.get("null"));
+    Assert.assertEquals(Long.valueOf(2), secondCallCounts.get("filtered"));
+  }
+
+  private ServiceMetricEvent.Builder createMetricEventBuilder()
+  {
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    MonitorUtils.addDimensionsToBuilder(builder, DIMENSIONS);
+    builder.setDimensionIfNotNull(DruidMetrics.TAGS, TAGS);
+    return builder;
   }
 }

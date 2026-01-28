@@ -107,12 +107,6 @@ public class SimpleDictionaryMergingIterator<T extends Comparable<T>> implements
   }
 
   @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException("remove");
-  }
-
-  @Override
   public void close()
   {
     // nothing to do

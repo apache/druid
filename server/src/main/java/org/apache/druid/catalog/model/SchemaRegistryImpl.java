@@ -139,7 +139,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
   @Override
   public Set<String> names()
   {
-    return new TreeSet<String>(builtIns.keySet());
+    return new TreeSet<>(builtIns.keySet());
   }
 
   @Override

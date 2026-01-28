@@ -23,6 +23,11 @@ sidebar_label: "Filters"
   ~ under the License.
   -->
 
+A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL.
+Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [Filtered aggregator](./aggregations.md#filtered-aggregator) and [Having filters](./having.md).
+
+By default, Druid uses SQL compatible three-value logic when filtering. See [Boolean logic](./sql-data-types.md#boolean-logic) for more details.
+
 :::info
  Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
@@ -30,12 +35,7 @@ sidebar_label: "Filters"
  [SQL documentation](sql-scalar.md).
 :::
 
-A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL.
-Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [Filtered aggregator](./aggregations.md#filtered-aggregator) and [Having filters](./having.md).
-
-By default, Druid uses SQL compatible three-value logic when filtering. See [Boolean logic](./sql-data-types.md#boolean-logic) for more details.
-
-Apache Druid supports the following types of filters.
+This topic describes the filter types supported in Apache Druid.
 
 ## Selector filter
 
@@ -43,7 +43,7 @@ The simplest filter is a selector filter. The selector filter matches a specific
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "selector".| Yes |
+| `type` | Must be `selector`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `value` | String value to match. | No. If not specified the filter matches NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
@@ -52,69 +52,65 @@ The selector filter can only match against `STRING` (single and multi-valued), `
 
 When the selector filter matches against numeric inputs, the string `value` will be best-effort coerced into a numeric value.
 
-### Example: equivalent of `WHERE someColumn = 'hello'`
+**Example**: equivalent of `WHERE someColumn = 'hello'`
 
 ``` json
 { "type": "selector", "dimension": "someColumn", "value": "hello" }
 ```
 
-
-### Example: equivalent of `WHERE someColumn IS NULL`
+**Example**: equivalent of `WHERE someColumn IS NULL`
 
 ``` json
 { "type": "selector", "dimension": "someColumn", "value": null }
 ```
 
-
-## Equality Filter
+## Equality filter
 
 The equality filter is a replacement for the selector filter with the ability to match against any type of column. The equality filter is designed to have more SQL compatible behavior than the selector filter and so can not match null values. To match null values use the null filter.
 
-Druid's SQL planner uses the equality filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the equality filter by default instead of selector filter whenever unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "equality".| Yes |
+| `type` | Must be `equals`.| Yes |
 | `column` | Input column or virtual column name to filter on. | Yes |
 | `matchValueType` | String specifying the type of value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column`. | Yes |
 | `matchValue` | Value to match, must not be null. | Yes |
 
-### Example: equivalent of `WHERE someColumn = 'hello'`
+**Example**: equivalent of `WHERE someColumn = 'hello'`
 
 ```json
 { "type": "equals", "column": "someColumn", "matchValueType": "STRING", "matchValue": "hello" }
 ```
 
-### Example: equivalent of `WHERE someNumericColumn = 1.23`
+**Example**: equivalent of `WHERE someNumericColumn = 1.23`
 
 ```json
 { "type": "equals", "column": "someNumericColumn", "matchValueType": "DOUBLE", "matchValue": 1.23 }
 ```
 
-### Example: equivalent of `WHERE someArrayColumn = ARRAY[1, 2, 3]`
+**Example**: equivalent of `WHERE someArrayColumn = ARRAY[1, 2, 3]`
 
 ```json
 { "type": "equals", "column": "someArrayColumn", "matchValueType": "ARRAY<LONG>", "matchValue": [1, 2, 3] }
 ```
 
-
-## Null Filter
+## Null filter
 
 The null filter is a partial replacement for the selector filter. It is dedicated to matching NULL values.
 
-Druid's SQL planner uses the null filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the null filter by default instead of selector filter unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "null".| Yes |
+| `type` | Must be `null`.| Yes |
 | `column` | Input column or virtual column name to filter on. | Yes |
 
-### Example: equivalent of `WHERE someColumn IS NULL`
+**Example**: equivalent of `WHERE someColumn IS NULL`
 
 ```json
 { "type": "null", "column": "someColumn" }
 ```
-
 
 ## Column comparison filter
 
@@ -122,14 +118,14 @@ The column comparison filter is similar to the selector filter, but compares dim
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "selector".| Yes |
+| `type` | Must be `selector`.| Yes |
 | `dimensions` | List of [`DimensionSpec`](./dimensionspecs.md) to compare. | Yes |
 
 `dimensions` is list of [DimensionSpecs](./dimensionspecs.md), making it possible to apply an extraction function if needed.
 
 Note that the column comparison filter converts all values to strings prior to comparison. This allows differently-typed input columns to match without a cast operation.
 
-### Example: equivalent of `WHERE someColumn = someLongColumn`
+**Example**: equivalent of `WHERE someColumn = someLongColumn`
 
 ``` json
 {
@@ -145,18 +141,17 @@ Note that the column comparison filter converts all values to strings prior to c
 }
 ```
 
-
 ## Logical expression filters
 
 ### AND
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "and".| Yes |
+| `type` | Must be `and`.| Yes |
 | `fields` | List of filter JSON objects, such as any other filter defined on this page or provided by extensions. | Yes |
 
 
-#### Example: equivalent of `WHERE someColumn = 'a' AND otherColumn = 1234 AND anotherColumn IS NULL`
+**Example**: equivalent of `WHERE someColumn = 'a' AND otherColumn = 1234 AND anotherColumn IS NULL`
 
 ``` json
 {
@@ -173,10 +168,10 @@ Note that the column comparison filter converts all values to strings prior to c
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "or".| Yes |
+| `type` | Must be `or`.| Yes |
 | `fields` | List of filter JSON objects, such as any other filter defined on this page or provided by extensions. | Yes |
 
-#### Example: equivalent of `WHERE someColumn = 'a' OR otherColumn = 1234 OR anotherColumn IS NULL`
+**Example**: equivalent of `WHERE someColumn = 'a' OR otherColumn = 1234 OR anotherColumn IS NULL`
 
 ``` json
 {
@@ -193,22 +188,21 @@ Note that the column comparison filter converts all values to strings prior to c
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "not".| Yes |
+| `type` | Must be `not`.| Yes |
 | `field` | Filter JSON objects, such as any other filter defined on this page or provided by extensions. | Yes |
 
-#### Example: equivalent of `WHERE someColumn IS NOT NULL`
+**Example**: equivalent of `WHERE someColumn IS NOT NULL`
 
 ```json
 { "type": "not", "field": { "type": "null", "column": "someColumn" }}
 ```
-
 
 ## In filter
 The in filter can match input rows against a set of values, where a match occurs if the value is contained in the set.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "in".| Yes |
+| `type` | Must be `in`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `values` | List of string value to match. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
@@ -219,7 +213,7 @@ If an empty `values` array is passed to the "in" filter, it will simply return a
 If the `values` array contains `null`, the "in" filter matches null values. This differs from the SQL IN filter, which
 does not match NULL values.
 
-### Example: equivalent of `WHERE `outlaw` IN ('Good', 'Bad', 'Ugly')`
+**Example**: equivalent of `WHERE `outlaw` IN ('Good', 'Bad', 'Ugly')`
 
 ```json
 {
@@ -229,7 +223,6 @@ does not match NULL values.
 }
 ```
 
-
 ## Bound filter
 
 Bound filters can be used to filter on ranges of dimension values. It can be used for comparison filtering like
@@ -238,12 +231,12 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "bound". | Yes |
+| `type` | Must be `bound`. | Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `lower` | The lower bound string match value for the filter. | No |
 | `upper`| The upper bound string match value for the filter. | No |
-| `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (">" instead of ">="). | No, default: `false` |
-| `upperStrict` | Boolean indicating whether to perform strict comparison on the upper bound ("<" instead of "<="). | No, default: `false`|
+| `lowerStrict` | Boolean indicating whether to perform strict comparison on the `lower` bound (`>` instead of `>=`). | No, default: `false` |
+| `upperStrict` | Boolean indicating whether to perform strict comparison on the upper bound (`<` instead of `<=`). | No, default: `false`|
 | `ordering` | String that specifies the sorting order to use when comparing values against the bound. Can be one of the following values: `"lexicographic"`, `"alphanumeric"`, `"numeric"`, `"strlen"`, `"version"`. See [Sorting Orders](./sorting-orders.md) for more details. | No, default: `"lexicographic"`|
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
@@ -253,7 +246,7 @@ The bound filter can only match against `STRING` (single and multi-valued), `LON
 
 Note that the bound filter matches null values if you don't specify a lower bound. Use the range filter if SQL-compatible behavior.
 
-### Example: equivalent to `WHERE 21 <= age <= 31`
+**Example**: equivalent to `WHERE 21 <= age <= 31`
 
 ```json
 {
@@ -265,7 +258,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using the default lexicographic sorting order
+**Example**: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using the default lexicographic sorting order
 
 ```json
 {
@@ -276,7 +269,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE 21 < age < 31`
+**Example**: equivalent to `WHERE 21 < age < 31`
 
 ```json
 {
@@ -290,7 +283,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE age < 31`
+**Example**: equivalent to `WHERE age < 31`
 
 ```json
 {
@@ -302,7 +295,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-### Example: equivalent to `WHERE age >= 18`
+**Example**: equivalent to `WHERE age >= 18`
 
 ```json
 {
@@ -313,24 +306,23 @@ Note that the bound filter matches null values if you don't specify a lower boun
 }
 ```
 
-
 ## Range filter
 
 The range filter is a replacement for the bound filter. It compares against any type of column and is designed to have has more SQL compliant behavior than the bound filter. It won't match null values, even if you don't specify a lower bound.
 
-Druid's SQL planner uses the range filter by default instead of bound filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the range filter by default instead of bound filter unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "range".| Yes |
+| `type` | Must be `range`.| Yes |
 | `column` | Input column or virtual column name to filter on. | Yes |
 | `matchValueType` | String specifying the type of bounds to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `matchValueType` determines how Druid interprets the `matchValue` to assist in converting to the type of the matched `column` and also defines the type of comparison used when matching values. | Yes |
 | `lower` | Lower bound value to match. | No. At least one of `lower` or `upper` must not be null. |
 | `upper` | Upper bound value to match. | No. At least one of `lower` or `upper` must not be null. |
-| `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). | No |
-| `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). | No |
+| `lowerOpen` | Boolean indicating if lower bound is open in the interval of values defined by the range (`>` instead of `>=`). | No |
+| `upperOpen` | Boolean indicating if upper bound is open on the interval of values defined by range (`<` instead of `<=`). | No |
 
-### Example: equivalent to `WHERE 21 <= age <= 31`
+**Example**: equivalent to `WHERE 21 <= age <= 31`
 
 ```json
 {
@@ -342,7 +334,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using STRING comparison
+**Example**: equivalent to `WHERE 'foo' <= name <= 'hoo'`, using STRING comparison
 
 ```json
 {
@@ -354,7 +346,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE 21 < age < 31`
+**Example**: equivalent to `WHERE 21 < age < 31`
 
 ```json
 {
@@ -368,7 +360,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE age < 31`
+**Example**: equivalent to `WHERE age < 31`
 
 ```json
 {
@@ -380,7 +372,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE age >= 18`
+**Example**: equivalent to `WHERE age >= 18`
 
 ```json
 {
@@ -391,7 +383,7 @@ Druid's SQL planner uses the range filter by default instead of bound filter whe
 }
 ```
 
-### Example: equivalent to `WHERE ARRAY['a','b','c'] < arrayColumn < ARRAY['d','e','f']`, using ARRAY comparison
+**Example**: equivalent to `WHERE ARRAY['a','b','c'] < arrayColumn < ARRAY['d','e','f']`, using ARRAY comparison
 
 ```json
 {
@@ -413,7 +405,7 @@ supported are "%" (matches any number of characters) and "\_" (matches any one c
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "like".| Yes |
+| `type` | Must be `like`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `pattern` | String LIKE pattern, such as "foo%" or "___bar".| Yes |
 | `escape`| A string escape character that can be used to escape special characters. | No |
@@ -421,7 +413,7 @@ supported are "%" (matches any number of characters) and "\_" (matches any one c
 
 Like filters support the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-### Example: equivalent of `WHERE last_name LIKE "D%"` (last_name starts with "D")
+**Example**: equivalent of `WHERE last_name LIKE "D%"` (last_name starts with "D")
 
 ```json
 {
@@ -437,14 +429,14 @@ The regular expression filter is similar to the selector filter, but using regul
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "regex".| Yes |
+| `type` | Must be `regex`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
-| `pattern` | String pattern to match - any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html). | Yes |
+| `pattern` | String pattern to match - any standard [Java regular expression](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html). | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 Note that it is often more optimal to use a like filter instead of a regex for simple matching of prefixes.
 
-### Example: matches values that start with "50."
+**Example**: matches values that start with `50.`
 
 ``` json
 { "type": "regex", "dimension": "someColumn", "pattern": ^50.* }
@@ -456,24 +448,24 @@ The `arrayContainsElement` filter checks if an `ARRAY` contains a specific eleme
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "arrayContainsElement".| Yes |
+| `type` | Must be `arrayContainsElement`.| Yes |
 | `column` | Input column or virtual column name to filter on. | Yes |
 | `elementMatchValueType` | String specifying the type of element value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `elementMatchValueType` determines how Druid interprets the `elementMatchValue` to assist in converting to the type of elements contained in the matched `column`. | Yes |
 | `elementMatchValue` | Array element value to match. This value can be null. | Yes |
 
-### Example: equivalent of `WHERE ARRAY_CONTAINS(someArrayColumn, 'hello')`
+**Example**: equivalent of `WHERE ARRAY_CONTAINS(someArrayColumn, 'hello')`
 
 ```json
 { "type": "arrayContainsElement", "column": "someArrayColumn", "elementMatchValueType": "STRING", "elementMatchValue": "hello" }
 ```
 
-### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, 1.23)`
+**Example**: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, 1.23)`
 
 ```json
 { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "DOUBLE", "elementMatchValue": 1.23 }
 ```
 
-### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+**Example**: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, ARRAY[1, 2, 3])`
 
 ```json
 {
@@ -487,7 +479,7 @@ The `arrayContainsElement` filter checks if an `ARRAY` contains a specific eleme
 
 ```
 
-### Example: equivalent of `WHERE ARRAY_OVERLAPS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+**Example**: equivalent of `WHERE ARRAY_OVERLAPS(someNumericArrayColumn, ARRAY[1, 2, 3])`
 
 ```json
 {
@@ -504,11 +496,11 @@ The `arrayContainsElement` filter checks if an `ARRAY` contains a specific eleme
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
-This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start <= time < end).
+This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start `<=` time `<` end).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "interval". | Yes |
+| `type` | Must be `interval`. | Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `intervals` | A JSON array containing ISO-8601 interval strings that defines the time ranges to filter on. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
@@ -558,8 +550,8 @@ The filter above is equivalent to the following OR of Bound filters:
 }
 ```
 
-
 ## True filter
+
 A filter which matches all values. You can use it to temporarily disable other filters without removing them.
 
 ```json
@@ -567,12 +559,12 @@ A filter which matches all values. You can use it to temporarily disable other f
 ```
 
 ## False filter
+
 A filter matches no values. You can use it to force a query to match no values.
 
 ```json
 {"type": "false" }
 ```
-
 
 ## Search filter
 
@@ -593,7 +585,7 @@ You can use search filters to filter on partial string matches.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "search". | Yes |
+| `type` | Must be `search`. | Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `query`| A JSON object for the type of search. See [search query spec](#search-query-spec) for more information. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
@@ -604,7 +596,7 @@ You can use search filters to filter on partial string matches.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "contains". | Yes |
+| `type` | Must be `contains`. | Yes |
 | `value` | A String value to search. | Yes |
 | `caseSensitive` | Whether the string comparison is case-sensitive or not. | No, default is false (insensitive) |
 
@@ -612,7 +604,7 @@ You can use search filters to filter on partial string matches.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "insensitive_contains". | Yes |
+| `type` | Must be `insensitive_contains`. | Yes |
 | `value` | A String value to search. | Yes |
 
 Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
@@ -622,11 +614,9 @@ provided).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "fragment". | Yes |
+| `type` | Must be `fragment`. | Yes |
 | `values` | A JSON array of string values to search. | Yes |
 | `caseSensitive` | Whether the string comparison is case-sensitive or not. | No, default is false (insensitive) |
-
-
 
 ## Expression filter
 
@@ -634,10 +624,10 @@ The expression filter allows for the implementation of arbitrary conditions, lev
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "expression" | Yes |
+| `type` | Must be `expression`. | Yes |
 | `expression` | Expression string to evaluate into true or false. See the [Druid expression system](math-expr.md) for more details. | Yes |
 
-### Example: expression based matching
+**Example**: expression based matching
 
 ```json
 { 
@@ -646,19 +636,18 @@ The expression filter allows for the implementation of arbitrary conditions, lev
 }
 ```
 
-
 ## JavaScript filter
 
 The JavaScript filter matches a dimension against the specified JavaScript function predicate. The filter matches values for which the function returns true.
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "javascript" | Yes |
+| `type` | Must be `javascript`. | Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `function` | JavaScript function which accepts the dimension value as a single argument, and returns either true or false. | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
-### Example: matching any dimension values for the dimension `name` between `'bar'` and `'foo'`
+**Example**: matching any dimension values for the dimension `name` between `'bar'` and `'foo'`
 
 ```json
 {
@@ -685,12 +674,12 @@ The following filter matches the values for which the extraction function has a 
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
-| `type` | Must be "extraction" | Yes |
+| `type` | Must be `extraction`. | Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
 | `value` | String value to match. | No. If not specified the filter will match NULL values. |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
-### Example: matching dimension values in `[product_1, product_3, product_5]` for the column `product`
+**Example**: matching dimension values in `[product_1, product_3, product_5]` for the column `product`
 
 ```json
 {
@@ -723,7 +712,7 @@ If specified, the extraction function will be used to transform input values bef
 The example below shows a selector filter combined with an extraction function. This filter will transform input values
 according to the values defined in the lookup map; transformed values will then be matched with the string "bar_1".
 
-### Example: matches dimension values in `[product_1, product_3, product_5]` for the column `product`
+**Example**: matches dimension values in `[product_1, product_3, product_5]` for the column `product`
 
 ```json
 {
@@ -757,7 +746,8 @@ scan those columns.
 
 All filters return true if any one of the dimension values is satisfies the filter.
 
-#### Example: multi-value match behavior
+**Example**: multi-value match behavior
+
 Given a multi-value STRING row with values `['a', 'b', 'c']`, a filter such as
 
 ```json
@@ -767,7 +757,8 @@ will successfully match the entire row. This can produce sometimes unintuitive b
 
 Additionally, contradictory filters may be defined and perfectly legal in native queries which will not work in SQL.
 
-#### Example: SQL "contradiction"
+**Example**: SQL "contradiction"
+
 This query is impossible to express as is in SQL since it is a contradiction that the SQL planner will optimize to false and match nothing.
 
 Given a multi-value STRING row with values `['a', 'b', 'c']`, and filter such as
@@ -802,7 +793,7 @@ When filtering on numeric columns using string based filters such as the selecto
 converted into a numeric predicate and will be applied to the numeric column values directly. In some cases (such as
 the "regex" filter) the numeric column values will be converted to strings during the scan.
 
-#### Example: filtering on a specific value, `myFloatColumn = 10.1`
+**Example**: filtering on a specific value, `myFloatColumn = 10.1`
 
 ```json
 {
@@ -823,7 +814,7 @@ or with a selector filter:
 }
 ```
 
-#### Example: filtering on a range of values, `10 <= myFloatColumn < 20`
+**Example**: filtering on a range of values, `10 <= myFloatColumn < 20`
 
 ```json
 {
@@ -859,7 +850,7 @@ should be specified as if the timestamp values were strings.
 
 If you want to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.md#time-format-extraction-function) is useful.
 
-#### Example: filtering on a long timestamp value
+**Example**: filtering on a long timestamp value
 
 ```json
 {
@@ -880,7 +871,7 @@ or with a selector filter:
 }
 ```
 
-#### Example: filtering on day of week using an extraction function
+**Example**: filtering on day of week using an extraction function
 
 ```json
 {
@@ -896,7 +887,7 @@ or with a selector filter:
 }
 ```
 
-#### Example: filtering on a set of ISO 8601 intervals
+**Example**: filtering on a set of ISO 8601 intervals
 
 ```json
 {
@@ -908,4 +899,3 @@ or with a selector filter:
     ]
 }
 ```
-

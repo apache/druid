@@ -50,7 +50,7 @@ public class ParserTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  VectorExprSanityTest.SettableVectorInputBinding emptyBinding = new VectorExprSanityTest.SettableVectorInputBinding(8);
+  SettableVectorInputBinding emptyBinding = new SettableVectorInputBinding(8);
 
   @BeforeClass
   public static void setup()

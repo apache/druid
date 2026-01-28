@@ -26,10 +26,10 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.utils.ByteUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -128,10 +128,10 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
-    baseBuffers.writeTo(channel, smoosher);
+    baseBuffers.writeTo(channel, fileBuilder);
   }
 
   @VisibleForTesting
@@ -142,35 +142,8 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
   public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
-      ByteOrder order
-  )
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      final int numBytes = buffer.get();
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-
-      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
-
-      return new CompressedVSizeColumnarIntsSupplier(
-          totalSize,
-          sizePer,
-          numBytes,
-          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
-          compression
-      );
-
-    }
-
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
-      ByteBuffer buffer,
       ByteOrder order,
-      SmooshedFileMapper mapper
+      SegmentFileMapper mapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -219,12 +192,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
         chunkFactor,
         numBytes,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   int position = 0;
                   private final ByteBuffer retVal =
@@ -308,7 +281,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     }
   }
 
-  private class CompressedVSizeColumnarInts implements ColumnarInts
+  public class CompressedVSizeColumnarInts implements ColumnarInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
 
@@ -327,6 +300,11 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     public int size()
     {
       return totalSize;
+    }
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return compression;
     }
 
     /**
@@ -355,6 +333,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     @Override
     public void get(int[] out, int start, int length)
     {
+      get(out, 0, start, length);
+    }
+
+    @Override
+    public void get(int[] out, int offset, int start, int length)
+    {
       int p = 0;
 
       while (p < length) {
@@ -374,7 +358,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
             break;
           }
 
-          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+          out[offset + i] = _get(buffer, bigEndian, index - currBufferStart);
         }
 
         assert i > p;

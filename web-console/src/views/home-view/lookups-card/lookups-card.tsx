@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
@@ -32,23 +32,25 @@ export interface LookupsCardProps {
 
 export const LookupsCard = React.memo(function LookupsCard(props: LookupsCardProps) {
   const [lookupsCountState] = useQueryManager<Capabilities, number>({
-    processQuery: async capabilities => {
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasCoordinatorAccess()) {
-        const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status');
+        const resp = await Api.instance.get('/druid/coordinator/v1/lookups/status', {
+          signal,
+        });
         const data = resp.data;
         return sum(Object.keys(data).map(k => Object.keys(data[k]).length));
       } else {
         throw new Error(`must have coordinator access`);
       }
     },
-    initQuery: props.capabilities,
   });
 
   return (
     <HomeViewCard
       className="lookups-card"
       href="#lookups"
-      icon={IconNames.PROPERTIES}
+      icon={getConsoleViewIcon('lookups')}
       title="Lookups"
       loading={lookupsCountState.loading}
       error={!isLookupsUninitialized(lookupsCountState.error) ? lookupsCountState.error : undefined}

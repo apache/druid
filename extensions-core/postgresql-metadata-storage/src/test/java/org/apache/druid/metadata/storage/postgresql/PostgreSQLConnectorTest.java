@@ -29,9 +29,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 @RunWith(Parameterized.class)
 public class PostgreSQLConnectorTest
@@ -44,14 +41,12 @@ public class PostgreSQLConnectorTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
+  public static Object[][] constructorFeeder()
   {
-    final List<Object[]> constructors = new ArrayList<>();
-    constructors.add(new Object[]{CentralizedDatasourceSchemaConfig.create()});
-    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
-    config.setEnabled(true);
-    constructors.add(new Object[]{config});
-    return constructors;
+    return new Object[][]{
+        {CentralizedDatasourceSchemaConfig.enabled(false)},
+        {CentralizedDatasourceSchemaConfig.enabled(true)}
+    };
   }
 
   @Test
@@ -72,6 +67,36 @@ public class PostgreSQLConnectorTest
     Assert.assertFalse(connector.isTransientException(new SQLException()));
     Assert.assertFalse(connector.isTransientException(new Exception("I'm not happy")));
     Assert.assertFalse(connector.isTransientException(new Throwable("I give up")));
+  }
+
+  @Test
+  public void testIsUniqueConstraintViolation()
+  {
+    PostgreSQLConnector connector = new PostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
+        new PostgreSQLConnectorConfig(),
+        new PostgreSQLTablesConfig(),
+        centralizedDatasourceSchemaConfig
+    );
+
+    // PostgreSQL unique_violation SQL state (23505)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new SQLException("duplicate key value violates unique constraint", "23505")
+    ));
+
+    // Different SQL state should return false
+    Assert.assertFalse(connector.isUniqueConstraintViolation(
+        new SQLException("some other error", "42P01")
+    ));
+
+    // SQLException wrapped in another exception (tests cause chain traversal)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new RuntimeException(new SQLException("duplicate key", "23505"))
+    ));
+
+    // Non-SQLException exception
+    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
   }
 
   @Test

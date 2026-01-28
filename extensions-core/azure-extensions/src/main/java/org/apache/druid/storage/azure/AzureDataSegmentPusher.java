@@ -73,7 +73,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public String getPathForHadoop()
   {
     String prefix = segmentConfig.getPrefix();
-    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
+    boolean prefixIsNullOrEmpty = org.apache.commons.lang3.StringUtils.isEmpty(prefix);
     String hadoopPath = StringUtils.format(
         "%s://%s@%s.%s/%s",
         AzureUtils.AZURE_STORAGE_HADOOP_PROTOCOL,
@@ -129,7 +129,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
     String prefix = segmentConfig.getPrefix();
-    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
+    boolean prefixIsNullOrEmpty = org.apache.commons.lang3.StringUtils.isEmpty(prefix);
     final String azurePath = JOINER.join(
         prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
         storageDirSuffix

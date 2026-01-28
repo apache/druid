@@ -20,25 +20,21 @@
 package org.apache.druid.crypto;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
 
 /**
@@ -46,10 +42,12 @@ import java.security.spec.KeySpec;
  * using javax.crypto package.
  *
  * To learn about possible algorithms supported and their names,
- * See https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html
+ * See https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html
  */
 public class CryptoService
 {
+  private static final Logger log = new Logger(CryptoService.class);
+
   // Based on Javadocs on SecureRandom, It is threadsafe as well.
   private static final SecureRandom SECURE_RANDOM_INSTANCE = new SecureRandom();
 
@@ -125,8 +123,9 @@ public class CryptoService
           ecipher.doFinal(plain)
       ).toByteAray();
     }
-    catch (InvalidKeySpecException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidParameterSpecException | IllegalBlockSizeException | BadPaddingException ex) {
-      throw new RuntimeException(ex);
+    catch (Exception ex) {
+      log.noStackTrace().warn(ex, "Encryption failed");
+      throw InternalServerError.exception("Encryption failed. Check service logs.");
     }
   }
 
@@ -145,8 +144,9 @@ public class CryptoService
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());
     }
-    catch (InvalidKeySpecException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
-      throw new RuntimeException(ex);
+    catch (Exception ex) {
+      log.noStackTrace().warn(ex, "Decryption failed");
+      throw InternalServerError.exception("Decryption failed. Check service logs.");
     }
   }
 

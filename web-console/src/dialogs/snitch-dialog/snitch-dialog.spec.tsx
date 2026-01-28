@@ -18,7 +18,6 @@
 
 import { render } from '@testing-library/react';
 import * as JSONBig from 'json-bigint-native';
-import React from 'react';
 
 import { SnitchDialog } from './snitch-dialog';
 

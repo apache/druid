@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
+import { TableFilters } from '../../utils/table-filters';
 
 import { SupervisorsView } from './supervisors-view';
 
@@ -27,13 +26,12 @@ describe('SupervisorsView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <SupervisorsView
-        filters={[]}
+        filters={TableFilters.empty()}
         onFiltersChange={() => {}}
         openSupervisorDialog={undefined}
-        goToDatasource={() => {}}
+        goToView={() => {}}
         goToQuery={() => {}}
         goToStreamingDataLoader={() => {}}
-        goToTasks={() => {}}
         capabilities={Capabilities.FULL}
       />,
     );

@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
 import type { CapacityInfo } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { getClusterCapacity } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
-import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { getApiArray, groupByAsMap, lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 function getTaskStatus(d: any) {
@@ -40,29 +39,31 @@ export interface TaskCounts {
   waiting?: number;
 }
 
-async function getTaskCounts(capabilities: Capabilities): Promise<TaskCounts> {
+async function getTaskCounts(capabilities: Capabilities, signal: AbortSignal): Promise<TaskCounts> {
   if (capabilities.hasSql()) {
-    const taskCountsFromQuery = await queryDruidSql<{ status: string; count: number }>({
-      query: `SELECT
+    const taskCountsFromQuery = await queryDruidSql<{ status: string; count: number }>(
+      {
+        query: `SELECT
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   COUNT(*) AS "count"
 FROM sys.tasks
 GROUP BY 1`,
-    });
+        context: { engine: 'native' },
+      },
+      signal,
+    );
     return lookupBy(
       taskCountsFromQuery,
       x => x.status.toLowerCase(),
       x => x.count,
     );
   } else if (capabilities.hasOverlordAccess()) {
-    const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks')).data;
-    return {
-      success: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
-      failed: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
-      running: tasks.filter(d => getTaskStatus(d) === 'RUNNING').length,
-      pending: tasks.filter(d => getTaskStatus(d) === 'PENDING').length,
-      waiting: tasks.filter(d => getTaskStatus(d) === 'WAITING').length,
-    };
+    const tasks: any[] = await getApiArray('/druid/indexer/v1/tasks', signal);
+    return groupByAsMap(
+      tasks,
+      d => getTaskStatus(d).toLowerCase(),
+      xs => xs.length,
+    );
   } else {
     throw new Error(`must have SQL or overlord access`);
   }
@@ -76,14 +77,14 @@ export interface TasksCardProps {
 
 export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   const [cardState] = useQueryManager<Capabilities, TaskCountsAndCapacity>({
-    processQuery: async capabilities => {
-      const taskCounts = await getTaskCounts(capabilities);
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, signal) => {
+      const taskCounts = await getTaskCounts(capabilities, signal);
       if (!capabilities.hasOverlordAccess()) return taskCounts;
 
       const capacity = await getClusterCapacity();
       return { ...taskCounts, ...capacity };
     },
-    initQuery: props.capabilities,
   });
 
   const { success, failed, running, pending, waiting, totalTaskSlots } = cardState.data || {};
@@ -92,7 +93,7 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
     <HomeViewCard
       className="tasks-card"
       href="#tasks"
-      icon={IconNames.GANTT_CHART}
+      icon={getConsoleViewIcon('tasks')}
       title="Tasks"
       loading={cardState.loading}
       error={cardState.error}

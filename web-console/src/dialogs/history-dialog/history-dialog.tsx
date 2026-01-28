@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Tab, Tabs, TabsExpander } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
@@ -65,12 +65,13 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
     content = (
       <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>
         {historyRecords.map(({ auditInfo, auditTime, payload }, i) => {
-          const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
+          const formattedTime = auditTime.replace('T', ' ').substring(0, 19);
           return (
             <Tab
               id={i}
               key={i}
               title={`${auditInfo.comment || 'Change'} @ ${formattedTime}`}
+              data-tooltip={formattedTime}
               panel={
                 <ShowValue
                   jsonValue={normalizePayload(payload)}
@@ -83,7 +84,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
             />
           );
         })}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
     );
   }
@@ -91,13 +92,13 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
   if (diffIndex !== -1) {
     return (
       <DiffDialog
-        title="Supervisor spec diff"
+        title={`${title} diff`}
         versions={historyRecords.map(({ auditInfo, auditTime, payload }) => ({
           label: auditInfo.comment || auditTime,
           value: normalizePayload(payload),
         }))}
-        initLeftIndex={diffIndex + 1}
-        initRightIndex={diffIndex}
+        initOldIndex={diffIndex + 1}
+        initNewIndex={diffIndex}
         onClose={() => setDiffIndex(-1)}
       />
     );

@@ -31,7 +31,7 @@ public class TimeseriesResultBuilder
 {
   private final DateTime timestamp;
 
-  private final Map<String, Object> metricValues = new HashMap<String, Object>();
+  private final Map<String, Object> metricValues = new HashMap<>();
 
   public TimeseriesResultBuilder(
       DateTime timestamp

@@ -38,9 +38,7 @@ public class LegacyDimensionSpecTest
   {
     final String dimension = "testDimension";
     final List<DimensionSpec> deserializedSpecs = mapper.readValue(
-        StringUtils.format("[\"%s\"]", dimension), new TypeReference<List<DimensionSpec>>()
-        {
-        }
+        StringUtils.format("[\"%s\"]", dimension), new TypeReference<>() {}
     );
     Assert.assertEquals(dimension, deserializedSpecs.get(0).getDimension());
     Assert.assertEquals(dimension, deserializedSpecs.get(0).getOutputName());

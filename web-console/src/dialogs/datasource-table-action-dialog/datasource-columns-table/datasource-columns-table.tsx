@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { L } from '@druid-toolkit/query';
+import { L } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
@@ -42,11 +42,15 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
 ) {
   const [columnsState] = useQueryManager<string, DatasourceColumnsTableRow[]>({
     initQuery: props.datasource,
-    processQuery: async (datasourceId: string) => {
-      return await queryDruidSql<ColumnMetadata>({
-        query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+    processQuery: async (datasourceId, signal) => {
+      return await queryDruidSql<ColumnMetadata>(
+        {
+          query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${L(datasourceId)}`,
-      });
+          context: { engine: 'native' },
+        },
+        signal,
+      );
     },
   });
 

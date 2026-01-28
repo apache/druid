@@ -37,7 +37,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -76,7 +75,7 @@ public class SchemalessIndexTest
       new CountAggregatorFactory("count")
   };
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   private static final List<Map<String, Object>> EVENTS = new ArrayList<>();
 
@@ -162,16 +161,11 @@ public class SchemalessIndexTest
           }
         }
 
-        try {
-          theIndex.add(new MapBasedInputRow(timestamp, dims, event));
-        }
-        catch (IndexSizeExceededException e) {
-          throw new RuntimeException(e);
-        }
+        theIndex.add(new MapBasedInputRow(timestamp, dims, event));
 
         count++;
       }
-      QueryableIndex retVal = TestIndex.persistRealtimeAndLoadMMapped(theIndex);
+      QueryableIndex retVal = TestIndex.persistAndMemoryMap(theIndex);
       entry.put(index2, retVal);
       return retVal;
     }
@@ -310,8 +304,8 @@ public class SchemalessIndexTest
   {
     return getMergedIncrementalIndex(
         Arrays.asList(
-            new Pair<String, AggregatorFactory[]>("druid.sample.json.top", METRIC_AGGS_NO_UNIQ),
-            new Pair<String, AggregatorFactory[]>("druid.sample.json.bottom", METRIC_AGGS)
+            new Pair<>("druid.sample.json.top", METRIC_AGGS_NO_UNIQ),
+            new Pair<>("druid.sample.json.bottom", METRIC_AGGS)
         )
     );
   }
@@ -463,7 +457,7 @@ public class SchemalessIndexTest
               Lists.newArrayList(
                   Iterables.transform(
                       filesToMap,
-                      new Function<File, QueryableIndex>()
+                      new Function<>()
                       {
                         @Override
                         public QueryableIndex apply(@Nullable File input)

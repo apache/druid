@@ -24,16 +24,17 @@ import {
   FormGroup,
   HTMLSelect,
   InputGroup,
-  NumericInput,
   Switch,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
+import type { Rule } from '../../druid-models';
+import { RuleUtil } from '../../druid-models';
 import { durationSanitizer } from '../../utils';
-import type { Rule } from '../../utils/load-rule';
-import { RuleUtil } from '../../utils/load-rule';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
+
+import { TieredReplicant } from './tiered-replicant';
 
 import './rule-editor.scss';
 
@@ -62,10 +63,22 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   }
 
   function addTier() {
-    let newTierName = tiers[0];
+    if (!rule.tieredReplicants) return;
 
-    if (rule.tieredReplicants) {
-      for (const tier of tiers) {
+    let newTierName: string | undefined;
+
+    // Pick an existing tier that is not assigned
+    for (const tier of tiers) {
+      if (rule.tieredReplicants[tier] === undefined) {
+        newTierName = tier;
+        break;
+      }
+    }
+
+    // If no such tier exists, pick a new tier name
+    if (!newTierName) {
+      for (let i = 1; i < 100; i++) {
+        const tier = `tier${i}`;
         if (rule.tieredReplicants[tier] === undefined) {
           newTierName = tier;
           break;
@@ -73,7 +86,9 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       }
     }
 
-    onChange?.(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+    if (newTierName) {
+      onChange?.(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+    }
   }
 
   function renderTiers() {
@@ -89,45 +104,22 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
     return (
       <FormGroup>
-        {tieredReplicantsList.map(([tier, replication]) => (
-          <ControlGroup key={tier}>
-            <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
-              Tier:
-            </Button>
-            <HTMLSelect
-              fill
-              value={tier}
-              disabled={disabled}
-              onChange={(e: any) =>
-                onChange?.(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
-              }
-            >
-              <option key={tier} value={tier}>
-                {tier}
-              </option>
-              {tiers
-                .filter(t => t !== tier && !tieredReplicants[t])
-                .map(t => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-            </HTMLSelect>
-            <Button minimal disabled={disabled} style={{ pointerEvents: 'none' }}>
-              Replicants:
-            </Button>
-            <NumericInput
-              value={replication}
-              disabled={disabled}
-              onValueChange={(v: number) => {
-                if (isNaN(v)) return;
-                onChange?.(RuleUtil.addTieredReplicant(rule, tier, v));
-              }}
-              min={0}
-              max={256}
-            />
-            {onChange && <Button onClick={() => removeTier(tier)} icon={IconNames.TRASH} />}
-          </ControlGroup>
+        {tieredReplicantsList.map(([tier, replication], i) => (
+          <TieredReplicant
+            key={i}
+            tier={tier}
+            replication={replication}
+            tiers={tiers}
+            usedTiers={Object.keys(tieredReplicants)}
+            disabled={disabled}
+            onChangeTier={newTier =>
+              onChange?.(RuleUtil.renameTieredReplicant(rule, tier, newTier))
+            }
+            onChangeReplication={value =>
+              onChange?.(RuleUtil.addTieredReplicant(rule, tier, value))
+            }
+            onRemove={onChange ? () => removeTier(tier) : undefined}
+          />
         ))}
       </FormGroup>
     );
@@ -135,17 +127,10 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
   function renderTierAdder() {
     if (!onChange) return;
-    const disabled = Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length;
 
     return (
       <FormGroup>
-        <Button
-          onClick={addTier}
-          minimal
-          icon={IconNames.PLUS}
-          disabled={disabled}
-          title={disabled ? 'There are no tiers left to assign' : ''}
-        >
+        <Button onClick={addTier} minimal icon={IconNames.PLUS} disabled={disabled}>
           Add historical tier replication
         </Button>
       </FormGroup>
@@ -170,7 +155,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card elevation={2}>
+        <Card className="rule-detail" elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect

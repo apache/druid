@@ -22,53 +22,31 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
-import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.IndexableAdapter;
-import org.apache.druid.segment.NestedDataColumnHandlerV4;
-import org.apache.druid.segment.NestedDataColumnIndexerV4;
-import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
-import org.apache.druid.segment.serde.ColumnPartSerde;
-import org.apache.druid.segment.serde.ComplexColumnPartSerde;
-import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -78,16 +56,9 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
 {
@@ -141,143 +112,13 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   @BeforeClass
   public static void staticSetup()
   {
-    NestedDataModule.registerHandlersAndSerde();
-  }
-
-  @Before
-  public void setup() throws IOException
-  {
-    final String fileNameBase = "test";
-    final String arrayFileNameBase = "array";
-    fileMapper = smooshify(fileNameBase, tempFolder.newFolder(), data);
-    baseBuffer = fileMapper.mapFile(fileNameBase);
-    arrayFileMapper = smooshify(arrayFileNameBase, tempFolder.newFolder(), arrayTestData);
-    arrayBaseBuffer = arrayFileMapper.mapFile(arrayFileNameBase);
-  }
-
-  private SmooshedFileMapper smooshify(
-      String fileNameBase,
-      File tmpFile,
-      List<Map<String, Object>> data
-  )
-      throws IOException
-  {
-    SegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
-    try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
-      NestedDataColumnSerializerV4 serializer = new NestedDataColumnSerializerV4(
-          fileNameBase,
-          IndexSpec.DEFAULT,
-          writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          closer
-      );
-
-      NestedDataColumnIndexerV4 indexer = new NestedDataColumnIndexerV4();
-      for (Object o : data) {
-        indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
-      }
-      SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
-
-      IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(
-              indexer.getSortedValueLookups(),
-              indexer.getFieldTypeInfo(),
-              true,
-              false,
-              null
-          )
-      );
-      SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
-      mergable.mergeFieldsInto(sortedFields);
-
-      serializer.open();
-      serializer.serializeFields(sortedFields);
-      serializer.serializeDictionaries(
-          globalDictionarySortedCollector.getSortedStrings(),
-          globalDictionarySortedCollector.getSortedLongs(),
-          globalDictionarySortedCollector.getSortedDoubles()
-      );
-
-      SettableSelector valueSelector = new SettableSelector();
-      for (Object o : data) {
-        valueSelector.setObject(StructuredData.wrap(o));
-        serializer.serialize(valueSelector);
-      }
-
-      try (SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize())) {
-        serializer.writeTo(writer, smoosher);
-      }
-      smoosher.close();
-      return closer.register(SmooshedFileMapper.load(tmpFile));
-    }
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @After
   public void teardown() throws IOException
   {
     closer.close();
-  }
-
-  @Test
-  public void testBasicFunctionality() throws IOException
-  {
-    ColumnBuilder bob = new ColumnBuilder();
-    bob.setFileMapper(fileMapper);
-    ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.createDeserializer(NestedDataComplexTypeSerde.TYPE_NAME);
-    ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE);
-    final ColumnHolder holder = bob.build();
-    final ColumnCapabilities capabilities = holder.getCapabilities();
-    Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
-    Assert.assertTrue(holder.getColumnFormat() instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4);
-    Assert.assertTrue(holder.getColumnFormat().getColumnHandler("test") instanceof NestedDataColumnHandlerV4);
-    NestedDataColumnSchema schema = (NestedDataColumnSchema) holder.getColumnFormat().getColumnSchema("test");
-    Assert.assertEquals(4, schema.getFormatVersion());
-    try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
-      smokeTest(column);
-    }
-  }
-
-  @Test
-  public void testConcurrency() throws ExecutionException, InterruptedException
-  {
-    // if this test ever starts being to be a flake, there might be thread safety issues
-    ColumnBuilder bob = new ColumnBuilder();
-    bob.setFileMapper(fileMapper);
-    NestedDataColumnSupplierV4 supplier = NestedDataColumnSupplierV4.read(
-        baseBuffer,
-        bob,
-        ColumnConfig.SELECTION_SIZE,
-        NestedDataComplexTypeSerde.OBJECT_MAPPER
-    );
-    final String expectedReason = "none";
-    final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
-
-    final int threads = 10;
-    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(threads, "NestedDataColumnSupplierTest-%d")
-    );
-    Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
-    final CountDownLatch threadsStartLatch = new CountDownLatch(1);
-    for (int i = 0; i < threads; ++i) {
-      futures.add(
-          executorService.submit(() -> {
-            try {
-              threadsStartLatch.await();
-              for (int iter = 0; iter < 5000; iter++) {
-                try (NestedDataComplexColumn column = (NestedDataComplexColumn) supplier.get()) {
-                  smokeTest(column);
-                }
-              }
-            }
-            catch (Throwable ex) {
-              failureReason.set(ex.getMessage());
-            }
-          })
-      );
-    }
-    threadsStartLatch.countDown();
-    Futures.allAsList(futures).get();
-    Assert.assertEquals(expectedReason, failureReason.get());
   }
 
   @Test
@@ -353,35 +194,36 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       Assert.assertTrue(indexForValue.computeBitmapResult(resultFactory, false).get(0));
     }
   }
+
   private void smokeTest(NestedDataComplexColumn column) throws IOException
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> rawSelector = column.makeColumnValueSelector(offset);
     final List<NestedPathPart> xPath = NestedPathFinder.parseJsonPath("$.x");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getColumnTypes(xPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getFieldTypes(xPath));
     Assert.assertEquals(ColumnType.LONG, column.getColumnHolder(xPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, offset);
-    DimensionSelector xDimSelector = column.makeDimensionSelector(xPath, offset, null);
+    ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, null, offset);
+    DimensionSelector xDimSelector = column.makeDimensionSelector(xPath, null, null, offset);
     ColumnIndexSupplier xIndexSupplier = column.getColumnIndexSupplier(xPath);
     Assert.assertNotNull(xIndexSupplier);
     StringValueSetIndexes xValueIndex = xIndexSupplier.as(StringValueSetIndexes.class);
     DruidPredicateIndexes xPredicateIndex = xIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex xNulls = xIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> yPath = NestedPathFinder.parseJsonPath("$.y");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getColumnTypes(yPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getFieldTypes(yPath));
     Assert.assertEquals(ColumnType.DOUBLE, column.getColumnHolder(yPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, offset);
-    DimensionSelector yDimSelector = column.makeDimensionSelector(yPath, offset, null);
+    ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, null, offset);
+    DimensionSelector yDimSelector = column.makeDimensionSelector(yPath, null, null, offset);
     ColumnIndexSupplier yIndexSupplier = column.getColumnIndexSupplier(yPath);
     Assert.assertNotNull(yIndexSupplier);
     StringValueSetIndexes yValueIndex = yIndexSupplier.as(StringValueSetIndexes.class);
     DruidPredicateIndexes yPredicateIndex = yIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex yNulls = yIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> zPath = NestedPathFinder.parseJsonPath("$.z");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(zPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(zPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(zPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, offset);
-    DimensionSelector zDimSelector = column.makeDimensionSelector(zPath, offset, null);
+    ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, null, offset);
+    DimensionSelector zDimSelector = column.makeDimensionSelector(zPath, null, null, offset);
     ColumnIndexSupplier zIndexSupplier = column.getColumnIndexSupplier(zPath);
     Assert.assertNotNull(zIndexSupplier);
     StringValueSetIndexes zValueIndex = zIndexSupplier.as(StringValueSetIndexes.class);
@@ -390,21 +232,21 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> vPath = NestedPathFinder.parseJsonPath("$.v");
     Assert.assertEquals(
         ImmutableSet.of(ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE),
-        column.getColumnTypes(vPath)
+        column.getFieldTypes(vPath)
     );
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(vPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, offset);
-    DimensionSelector vDimSelector = column.makeDimensionSelector(vPath, offset, null);
+    ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, null, offset);
+    DimensionSelector vDimSelector = column.makeDimensionSelector(vPath, null, null, offset);
     ColumnIndexSupplier vIndexSupplier = column.getColumnIndexSupplier(vPath);
     Assert.assertNotNull(vIndexSupplier);
     StringValueSetIndexes vValueIndex = vIndexSupplier.as(StringValueSetIndexes.class);
     DruidPredicateIndexes vPredicateIndex = vIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex vNulls = vIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> nullishPath = NestedPathFinder.parseJsonPath("$.nullish");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(nullishPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(nullishPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(nullishPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, offset);
-    DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, offset, null);
+    ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, null, offset);
+    DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, null, null, offset);
     ColumnIndexSupplier nullishIndexSupplier = column.getColumnIndexSupplier(nullishPath);
     Assert.assertNotNull(nullishIndexSupplier);
     StringValueSetIndexes nullishValueIndex = nullishIndexSupplier.as(StringValueSetIndexes.class);
@@ -435,6 +277,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
       offset.increment();
     }
   }
+
   private void testPath(
       Map row,
       int rowNumber,
@@ -448,11 +291,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   )
   {
     final Object inputValue = row.get(path);
-    // in default value mode, even though the input row had an empty string, the selector spits out null, so we want
-    // to take the null checking path
-    final boolean isStringAndNullEquivalent =
-        inputValue instanceof String && NullHandling.isNullOrEquivalent((String) inputValue);
-    if (row.containsKey(path) && inputValue != null && !isStringAndNullEquivalent) {
+    if (row.containsKey(path) && inputValue != null) {
       Assert.assertEquals(inputValue, valueSelector.getObject());
       if (ColumnType.LONG.equals(singleType)) {
         Assert.assertEquals(inputValue, valueSelector.getLong());
@@ -534,58 +373,6 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
 
-    }
-  }
-
-  private static class OnlyPositionalReadsTypeStrategy<T> implements TypeStrategy<T>
-  {
-    private final TypeStrategy<T> delegate;
-
-    private OnlyPositionalReadsTypeStrategy(TypeStrategy<T> delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public int estimateSizeBytes(T value)
-    {
-      return delegate.estimateSizeBytes(value);
-    }
-
-    @Override
-    public T read(ByteBuffer buffer)
-    {
-      throw new IllegalStateException("non-positional read");
-    }
-
-    @Override
-    public boolean readRetainsBufferReference()
-    {
-      return delegate.readRetainsBufferReference();
-    }
-
-    @Override
-    public int write(ByteBuffer buffer, T value, int maxSizeBytes)
-    {
-      return delegate.write(buffer, value, maxSizeBytes);
-    }
-
-    @Override
-    public T read(ByteBuffer buffer, int offset)
-    {
-      return delegate.read(buffer, offset);
-    }
-
-    @Override
-    public int write(ByteBuffer buffer, int offset, T value, int maxSizeBytes)
-    {
-      return delegate.write(buffer, offset, value, maxSizeBytes);
-    }
-
-    @Override
-    public int compare(Object o1, Object o2)
-    {
-      return delegate.compare(o1, o2);
     }
   }
 }

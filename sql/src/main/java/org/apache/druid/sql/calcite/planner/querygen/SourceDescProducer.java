@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner.querygen;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -54,6 +55,12 @@ public interface SourceDescProducer
       this.dataSource = dataSource;
       this.rowSignature = rowSignature;
       this.virtualColumnRegistry = virtualColumnRegistry;
+    }
+
+    @Override
+    public String toString()
+    {
+      return ToStringBuilder.reflectionToString(this);
     }
   }
 

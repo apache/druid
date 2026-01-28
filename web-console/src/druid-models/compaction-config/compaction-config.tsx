@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { deepGet, deepSet, oneOfKnown } from '../../utils';
@@ -30,6 +29,10 @@ export interface CompactionConfig {
 
   // Deprecated:
   inputSegmentSizeBytes?: number;
+}
+
+export interface CompactionConfigs {
+  compactionConfigs: CompactionConfig[];
 }
 
 export const NOOP_INPUT_SEGMENT_SIZE_BYTES = 100000000000000;

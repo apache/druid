@@ -18,10 +18,10 @@ exports[`LoadDataView matches snapshot batch 1`] = `
         >
           Connect and parse raw data
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={true}
             className="welcome"
             disabled={false}
@@ -29,7 +29,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Start"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="connect"
             disabled={true}
@@ -37,7 +37,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Connect"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="parser"
             disabled={true}
@@ -45,7 +45,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Parse data"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -55,10 +55,10 @@ exports[`LoadDataView matches snapshot batch 1`] = `
         >
           Transform data and configure schema
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="timestamp"
             disabled={true}
@@ -66,7 +66,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Parse time"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="transform"
             disabled={true}
@@ -74,7 +74,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Transform"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="filter"
             disabled={true}
@@ -82,7 +82,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Filter"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="schema"
             disabled={true}
@@ -90,7 +90,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Configure schema"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -100,10 +100,10 @@ exports[`LoadDataView matches snapshot batch 1`] = `
         >
           Tune parameters
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="partition"
             disabled={true}
@@ -111,7 +111,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Partition"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="tuning"
             disabled={true}
@@ -119,7 +119,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Tune"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="publish"
             disabled={true}
@@ -127,7 +127,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Publish"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -137,10 +137,10 @@ exports[`LoadDataView matches snapshot batch 1`] = `
         >
           Verify and submit
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="spec"
             disabled={false}
@@ -148,7 +148,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
             text="Edit spec"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
     </div>
   </div>
@@ -160,7 +160,7 @@ exports[`LoadDataView matches snapshot batch 1`] = `
         className="ingestion-cards"
       >
         <React.Fragment>
-          <Blueprint4.Card
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -173,8 +173,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Amazon S3
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -182,13 +182,13 @@ exports[`LoadDataView matches snapshot batch 1`] = `
           >
             <img
               alt="Ingestion tile for index_parallel:azureStorage"
-              src="/some/base_url/assets/azureStorage.png"
+              src="/some/base_url/assets/azure-storage.png"
             />
             <p>
               Azure Data Lake
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -201,8 +201,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Google Cloud Storage
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -215,8 +215,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Delta Lake
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -229,8 +229,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               HDFS
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -243,8 +243,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Reindex from Druid
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -257,8 +257,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               HTTP(s)
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -271,8 +271,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Local disk
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -285,8 +285,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Paste data
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -299,9 +299,9 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             <p>
               Example data
             </p>
-          </Blueprint4.Card>
+          </Blueprint5.Card>
         </React.Fragment>
-        <Blueprint4.Card
+        <Blueprint5.Card
           className="ingestion-card"
           elevation={1}
           interactive={true}
@@ -314,19 +314,19 @@ exports[`LoadDataView matches snapshot batch 1`] = `
           <p>
             Other
           </p>
-        </Blueprint4.Card>
+        </Blueprint5.Card>
       </div>
     </div>
     <div
       className="control"
     >
-      <Blueprint4.FormGroup>
-        <Blueprint4.Callout>
+      <Blueprint5.FormGroup>
+        <Blueprint5.Callout>
           <p>
             Please specify where your raw data is located.
           </p>
-        </Blueprint4.Callout>
-      </Blueprint4.FormGroup>
+        </Blueprint5.Callout>
+      </Blueprint5.FormGroup>
     </div>
   </React.Fragment>
 </div>
@@ -350,10 +350,10 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
         >
           Connect and parse raw data
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={true}
             className="welcome"
             disabled={false}
@@ -361,7 +361,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Start"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="connect"
             disabled={true}
@@ -369,7 +369,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Connect"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="parser"
             disabled={true}
@@ -377,7 +377,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Parse data"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -387,10 +387,10 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
         >
           Transform data and configure schema
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="timestamp"
             disabled={true}
@@ -398,7 +398,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Parse time"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="transform"
             disabled={true}
@@ -406,7 +406,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Transform"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="filter"
             disabled={true}
@@ -414,7 +414,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Filter"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="schema"
             disabled={true}
@@ -422,7 +422,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Configure schema"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -432,10 +432,10 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
         >
           Tune parameters
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="partition"
             disabled={true}
@@ -443,7 +443,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Partition"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="tuning"
             disabled={true}
@@ -451,7 +451,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Tune"
           />
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="publish"
             disabled={true}
@@ -459,7 +459,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Publish"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
       <div
         className="step-section"
@@ -469,10 +469,10 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
         >
           Verify and submit
         </div>
-        <Blueprint4.ButtonGroup
+        <Blueprint5.ButtonGroup
           className="step-nav-l2"
         >
-          <Blueprint4.Button
+          <Blueprint5.Button
             active={false}
             className="spec"
             disabled={false}
@@ -480,7 +480,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             onClick={[Function]}
             text="Edit spec"
           />
-        </Blueprint4.ButtonGroup>
+        </Blueprint5.ButtonGroup>
       </div>
     </div>
   </div>
@@ -492,7 +492,7 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
         className="ingestion-cards"
       >
         <React.Fragment>
-          <Blueprint4.Card
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -505,8 +505,8 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             <p>
               Apache Kafka
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -519,8 +519,8 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             <p>
               Amazon Kinesis
             </p>
-          </Blueprint4.Card>
-          <Blueprint4.Card
+          </Blueprint5.Card>
+          <Blueprint5.Card
             className="ingestion-card"
             elevation={1}
             interactive={true}
@@ -533,9 +533,9 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
             <p>
               Azure Event Hub
             </p>
-          </Blueprint4.Card>
+          </Blueprint5.Card>
         </React.Fragment>
-        <Blueprint4.Card
+        <Blueprint5.Card
           className="ingestion-card"
           elevation={1}
           interactive={true}
@@ -548,19 +548,19 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
           <p>
             Other
           </p>
-        </Blueprint4.Card>
+        </Blueprint5.Card>
       </div>
     </div>
     <div
       className="control"
     >
-      <Blueprint4.FormGroup>
-        <Blueprint4.Callout>
+      <Blueprint5.FormGroup>
+        <Blueprint5.Callout>
           <p>
             Please specify where your raw data is located.
           </p>
-        </Blueprint4.Callout>
-      </Blueprint4.FormGroup>
+        </Blueprint5.Callout>
+      </Blueprint5.FormGroup>
     </div>
   </React.Fragment>
 </div>

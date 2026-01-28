@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.histogram;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.data.ObjectStrategy;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1502,5 +1503,13 @@ public class FixedBucketsHistogramTest
 
     FixedBucketsHistogram fromBase64 = FixedBucketsHistogram.fromBase64(asBase64Full);
     Assert.assertEquals(hSparse, fromBase64);
+  }
+
+  @Test
+  public void testObjectStrategyReadRetainsBufferReference()
+  {
+    FixedBucketsHistogramSerde serde = new FixedBucketsHistogramSerde();
+    ObjectStrategy<?> strategy = serde.getObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
   }
 }

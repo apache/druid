@@ -68,15 +68,15 @@ public class FlattenJSONBenchmark
   public void prepare() throws Exception
   {
     FlattenJSONBenchmarkUtil gen = new FlattenJSONBenchmarkUtil();
-    flatInputs = new ArrayList<String>();
+    flatInputs = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
       flatInputs.add(gen.generateFlatEvent());
     }
-    nestedInputs = new ArrayList<String>();
+    nestedInputs = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
       nestedInputs.add(gen.generateNestedEvent());
     }
-    jqInputs = new ArrayList<String>();
+    jqInputs = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
       jqInputs.add(gen.generateNestedEvent()); // reuse the same event as "nested"
     }

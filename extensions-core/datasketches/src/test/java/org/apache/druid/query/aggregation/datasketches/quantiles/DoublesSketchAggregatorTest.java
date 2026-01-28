@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -362,7 +361,7 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     Object sketchObjectWithNulls = row.get(1);
     Assert.assertTrue(sketchObjectWithNulls instanceof Long);
     long sketchValueWithNulls = (long) sketchObjectWithNulls;
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 400 : 377, sketchValueWithNulls);
+    Assert.assertEquals(377, sketchValueWithNulls);
 
     // post agg
     Object quantileObject = row.get(2);
@@ -390,7 +389,7 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     Object quantileObjectWithNulls = row.get(5);
     Assert.assertTrue(quantileObjectWithNulls instanceof Double);
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 7.4 : 7.5,
+        7.5,
         (double) quantileObjectWithNulls,
         0.1
     ); // median value
@@ -399,8 +398,8 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     Object quantilesObjectWithNulls = row.get(6);
     Assert.assertTrue(quantilesObjectWithNulls instanceof double[]);
     double[] quantilesWithNulls = (double[]) quantilesObjectWithNulls;
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 5.0, quantilesWithNulls[0], 0.05); // min value
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.4 : 7.5, quantilesWithNulls[1], 0.1); // median value
+    Assert.assertEquals(5.0, quantilesWithNulls[0], 0.05); // min value
+    Assert.assertEquals(7.5, quantilesWithNulls[1], 0.1); // median value
     Assert.assertEquals(10.0, quantilesWithNulls[2], 0.05); // max value
 
     // post agg with nulls

@@ -19,14 +19,15 @@
 
 package org.apache.druid.segment.generator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.Hashing;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -55,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -68,10 +70,6 @@ public class SegmentGenerator implements Closeable
   // Allow users to specify a cache directory via a JVM property or an environment variable.
   private static final String CACHE_DIR_PROPERTY = "druid.benchmark.cacheDir";
   private static final String CACHE_DIR_ENV_VAR = "DRUID_BENCHMARK_CACHE_DIR";
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private final File cacheDir;
   private final boolean cleanupCacheDir;
@@ -114,7 +112,16 @@ public class SegmentGenerator implements Closeable
       final int numRows
   )
   {
-    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, IndexSpec.DEFAULT, granularity, numRows);
+    return generate(
+        dataSegment,
+        schemaInfo,
+        schemaInfo.getDimensionsSpec(),
+        TransformSpec.NONE,
+        IndexSpec.getDefault(),
+        granularity,
+        Collections.emptyList(),
+        numRows
+    );
   }
 
   public QueryableIndex generate(
@@ -125,7 +132,16 @@ public class SegmentGenerator implements Closeable
       final int numRows
   )
   {
-    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, indexSpec, granularity, numRows);
+    return generate(
+        dataSegment,
+        schemaInfo,
+        schemaInfo.getDimensionsSpec(),
+        TransformSpec.NONE,
+        indexSpec,
+        granularity,
+        Collections.emptyList(),
+        numRows
+    );
   }
 
   public QueryableIndex generate(
@@ -138,9 +154,56 @@ public class SegmentGenerator implements Closeable
       final int numRows
   )
   {
+    return generate(
+        dataSegment,
+        schemaInfo,
+        dimensionsSpec,
+        transformSpec,
+        indexSpec,
+        queryGranularity,
+        Collections.emptyList(),
+        numRows
+    );
+  }
+  public QueryableIndex generate(
+      final DataSegment dataSegment,
+      final GeneratorSchemaInfo schemaInfo,
+      final DimensionsSpec dimensionsSpec,
+      final TransformSpec transformSpec,
+      final IndexSpec indexSpec,
+      final Granularity queryGranularity,
+      final List<AggregateProjectionSpec> projectionSpecs,
+      final int numRows
+  )
+  {
+    return generate(
+        dataSegment,
+        schemaInfo,
+        dimensionsSpec,
+        transformSpec,
+        indexSpec,
+        queryGranularity,
+        projectionSpecs,
+        numRows,
+        TestHelper.JSON_MAPPER
+    );
+  }
+
+  public QueryableIndex generate(
+      final DataSegment dataSegment,
+      final GeneratorSchemaInfo schemaInfo,
+      final DimensionsSpec dimensionsSpec,
+      final TransformSpec transformSpec,
+      final IndexSpec indexSpec,
+      final Granularity queryGranularity,
+      final List<AggregateProjectionSpec> projectionSpecs,
+      final int numRows,
+      final ObjectMapper jsonMapper
+  )
+  {
     // In case we need to generate hyperUniques or json
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()
@@ -149,6 +212,8 @@ public class SegmentGenerator implements Closeable
                                    .putString(dimensionsSpec.toString(), StandardCharsets.UTF_8)
                                    .putString(queryGranularity.toString(), StandardCharsets.UTF_8)
                                    .putString(indexSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(transformSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(projectionSpecs.toString(), StandardCharsets.UTF_8)
                                    .putInt(numRows)
                                    .hash()
                                    .toString();
@@ -158,7 +223,7 @@ public class SegmentGenerator implements Closeable
     if (outDir.exists()) {
       try {
         log.info("Found segment with hash[%s] cached in directory[%s].", dataHash, outDir);
-        return TestHelper.getTestIndexIO(ColumnConfig.DEFAULT).loadIndex(outDir);
+        return TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT).loadIndex(outDir);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -179,22 +244,23 @@ public class SegmentGenerator implements Closeable
         .withMetrics(schemaInfo.getAggsArray())
         .withRollup(schemaInfo.isWithRollup())
         .withQueryGranularity(queryGranularity)
+        .withProjections(projectionSpecs)
         .build();
 
     final List<InputRow> rows = new ArrayList<>();
     final List<QueryableIndex> indexes = new ArrayList<>();
 
-    Transformer transformer = transformSpec.toTransformer();
-    InputRowSchema rowSchema = new InputRowSchema(
+    final Transformer transformer = transformSpec.toTransformer();
+    final InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec(null, null, null),
         dimensionsSpec,
         null
     );
 
     for (int i = 0; i < numRows; i++) {
-      Map<String, Object> raw = dataGenerator.nextRaw();
-      InputRow inputRow = MapInputRowParser.parse(rowSchema, raw);
-      InputRow transformedRow = transformer.transform(inputRow);
+      final Map<String, Object> raw = dataGenerator.nextRaw();
+      final InputRow inputRow = MapInputRowParser.parse(rowSchema, raw);
+      final InputRow transformedRow = transformer.transform(inputRow);
       rows.add(transformedRow);
 
       if ((i + 1) % 20000 == 0) {
@@ -202,7 +268,7 @@ public class SegmentGenerator implements Closeable
       }
 
       if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
-        indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec));
+        indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec, jsonMapper));
         rows.clear();
       }
     }
@@ -210,7 +276,7 @@ public class SegmentGenerator implements Closeable
     log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
 
     if (rows.size() > 0) {
-      indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec));
+      indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema, indexSpec, jsonMapper));
       rows.clear();
     }
 
@@ -221,9 +287,9 @@ public class SegmentGenerator implements Closeable
     } else {
       try {
         retVal = TestHelper
-            .getTestIndexIO(ColumnConfig.DEFAULT)
+            .getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT)
             .loadIndex(
-                TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                TestHelper.getTestIndexMergerV9(jsonMapper, OffHeapMemorySegmentWriteOutMediumFactory.instance())
                           .mergeQueryableIndex(
                               indexes,
                               false,
@@ -256,7 +322,82 @@ public class SegmentGenerator implements Closeable
   }
 
   public IncrementalIndex generateIncrementalIndex(
+      final DataSegment dataSegment,
+      final GeneratorSchemaInfo schemaInfo,
+      final DimensionsSpec dimensionsSpec,
+      final TransformSpec transformSpec,
+      final AggregatorFactory[] aggregatorFactories,
+      final IndexSpec indexSpec,
+      final Granularity queryGranularity,
+      final List<AggregateProjectionSpec> projectionSpecs,
+      final int numRows,
+      final ObjectMapper jsonMapper
+  )
+  {
+    // In case we need to generate hyperUniques or json
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
+    BuiltInTypesModule.registerHandlersAndSerde();
 
+    final String dataHash = Hashing.sha256()
+                                   .newHasher()
+                                   .putString(dataSegment.getId().toString(), StandardCharsets.UTF_8)
+                                   .putString(schemaInfo.toString(), StandardCharsets.UTF_8)
+                                   .putString(dimensionsSpec.toString(), StandardCharsets.UTF_8)
+                                   .putString(queryGranularity.toString(), StandardCharsets.UTF_8)
+                                   .putString(indexSpec.toString(), StandardCharsets.UTF_8)
+                                   .putInt(numRows)
+                                   .hash()
+                                   .toString();
+
+    log.info("Writing segment with hash[%s] to incremental index.", dataHash);
+
+    final DataGenerator dataGenerator = new DataGenerator(
+        schemaInfo.getColumnSchemas(),
+        dataSegment.getId().hashCode(), /* Use segment identifier hashCode as seed */
+        schemaInfo.getDataInterval(),
+        numRows
+    );
+
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(dimensionsSpec)
+        .withMetrics(aggregatorFactories)
+        .withRollup(schemaInfo.isWithRollup())
+        .withQueryGranularity(queryGranularity)
+        .withProjections(projectionSpecs)
+        .build();
+
+    final List<InputRow> rows = new ArrayList<>();
+
+    final Transformer transformer = transformSpec.toTransformer();
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, null),
+        dimensionsSpec,
+        null
+    );
+
+    for (int i = 0; i < numRows; i++) {
+      final Map<String, Object> raw = dataGenerator.nextRaw();
+      final InputRow inputRow = MapInputRowParser.parse(rowSchema, raw);
+      final InputRow transformedRow = transformer.transform(inputRow);
+      rows.add(transformedRow);
+
+      if ((i + 1) % 20000 == 0) {
+        log.info("%,d/%,d rows generated for[%s].", i + 1, numRows, dataSegment);
+      }
+    }
+
+    log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
+
+    return IndexBuilder
+        .create(jsonMapper)
+        .schema(indexSchema)
+        .tmpDir(new File(getSegmentDir(dataSegment.getId(), dataHash), ""))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .rows(rows)
+        .buildIncrementalIndex();
+  }
+
+  public IncrementalIndex generateIncrementalIndex(
       final DataSegment dataSegment,
       final GeneratorSchemaInfo schemaInfo,
       final Granularity granularity,
@@ -320,11 +461,12 @@ public class SegmentGenerator implements Closeable
       final int indexNumber,
       final List<InputRow> rows,
       final IncrementalIndexSchema indexSchema,
-      final IndexSpec indexSpec
+      final IndexSpec indexSpec,
+      final ObjectMapper jsonMapper
   )
   {
     return IndexBuilder
-        .create()
+        .create(jsonMapper)
         .schema(indexSchema)
         .indexSpec(indexSpec)
         .tmpDir(new File(getSegmentDir(identifier, dataHash), String.valueOf(indexNumber)))

@@ -117,4 +117,12 @@ public class LookupSerdeModuleTest
         objectMapper.readValue(objectMapper.writeValueAsBytes(transform), ExpressionTransform.class)
     );
   }
+
+  @Test
+  public void testGetCanonicalLookupName()
+  {
+    LookupExtractorFactoryContainerProvider instance = injector.getInstance(LookupExtractorFactoryContainerProvider.class);
+    String lookupName = "lookupName1";
+    Assert.assertEquals(lookupName, instance.getCanonicalLookupName(lookupName));
+  }
 }

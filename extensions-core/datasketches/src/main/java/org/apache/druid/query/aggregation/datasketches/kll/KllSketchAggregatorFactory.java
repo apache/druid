@@ -80,13 +80,13 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
         && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<ValueType> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new KllSketchNoOpAggregator<SketchType>(getEmptySketch());
+        return new KllSketchNoOpAggregator<>(getEmptySketch());
       }
       return getBuildAggregator(selector);
     }
     final ColumnValueSelector<SketchType> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpAggregator<SketchType>(getEmptySketch());
+      return new KllSketchNoOpAggregator<>(getEmptySketch());
     }
     return getMergeAggregator(selector);
   }
@@ -98,13 +98,13 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
         && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<ValueType> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new KllSketchNoOpBufferAggregator<SketchType>(getEmptySketch());
+        return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
       }
       return getBuildBufferAggregator(selector);
     }
     final ColumnValueSelector<SketchType> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpBufferAggregator<SketchType>(getEmptySketch());
+      return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
     }
     return getMergeBufferAggregator(selector);
   }
@@ -224,6 +224,23 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
   {
     // maxStreamLength is not included in the cache key as it does nothing with query result.
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();
+  }
+
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+    KllSketchAggregatorFactory<?, ?> that = (KllSketchAggregatorFactory<?, ?>) preAggregated;
+    if (Objects.equals(fieldName, that.fieldName) && k == that.k && maxStreamLength <= that.maxStreamLength) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

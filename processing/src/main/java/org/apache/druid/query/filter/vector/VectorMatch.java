@@ -20,7 +20,7 @@
 package org.apache.druid.query.filter.vector;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.query.QueryContexts;
 
 import javax.annotation.Nullable;
 
@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public class VectorMatch implements ReadableVectorMatch
 {
-  private static final int[] DEFAULT_ALL_TRUE_VECTOR = new int[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
+  private static final int[] DEFAULT_ALL_TRUE_VECTOR = new int[QueryContexts.DEFAULT_VECTOR_SIZE];
 
   private static final VectorMatch ALL_FALSE = new VectorMatch(new int[0], 0);
 

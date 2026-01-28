@@ -39,6 +39,7 @@ import java.util.Spliterator;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class CollectionUtils
@@ -51,7 +52,7 @@ public final class CollectionUtils
    */
   public static <E> Collection<E> createLazyCollectionFromStream(Supplier<Stream<E>> sequentialStreamSupplier, int size)
   {
-    return new AbstractCollection<E>()
+    return new AbstractCollection<>()
     {
       @Override
       public Iterator<E> iterator()
@@ -125,6 +126,15 @@ public final class CollectionUtils
   }
 
   /**
+   * Creates an immutable map by mapping each entry in the given collection to
+   * a key and a value.
+   */
+  public static <E, K, V> Map<K, V> toMap(Collection<E> collection, Function<E, K> keyMapper, Function<E, V> valueMapper)
+  {
+    return collection.stream().collect(Collectors.toMap(keyMapper, valueMapper));
+  }
+
+  /**
    * Returns a LinkedHashMap with an appropriate size based on the callers expectedSize. This methods functionality
    * mirrors that of com.google.common.collect.Maps#newLinkedHashMapWithExpectedSize in Guava 19+. Thus, this method
    * can be replaced with Guava's implementation once Druid has upgraded its Guava dependency to a sufficient version.
@@ -177,7 +187,7 @@ public final class CollectionUtils
   }
 
   /**
-   * Intersection of two sets: {@code C = A ∪ B}.
+   * Union of two sets: {@code C = A ∪ B}.
    */
   public static <T> Set<T> union(Set<T> left, Set<T> right)
   {

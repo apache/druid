@@ -30,7 +30,7 @@ import java.util.Objects;
 
 /**
  * This class provides a mechanism to influence whether or not indexes are used for a {@link Filter} during processing
- * by {@link Filter#makeFilterBundle(ColumnIndexSelector, BitmapResultFactory, int, int, boolean)}
+ * by {@link Filter#makeFilterBundle(FilterBundle.Builder, BitmapResultFactory, int, int, boolean)}
  * (i.e. will a {@link Filter} be a "pre" filter in which we union indexes for all values that match the filter to
  * create a {@link org.apache.druid.segment.BitmapOffset}/{@link org.apache.druid.segment.vector.BitmapVectorOffset},
  * or will it be used as a "post" filter and evaluated while scanning row values from the

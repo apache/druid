@@ -94,7 +94,7 @@ public class OssStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage.oss", OssStorageConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.oss", OssDataSegmentArchiverConfig.class);
 
-    Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class);
+    Binders.bindTaskLogs(binder, SCHEME, OssTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs.oss", OssTaskLogsConfig.class);
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
   }

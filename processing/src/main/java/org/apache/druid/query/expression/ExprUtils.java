@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -45,13 +45,25 @@ public class ExprUtils
   }
 
   static PeriodGranularity toPeriodGranularity(
+      final Expr wrappingExpr,
       final Expr periodArg,
       @Nullable final Expr originArg,
       @Nullable final Expr timeZoneArg,
       final Expr.ObjectBinding bindings
   )
   {
-    final Period period = new Period(periodArg.eval(bindings).asString());
+    final Period period;
+    try {
+      period = new Period(periodArg.eval(bindings).asString());
+    }
+    catch (IllegalArgumentException iae) {
+      throw InvalidInput.exception(
+          "Invalid period[%s] specified for expression[%s]: [%s]",
+          periodArg.stringify(), 
+          wrappingExpr.stringify(),
+          iae.getMessage()
+      );
+    }
     final DateTime origin;
     final DateTimeZone timeZone;
 
@@ -66,31 +78,18 @@ public class ExprUtils
       origin = null;
     } else {
       Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
-      final Object value = originArg.eval(bindings).valueOrDefault();
-      if (value instanceof String && NullHandling.isNullOrEquivalent((String) value)) {
-        // We get a blank string here, when sql compatible null handling is enabled
-        // and expression contains empty string for for origin
-        // e.g timestamp_floor(\"__time\",'PT1M','','UTC')
-        origin = null;
-      } else {
-        origin = value != null ? new DateTime(value, chronology) : null;
-      }
+      final Object value = originArg.eval(bindings).value();
+      origin = value != null ? new DateTime(value, chronology) : null;
     }
 
     return new PeriodGranularity(period, origin, timeZone);
   }
 
   /**
-   * True if Expr is a string literal.
-   *
-   * In non-SQL-compliant null handling mode, this method will return true for null literals as well (because they are
-   * treated equivalently to empty strings, and we cannot tell the difference.)
-   *
-   * In SQL-compliant null handling mode, this method will return true for actual strings only, not nulls.
+   * True if Expr is a non-null string literal.
    */
   static boolean isStringLiteral(final Expr expr)
   {
-    return (expr.isLiteral() && expr.getLiteralValue() instanceof String)
-           || (NullHandling.replaceWithDefault() && expr.isNullLiteral());
+    return expr.isLiteral() && expr.getLiteralValue() instanceof String;
   }
 }

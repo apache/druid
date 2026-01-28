@@ -59,6 +59,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -103,6 +104,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
@@ -114,7 +116,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir
+      String processingTmpDir,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.config = config;
@@ -127,6 +130,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -163,12 +167,17 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
+    GroupByStatsProvider.PerQueryStats perQueryStats =
+        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
+
     final int priority = queryContext.getPriority();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
     final long queryTimeout = queryContext.getTimeout();
     final boolean hasTimeout = queryContext.hasTimeout();
+    final boolean hasPerSegmentTimeout = queryContext.usePerSegmentTimeout();
+    final long perSegmentTimeout = queryContext.getPerSegmentTimeout();
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
     return new BaseSequence<>(
@@ -182,8 +191,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+                  perQueryStats
               );
+
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.register(temporaryStorageHolder);
@@ -215,7 +226,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize
+                      mergeBufferSize,
+                      perQueryStats
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
@@ -228,7 +240,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               List<ListenableFuture<AggregateResult>> futures = Lists.newArrayList(
                       Iterables.transform(
                           queryables,
-                          new Function<QueryRunner<ResultRow>, ListenableFuture<AggregateResult>>()
+                          new Function<>()
                           {
                             @Override
                             public ListenableFuture<AggregateResult> apply(final QueryRunner<ResultRow> input)
@@ -237,34 +249,43 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                                 throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                               }
 
-                              ListenableFuture<AggregateResult> future = queryProcessingPool.submitRunnerTask(
-                                  new AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow>(priority, input)
-                                  {
-                                    @Override
-                                    public AggregateResult call()
-                                    {
-                                      try (
-                                          // These variables are used to close releasers automatically.
-                                          @SuppressWarnings("unused")
-                                          Closeable bufferReleaser = mergeBufferHolder.increment();
-                                          @SuppressWarnings("unused")
-                                          Closeable grouperReleaser = grouperHolder.increment()
-                                      ) {
-                                        // Return true if OK, false if resources were exhausted.
-                                        return input.run(queryPlusForRunners, responseContext)
-                                            .accumulate(AggregateResult.ok(), accumulator);
-                                      }
-                                      catch (QueryInterruptedException | QueryTimeoutException e) {
-                                        throw e;
-                                      }
-                                      catch (Exception e) {
-                                        log.error(e, "Exception with one of the sequences!");
-                                        Throwables.propagateIfPossible(e);
-                                        throw new RuntimeException(e);
-                                      }
-                                    }
+                              final AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow> callable = new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
+                              {
+                                @Override
+                                public AggregateResult call()
+                                {
+                                  try (
+                                      // These variables are used to close releasers automatically.
+                                      @SuppressWarnings("unused")
+                                      Closeable bufferReleaser = mergeBufferHolder.increment();
+                                      @SuppressWarnings("unused")
+                                      Closeable grouperReleaser = grouperHolder.increment()
+                                  ) {
+                                    // Return true if OK, false if resources were exhausted.
+                                    return input.run(queryPlusForRunners, responseContext)
+                                                .accumulate(AggregateResult.ok(), accumulator);
                                   }
-                              );
+                                  catch (QueryInterruptedException | QueryTimeoutException e) {
+                                    throw e;
+                                  }
+                                  catch (Exception e) {
+                                    log.error(e, "Exception with one of the sequences!");
+                                    Throwables.throwIfUnchecked(e);
+                                    throw new RuntimeException(e);
+                                  }
+                                }
+                              };
+
+                              final ListenableFuture<AggregateResult> future;
+                              if (hasPerSegmentTimeout) {
+                                future = queryProcessingPool.submitRunnerTask(
+                                    callable,
+                                    perSegmentTimeout,
+                                    TimeUnit.MILLISECONDS
+                                );
+                              } else {
+                                future = queryProcessingPool.submitRunnerTask(callable);
+                              }
 
                               if (isSingleThreaded) {
                                 waitForFutureCompletion(
@@ -318,8 +339,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
       throw DruidException.defensive(
-          "Expected merge buffers to be reserved in the reservation pool for the query id [%s] however while executing "
-          + "the GroupByMergingQueryRunner, however none were provided.",
+          "Expected merge buffers to be reserved in the reservation pool for the query resource id [%s] however while executing "
+          + "the GroupByMergingQueryRunner none were provided.",
           queryResourceId
       );
     }
@@ -366,22 +387,24 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         }
       }
     }
-    catch (InterruptedException e) {
-      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+    catch (InterruptedException | CancellationException e) {
+      log.noStackTrace().warn(e, "Query interrupted, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
-    catch (CancellationException e) {
+    catch (QueryTimeoutException | TimeoutException e) {
+      log.noStackTrace().warn(e, "Query timeout, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryInterruptedException(e);
-    }
-    catch (TimeoutException e) {
-      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryTimeoutException();
+      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
     }
     catch (ExecutionException e) {
+      log.noStackTrace().warn(e, "Query error, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
+      Throwable cause = e.getCause();
+      // Nested per-segment future timeout
+      if (cause instanceof TimeoutException) {
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
+      }
       throw new RuntimeException(e);
     }
   }

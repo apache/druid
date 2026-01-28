@@ -31,7 +31,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import org.apache.druid.collections.RangeIntSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
@@ -46,7 +45,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -95,16 +93,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
       final boolean remainderNeeded,
-      final boolean descending,
       final Closer closer
   )
   {
     this.table = table;
-    if (descending) {
-      this.joinableOffset = new SimpleDescendingOffset(table.numRows());
-    } else {
-      this.joinableOffset = new SimpleAscendingOffset(table.numRows());
-    }
+    this.joinableOffset = new SimpleAscendingOffset(table.numRows());
     reset();
 
     if (condition.isAlwaysTrue()) {
@@ -133,7 +126,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       );
     }
 
-    ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, descending, closer);
+    ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, closer);
     this.selectorFactory = selectorFactory != null
                            ? selectorFactory
                            : new IndexedTableColumnSelectorFactory(table, () -> currentRow, closer);
@@ -400,7 +393,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     private IntSortedSet getRowNumbers(@Nullable String key)
     {
-      if (includeNull || !NullHandling.isNullOrEquivalent(key)) {
+      if (includeNull || key != null) {
         return index.find(key);
       } else {
         return IntSortedSets.EMPTY_SET;
@@ -468,9 +461,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
-      if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getFloat());
-      } else if (includeNull) {
+      if (includeNull) {
         return () -> selector.isNull() ? index.find(null) : index.find(selector.getFloat());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getFloat());
@@ -480,9 +471,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     @Override
     public ConditionMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
-      if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getDouble());
-      } else if (includeNull) {
+      if (includeNull) {
         return () -> selector.isNull() ? index.find(null) : index.find(selector.getDouble());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getDouble());
@@ -494,8 +483,6 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       if (index.keyType().is(ValueType.LONG)) {
         return makePrimitiveLongMatcher(selector);
-      } else if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getLong());
       } else if (includeNull) {
         return () -> selector.isNull() ? index.find(null) : index.find(selector.getLong());
       } else {
@@ -539,22 +526,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
      */
     private ConditionMatcher makePrimitiveLongMatcher(BaseLongColumnValueSelector selector)
     {
-      if (NullHandling.replaceWithDefault()) {
-        return new ConditionMatcher()
-        {
-          @Override
-          public int matchSingleRow()
-          {
-            return index.findUniqueLong(selector.getLong());
-          }
-
-          @Override
-          public IntSortedSet match()
-          {
-            return index.find(selector.getLong());
-          }
-        };
-      } else if (includeNull) {
+      if (includeNull) {
         return new ConditionMatcher()
         {
           @Override

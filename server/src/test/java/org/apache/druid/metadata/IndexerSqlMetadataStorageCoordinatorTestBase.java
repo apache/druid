@@ -31,9 +31,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
@@ -49,16 +48,18 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -310,36 +311,33 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected FingerprintGenerator fingerprintGenerator;
   protected SegmentSchemaTestUtils segmentSchemaTestUtils;
 
-  protected static class DS
-  {
-    static final String WIKI = "wiki";
-  }
-
   protected DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
   {
     return DataSegment.builder()
-                      .dataSource(DS.WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .shardSpec(shardSpec)
                       .size(100)
+                      // hash to get a unique load spec as segmentId has not yet been generated
+                      .loadSpec(ImmutableMap.of("hash", Objects.hash(interval, version, shardSpec)))
                       .build();
   }
 
-  protected List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear) throws IOException
+  protected List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear)
   {
     final List<DataSegment> segments = new ArrayList<>();
 
     for (int year = startYear; year < endYear; year++) {
       segments.add(createSegment(
-          Intervals.of("%d/%d", year, year + 1),
-          "version",
-          new LinearShardSpec(0))
+                       Intervals.of("%d/%d", year, year + 1),
+                       "version",
+                       new LinearShardSpec(0)
+                   )
       );
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
-    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, new SegmentSchemaMapping(
-        CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, null);
     Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
@@ -363,7 +361,15 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -382,13 +388,16 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(
-                                               handle,
-                                               derbyConnector,
-                                               tablesConfig,
-                                               mapper
-                                           )
-                                           .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
+                                           .retrieveUnusedSegmentsPlus(
+                                               TestDataSource.WIKI,
+                                               intervals,
+                                               null,
+                                               limit,
+                                               lastSegmentId,
+                                               sortOrder,
+                                               maxUsedStatusLastUpdatedTime
+                                           )) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -398,11 +407,20 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected void verifyContainsAllSegmentsPlus(
       List<DataSegment> expectedSegments,
       List<DataSegmentPlus> actualUnusedSegmentsPlus,
-      DateTime usedStatusLastUpdatedTime)
+      DateTime usedStatusLastUpdatedTime
+  )
   {
-    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
+    Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream()
+                                                                      .collect(Collectors.toMap(
+                                                                          DataSegment::getId,
+                                                                          Function.identity()
+                                                                      ));
     Map<SegmentId, DataSegmentPlus> actualIdToSegmentPlus = actualUnusedSegmentsPlus.stream()
-                                                                                    .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
+                                                                                    .collect(Collectors.toMap(
+                                                                                        d -> d.getDataSegment()
+                                                                                              .getId(),
+                                                                                        Function.identity()
+                                                                                    ));
     Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
       DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
       return segmentPlus != null
@@ -487,7 +505,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     final String table = tablesConfig.getSegmentsTable();
     return derbyConnector.retryWithHandle(
         handle -> handle.createQuery("SELECT payload FROM " + table + " WHERE used = true ORDER BY id")
-                        .map((index, result, context) -> JacksonUtils.readValue(mapper, result.getBytes(1), DataSegment.class))
+                        .map((index, result, context) -> JacksonUtils.readValue(
+                            mapper,
+                            result.getBytes(1),
+                            DataSegment.class
+                        ))
                         .list()
     );
   }
@@ -502,7 +524,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     );
   }
 
-  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId, MetadataStorageTablesConfig tablesConfig)
+  protected Map<String, String> getSegmentsCommittedDuringReplaceTask(
+      String taskId,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     return derbyConnector.retryWithHandle(handle -> {
@@ -528,7 +553,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     });
   }
 
-  protected void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap, MetadataStorageTablesConfig tablesConfig)
+  protected void insertIntoUpgradeSegmentsTable(
+      Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap,
+      MetadataStorageTablesConfig tablesConfig
+  )
   {
     final String table = tablesConfig.getUpgradeSegmentsTable();
     derbyConnector.retryWithHandle(
@@ -559,5 +587,128 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           return true;
         }
     );
+  }
+
+  public static void insertUsedSegments(
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
+      ObjectMapper jsonMapper
+  )
+  {
+    insertUsedSegments(dataSegments, upgradedFromSegmentIdMap, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertUsedSegments(
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
+  )
+  {
+    final Set<DataSegmentPlus> usedSegments = new HashSet<>();
+    for (DataSegment segment : dataSegments) {
+      final DateTime now = DateTimes.nowUtc();
+      usedSegments.add(
+          new DataSegmentPlus(
+              segment,
+              now,
+              now,
+              true,
+              null,
+              null,
+              upgradedFromSegmentIdMap.get(segment.getId().toString()),
+              null
+          )
+      );
+    }
+
+    insertSegments(usedSegments, false, connector, jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
+      TestDerbyConnector.DerbyConnectorRule derbyConnectorRule,
+      ObjectMapper jsonMapper
+  )
+  {
+    insertSegments(dataSegments, includeSchema, derbyConnectorRule.getConnector(), jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      boolean includeSchema,
+      TestDerbyConnector connector,
+      ObjectMapper jsonMapper
+  )
+  {
+    final String table = connector.getMetadataTablesConfig().getSegmentsTable();
+
+    final String sql = getSegmentInsertSql(includeSchema, table, connector);
+    connector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(sql);
+          for (DataSegmentPlus segmentPlus : dataSegments) {
+            final DataSegment segment = segmentPlus.getDataSegment();
+            String id = segment.getId().toString();
+            final PreparedBatchPart segmentRecord = preparedBatch.add();
+            segmentRecord.bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
+                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
+
+            if (includeSchema) {
+              segmentRecord.bind("num_rows", segmentPlus.getNumRows())
+                           .bind("schema_fingerprint", segmentPlus.getSchemaFingerprint());
+            }
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
+          }
+          return true;
+        }
+    );
+  }
+
+  private static String getSegmentInsertSql(boolean includeSchema, String table, TestDerbyConnector connector)
+  {
+    final String sql;
+    if (includeSchema) {
+      sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+          + " used, payload, used_status_last_updated, upgraded_from_segment_id, num_rows, schema_fingerprint) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+          + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id, :num_rows, :schema_fingerprint)",
+          table,
+          connector.getQuoteString()
+      );
+    } else {
+      sql = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+          + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+          + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
+          table,
+          connector.getQuoteString()
+      );
+    }
+    return sql;
+  }
+
+  @Nullable
+  private static String nullSafeString(DateTime date)
+  {
+    return date == null ? null : date.toString();
   }
 }

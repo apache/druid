@@ -61,7 +61,7 @@ public class GoHandlers
   static <T> ListenableFuture<T> immediateFuture(T val)
   {
     CompletableFuture<T> future = CompletableFuture.completedFuture(val);
-    return new ListenableFuture<T>()
+    return new ListenableFuture<>()
     {
       @Override
       public void done()

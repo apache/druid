@@ -19,36 +19,16 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.EnsurePath;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.curator.CuratorTestBase;
-import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
-
-/**
- */
-public class ZkCoordinatorTest extends CuratorTestBase
+public class ZkCoordinatorTest
 {
-  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",
@@ -67,103 +47,55 @@ public class ZkCoordinatorTest extends CuratorTestBase
     }
   };
 
-  @Before
-  public void setUp() throws Exception
+  @Test(timeout = 60_000L)
+  public void testSegmentPathIsCreatedIfZkAnnouncementIsEnabled() throws Exception
   {
-    setupServerAndCurator();
-    curator.start();
-    curator.blockUntilConnected();
-  }
-
-  @After
-  public void tearDown()
-  {
-    tearDownServerAndCurator();
+    testSegmentPathCreated(true);
   }
 
   @Test(timeout = 60_000L)
-  public void testLoadDrop() throws Exception
+  public void testSegmentPathIsNotCreatedIfZkAnnouncementIsDisabled() throws Exception
   {
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    DataSegment segment = new DataSegment(
-        "test",
-        Intervals.of("P1d/2011-04-02"),
-        "v0",
-        ImmutableMap.of("version", "v0", "interval", Intervals.of("P1d/2011-04-02"), "cacheDir", "/no"),
-        Arrays.asList("dim1", "dim2", "dim3"),
-        Arrays.asList("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        IndexIO.CURRENT_VERSION_ID,
-        123L
+    testSegmentPathCreated(false);
+  }
+
+  private void testSegmentPathCreated(boolean announceSegmentsOnZk) throws Exception
+  {
+    final String liveSegmentsPath = ZKPaths.makePath(
+        zkPaths.getLiveSegmentsPath(),
+        me.getName()
     );
 
-    CountDownLatch loadLatch = new CountDownLatch(1);
-    CountDownLatch dropLatch = new CountDownLatch(1);
+    final EnsurePath mockEnsurePath = EasyMock.mock(EnsurePath.class);
+    final CuratorFramework mockCurator = EasyMock.mock(CuratorFramework.class);
 
-    SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
-        new SegmentLoaderConfig(),
-        EasyMock.createNiceMock(DataSegmentAnnouncer.class),
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        EasyMock.createNiceMock(SegmentManager.class),
-        EasyMock.createNiceMock(ScheduledExecutorService.class),
-        new ServerTypeConfig(ServerType.HISTORICAL)
-    )
-    {
-      @Override
-      public void addSegment(DataSegment s, DataSegmentChangeCallback callback)
-      {
-        if (segment.getId().equals(s.getId())) {
-          loadLatch.countDown();
-          callback.execute();
-        }
-      }
+    if (announceSegmentsOnZk) {
+      EasyMock.expect(mockCurator.newNamespaceAwareEnsurePath(liveSegmentsPath))
+              .andReturn(mockEnsurePath).once();
 
-      @Override
-      public void removeSegment(DataSegment s, DataSegmentChangeCallback callback)
-      {
-        if (segment.getId().equals(s.getId())) {
-          dropLatch.countDown();
-          callback.execute();
-        }
-      }
-    };
+      EasyMock.expect(mockCurator.getZookeeperClient())
+              .andReturn(null).once();
 
-    ZkCoordinator zkCoordinator = new ZkCoordinator(
-        segmentLoadDropHandler,
-        jsonMapper,
+      mockEnsurePath.ensure(EasyMock.anyObject());
+      EasyMock.expectLastCall().once();
+    }
+
+    EasyMock.replay(mockCurator, mockEnsurePath);
+    final ZkCoordinator zkCoordinator = new ZkCoordinator(
         zkPaths,
         me,
-        curator,
-        new SegmentLoaderConfig()
+        mockCurator,
+        new BatchDataSegmentAnnouncerConfig() {
+          @Override
+          public boolean isSkipSegmentAnnouncementOnZk()
+          {
+            return !announceSegmentsOnZk;
+          }
+        }
     );
+
     zkCoordinator.start();
-
-    String segmentZkPath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName(), segment.getId().toString());
-
-    curator
-        .create()
-        .creatingParentsIfNeeded()
-        .withMode(CreateMode.EPHEMERAL)
-        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestLoad(segment)));
-
-    loadLatch.await();
-
-    while (curator.checkExists().forPath(segmentZkPath) != null) {
-      Thread.sleep(100);
-    }
-
-    curator
-        .create()
-        .creatingParentsIfNeeded()
-        .withMode(CreateMode.EPHEMERAL)
-        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestDrop(segment)));
-
-    dropLatch.await();
-
-    while (curator.checkExists().forPath(segmentZkPath) != null) {
-      Thread.sleep(100);
-    }
-
+    EasyMock.verify();
     zkCoordinator.stop();
   }
 }

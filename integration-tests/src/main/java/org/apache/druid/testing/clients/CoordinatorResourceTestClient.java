@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -35,8 +34,8 @@ import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -131,9 +130,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<String>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -152,9 +149,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -171,9 +166,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<String>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -189,9 +182,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
 
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -222,9 +213,7 @@ public class CoordinatorResourceTestClient
       }
 
       status = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Integer>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -274,23 +263,6 @@ public class CoordinatorResourceTestClient
     }
   }
 
-  public HttpResponseStatus getProxiedOverlordScalingResponseStatus()
-  {
-    try {
-      StatusResponseHolder response = makeRequest(
-          HttpMethod.GET,
-          StringUtils.format(
-              "%s/druid/indexer/v1/scaling",
-              coordinator
-          )
-      );
-      return response.getStatus();
-    }
-    catch (Exception e) {
-      throw new RE(e, "Unable to get scaling status from [%s]", coordinator);
-    }
-  }
-
   public Map<String, Object> initializeLookups(String filePath) throws Exception
   {
     String url = StringUtils.format("%slookups/config", getCoordinatorURL());
@@ -333,9 +305,7 @@ public class CoordinatorResourceTestClient
 
     Map<String, Object> results2 = jsonMapper.readValue(
         response.getContent(),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     return results2;
@@ -367,9 +337,7 @@ public class CoordinatorResourceTestClient
 
       status = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {

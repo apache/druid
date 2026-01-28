@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -39,15 +38,23 @@ import java.util.Objects;
 public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Float>
 {
   public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
-
+  private final String dimensionName;
   private volatile boolean hasNulls = false;
 
-  @Override
-  public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public FloatDimensionIndexer(String dimensionName)
   {
-    Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    this.dimensionName = dimensionName;
+  }
+
+  @Override
+  public EncodedKeyComponent<Float> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  )
+  {
+    Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions, dimensionName);
     if (f == null) {
-      hasNulls = NullHandling.sqlCompatible();
+      hasNulls = true;
     }
     return new EncodedKeyComponent<>(f, Float.BYTES);
   }
@@ -55,7 +62,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public void setSparseIndexed()
   {
-    hasNulls = NullHandling.sqlCompatible();
+    hasNulls = true;
   }
 
   @Override
@@ -131,7 +138,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          assert NullHandling.replaceWithDefault();
+          assert !isNull();
           return 0.0f;
         }
 
@@ -146,7 +153,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          return NullHandling.defaultFloatValue();
+          return null;
         }
 
         return (Float) dims[dimIndex];

@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -344,7 +343,7 @@ public class DefaultLimitSpec implements LimitSpec
     final Ordering<ResultRow> timeOrdering;
 
     if (hasTimestamp) {
-      timeOrdering = new Ordering<ResultRow>()
+      timeOrdering = new Ordering<>()
       {
         @Override
         public int compare(ResultRow left, ResultRow right)
@@ -425,9 +424,7 @@ public class DefaultLimitSpec implements LimitSpec
   {
     // As per SQL standard we need to have same ordering for metrics as dimensions i.e nulls first
     // If SQL compatibility is not enabled we use nullsLast ordering for null metrics for backwards compatibility.
-    final Comparator<T> nullFriendlyComparator = NullHandling.sqlCompatible()
-                                                 ? Comparator.nullsFirst(comparator)
-                                                 : Comparator.nullsLast(comparator);
+    final Comparator<T> nullFriendlyComparator = Comparator.nullsFirst(comparator);
 
     //noinspection unchecked
     return Ordering.from(Comparator.comparing(row -> (T) row.get(column), nullFriendlyComparator));
@@ -468,7 +465,7 @@ public class DefaultLimitSpec implements LimitSpec
                 DimensionHandlerUtils.coerceToStringArray(o2)
             );
           }
-          return new DimensionComparisonUtils.ArrayComparator<String>(stringComparator)
+          return new DimensionComparisonUtils.ArrayComparator<>(stringComparator)
               .compare(
                   DimensionHandlerUtils.coerceToStringArray(o1),
                   DimensionHandlerUtils.coerceToStringArray(o2)

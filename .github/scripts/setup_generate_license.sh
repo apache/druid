@@ -17,7 +17,14 @@
 
 set -e
 
-sudo apt-get update && sudo apt-get install python3 -y
-curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+if [ "$(uname)" = "Linux" ]; then
+  # github action runs on ubuntu, we might need to install python3 and pip3
+  sudo apt-get update && sudo apt-get install python3 -y
+  sudo apt install python3-pip
+fi
+
+# creating python virtual env
+python3 -m venv ~/.python3venv
+source ~/.python3venv/bin/activate
 pip3 install wheel  # install wheel first explicitly
 pip3 install --upgrade pyyaml

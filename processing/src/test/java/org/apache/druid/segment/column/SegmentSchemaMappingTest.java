@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
@@ -36,10 +35,6 @@ import java.util.Collections;
 
 public class SegmentSchemaMappingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test

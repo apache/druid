@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
-import type { CancelToken } from 'axios';
+import type { QueryResult } from 'druid-query-toolkit';
 
 import type { Execution } from '../../druid-models';
 import { IntermediateQueryState } from '../../utils';
@@ -41,11 +40,11 @@ export function extractResult(
 export async function executionBackgroundStatusCheck(
   execution: Execution,
   _query: any,
-  cancelToken: CancelToken,
+  signal: AbortSignal,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
   switch (execution.engine) {
     case 'sql-msq-task':
-      execution = await updateExecutionWithTaskIfNeeded(execution, cancelToken);
+      execution = await updateExecutionWithTaskIfNeeded(execution, signal);
       break;
 
     default:
@@ -60,7 +59,7 @@ export async function executionBackgroundStatusCheck(
 export async function executionBackgroundResultStatusCheck(
   execution: Execution,
   query: any,
-  cancelToken: CancelToken,
+  signal: AbortSignal,
 ): Promise<QueryResult | IntermediateQueryState<Execution>> {
-  return extractResult(await executionBackgroundStatusCheck(execution, query, cancelToken));
+  return extractResult(await executionBackgroundStatusCheck(execution, query, signal));
 }

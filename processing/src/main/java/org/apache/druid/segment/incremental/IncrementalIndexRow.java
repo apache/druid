@@ -137,13 +137,15 @@ public final class IncrementalIndexRow
     return "IncrementalIndexRow{" +
            "timestamp=" + DateTimes.utc(timestamp) +
            ", dims=" + Lists.transform(
-        Arrays.asList(dims), new Function<Object, Object>()
+        Arrays.asList(dims), new Function<>()
         {
           @Override
           public Object apply(@Nullable Object input)
           {
-            if (input == null || Array.getLength(input) == 0) {
+            if (input == null || (input.getClass().isArray() && Array.getLength(input) == 0)) {
               return Collections.singletonList("null");
+            } else if (input instanceof int[]) {
+              return Arrays.toString((int[]) input);
             }
             return Collections.singletonList(input);
           }

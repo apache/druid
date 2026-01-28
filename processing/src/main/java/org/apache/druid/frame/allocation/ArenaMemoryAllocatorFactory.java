@@ -24,6 +24,8 @@ package org.apache.druid.frame.allocation;
  */
 public class ArenaMemoryAllocatorFactory implements MemoryAllocatorFactory
 {
+  private static final int FRAME_SIZE = 8_000_000;
+
   private final int capacity;
 
   public ArenaMemoryAllocatorFactory(final int capacity)
@@ -41,5 +43,10 @@ public class ArenaMemoryAllocatorFactory implements MemoryAllocatorFactory
   public long allocatorCapacity()
   {
     return capacity;
+  }
+
+  public static MemoryAllocatorFactory makeDefault()
+  {
+    return new ArenaMemoryAllocatorFactory(FRAME_SIZE);
   }
 }

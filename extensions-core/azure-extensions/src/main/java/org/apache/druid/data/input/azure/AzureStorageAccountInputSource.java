@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.azure;
 
 import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -180,12 +179,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         try {
           AzureStorage azureStorage = new AzureStorage(azureIngestClientFactory, location.getBucket());
           Pair<String, String> locationInfo = getContainerAndPathFromObjectLocation(location);
-          final BlockBlobClient blobWithAttributes = azureStorage.getBlockBlobReferenceWithAttributes(
-              locationInfo.lhs,
-              locationInfo.rhs
-          );
-
-          return blobWithAttributes.getProperties().getBlobSize();
+          return azureStorage.getBlockBlobLength(locationInfo.lhs, locationInfo.rhs);
         }
         catch (BlobStorageException e) {
           throw new RuntimeException(e);
@@ -246,7 +240,9 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   public static Pair<String, String> getContainerAndPathFromObjectLocation(CloudObjectLocation location)
   {
     String[] pathParts = location.getPath().split("/", 2);
-    // If there is no path specified, use a empty path as azure will throw a exception that is more clear than a index error.
+
+    // If there is no path specified, use an empty path as Azure will throw an exception
+    // that is more clear than an index error.
     return Pair.of(pathParts[0], pathParts.length == 2 ? pathParts[1] : "");
   }
 }

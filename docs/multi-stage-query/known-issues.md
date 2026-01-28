@@ -23,24 +23,18 @@ sidebar_label: Known issues
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
 ## Multi-stage query task runtime
 
 - Fault tolerance is partially implemented. Workers get relaunched when they are killed unexpectedly. The controller does not get relaunched if it is killed unexpectedly.
 
 - Worker task stage outputs are stored in the working directory given by `druid.indexer.task.baseDir`. Stages that
 generate a large amount of output data may exhaust all available disk space. In this case, the query fails with
-an [UnknownError](./reference.md#error_UnknownError) with a message including "No space left on device".
+an [UnknownError](./reference.md#error-codes) with a message including "No space left on device".
 
 ## `SELECT` Statement
 
 - `GROUPING SETS` are not implemented. Queries using these features return a
-  [QueryNotSupported](reference.md#error_QueryNotSupported) error.
+  [QueryNotSupported](./reference.md#error-codes) error.
 
 ## `INSERT` and `REPLACE` Statements
 
@@ -68,3 +62,16 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 - The maximum number of elements in a window cannot exceed a value of 100,000. 
 - To avoid `leafOperators` in MSQ engine, window functions have an extra scan stage after the window stage for cases 
 where native engine has a non-empty `leafOperator`.
+
+## Automatic compaction
+
+<!-- If you update this list, also update data-management/automatic-compaction.md -->
+
+The following known issues and limitations affect automatic compaction with the MSQ task engine:
+
+- The `metricSpec` field is only supported for certain aggregators. For more information, see [Supported aggregators](../data-management/automatic-compaction.md#supported-aggregators).
+- Only dynamic and range-based partitioning are supported.
+- Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
+- You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
+- The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
+- Segments can only be sorted on `__time` as the first column.

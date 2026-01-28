@@ -91,9 +91,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
     in.readFully(buf);
     segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         buf,
-        new TypeReference<List<WindowedDataSegment>>()
-        {
-        }
+        new TypeReference<>() {}
     );
     locations = new String[in.readInt()];
     for (int i = 0; i < locations.length; i++) {

@@ -136,7 +136,7 @@ public class ChangeRequestHistoryTest
     final AtomicBoolean callbackExcecuted = new AtomicBoolean(false);
     Futures.addCallback(
         future,
-        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(ChangeRequestsSnapshot result)
@@ -194,7 +194,7 @@ public class ChangeRequestHistoryTest
     final AtomicBoolean callbackExcecuted = new AtomicBoolean(false);
     Futures.addCallback(
         future,
-        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(ChangeRequestsSnapshot result)

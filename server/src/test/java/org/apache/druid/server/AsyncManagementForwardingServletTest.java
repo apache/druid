@@ -39,14 +39,16 @@ import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthenticationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -321,7 +323,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testProxyEnebledCheck() throws Exception
+  public void testProxyEnabledCheck() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d/proxy/enabled", port)).openConnection());
@@ -348,11 +350,35 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testCoordinatorNoPath() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(403, connection.getResponseCode()); // proxy with no path is not allowed
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testOverlordNoPath() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(403, connection.getResponseCode()); // proxy with no path is not allowed
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
   public void testCoordinatorLeaderUnknown() throws Exception
   {
     isValidLeader = false;
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/druid/coordinator", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(503, connection.getResponseCode());
@@ -365,7 +391,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   {
     isValidLeader = false;
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/druid/indexer", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/druid/indexer/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(503, connection.getResponseCode());
@@ -401,8 +427,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   private static Server makeTestServer(int port, ExpectedRequest expectedRequest)
   {
     Server server = new Server(port);
-    ServletHandler handler = new ServletHandler();
-    handler.addServletWithMapping(new ServletHolder(new HttpServlet()
+    ServletContextHandler servletContextHandler = new ServletContextHandler();
+    servletContextHandler.addServlet(new ServletHolder(new HttpServlet()
     {
       @Override
       protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException
@@ -447,7 +473,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       }
     }), "/*");
 
-    server.setHandler(handler);
+    server.setHandler(servletContextHandler);
     return server;
   }
 
@@ -491,7 +517,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
-              overlordLeaderSelector
+              overlordLeaderSelector,
+              new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer(null)))
           )
       );
 
@@ -502,14 +529,15 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/druid/indexer/*");
       root.addServlet(holder, "/proxy/*");
 
+      AuthenticationUtils.addAuthenticationFilterChain(root, ImmutableList.of(new AllowAllAuthenticator()));
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
-      final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(
-          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+      final Handler.Sequence handlerList = new Handler.Sequence(
+          JettyServerInitUtils.wrapWithDefaultGzipHandler(
               root,
               ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-              Deflater.DEFAULT_COMPRESSION)}
+              Deflater.DEFAULT_COMPRESSION
+          )
       );
       server.setHandler(handlerList);
     }

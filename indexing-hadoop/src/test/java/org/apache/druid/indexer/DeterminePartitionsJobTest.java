@@ -25,14 +25,13 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.After;
 import org.junit.Assert;
@@ -66,7 +65,7 @@ public class DeterminePartitionsJobTest
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
                                    + "targetRowsPerSegment={1}, "
                                    + "maxRowsPerSegment={2}, "
-                                   + "interval={3}"
+                                   + "intervals={3}"
                                    + "expectedNumOfSegments={4}, "
                                    + "expectedNumOfShardsForEachSegment={5}, "
                                    + "expectedStartEndForEachShard={6}, "
@@ -76,11 +75,25 @@ public class DeterminePartitionsJobTest
     return Arrays.asList(
         new Object[][]{
             {
+                false,
+                1,
+                NO_MAX_ROWS_PER_SEGMENT,
+                List.of("1970-01-01T00:00:00Z/P1D"),
+                1,
+                new int[]{1},
+                new String[][][]{
+                    {
+                        {null, null}
+                    }
+                },
+                ImmutableList.of("1970010100,c.example.com,CN,100")
+            },
+            {
                 // Test partitoning by targetRowsPerSegment
                 true,
                 2,
                 NO_MAX_ROWS_PER_SEGMENT,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -109,7 +122,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 2,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -138,7 +151,7 @@ public class DeterminePartitionsJobTest
                 false,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 2,
-                "2014-10-20T00:00:00Z/P1D",
+                List.of("2014-10-20T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -177,7 +190,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 5,
-                "2014-10-20T00:00:00Z/P3D",
+                List.of("2014-10-20T00:00:00Z/P3D"),
                 3,
                 new int[]{2, 2, 2},
                 new String[][][]{
@@ -231,7 +244,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 1000,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{1},
                 new String[][][]{
@@ -260,7 +273,7 @@ public class DeterminePartitionsJobTest
       boolean assumeGrouped,
       @Nullable Integer targetRowsPerSegment,
       Integer maxRowsPerSegment,
-      String interval,
+      List<String> intervals,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
       String[][][] expectedStartEndForEachShard,
@@ -280,33 +293,36 @@ public class DeterminePartitionsJobTest
 
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(
-                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country"))
-                            ),
-                            null,
-                            ImmutableList.of("timestamp", "host", "country", "visited_num"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.NONE,
-                    ImmutableList.of(Intervals.of(interval))
-                ),
-                null,
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(
+                          HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                              new StringInputRowParser(
+                                  new CSVParseSpec(
+                                      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                      new DimensionsSpec(
+                                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country"))
+                                      ),
+                                      null,
+                                      ImmutableList.of("timestamp", "host", "country", "visited_num"),
+                                      false,
+                                      0
+                                  ),
+                                  null
+                              ),
+                              Map.class
+                          )
+                      )
+                      .withAggregators(new LongSumAggregatorFactory("visited_num", "visited_num"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              intervals.stream().map(Intervals::of).collect(ImmutableList.toImmutableList())
+                          )
+                      )
+                      .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.of(
                     "paths",
@@ -327,7 +343,6 @@ public class DeterminePartitionsJobTest
                 null,
                 null,
                 null,
-                false,
                 false,
                 false,
                 false,

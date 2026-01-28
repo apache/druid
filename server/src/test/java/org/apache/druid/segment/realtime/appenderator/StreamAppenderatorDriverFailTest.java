@@ -41,11 +41,12 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -132,10 +133,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -170,10 +171,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -208,10 +209,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -259,10 +260,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         new FailableAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new NoopUsedSegmentChecker(),
+        new NoopPublishedSegmentRetriever(),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     driver.startJob(null);
@@ -323,10 +324,10 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
   }
 
-  private static class NoopUsedSegmentChecker implements UsedSegmentChecker
+  private static class NoopPublishedSegmentRetriever implements PublishedSegmentRetriever
   {
     @Override
-    public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
+    public Set<DataSegment> findPublishedSegments(Set<SegmentId> identifiers)
     {
       return ImmutableSet.of();
     }
@@ -335,11 +336,6 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   static Appenderator createPushFailAppenderator()
   {
     return new FailableAppenderator().disablePush();
-  }
-
-  static Appenderator createPushInterruptAppenderator()
-  {
-    return new FailableAppenderator().interruptPush();
   }
 
   static Appenderator createPersistFailAppenderator()
@@ -501,7 +497,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         );
       } else {
         if (interruptPush) {
-          return new AbstractFuture<SegmentsAndCommitMetadata>()
+          return new AbstractFuture<>()
           {
             @Override
             public SegmentsAndCommitMetadata get(long timeout, TimeUnit unit)

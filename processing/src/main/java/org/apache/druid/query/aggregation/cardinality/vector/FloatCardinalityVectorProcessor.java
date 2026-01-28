@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.cardinality.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.types.FloatCardinalityAggregatorColumnSelectorStrategy;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -53,7 +52,7 @@ public class FloatCardinalityVectorProcessor implements CardinalityVectorProcess
       final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
 
       for (int i = startRow; i < endRow; i++) {
-        if (NullHandling.replaceWithDefault() || nullVector == null || !nullVector[i]) {
+        if (nullVector == null || !nullVector[i]) {
           FloatCardinalityAggregatorColumnSelectorStrategy.addFloatToCollector(collector, vector[i]);
         }
       }
@@ -77,7 +76,7 @@ public class FloatCardinalityVectorProcessor implements CardinalityVectorProcess
 
       for (int i = 0; i < numRows; i++) {
         final int idx = rows != null ? rows[i] : i;
-        if (NullHandling.replaceWithDefault() || nullVector == null || !nullVector[idx]) {
+        if (nullVector == null || !nullVector[idx]) {
           final int position = positions[i] + positionOffset;
           buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
           buf.position(position);

@@ -63,12 +63,12 @@ public class OffHeapPollingCache<K, V> implements PollingCache<K, V>
       final Set<V> setOfValues = setOfValuesBuilder.build();
       reverseCache.putAll(Maps.asMap(
           setOfValues,
-          new Function<V, List<K>>()
+          new Function<>()
           {
             @Override
             public List<K> apply(final V input)
             {
-              return Lists.newArrayList(Maps.filterKeys(mapCache, new Predicate<K>()
+              return Lists.newArrayList(Maps.filterKeys(mapCache, new Predicate<>()
               {
                 @Override
                 public boolean apply(K key)

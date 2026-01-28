@@ -17,6 +17,6 @@
   ~ under the License.
   -->
 
-This module contains a simple implementation of [SslContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html)
+This module contains a simple implementation of [SslContext](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/javax/net/ssl/SSLContext.html)
 that will be injected to be used with HttpClient that Druid nodes use internally to communicate with each other.
 More details [here](https://druid.apache.org/docs/latest/development/extensions-core/simple-client-sslcontext.html).

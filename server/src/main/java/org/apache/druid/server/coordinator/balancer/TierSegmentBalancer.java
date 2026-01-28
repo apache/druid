@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
  */
 public class TierSegmentBalancer
 {
-  private static final EmittingLogger log = new EmittingLogger(TierSegmentBalancer.class);
+  private static final Logger log = new Logger(TierSegmentBalancer.class);
 
   private final String tier;
   private final DruidCoordinatorRuntimeParams params;
@@ -72,7 +72,7 @@ public class TierSegmentBalancer
     this.tier = tier;
     this.params = params;
     this.segmentAssigner = params.getSegmentAssigner();
-    this.runStats = segmentAssigner.getStats();
+    this.runStats = params.getCoordinatorStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
@@ -127,10 +127,10 @@ public class TierSegmentBalancer
       );
       movedCount += moveSegmentsTo(activeServers, pickedSegments, numLoadedSegmentsToMove);
     } else {
-      log.info("There are already [%,d] segments moving in tier[%s].", movingSegmentCount, tier);
+      log.debug("There are already [%,d] segments moving in tier[%s].", movingSegmentCount, tier);
     }
 
-    log.info(
+    log.debug(
         "Moved [%,d of %,d] segments from [%d] [%s] servers in tier [%s].",
         movedCount, numSegmentsToMove, sourceServers.size(), sourceServerType, tier
     );
@@ -167,7 +167,7 @@ public class TierSegmentBalancer
   @Nullable
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
-    if (!params.getUsedSegments().contains(segmentToMove)) {
+    if (!params.isUsedSegment(segmentToMove)) {
       markUnmoved("Segment is unused", segmentToMove);
       return null;
     }
@@ -205,7 +205,7 @@ public class TierSegmentBalancer
       return 0;
     } else {
       final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
-          server -> server.getProjectedSegments().getTotalSegmentCount()
+          server -> server.getProjectedSegmentCounts().getTotalSegmentCount()
       ).sum();
       return Math.min(decommSegmentsToMove, maxSegmentsToMove);
     }

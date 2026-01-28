@@ -1,0 +1,1390 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/mv
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT *
+FROM test_unnest;
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| __time                  | c_str | c_long | c_float | c_double | c_mv_complex                                   | c_mv_num               | c_mv_complex_with_null_and_empty_val | c_mv_num_with_null_and_empty_val | c_mv_complex_with_null_and_empty_row | c_mv_num_with_null_and_empty_row | c_mv_all_null_and_empty_val |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+| 2022-01-01 00:00:00.000 |       |      1 |     0.1 |      0.1 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str2  |      2 |     0.2 |      0.2 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str3  |      3 |     0.3 |      0.3 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 | str4  |      4 |     0.4 |      0.4 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            | [null,"",null,"",null]      |
+| 2022-01-01 00:00:00.000 |       |      0 |     0.0 |      0.0 | ["my_null","my_empty","1","[2]","[3, [4, 5]]"] | ["-1","0","1","2","3"] | [null,"","1","[2]","[3, [4, 5]]"]    | [null,"","1","2","3"]            |                                      |                                  | [null,"",null,"",null]      |
++-------------------------+-------+--------+---------+----------+------------------------------------------------+------------------------+--------------------------------------+----------------------------------+--------------------------------------+----------------------------------+-----------------------------+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B1_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B1_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c='1');
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B1_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c='1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B1_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B1_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B2_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B2_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c<>'1');
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B2_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c<>'1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B2_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c<>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B2_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B3_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B3_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c>'1');
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B3_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c>'1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B3_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B3_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c>'1';
++-------------+
+| c           |
++-------------+
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(20 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B4_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c>='1';
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B4_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c>='1');
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B4_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c>='1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B4_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c>='1';
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B4_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c>='1';
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B5_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<'1';
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B5_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c<'1');
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B5_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c<'1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B5_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c<'1';
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B5_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<'1';
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B6_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B6_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c<='1');
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B6_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c<='1'), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B6_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c<='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B6_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c<='1';
++---+
+| c |
++---+
+| 1 |
+| 1 |
+| 1 |
+| 1 |
+| 1 |
++---+
+(5 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE (NOT c<>''
+       OR NOT c<>'my_null'
+       OR NOT c<>'my_empty'
+       OR NOT c<>'1'
+       OR NOT c<>'-1'
+       OR NOT c<>'0'
+       OR NOT c<>'999'
+       OR NOT c<>999)
+  AND (NOT c='[2]'
+       OR NOT c='[3, [4, 5]]'
+       OR NOT c='2'
+       OR NOT c='3'
+       OR NOT c='999'
+       OR NOT c=999);
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE (NOT c<>''
+          OR NOT c<>'my_null'
+          OR NOT c<>'my_empty'
+          OR NOT c<>'1'
+          OR NOT c<>'-1'
+          OR NOT c<>'0'
+          OR NOT c<>'999'
+          OR NOT c<>999)
+     AND (NOT c='[2]'
+          OR NOT c='[3, [4, 5]]'
+          OR NOT c='2'
+          OR NOT c='3'
+          OR NOT c='999'
+          OR NOT c=999));
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (NOT c<>''
+          OR NOT c<>'my_null'
+          OR NOT c<>'my_empty'
+          OR NOT c<>'1'
+          OR NOT c<>'-1'
+          OR NOT c<>'0'
+          OR NOT c<>'999'
+          OR NOT c<>999)
+     AND (NOT c='[2]'
+          OR NOT c='[3, [4, 5]]'
+          OR NOT c='2'
+          OR NOT c='3'
+          OR NOT c='999'
+          OR NOT c=999)), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE (NOT c<>''
+       OR NOT c<>'my_null'
+       OR NOT c<>'my_empty'
+       OR NOT c<>'1'
+       OR NOT c<>'-1'
+       OR NOT c<>'0'
+       OR NOT c<>'999'
+       OR NOT c<>999)
+  AND (NOT c='[2]'
+       OR NOT c='[3, [4, 5]]'
+       OR NOT c='2'
+       OR NOT c='3'
+       OR NOT c='999'
+       OR NOT c=999);
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B7_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE (NOT c<>''
+       OR NOT c<>'my_null'
+       OR NOT c<>'my_empty'
+       OR NOT c<>'1'
+       OR NOT c<>'-1'
+       OR NOT c<>'0'
+       OR NOT c<>'999'
+       OR NOT c<>999)
+  AND (NOT c='[2]'
+       OR NOT c='[3, [4, 5]]'
+       OR NOT c='2'
+       OR NOT c='3'
+       OR NOT c='999'
+       OR NOT c=999);
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE (c=''
+       OR c='my_null'
+       OR c='my_empty'
+       OR c='1'
+       OR c='-1'
+       OR c='0'
+       OR c='999'
+       OR c=999)
+  AND NOT c='[2]'
+  AND NOT c='[3, [4, 5]]'
+  AND NOT c='2'
+  AND NOT c='3'
+  AND NOT c='999'
+  AND NOT c=999;
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE (c=''
+          OR c='my_null'
+          OR c='my_empty'
+          OR c='1'
+          OR c='-1'
+          OR c='0'
+          OR c='999'
+          OR c=999)
+     AND NOT c='[2]'
+     AND NOT c='[3, [4, 5]]'
+     AND NOT c='2'
+     AND NOT c='3'
+     AND NOT c='999'
+     AND NOT c=999);
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE (c=''
+          OR c='my_null'
+          OR c='my_empty'
+          OR c='1'
+          OR c='-1'
+          OR c='0'
+          OR c='999'
+          OR c=999)
+     AND NOT c='[2]'
+     AND NOT c='[3, [4, 5]]'
+     AND NOT c='2'
+     AND NOT c='3'
+     AND NOT c='999'
+     AND NOT c=999), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE (c=''
+       OR c='my_null'
+       OR c='my_empty'
+       OR c='1'
+       OR c='-1'
+       OR c='0'
+       OR c='999'
+       OR c=999)
+  AND NOT c='[2]'
+  AND NOT c='[3, [4, 5]]'
+  AND NOT c='2'
+  AND NOT c='3'
+  AND NOT c='999'
+  AND NOT c=999;
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B8_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE (c=''
+       OR c='my_null'
+       OR c='my_empty'
+       OR c='1'
+       OR c='-1'
+       OR c='0'
+       OR c='999'
+       OR c=999)
+  AND NOT c='[2]'
+  AND NOT c='[3, [4, 5]]'
+  AND NOT c='2'
+  AND NOT c='3'
+  AND NOT c='999'
+  AND NOT c=999;
++----------+
+| c        |
++----------+
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| 1        |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_empty |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
+| my_null  |
++----------+
+(15 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c IS NULL;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c IS NULL);
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IS NULL), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c IS NULL;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B9_C9
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest), unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c IS NULL;
++---+
+| c |
++---+
++---+
+(0 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C1
+#-------------------------------------------------------------------------
+SELECT c
+FROM test_unnest,
+     unnest(mv_to_array(c_mv_complex)) AS u(c)
+WHERE c IS NOT NULL;
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C3
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c)
+   WHERE c IS NOT NULL);
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C5
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest
+   WHERE c IS NOT NULL), unnest(mv_to_array(c_mv_complex)) AS u(c);
+QueryInterruptedException
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_subquery_with_where TEST_ID: A1_B10_C7
+#-------------------------------------------------------------------------
+SELECT c
+FROM
+  (SELECT *
+   FROM test_unnest,
+        unnest(mv_to_array(c_mv_complex)) AS u(c))
+WHERE c IS NOT NULL;
++-------------+
+| c           |
++-------------+
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| 1           |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [2]         |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| [3, [4, 5]] |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_empty    |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
+| my_null     |
++-------------+
+(25 rows)
+
+!ok
+

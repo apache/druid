@@ -20,15 +20,19 @@
 package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 
 import java.util.Map;
 
+@LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class TaskCountStatsMonitor extends AbstractMonitor
 {
   private final TaskCountStatsProvider statsProvider;
@@ -61,12 +65,12 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     return true;
   }
 
-  private void emit(ServiceEmitter emitter, String key, Map<String, Long> counts)
+  private void emit(ServiceEmitter emitter, String key, Map<RowKey, Long> counts)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     if (counts != null) {
       counts.forEach((k, v) -> {
-        builder.setDimension("dataSource", k);
+        k.getValues().forEach((dim, value) -> builder.setDimension(dim.reportedName(), value));
         emitter.emit(builder.setMetric(key, v));
       });
     }
@@ -84,5 +88,4 @@ public class TaskCountStatsMonitor extends AbstractMonitor
     );
     emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }
-
 }

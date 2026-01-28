@@ -19,7 +19,6 @@
 
 package org.apache.druid.client.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -50,11 +49,9 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -80,7 +77,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class MemcachedCacheTest
+public class MemcachedCacheTest extends CacheTestBase<MemcachedCache>
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
@@ -93,7 +90,7 @@ public class MemcachedCacheTest
       return false;
     }
   };
-  private MemcachedCache cache;
+
   private final MemcachedCacheConfig memcachedCacheConfig = new MemcachedCacheConfig()
   {
     @Override
@@ -206,16 +203,13 @@ public class MemcachedCacheTest
     final MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig);
     final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
 
-    while (serviceEmitter.getEvents().isEmpty()) {
+    while (serviceEmitter.getNumEmittedEvents() <= 0) {
       Thread.sleep(memcachedCacheConfig.getTimeout());
       cache.doMonitor(serviceEmitter);
     }
 
-    Assert.assertFalse(serviceEmitter.getEvents().isEmpty());
-    ObjectMapper mapper = new DefaultObjectMapper();
-    for (Event event : serviceEmitter.getEvents()) {
-      log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
-    }
+    Assert.assertTrue(serviceEmitter.getNumEmittedEvents() > 0);
+    Assert.assertFalse(serviceEmitter.getMetricEvents("query/cache/memcached/total").isEmpty());
   }
 
   @Test
@@ -352,7 +346,7 @@ class MemcachedProviderWithConfig extends MemcachedCacheProvider
 
 class MockMemcachedClient implements MemcachedClientIF
 {
-  private final ConcurrentMap<String, CachedData> theMap = new ConcurrentHashMap<String, CachedData>();
+  private final ConcurrentMap<String, CachedData> theMap = new ConcurrentHashMap<>();
   private final SerializingTranscoder transcoder;
 
   public MockMemcachedClient()
@@ -504,7 +498,7 @@ class MockMemcachedClient implements MemcachedClientIF
   {
     theMap.put(key, tc.encode(o));
 
-    return new Future<Boolean>()
+    return new Future<>()
     {
       @Override
       public boolean cancel(boolean b)
@@ -562,7 +556,7 @@ class MockMemcachedClient implements MemcachedClientIF
     CachedData data = theMap.get(key);
     final T theValue = data != null ? tc.decode(data) : null;
 
-    return new Future<T>()
+    return new Future<>()
     {
       @Override
       public boolean cancel(boolean b)
@@ -678,7 +672,7 @@ class MockMemcachedClient implements MemcachedClientIF
   @Override
   public <T> BulkFuture<Map<String, T>> asyncGetBulk(final Iterator<String> keys, final Transcoder<T> tc)
   {
-    return new BulkFuture<Map<String, T>>()
+    return new BulkFuture<>()
     {
       @Override
       public boolean isTimeout()

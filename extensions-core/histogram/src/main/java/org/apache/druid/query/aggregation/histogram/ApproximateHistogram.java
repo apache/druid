@@ -41,8 +41,8 @@ public class ApproximateHistogram
   // max size of the histogram (number of bincount/position pairs)
   int size;
 
-  public float[] positions;
-  public long[] bins;
+  protected float[] positions;
+  protected long[] bins;
 
   // used bincount
   int binCount;
@@ -1659,7 +1659,7 @@ public class ApproximateHistogram
 
     final float cutoff = 0.1f;
 
-    final ArrayList<Float> breaks = new ArrayList<Float>();
+    final ArrayList<Float> breaks = new ArrayList<>();
 
     // to deal with left inclusivity when the min is the same as a break
     final float bottomBreak = minFloor - bucketSize;

@@ -84,7 +84,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   public Function<Row, Row> makePostComputeManipulatorFn(MovingAverageQuery query, MetricManipulationFn fn)
   {
 
-    return new Function<Row, Row>()
+    return new Function<>()
     {
 
       @Override
@@ -122,9 +122,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   @Override
   public TypeReference<Row> getResultTypeReference()
   {
-    return new TypeReference<Row>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

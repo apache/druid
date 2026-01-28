@@ -249,7 +249,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     final int size = offsetHeap.getHeapSize();
 
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-    final List<Integer> wrappedOffsets = new AbstractList<Integer>()
+    final List<Integer> wrappedOffsets = new AbstractList<>()
     {
       @Override
       public Integer get(int index)
@@ -277,7 +277,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     // Sort offsets in-place.
     Collections.sort(
         wrappedOffsets,
-        new Comparator<Integer>()
+        new Comparator<>()
         {
           @Override
           public int compare(Integer lhs, Integer rhs)
@@ -293,7 +293,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         }
     );
 
-    return new CloseableIterator<Entry<KeyType>>()
+    return new CloseableIterator<>()
     {
       final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
       int curr = 0;
@@ -332,7 +332,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     if (!hasIterated) {
       hasIterated = true;
       offsetHeapIterableSize = initialHeapSize;
-      return new CloseableIterator<Entry<KeyType>>()
+      return new CloseableIterator<>()
       {
         final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
         int curr = 0;
@@ -372,7 +372,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       };
     } else {
       // subsequent iterations just walk the buffer backwards
-      return new CloseableIterator<Entry<KeyType>>()
+      return new CloseableIterator<>()
       {
         final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
         int curr = offsetHeapIterableSize - 1;
@@ -420,7 +420,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
   private Comparator<Integer> makeHeapComparator()
   {
-    return new Comparator<Integer>()
+    return new Comparator<>()
     {
       final BufferComparator bufferComparator = keySerde.bufferComparatorWithAggregators(
           aggregators.factories().toArray(new AggregatorFactory[0]),

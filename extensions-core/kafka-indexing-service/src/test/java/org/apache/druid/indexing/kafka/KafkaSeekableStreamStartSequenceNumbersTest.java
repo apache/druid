@@ -66,7 +66,7 @@ public class KafkaSeekableStreamStartSequenceNumbersTest
     // Check round-trip.
     final SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> partitions2 = OBJECT_MAPPER.readValue(
         serializedString,
-        new TypeReference<SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long>>() {}
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals(

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.parser;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.calcite.runtime.PairList;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -34,7 +35,6 @@ import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
@@ -185,11 +185,12 @@ public class DruidSqlParserUtilsTest
     @Test
     public void testNullClusteredBy()
     {
-      final ImmutableList<Pair<Integer, String>> fields = ImmutableList.of(
-          Pair.of(1, "__time"),
-          Pair.of(2, "foo"),
-          Pair.of(3, "bar")
-      );
+      PairList<Integer, String> fields = PairList.<Integer, String>builder()
+          .add(1, "__time")
+          .add(2, "foo")
+          .add(3, "bar")
+          .build();
+
       Assert.assertNull(
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
               null,
@@ -222,11 +223,11 @@ public class DruidSqlParserUtilsTest
     @Test
     public void testSimpleClusteredBy()
     {
-      final ImmutableList<Pair<Integer, String>> sourceFieldMappings = ImmutableList.of(
-          Pair.of(1, "__time"),
-          Pair.of(2, "FOO"),
-          Pair.of(3, "BOO")
-      );
+      PairList<Integer, String> sourceFieldMappings = PairList.<Integer, String>builder()
+          .add(1, "__time")
+          .add(2, "FOO")
+          .add(3, "BOO")
+          .build();
 
       final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
       clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
@@ -243,15 +244,15 @@ public class DruidSqlParserUtilsTest
     @Test
     public void testClusteredByOrdinalsAndAliases()
     {
-      final ImmutableList<Pair<Integer, String>> sourceFieldMappings = ImmutableList.of(
-          Pair.of(1, "__time"),
-          Pair.of(2, "DIM3"),
-          Pair.of(3, "DIM3_ALIAS"),
-          Pair.of(4, "floor_dim4_time"),
-          Pair.of(5, "DIM5"),
-          Pair.of(5, "DIM6"),
-          Pair.of(7, "TIME_FLOOR(\"timestamps\", 'PT1H')")
-      );
+      PairList<Integer, String> sourceFieldMappings = PairList.<Integer, String>builder()
+          .add(1, "__time")
+          .add(2, "DIM3")
+          .add(3, "DIM3_ALIAS")
+          .add(4, "floor_dim4_time")
+          .add(5, "DIM5")
+          .add(5, "DIM6")
+          .add(7, "TIME_FLOOR(\"timestamps\", 'PT1H')")
+          .build();
 
       // Construct the clustered by args
       final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);

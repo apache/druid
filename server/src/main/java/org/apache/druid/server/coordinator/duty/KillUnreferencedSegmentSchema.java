@@ -74,9 +74,9 @@ public class KillUnreferencedSegmentSchema extends MetadataCleanupDuty
     // This case would arise when segment is associated with a schema which was marked unused in the previous step
     // or in the previous run.
     List<String> schemaFingerprintsToUpdate = segmentSchemaManager.findReferencedSchemaMarkedAsUnused();
-    if (schemaFingerprintsToUpdate.size() > 0) {
-      segmentSchemaManager.markSchemaAsUsed(schemaFingerprintsToUpdate);
-      log.info("Marked [%s] unused schemas referenced by used segments as used.", schemaFingerprintsToUpdate.size());
+    if (!schemaFingerprintsToUpdate.isEmpty()) {
+      int numUpdated = segmentSchemaManager.markSchemaAsUsed(schemaFingerprintsToUpdate);
+      log.info("Marked [%s] unused schemas referenced by used segments as used.", numUpdated);
     }
 
     // 3: Delete unused schema older than timestamp.

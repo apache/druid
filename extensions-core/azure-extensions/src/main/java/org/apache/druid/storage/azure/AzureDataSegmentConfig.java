@@ -21,12 +21,15 @@ package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.NotNull;
+
 /**
- * Stores the configuration for segments written to Azure deep storage
+ * Stores the configuration for segments written to Azure deep storage.
  */
 public class AzureDataSegmentConfig
 {
   @JsonProperty
+  @NotNull
   private String container;
 
   @JsonProperty

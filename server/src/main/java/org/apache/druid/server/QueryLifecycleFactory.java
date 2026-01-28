@@ -25,8 +25,9 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -34,7 +35,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 @LazySingleton
 public class QueryLifecycleFactory
 {
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
@@ -42,20 +43,22 @@ public class QueryLifecycleFactory
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
+  private final PolicyEnforcer policyEnforcer;
 
   @Inject
   public QueryLifecycleFactory(
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
       final Supplier<DefaultQueryConfig> queryConfigSupplier
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.texasRanger = texasRanger;
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
@@ -63,12 +66,13 @@ public class QueryLifecycleFactory
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = queryConfigSupplier.get();
     this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
   }
 
   public QueryLifecycle factorize()
   {
     return new QueryLifecycle(
-        warehouse,
+        conglomerate,
         texasRanger,
         queryMetricsFactory,
         emitter,
@@ -76,6 +80,7 @@ public class QueryLifecycleFactory
         authorizerMapper,
         defaultQueryConfig,
         authConfig,
+        policyEnforcer,
         System.currentTimeMillis(),
         System.nanoTime()
     );

@@ -1,0 +1,134 @@
+# testUnnestThriceWithFiltersOnDimAndUnnestColumnsORCombinations case-crc:b18b7dbe
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM 
+      ( SELECT * FROM 
+           ( SELECT * FROM lotsocolumns, UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest1) )           ,UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest2) 
+      ), UNNEST(MV_TO_ARRAY(dimMultivalEnumerated)) as ut(dim3_unnest3)  WHERE dimZipf=27 AND (dim3_unnest1='Baz' OR dim3_unnest2='Hello') AND dim3_unnest3='World';
++---------+--------------+--------------+--------------+
+| dimZipf | dim3_unnest1 | dim3_unnest2 | dim3_unnest3 |
++---------+--------------+--------------+--------------+
+| 27      | Baz          | Baz          | World        |
+| 27      | Baz          | Baz          | World        |
+| 27      | Baz          | Baz          | World        |
+| 27      | Baz          | Baz          | World        |
+| 27      | Baz          | Hello        | World        |
+| 27      | Baz          | Hello        | World        |
+| 27      | Baz          | World        | World        |
+| 27      | Baz          | World        | World        |
+| 27      | Hello        | Hello        | World        |
+| 27      | World        | Hello        | World        |
++---------+--------------+--------------+--------------+
+(10 rows)
+
+!ok
+LogicalProject(dimZipf=[$0], dim3_unnest1=[$1], dim3_unnest2=[$2], dim3_unnest3=[$4])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[=($0, 'World')])
+    LogicalProject(dimZipf=[$1], dim3_unnest1=[$2], EXPR$0=[$3], dimMultivalEnumerated0=[$0])
+      LogicalFilter(condition=[OR(=($2, 'Baz'), =($3, 'Hello'))])
+        LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)])
+          LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)])
+            LogicalProject(dimMultivalEnumerated=[$2], dimZipf=[$8])
+              LogicalFilter(condition=[=(CAST($8):INTEGER, 27)])
+                LogicalTableScan(table=[[druid, lotsocolumns]])
+
+!logicalPlan
+DruidProject(dimZipf=[$0], dim3_unnest1=[$1], dim3_unnest2=[$2], dim3_unnest3=[$4], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[=($0, 'World')])
+    DruidProject(dimZipf=[$1], dim3_unnest1=[$2], EXPR$0=[$3], dimMultivalEnumerated0=[$0], druid=[logical])
+      DruidFilter(condition=[OR(=($2, 'Baz'), =($3, 'Hello'))])
+        DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)])
+          DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)])
+            DruidProject(dimMultivalEnumerated=[$2], dimZipf=[$8], druid=[logical])
+              DruidFilter(condition=[=(CAST($8):INTEGER, 27)])
+                DruidTableScan(table=[[druid, lotsocolumns]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "filter",
+      "base" : {
+        "type" : "unnest",
+        "base" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "filter",
+            "base" : {
+              "type" : "table",
+              "name" : "lotsocolumns"
+            },
+            "filter" : {
+              "type" : "equals",
+              "column" : "dimZipf",
+              "matchValueType" : "LONG",
+              "matchValue" : 27
+            }
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "j0.unnest",
+            "expression" : "mv_to_array(\"dimMultivalEnumerated\")",
+            "outputType" : "ARRAY<STRING>"
+          },
+          "unnestFilter" : null
+        },
+        "virtualColumn" : {
+          "type" : "expression",
+          "name" : "_j0.unnest",
+          "expression" : "mv_to_array(\"dimMultivalEnumerated\")",
+          "outputType" : "ARRAY<STRING>"
+        },
+        "unnestFilter" : null
+      },
+      "filter" : {
+        "type" : "or",
+        "fields" : [ {
+          "type" : "equals",
+          "column" : "j0.unnest",
+          "matchValueType" : "STRING",
+          "matchValue" : "Baz"
+        }, {
+          "type" : "equals",
+          "column" : "_j0.unnest",
+          "matchValueType" : "STRING",
+          "matchValue" : "Hello"
+        } ]
+      }
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "__j0.unnest",
+      "expression" : "mv_to_array(\"dimMultivalEnumerated\")",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : {
+      "type" : "equals",
+      "column" : "__j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "World"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dimZipf", "j0.unnest", "_j0.unnest", "__j0.unnest" ],
+  "columnTypes" : [ "STRING", "STRING", "STRING", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

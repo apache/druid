@@ -34,7 +34,7 @@ public class DynamicComposite<T, E> implements InvocationHandler
     return (T) Proxy.newProxyInstance(
         base.getClass().getClassLoader(),
         new Class[] {baseClass, extClass},
-        new DynamicComposite<T, E>(base, ext, extClass)
+        new DynamicComposite<>(base, ext, extClass)
     );
   }
 

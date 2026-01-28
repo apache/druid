@@ -50,6 +50,10 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](./lookups-cached-global.md).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](./kafka-extraction-namespace.md).
 
+:::info
+[Multi-value dimensions](multi-value-dimensions.md) (MVDs) are not supported as keys in lookups. For example, to map the MVD `["A", "B", "C"]` to the value `x` in your lookup, flatten the MVD and map each element of the MVD to the value. Your lookup will have separate key-value pairs for each element of the MVD: `"A": "x"`, `"B": "x"`, and `"C": "x"`.
+:::
+
 Query Syntax
 ------------
 
@@ -206,11 +210,7 @@ Injective lookups are eligible for the largest set of query rewrites. Injective 
 - The lookup table must have a key-value pair defined for every input that the `LOOKUP` function call may
   encounter. For example, when calling `LOOKUP(sku, 'sku_to_name')`, the `sku_to_name` lookup table must have a key
   for all possible `sku`.
-- In SQL-compatible null handling mode (when `druid.generic.useDefaultValueForNull = false`, the default) injective
-  lookup tables are not required to have keys for `null`, since `LOOKUP` of `null` is always `null` itself.
-- When `druid.generic.useDefaultValueForNull = true`, a `LOOKUP` of `null` retrieves the value mapped to the
-  empty-string key (`""`). In this mode, injective lookup tables must have an empty-string key if the `LOOKUP`
-  function may encounter null input values.
+- Injective lookup tables are not required to have keys for `null`, since `LOOKUP` of `null` is always `null` itself.
 
 To determine whether a lookup is injective, Druid relies on an `injective` property that you can set in the
 [lookup definition](./lookups-cached-global.md). In general, you should set

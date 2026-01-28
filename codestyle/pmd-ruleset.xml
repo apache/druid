@@ -29,5 +29,4 @@ This ruleset defines the PMD rules for the Apache Druid project.
 
   <rule ref="category/java/codestyle.xml/UnnecessaryImport" />
   <rule ref="category/java/codestyle.xml/TooManyStaticImports" />
-  <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName"/>
 </ruleset>

@@ -197,7 +197,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        new Function<String, DruidServer>()
+        new Function<>()
         {
           @Override
           public DruidServer apply(String input)
@@ -226,7 +226,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             Pair.of("2011-04-01/2011-04-09", "v2"),
             Pair.of("2011-04-06/2011-04-09", "v3"),
             Pair.of("2011-04-01/2011-04-02", "v3")
-        ), new Function<Pair<String, String>, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(Pair<String, String> input)

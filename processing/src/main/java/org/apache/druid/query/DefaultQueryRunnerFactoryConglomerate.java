@@ -19,29 +19,58 @@
 
 package org.apache.druid.query;
 
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-/**
-*/
 public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
+  private final Map<Class<? extends Query>, QueryToolChest> toolchests;
+  private final Map<Class<? extends Query>, QueryLogic> querylogics;
+
+  public static DefaultQueryRunnerFactoryConglomerate buildFromQueryRunnerFactories(
+      Map<Class<? extends Query>, QueryRunnerFactory> factories)
+  {
+    return new DefaultQueryRunnerFactoryConglomerate(
+        factories,
+        Maps.transformValues(factories, f -> f.getToolchest()),
+        Collections.emptyMap()
+    );
+  }
 
   @Inject
-  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
+  public DefaultQueryRunnerFactoryConglomerate(
+      Map<Class<? extends Query>, QueryRunnerFactory> factories,
+      Map<Class<? extends Query>, QueryToolChest> toolchests,
+      Map<Class<? extends Query>, QueryLogic> querylogics)
   {
-    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
-    // Class doesn't override Object.equals().
     this.factories = new IdentityHashMap<>(factories);
+    this.toolchests = new IdentityHashMap<>(toolchests);
+    this.querylogics = new IdentityHashMap<>(querylogics);
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
   {
-    return (QueryRunnerFactory<T, QueryType>) factories.get(query.getClass());
+    return factories.get(query.getClass());
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    return toolchests.get(query.getClass());
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T, QueryType extends Query<T>> QueryLogic getQueryLogic(QueryType query)
+  {
+    return querylogics.get(query.getClass());
   }
 }

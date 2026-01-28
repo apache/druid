@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -30,7 +29,7 @@ import java.util.Collections;
 
 /**
  * A {@link SegmentWrangler} for {@link InlineDataSource}.
- *
+ * <p>
  * It is not valid to pass any other DataSource type to the "getSegmentsForIntervals" method.
  */
 public class InlineSegmentWrangler implements SegmentWrangler
@@ -46,7 +45,6 @@ public class InlineSegmentWrangler implements SegmentWrangler
     if (inlineDataSource.rowsAreArrayList()) {
       return Collections.singletonList(
           new ArrayListSegment<>(
-              SegmentId.dummy(SEGMENT_ID),
               (ArrayList<Object[]>) inlineDataSource.getRowsAsList(),
               inlineDataSource.rowAdapter(),
               inlineDataSource.getRowSignature()
@@ -56,7 +54,6 @@ public class InlineSegmentWrangler implements SegmentWrangler
 
     return Collections.singletonList(
         new RowBasedSegment<>(
-            SegmentId.dummy(SEGMENT_ID),
             Sequences.simple(inlineDataSource.getRows()),
             inlineDataSource.rowAdapter(),
             inlineDataSource.getRowSignature()

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -66,7 +65,7 @@ public class LookupExtractionFnTest
 
   public LookupExtractionFnTest(boolean retainMissing, String replaceMissing, Optional<Boolean> injective)
   {
-    this.replaceMissing = NullHandling.emptyToNullIfNeeded(replaceMissing);
+    this.replaceMissing = replaceMissing;
     this.retainMissing = retainMissing;
     this.injective = injective.orElse(null);
   }
@@ -74,7 +73,7 @@ public class LookupExtractionFnTest
   @Test
   public void testEqualsAndHash()
   {
-    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
+    if (retainMissing && replaceMissing != null) {
       // skip
       return;
     }
@@ -111,7 +110,7 @@ public class LookupExtractionFnTest
   @Test
   public void testSimpleSerDe() throws IOException
   {
-    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
+    if (retainMissing && replaceMissing != null) {
       // skip
       return;
     }
@@ -146,12 +145,12 @@ public class LookupExtractionFnTest
   @Test(expected = IllegalArgumentException.class)
   public void testIllegalArgs()
   {
-    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
+    if (retainMissing && replaceMissing != null) {
       @SuppressWarnings("unused") // expected exception
       final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
           new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
           retainMissing,
-          NullHandling.emptyToNullIfNeeded(replaceMissing),
+          replaceMissing,
           injective,
           false
       );
@@ -163,7 +162,7 @@ public class LookupExtractionFnTest
   @Test
   public void testCacheKey()
   {
-    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
+    if (retainMissing && replaceMissing != null) {
       // skip
       return;
     }
@@ -178,7 +177,7 @@ public class LookupExtractionFnTest
         false
     );
 
-    if (NullHandling.isNullOrEquivalent(replaceMissing) || retainMissing) {
+    if (replaceMissing == null || retainMissing) {
       Assert.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),

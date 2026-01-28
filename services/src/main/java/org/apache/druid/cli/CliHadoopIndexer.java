@@ -26,9 +26,10 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ExtensionsLoader;
-import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexer.HadoopTaskConfig;
 import org.apache.druid.indexing.common.task.Initialization;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -39,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ *
  */
 @Command(
     name = "hadoop",
@@ -46,7 +48,7 @@ import java.util.List;
 )
 public class CliHadoopIndexer implements Runnable
 {
-  private static final List<String> DEFAULT_HADOOP_COORDINATES = TaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
+  private static final List<String> DEFAULT_HADOOP_COORDINATES = HadoopTaskConfig.DEFAULT_DEFAULT_HADOOP_COORDINATES;
 
   private static final Logger log = new Logger(CliHadoopIndexer.class);
 
@@ -55,12 +57,12 @@ public class CliHadoopIndexer implements Runnable
   private String argumentSpec;
 
   @Option(name = {"-c", "--coordinate", "hadoopDependencies"},
-          description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
+      description = "extra dependencies to pull down (e.g. non-default hadoop coordinates or extra hadoop jars)")
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private List<String> coordinates;
 
   @Option(name = "--no-default-hadoop",
-          description = "don't pull down the default hadoop version")
+      description = "don't pull down the default hadoop version")
   public boolean noDefaultHadoop;
 
   @Inject
@@ -84,9 +86,7 @@ public class CliHadoopIndexer implements Runnable
         extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
       }
 
-      final List<URL> nonHadoopURLs = Arrays.asList(
-          ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()
-      );
+      final List<URL> nonHadoopURLs = JvmUtils.systemClassPath();
 
       final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
@@ -95,7 +95,10 @@ public class CliHadoopIndexer implements Runnable
         driverURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
       }
 
-      final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[0]), null);
+      final URLClassLoader loader = new URLClassLoader(
+          driverURLs.toArray(new URL[0]),
+          ClassLoader.getSystemClassLoader()
+      );
       Thread.currentThread().setContextClassLoader(loader);
 
       final List<URL> jobUrls = new ArrayList<>();

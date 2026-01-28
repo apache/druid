@@ -18,7 +18,7 @@
         "tutorials/tutorial-kafka",
         "tutorials/tutorial-rollup",
         "tutorials/tutorial-ingestion-spec",
-        "tutorials/tutorial-transform-spec",
+        "tutorials/tutorial-transform",
         "tutorials/tutorial-msq-convert-spec"
               ]},
       {"type": "category",
@@ -38,7 +38,8 @@
           "tutorials/tutorial-sql-query-view",
           "tutorials/tutorial-unnest-arrays",
           "tutorials/tutorial-query-deep-storage",
-          "tutorials/tutorial-latest-by"]
+          "tutorials/tutorial-latest-by",
+          "tutorials/tutorial-extern"]
       },
     "tutorials/tutorial-sketches-theta",
     "tutorials/tutorial-jdbc",
@@ -180,6 +181,7 @@
       "querying/querying",
       "querying/query-processing",
       "querying/query-execution",
+      "querying/dart",
       "querying/troubleshooting",
       {
         "type": "category",
@@ -203,7 +205,8 @@
           "querying/multitenancy",
           "querying/caching",
           "querying/using-caching",
-          "querying/query-context"
+          "querying/query-context",
+          "querying/query-context-reference"
         ]
       },
       {
@@ -374,8 +377,11 @@
         "id": "release-info/migration-guide"
       },
       "items": [
+        "release-info/migr-mvd-array",
         "release-info/migr-front-coded-dict",
-        "release-info/migr-subquery-limit"
+        "release-info/migr-subquery-limit",
+        "release-info/migr-ansi-sql-null"
+        
       ]
     }
   ]},

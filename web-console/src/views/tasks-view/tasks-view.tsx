@@ -18,7 +18,9 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React from 'react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import React, { type ReactNode } from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
@@ -35,15 +37,26 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
-import type { QueryWithContext } from '../../druid-models';
-import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
+import type { ConsoleViewId, QueryWithContext } from '../../druid-models';
+import {
+  getConsoleViewIcon,
+  TASK_CANCELED_ERROR_MESSAGES,
+  TASK_CANCELED_PREDICATE,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
+  DATE_FORMAT,
+  formatDate,
   formatDuration,
+  getApiArray,
   getDruidErrorMessage,
-  hasPopoverOpen,
+  hasOverlayOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   oneOf,
@@ -52,9 +65,12 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 import { ExecutionDetailsDialog } from '../workbench-view/execution-details-dialog/execution-details-dialog';
 
 import './tasks-view.scss';
+
+dayjs.extend(relativeTime);
 
 const taskTableColumns: string[] = [
   'Task ID',
@@ -62,6 +78,7 @@ const taskTableColumns: string[] = [
   'Type',
   'Datasource',
   'Status',
+  'Error',
   'Created time',
   'Duration',
   'Location',
@@ -80,10 +97,10 @@ interface TaskQueryResultRow {
 }
 
 export interface TasksViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openTaskDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToClassicBatchDataLoader(taskId?: string): void;
   capabilities: Capabilities;
@@ -161,18 +178,34 @@ ORDER BY
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
+        ['Error'],
       ),
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async (capabilities, signal) => {
         if (capabilities.hasSql()) {
-          return await queryDruidSql({
-            query: TasksView.TASK_SQL,
-          });
+          return await queryDruidSql(
+            {
+              query: TasksView.TASK_SQL,
+              context: { engine: 'native' },
+            },
+            signal,
+          );
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
-          return TasksView.parseTasks(resp.data);
+          return (await getApiArray(`/druid/indexer/v1/tasks`, signal)).map(d => {
+            return {
+              task_id: d.id,
+              group_id: d.groupId,
+              type: d.type,
+              created_time: d.createdTime,
+              datasource: d.dataSource,
+              duration: d.duration ? d.duration : 0,
+              error_msg: d.errorMsg,
+              location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+              status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+            };
+          });
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
@@ -184,22 +217,6 @@ ORDER BY
       },
     });
   }
-
-  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
-    return data.map(d => {
-      return {
-        task_id: d.id,
-        group_id: d.groupId,
-        type: d.type,
-        created_time: d.createdTime,
-        datasource: d.dataSource,
-        duration: d.duration ? d.duration : 0,
-        error_msg: d.errorMsg,
-        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-      };
-    });
-  };
 
   componentDidMount(): void {
     const { capabilities } = this.props;
@@ -242,7 +259,7 @@ ORDER BY
     type: string,
     fromTable?: boolean,
   ): BasicAction[] {
-    const { goToDatasource, goToClassicBatchDataLoader } = this.props;
+    const { goToView, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (fromTable) {
@@ -264,7 +281,7 @@ ORDER BY
       actions.push({
         icon: IconNames.MULTI_SELECT,
         title: 'Go to datasource',
-        onAction: () => goToDatasource(datasource),
+        onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
       });
     }
     if (oneOf(type, 'index', 'index_parallel')) {
@@ -316,19 +333,28 @@ ORDER BY
     );
   }
 
-  private renderTaskFilterableCell(field: string) {
+  private renderTaskFilterableCell(
+    field: string,
+    enableComparisons = false,
+    displayFn: (value: string) => ReactNode = String,
+    filterDisplayFn: (value: string) => string = String,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
-    return (row: { value: any }) => (
-      <TableFilterableCell
-        field={field}
-        value={row.value}
-        filters={filters}
-        onFiltersChange={onFiltersChange}
-      >
-        {row.value}
-      </TableFilterableCell>
-    );
+    return function TaskFilterableCell(row: { value: any }) {
+      return (
+        <TableFilterableCell
+          field={field}
+          value={row.value}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
+        >
+          {displayFn(row.value)}
+        </TableFilterableCell>
+      );
+    };
   }
 
   private onTaskDetail(task: TaskQueryResultRow) {
@@ -358,8 +384,8 @@ ORDER BY
         loading={tasksState.loading}
         noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
         filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
         defaultSorted={[{ id: 'status', desc: true }]}
         pivotBy={groupTasksBy ? [groupTasksBy] : []}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
@@ -372,6 +398,7 @@ ORDER BY
             width: 440,
             Cell: ({ value, original }) => (
               <TableClickableCell
+                tooltip="Show detail"
                 onClick={() => this.onTaskDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -407,6 +434,14 @@ ORDER BY
             Header: 'Status',
             id: 'status',
             width: 110,
+            Filter: suggestibleFilterInput([
+              'CANCELED',
+              'FAILED',
+              'PENDING',
+              'RUNNING',
+              'SUCCESS',
+              'WAITING',
+            ]),
             accessor: row => ({
               status: row.status,
               created_time: row.created_time,
@@ -414,8 +449,11 @@ ORDER BY
             }),
             Cell: row => {
               if (row.aggregated) return '';
-              const { status } = row.original;
-              const errorMsg = row.original.error_msg;
+              const { status, error_msg } = row.original;
+              const errorMsg =
+                error_msg && !TASK_CANCELED_ERROR_MESSAGES.includes(error_msg)
+                  ? error_msg
+                  : undefined;
               return (
                 <TableFilterableCell
                   field="status"
@@ -423,10 +461,10 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span title={errorMsg}>
+                  <span data-tooltip={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                    {errorMsg && (
                       <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
@@ -454,12 +492,48 @@ ORDER BY
             show: visibleColumns.shown('Status'),
           },
           {
+            Header: 'Error',
+            id: 'error',
+            accessor: row => row.error_msg || '',
+            width: 300,
+            Cell: this.renderTaskFilterableCell('error'),
+            Aggregated: () => '',
+            show: visibleColumns.shown('Error'),
+          },
+          {
             Header: 'Created time',
             accessor: 'created_time',
-            width: 190,
-            Cell: this.renderTaskFilterableCell('created_time'),
+            headerClassName: 'enable-comparisons',
+            width: 220,
+            Cell: this.renderTaskFilterableCell(
+              'created_time',
+              true,
+              value => {
+                const day = dayjs(value);
+                return day.isValid() ? (
+                  <span data-tooltip={day.fromNow()}>{formatDate(value)}</span>
+                ) : (
+                  String(value)
+                );
+              },
+              formatDate,
+            ),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
+            filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
+              const tableFilter = TableFilter.fromFilter(filter);
+              const parsedRowDate = formatDate(row.created_time);
+              if (tableFilter.mode === '~') {
+                return tableFilter.matches(parsedRowDate);
+              }
+              const parsedFilterDate = formatDate(tableFilter.value);
+              const updatedFilter = new TableFilter(
+                tableFilter.key,
+                tableFilter.mode,
+                parsedFilterDate,
+              );
+              return updatedFilter.matches(parsedRowDate);
+            },
           },
           {
             Header: 'Duration',
@@ -470,7 +544,17 @@ ORDER BY
             Cell({ value, original, aggregated }) {
               if (aggregated) return '';
               if (value > 0) {
-                return formatDuration(value);
+                const shownDuration = formatDuration(value);
+
+                const start = dayjs(original.created_time);
+                if (!start.isValid()) return shownDuration;
+
+                const end = start.add(value, 'ms');
+                return (
+                  <span data-tooltip={`End time: ${end.format(DATE_FORMAT)}\n(${end.fromNow()})`}>
+                    {shownDuration}
+                  </span>
+                );
               }
               if (oneOf(original.status, 'RUNNING', 'PENDING') && original.created_time) {
                 // Compute running duration from the created time if it exists
@@ -505,6 +589,7 @@ ORDER BY
                 <ActionCell
                   onDetail={() => this.onTaskDetail(row.original)}
                   actions={this.getTaskActions(id, datasource, status, type, true)}
+                  menuTitle={id}
                 />
               );
             },
@@ -522,7 +607,7 @@ ORDER BY
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             onClick={() => goToQuery({ queryString: TasksView.TASK_SQL })}
           />
@@ -586,7 +671,7 @@ ORDER BY
           <RefreshButton
             localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             onRefresh={auto => {
-              if (auto && hasPopoverOpen()) return;
+              if (auto && hasOverlayOpen()) return;
               this.taskQueryManager.rerunLastQuery(auto);
             }}
           />
@@ -630,9 +715,10 @@ ORDER BY
         )}
         {executionDialogOpen && (
           <ExecutionDetailsDialog
+            type="task"
             id={executionDialogOpen}
             goToTask={taskId => {
-              onFiltersChange([{ id: 'task_id', value: `=${taskId}` }]);
+              onFiltersChange(TableFilters.eq({ task_id: taskId }));
               this.setState({ executionDialogOpen: undefined });
             }}
             onClose={() => this.setState({ executionDialogOpen: undefined })}

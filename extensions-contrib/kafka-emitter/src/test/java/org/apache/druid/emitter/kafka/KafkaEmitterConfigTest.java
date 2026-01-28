@@ -58,7 +58,8 @@ public class KafkaEmitterConfigTest
         ImmutableMap.of("env", "preProd"),
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
-        DEFAULT_PRODUCER_SECRETS
+        DEFAULT_PRODUCER_SECRETS,
+        50L
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
@@ -80,7 +81,8 @@ public class KafkaEmitterConfigTest
         null,
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
-        DEFAULT_PRODUCER_SECRETS
+        DEFAULT_PRODUCER_SECRETS,
+        null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
@@ -91,7 +93,7 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfigNullMetricsTopic() throws IOException
   {
-    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<KafkaEmitterConfig.EventType>();
+    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<>();
     eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "hostname",
@@ -104,7 +106,8 @@ public class KafkaEmitterConfigTest
         null,
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
-        DEFAULT_PRODUCER_SECRETS
+        DEFAULT_PRODUCER_SECRETS,
+        null
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
@@ -124,6 +127,7 @@ public class KafkaEmitterConfigTest
         "metadataTest",
         null,
         ImmutableMap.of("env", "preProd"),
+        null,
         null,
         null
     );
@@ -179,6 +183,7 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -196,6 +201,7 @@ public class KafkaEmitterConfigTest
             () -> new KafkaEmitterConfig(
                 "foo",
                 new HashSet<>(Collections.singletonList(KafkaEmitterConfig.EventType.METRICS)),
+                null,
                 null,
                 null,
                 null,
@@ -221,6 +227,7 @@ public class KafkaEmitterConfigTest
                 "foo",
                 null,
                 "foo",
+                null,
                 null,
                 null,
                 null,
@@ -253,6 +260,7 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -279,6 +287,7 @@ public class KafkaEmitterConfigTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -287,6 +296,31 @@ public class KafkaEmitterConfigTest
                 "druid.emitter.kafka.segmentMetadata.topic must be specified if druid.emitter.kafka.event.types contains segment_metadata."
             )
     );
+  }
+
+  @Test
+  public void testDefaultShutdownTimeout() throws IOException
+  {
+    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<>();
+    eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
+        "hostname",
+        eventTypeSet,
+        null,
+        null,
+        null,
+        "shutdownTest",
+        "clusterNameTest",
+        null,
+        ImmutableMap.<String, String>builder()
+                    .put("testKey", "testValue").build(),
+        DEFAULT_PRODUCER_SECRETS,
+        null
+    );
+    String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
+                                                          .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(Long.MAX_VALUE, (long) kafkaEmitterConfigExpected.getShutdownTimeout());
   }
 
   private DruidExceptionMatcher operatorExceptionMatcher()

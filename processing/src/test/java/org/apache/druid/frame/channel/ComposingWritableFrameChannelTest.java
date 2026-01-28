@@ -22,11 +22,12 @@ package org.apache.druid.frame.channel;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -71,6 +72,7 @@ public class ComposingWritableFrameChannelTest
     Map<Integer, HashSet<Integer>> partitionToChannelMap = new HashMap<>();
 
     ComposingWritableFrameChannel composingWritableFrameChannel = new ComposingWritableFrameChannel(
+        null,
         ImmutableList.of(
             () -> outputChannel1,
             () -> outputChannel2
@@ -83,9 +85,9 @@ public class ComposingWritableFrameChannelTest
         partitionToChannelMap
     );
 
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 1));
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 2));
-    composingWritableFrameChannel.write(new FrameWithPartition(Mockito.mock(Frame.class), 3));
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 1);
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 2);
+    composingWritableFrameChannel.write(Mockito.mock(Frame.class), 3);
 
     // Assert the location of the channels where the frames have been written to
     Assert.assertEquals(ImmutableSet.of(0), partitionToChannelMap.get(1));
@@ -94,22 +96,20 @@ public class ComposingWritableFrameChannelTest
 
 
     // Test if the older channel has been converted to read only
-    Assert.assertThrows(ISE.class, outputChannel1::getWritableChannel);
+    Assert.assertThrows(DruidException.class, outputChannel1::getWritableChannel);
     composingWritableFrameChannel.close();
 
-    Exception ise1 = Assert.assertThrows(IllegalStateException.class, () -> outputChannel1.getFrameMemoryAllocator());
+    Exception ise1 = Assert.assertThrows(DruidException.class, outputChannel1::getFrameMemoryAllocator);
     MatcherAssert.assertThat(
         ise1,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Frame memory allocator is not available."))
     );
 
 
-    Exception ise2 = Assert.assertThrows(IllegalStateException.class, () -> outputChannel2.getFrameMemoryAllocator());
+    Exception ise2 = Assert.assertThrows(DruidException.class, outputChannel2::getFrameMemoryAllocator);
     MatcherAssert.assertThat(
         ise2,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-            "Frame allocator is not available. The output channel might be marked as read-only, hence memory allocator is not required."))
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Frame memory allocator is not available."))
     );
 
   }
@@ -125,17 +125,12 @@ public class ComposingWritableFrameChannelTest
     }
 
     @Override
-    public void write(FrameWithPartition frameWithPartition)
+    public void write(RowsAndColumns rac, int partitionNumber)
     {
       if (curFrame >= maxFrames) {
         throw new ResourceLimitExceededException("Cannot write more frames to the channel");
       }
       ++curFrame;
-    }
-
-    @Override
-    public void write(Frame frame)
-    {
     }
 
     @Override

@@ -86,7 +86,7 @@ public class ResourceFilterTestHelper
         ImmutableList.copyOf(
             Iterables.transform(
                 Arrays.asList(requestPath.split("/")),
-                new Function<String, PathSegment>()
+                new Function<>()
                 {
                   @Override
                   public PathSegment apply(final String input)
@@ -209,7 +209,7 @@ public class ResourceFilterTestHelper
                     // and also the endpoints that does not have any
                     // ResourceFilters applied to them
                     methods,
-                    new Predicate<Method>()
+                    new Predicate<>()
                     {
                       @Override
                       public boolean apply(Method input)
@@ -233,7 +233,7 @@ public class ResourceFilterTestHelper
 
                     return Collections2.transform(
                         resourceFilters,
-                        new Function<Class<? extends ResourceFilter>, Object[]>()
+                        new Function<>()
                         {
                           @Override
                           public Object[] apply(Class<? extends ResourceFilter> input)

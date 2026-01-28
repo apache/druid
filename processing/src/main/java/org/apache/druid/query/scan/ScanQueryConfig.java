@@ -29,30 +29,15 @@ public class ScanQueryConfig
   public static final String CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING = "maxSegmentPartitionsOrderedInMemory";
 
   @JsonProperty
-  private boolean legacy = false;
-
-  public boolean isLegacy()
-  {
-    return legacy;
-  }
-
-  @SuppressWarnings("unused") // Used by Jackson deserialization?
-  public ScanQueryConfig setLegacy(final boolean legacy)
-  {
-    this.legacy = legacy;
-    return this;
-  }
+  private int maxRowsQueuedForOrdering = 100000;
 
   @JsonProperty
-  private int maxRowsQueuedForOrdering = 100000;
+  private int maxSegmentPartitionsOrderedInMemory = 50;
 
   public int getMaxRowsQueuedForOrdering()
   {
     return maxRowsQueuedForOrdering;
   }
-
-  @JsonProperty
-  private int maxSegmentPartitionsOrderedInMemory = 50;
 
   public int getMaxSegmentPartitionsOrderedInMemory()
   {
@@ -60,7 +45,7 @@ public class ScanQueryConfig
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -68,21 +53,23 @@ public class ScanQueryConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final ScanQueryConfig that = (ScanQueryConfig) o;
-    return legacy == that.legacy;
+    ScanQueryConfig that = (ScanQueryConfig) o;
+    return maxRowsQueuedForOrdering == that.maxRowsQueuedForOrdering
+           && maxSegmentPartitionsOrderedInMemory == that.maxSegmentPartitionsOrderedInMemory;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(legacy);
+    return Objects.hash(maxRowsQueuedForOrdering, maxSegmentPartitionsOrderedInMemory);
   }
 
   @Override
   public String toString()
   {
     return "ScanQueryConfig{" +
-           "legacy=" + legacy +
+           "maxRowsQueuedForOrdering=" + maxRowsQueuedForOrdering +
+           ", maxSegmentPartitionsOrderedInMemory=" + maxSegmentPartitionsOrderedInMemory +
            '}';
   }
 }

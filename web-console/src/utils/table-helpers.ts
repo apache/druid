@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
-import { C } from '@druid-toolkit/query';
-import type { Filter } from 'react-table';
+import { ascending, descending, sort } from 'd3-array';
+import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
+import type { SortingRule } from 'react-table';
 
-import { filterMap, formatNumber, oneOf } from './general';
+import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
+import type { TableFilters } from './table-filters';
 
 export interface Pagination {
   page: number;
@@ -35,6 +37,8 @@ export function changePage(pagination: Pagination, page: number): Pagination {
 export interface ColumnHint {
   displayName?: string;
   group?: string;
+  hidden?: boolean;
+  expressionForWhere?: SqlExpression;
   formatter?: (x: any) => string;
 }
 
@@ -55,9 +59,7 @@ export function getNumericColumnBraces(
     queryResult.header.forEach((column, i) => {
       if (!oneOf(column.nativeType, 'LONG', 'FLOAT', 'DOUBLE')) return;
       const formatter = columnHints?.get(column.name)?.formatter || formatNumber;
-      const braces = filterMap(rows, row =>
-        oneOf(typeof row[i], 'number', 'bigint') ? formatter(row[i]) : undefined,
-      );
+      const braces = filterMap(rows, row => (isNumberLike(row[i]) ? formatter(row[i]) : undefined));
       if (braces.length) {
         numericColumnBraces[i] = braces;
       }
@@ -67,19 +69,24 @@ export function getNumericColumnBraces(
   return numericColumnBraces;
 }
 
-export interface Sorted {
-  id: string;
-  desc: boolean;
-}
-
 export interface TableState {
   page: number;
   pageSize: number;
-  filtered: Filter[];
-  sorted: Sorted[];
+  filtered: TableFilters;
+  sorted: SortingRule[];
 }
 
-export function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+export function sortedToOrderByClause(sorted: SortingRule[]): string | undefined {
   if (!sorted.length) return;
   return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
+}
+
+export function applySorting(xs: any[], sorted: SortingRule[]): any[] {
+  const firstSortingRule = sorted[0];
+  if (!firstSortingRule) return xs;
+  const { id, desc } = firstSortingRule;
+  return sort(
+    xs,
+    desc ? (d1, d2) => descending(d1[id], d2[id]) : (d1, d2) => ascending(d1[id], d2[id]),
+  );
 }

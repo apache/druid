@@ -21,12 +21,11 @@ package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
@@ -101,8 +100,8 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 5)
+@Measurement(iterations = 15)
 public class TimeseriesBenchmark
 {
   @Param({"750000"})
@@ -114,15 +113,14 @@ public class TimeseriesBenchmark
   @Param({"true", "false"})
   private boolean descending;
 
+  @Param({"all", "hour"})
+  private String queryGranularity;
+
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private AppendableIndexSpec appendableIndexSpec;
   private DataGenerator generator;
@@ -162,7 +160,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery queryA =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularities.ALL)
+                .granularity(Granularity.fromString(queryGranularity))
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
@@ -182,7 +180,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularities.ALL)
+                .granularity(Granularity.fromString(queryGranularity))
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
@@ -202,7 +200,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularities.ALL)
+                .granularity(Granularity.fromString(queryGranularity))
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
@@ -219,7 +217,7 @@ public class TimeseriesBenchmark
       TimeseriesQuery timeFilterQuery =
           Druids.newTimeseriesQueryBuilder()
                 .dataSource("blah")
-                .granularity(Granularities.ALL)
+                .granularity(Granularity.fromString(queryGranularity))
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
@@ -271,7 +269,7 @@ public class TimeseriesBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;
@@ -327,7 +325,7 @@ public class TimeseriesBenchmark
         File indexFile = INDEX_MERGER_V9.persist(
             incIndex,
             new File(qIndexesDir, String.valueOf(i)),
-            IndexSpec.DEFAULT,
+            IndexSpec.getDefault(),
             null
         );
         incIndex.close();

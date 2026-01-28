@@ -26,6 +26,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.nio.ByteBuffer;
 
@@ -40,10 +41,12 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
    * Compressed.
    *
    * @param buffer Byte buffer
+   * @param fileMapper mapper for secondary files, in case of large columns
    * @return new instance of CompressedBigDecimalColumnPartSupplier
    */
   public static CompressedBigDecimalColumnPartSupplier fromByteBuffer(
-      ByteBuffer buffer
+      ByteBuffer buffer,
+      SegmentFileMapper fileMapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -53,11 +56,12 @@ public class CompressedBigDecimalColumnPartSupplier implements Supplier<ComplexC
 
       CompressedVSizeColumnarIntsSupplier scaleSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
-          IndexIO.BYTE_ORDER
+          IndexIO.BYTE_ORDER,
+          fileMapper
       );
 
       V3CompressedVSizeColumnarMultiIntsSupplier magnitudeSupplier =
-          V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, IndexIO.BYTE_ORDER);
+          V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, IndexIO.BYTE_ORDER, fileMapper);
 
       return new CompressedBigDecimalColumnPartSupplier(
           buffer.position() - positionStart,

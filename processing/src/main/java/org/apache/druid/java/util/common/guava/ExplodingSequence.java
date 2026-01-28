@@ -55,7 +55,7 @@ public class ExplodingSequence<T> extends YieldingSequenceBase<T>
 
   private <OutType> Yielder<OutType> wrapYielder(final Yielder<OutType> baseYielder)
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

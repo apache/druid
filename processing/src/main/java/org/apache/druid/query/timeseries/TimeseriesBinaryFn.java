@@ -59,7 +59,7 @@ public class TimeseriesBinaryFn implements BinaryOperator<Result<TimeseriesResul
     TimeseriesResultValue arg1Val = arg1.getValue();
     TimeseriesResultValue arg2Val = arg2.getValue();
 
-    Map<String, Object> retVal = new LinkedHashMap<String, Object>();
+    Map<String, Object> retVal = new LinkedHashMap<>();
 
     for (AggregatorFactory factory : aggregations) {
       final String metricName = factory.getName();
@@ -67,11 +67,11 @@ public class TimeseriesBinaryFn implements BinaryOperator<Result<TimeseriesResul
     }
 
     return (gran instanceof AllGranularity) ?
-           new Result<TimeseriesResultValue>(
+           new Result<>(
                arg1.getTimestamp(),
                new TimeseriesResultValue(retVal)
            ) :
-           new Result<TimeseriesResultValue>(
+           new Result<>(
                gran.bucketStart(arg1.getTimestamp()),
                new TimeseriesResultValue(retVal)
            );

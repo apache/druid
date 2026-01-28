@@ -21,9 +21,7 @@ package org.apache.druid.k8s.discovery;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Key;
-import com.google.inject.Provider;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.Config;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -34,9 +32,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.server.DruidNode;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -88,65 +84,15 @@ public class K8sDiscoveryModule implements DruidModule
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, Coordinator.class))
             .addBinding(K8S_KEY)
             .toProvider(
-                new DruidLeaderSelectorProvider(true)
+                K8sDruidLeaderSelectorProvider.K8sCoordinatorDruidLeaderSelectorProvider.class
             )
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, IndexingService.class))
             .addBinding(K8S_KEY)
             .toProvider(
-                new DruidLeaderSelectorProvider(false)
+                K8sDruidLeaderSelectorProvider.K8sIndexingServiceDruidLeaderSelectorProvider.class
             )
             .in(LazySingleton.class);
-  }
-
-  private static class DruidLeaderSelectorProvider implements Provider<DruidLeaderSelector>
-  {
-    @Inject
-    @Self
-    private DruidNode druidNode;
-
-    @Inject
-    private PodInfo podInfo;
-
-    @Inject
-    private K8sDiscoveryConfig discoveryConfig;
-
-    @Inject
-    private Provider<ApiClient> k8sApiClientProvider;
-
-    private boolean isCoordinator;
-
-    DruidLeaderSelectorProvider(boolean isCoordinator)
-    {
-      this.isCoordinator = isCoordinator;
-    }
-
-    @Override
-    public DruidLeaderSelector get()
-    {
-      // Note: these can not be setup in the constructor because injected K8sDiscoveryConfig and PodInfo
-      // are not available at that time.
-      String lockResourceName;
-      String lockResourceNamespace;
-
-      if (isCoordinator) {
-        lockResourceName = discoveryConfig.getClusterIdentifier() + "-leaderelection-coordinator";
-        lockResourceNamespace = discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace() == null ?
-                                     podInfo.getPodNamespace() : discoveryConfig.getCoordinatorLeaderElectionConfigMapNamespace();
-      } else {
-        lockResourceName = discoveryConfig.getClusterIdentifier() + "-leaderelection-overlord";
-        lockResourceNamespace = discoveryConfig.getOverlordLeaderElectionConfigMapNamespace() == null ?
-                                     podInfo.getPodNamespace() : discoveryConfig.getOverlordLeaderElectionConfigMapNamespace();
-      }
-
-      return new K8sDruidLeaderSelector(
-          druidNode,
-          lockResourceName,
-          lockResourceNamespace,
-          discoveryConfig,
-          new DefaultK8sLeaderElectorFactory(k8sApiClientProvider.get(), discoveryConfig)
-      );
-    }
   }
 }

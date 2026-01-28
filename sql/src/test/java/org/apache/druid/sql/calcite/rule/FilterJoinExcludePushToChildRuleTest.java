@@ -56,7 +56,7 @@ public class FilterJoinExcludePushToChildRuleTest
     List<RexNode> joinFilters = new ArrayList<>();
     joinFilters.add(equalityFilter);
 
-    FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER, true);
+    FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER);
     Assert.assertEquals(joinFilters.size(), 1);
     Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
 
@@ -64,7 +64,7 @@ public class FilterJoinExcludePushToChildRuleTest
     joinFilters.add(isNotNullFilterOnNonJoinColumn);
     joinFilters.add(isNotNullFilterOnJoinColumn);
     Assert.assertEquals(joinFilters.size(), 3);
-    FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER, true);
+    FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER);
     Assert.assertEquals(joinFilters.size(), 2);
     Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
     Assert.assertEquals("IS NOT NULL filter on non-join column changed", joinFilters.get(1), isNotNullFilterOnNonJoinColumn);

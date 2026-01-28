@@ -53,7 +53,7 @@ public class SkippingSequence<T> extends YieldingSequenceBase<T>
       final SkippingYieldingAccumulator<OutType> accumulator
   )
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

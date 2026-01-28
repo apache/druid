@@ -31,4 +31,6 @@ public interface ExprVectorProcessor<TOutput>
   ExprEvalVector<TOutput> evalVector(Expr.VectorInputBinding bindings);
 
   ExpressionType getOutputType();
+
+  int maxVectorSize();
 }

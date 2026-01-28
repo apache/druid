@@ -145,6 +145,11 @@ public class LocalInputSource
     return systemFields.getFields();
   }
 
+  public SystemFields getSystemFields()
+  {
+    return systemFields;
+  }
+
   public List<File> getFiles()
   {
     return files;

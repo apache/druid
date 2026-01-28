@@ -96,10 +96,10 @@ public class RunRulesTest
   public void setUp()
   {
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    emitter = new StubServiceEmitter("coordinator", "host");
+    emitter = StubServiceEmitter.createStarted();
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    ruleRunner = new RunRules(Set::size);
+    ruleRunner = new RunRules((ds, set) -> set.size(), databaseRuleManager::getRulesWithDefault);
     loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
@@ -334,10 +334,9 @@ public class RunRulesTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc().minusDays(1))
+        .builder()
         .withDruidCluster(druidCluster)
-        .withUsedSegments(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager);
+        .withUsedSegments(dataSegments);
   }
 
   /**
@@ -1014,7 +1013,7 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     Assert.assertEquals(2, usedSegments.size());
-    Assert.assertEquals(usedSegments, params.getUsedSegments());
+    Assert.assertEquals(usedSegments, params.getUsedSegmentsNewestFirst());
 
     EasyMock.verify(mockPeon);
   }

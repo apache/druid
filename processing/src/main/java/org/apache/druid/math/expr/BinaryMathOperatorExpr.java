@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -54,7 +53,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(NullHandling.nullToEmptyIfNeeded(left) + NullHandling.nullToEmptyIfNeeded(right));
+    return ExprEval.ofString(left + right);
   }
 
   @Override
@@ -85,7 +84,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
     if (Types.is(type, ExprType.STRING)) {
       return VectorStringProcessors.concat(inspector, left, right);
     }
-    return VectorMathProcessors.plus(inspector, left, right);
+    return VectorMathProcessors.plus().asProcessor(inspector, left, right);
   }
 }
 
@@ -124,7 +123,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.minus(inspector, left, right);
+    return VectorMathProcessors.subtract().asProcessor(inspector, left, right);
   }
 }
 
@@ -163,7 +162,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.multiply(inspector, left, right);
+    return VectorMathProcessors.multiply().asProcessor(inspector, left, right);
   }
 }
 
@@ -202,7 +201,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.divide(inspector, left, right);
+    return VectorMathProcessors.divide().asProcessor(inspector, left, right);
   }
 }
 
@@ -241,7 +240,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.power(inspector, left, right);
+    return VectorMathProcessors.power().asProcessor(inspector, left, right);
   }
 }
 
@@ -280,6 +279,6 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.modulo(inspector, left, right);
+    return VectorMathProcessors.modulo().asProcessor(inspector, left, right);
   }
 }

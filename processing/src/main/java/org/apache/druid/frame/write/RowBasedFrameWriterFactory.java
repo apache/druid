@@ -38,18 +38,24 @@ import java.util.List;
 public class RowBasedFrameWriterFactory implements FrameWriterFactory
 {
   private final MemoryAllocatorFactory allocatorFactory;
+  private final FrameType frameType;
   private final RowSignature signature;
   private final List<KeyColumn> sortColumns;
+  private final boolean removeNullBytes;
 
   public RowBasedFrameWriterFactory(
       final MemoryAllocatorFactory allocatorFactory,
+      final FrameType frameType,
       final RowSignature signature,
-      final List<KeyColumn> sortColumns
+      final List<KeyColumn> sortColumns,
+      final boolean removeNullBytes
   )
   {
     this.allocatorFactory = allocatorFactory;
+    this.frameType = frameType;
     this.signature = signature;
     this.sortColumns = sortColumns;
+    this.removeNullBytes = removeNullBytes;
 
     FrameWriterUtils.verifySortColumns(sortColumns, signature);
   }
@@ -68,10 +74,11 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
     );
 
     return new RowBasedFrameWriter(
+        frameType,
         signature,
         sortColumns,
-        makeFieldWriters(columnSelectorFactory),
-        FrameReaderUtils.makeRowMemorySupplier(columnSelectorFactory, signature),
+        makeFieldWriters(frameType, columnSelectorFactory, removeNullBytes),
+        FrameReaderUtils.makeRowMemorySupplier(columnSelectorFactory, frameType, signature),
         rowOrderMemory,
         rowOffsetMemory,
         dataMemory
@@ -93,7 +100,7 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
   @Override
   public FrameType frameType()
   {
-    return FrameType.ROW_BASED;
+    return frameType;
   }
 
   /**
@@ -102,7 +109,11 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
    * The returned {@link FieldWriter} objects are not thread-safe, and should only be used with a
    * single frame writer.
    */
-  private List<FieldWriter> makeFieldWriters(final ColumnSelectorFactory columnSelectorFactory)
+  private List<FieldWriter> makeFieldWriters(
+      final FrameType frameType,
+      final ColumnSelectorFactory columnSelectorFactory,
+      final boolean removeNullBytes
+  )
   {
     final List<FieldWriter> fieldWriters = new ArrayList<>();
 
@@ -111,7 +122,7 @@ public class RowBasedFrameWriterFactory implements FrameWriterFactory
         final String column = signature.getColumnName(i);
         // note: null type won't work, but we'll get a nice error from FrameColumnWriters.create
         final ColumnType columnType = signature.getColumnType(i).orElse(null);
-        fieldWriters.add(FieldWriters.create(columnSelectorFactory, column, columnType));
+        fieldWriters.add(FieldWriters.create(frameType, columnSelectorFactory, column, columnType, removeNullBytes));
       }
     }
     catch (Throwable e) {

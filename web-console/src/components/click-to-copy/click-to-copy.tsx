@@ -31,7 +31,7 @@ export const ClickToCopy = React.memo(function ClickToCopy(props: ClickToCopyPro
   return (
     <a
       className="click-to-copy"
-      title={`Click to copy:\n${text}`}
+      data-tooltip={`Click to copy:\n${text}`}
       onClick={() => {
         copy(text, { format: 'text/plain' });
         AppToaster.show({

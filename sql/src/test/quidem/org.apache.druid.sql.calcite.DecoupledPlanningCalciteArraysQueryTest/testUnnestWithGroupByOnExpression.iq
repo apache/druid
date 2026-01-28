@@ -1,0 +1,98 @@
+# testUnnestWithGroupByOnExpression case-crc:d500d30b
+# quidem testcase reason: UNNEST_VC_USES_PROJECTED_CONSTANT
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+WITH X as 
+(
+SELECT
+ARRAY[1,2,3] as allNums
+FROM foo
+GROUP BY 1
+)
+select * from X CROSS JOIN UNNEST(X.allNums) as ud(num);
++-----------+-----+
+| allNums   | num |
++-----------+-----+
+| [1, 2, 3] |   1 |
+| [1, 2, 3] |   2 |
+| [1, 2, 3] |   3 |
++-----------+-----+
+(3 rows)
+
+!ok
+LogicalUnnest(unnestExpr=[$0])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(allNums=[ARRAY(1, 2, 3)])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidUnnest(unnestExpr=[$0])
+  DruidAggregate(group=[{0}], druid=[logical])
+    DruidProject(allNums=[ARRAY(1, 2, 3)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "array(1,2,3)",
+          "outputType" : "ARRAY<LONG>"
+        } ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "v0",
+          "outputName" : "d0",
+          "outputType" : "ARRAY<LONG>"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"d0\"",
+      "outputType" : "ARRAY<LONG>"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "d0", "j0.unnest" ],
+  "columnTypes" : [ "ARRAY<LONG>", "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

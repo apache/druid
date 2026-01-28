@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Cpu;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
@@ -38,23 +39,89 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupCpuMonitor.class);
   private static final Long DEFAULT_USER_HZ = 100L;
-  public static final String TOTAL_USAGE_METRIC = "cgroup/cpu/usage/total/percentage";
-  public static final String USER_USAGE_METRIC = "cgroup/cpu/usage/user/percentage";
-  public static final String SYS_USAGE_METRIC = "cgroup/cpu/usage/sys/percentage";
-  private static final String TOTAL = "total";
-  private static final String USER = "user";
-  private static final String SYSTEM = "system";
   final CgroupDiscoverer cgroupDiscoverer;
-  final Map<String, String[]> dimensions;
   private Long userHz;
-  private KeyedDiff jiffies = new KeyedDiff();
+  private final KeyedDiff jiffies = new KeyedDiff();
   private long prevJiffiesSnapshotAt = 0;
+  private final boolean isRunningOnCgroupsV2;
+  private final CgroupV2CpuMonitor cgroupV2CpuMonitor;
 
-  public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
+  public CgroupCpuMonitor(CgroupDiscoverer cgroupDiscoverer, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
-    this.dimensions = dimensions;
+
+    // Check if we're running on cgroups v2
+    this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
+    if (isRunningOnCgroupsV2) {
+      this.cgroupV2CpuMonitor = new CgroupV2CpuMonitor(cgroupDiscoverer, feed);
+      LOG.info("Detected cgroups v2, using CgroupV2CpuMonitor behavior for accurate metrics");
+    } else {
+      this.cgroupV2CpuMonitor = null;
+      initUzerHz();
+    }
+
+  }
+
+  public CgroupCpuMonitor(String feed)
+  {
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), feed);
+  }
+
+  public CgroupCpuMonitor()
+  {
+    this(DEFAULT_METRICS_FEED);
+  }
+
+  @Override
+  public boolean doMonitor(ServiceEmitter emitter)
+  {
+    if (isRunningOnCgroupsV2) {
+      return cgroupV2CpuMonitor.doMonitor(emitter);
+    } else {
+      return doMonitorV1(emitter);
+    }
+  }
+
+  private boolean doMonitorV1(ServiceEmitter emitter)
+  {
+    final Cpu.CpuMetrics cpuSnapshot = cgroupDiscoverer.getCpuMetrics();
+    long now = Instant.now().getEpochSecond();
+
+    final ServiceMetricEvent.Builder builder = builder();
+    builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
+
+    emitter.emit(builder.setMetric("cgroup/cpu/shares", cpuSnapshot.getShares()));
+    emitter.emit(builder.setMetric(
+        "cgroup/cpu/cores_quota",
+        CgroupUtil.computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
+    ));
+
+    long elapsedJiffiesSnapshotSecs = now - prevJiffiesSnapshotAt;
+    if (elapsedJiffiesSnapshotSecs > 0) {
+      prevJiffiesSnapshotAt = now;
+      final Map<String, Long> elapsedJiffies = jiffies.to(
+          "usage",
+          ImmutableMap.<String, Long>builder()
+                      .put(CgroupUtil.USER, cpuSnapshot.getUserJiffies())
+                      .put(CgroupUtil.SYSTEM, cpuSnapshot.getSystemJiffies())
+                      .put(CgroupUtil.TOTAL, cpuSnapshot.getTotalJiffies())
+                      .build()
+      );
+      if (elapsedJiffies != null) {
+        double totalUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.TOTAL) / userHz / elapsedJiffiesSnapshotSecs;
+        double sysUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.SYSTEM) / userHz / elapsedJiffiesSnapshotSecs;
+        double userUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.USER) / userHz / elapsedJiffiesSnapshotSecs;
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_TOTAL_USAGE_METRIC, totalUsagePct));
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_SYS_USAGE_METRIC, sysUsagePct));
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_USER_USAGE_METRIC, userUsagePct));
+      }
+    }
+    return true;
+  }
+
+  private void initUzerHz()
+  {
     try {
       Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
       try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
@@ -73,73 +140,5 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
         userHz = DEFAULT_USER_HZ;
       }
     }
-  }
-
-  public CgroupCpuMonitor(final Map<String, String[]> dimensions, String feed)
-  {
-    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
-  }
-
-  public CgroupCpuMonitor(final Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
-  }
-
-  public CgroupCpuMonitor()
-  {
-    this(ImmutableMap.of());
-  }
-
-  @Override
-  public boolean doMonitor(ServiceEmitter emitter)
-  {
-    final Cpu cpu = new Cpu(cgroupDiscoverer);
-    final Cpu.CpuMetrics cpuSnapshot = cpu.snapshot();
-    long now = Instant.now().getEpochSecond();
-
-    final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    emitter.emit(builder.setMetric("cgroup/cpu/shares", cpuSnapshot.getShares()));
-    emitter.emit(builder.setMetric(
-        "cgroup/cpu/cores_quota",
-        computeProcessorQuota(cpuSnapshot.getQuotaUs(), cpuSnapshot.getPeriodUs())
-    ));
-
-    long elapsedJiffiesSnapshotSecs = now - prevJiffiesSnapshotAt;
-    if (elapsedJiffiesSnapshotSecs > 0) {
-      prevJiffiesSnapshotAt = now;
-      final Map<String, Long> elapsedJiffies = jiffies.to(
-          "usage",
-          ImmutableMap.<String, Long>builder()
-                      .put(USER, cpuSnapshot.getUserJiffies())
-                      .put(SYSTEM, cpuSnapshot.getSystemJiffies())
-                      .put(TOTAL, cpuSnapshot.getTotalJiffies())
-                      .build()
-      );
-      if (elapsedJiffies != null) {
-        double totalUsagePct = 100.0 * elapsedJiffies.get(TOTAL) / userHz / elapsedJiffiesSnapshotSecs;
-        double sysUsagePct = 100.0 * elapsedJiffies.get(SYSTEM) / userHz / elapsedJiffiesSnapshotSecs;
-        double userUsagePct = 100.0 * elapsedJiffies.get(USER) / userHz / elapsedJiffiesSnapshotSecs;
-        emitter.emit(builder.setMetric(TOTAL_USAGE_METRIC, totalUsagePct));
-        emitter.emit(builder.setMetric(SYS_USAGE_METRIC, sysUsagePct));
-        emitter.emit(builder.setMetric(USER_USAGE_METRIC, userUsagePct));
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Calculates the total cores allocated through quotas. A negative value indicates that no quota has been specified.
-   * We use -1 because that's the default value used in the cgroup.
-   *
-   * @param quotaUs  the cgroup quota value.
-   * @param periodUs the cgroup period value.
-   * @return the calculated processor quota, -1 if no quota or period set.
-   */
-  public static double computeProcessorQuota(long quotaUs, long periodUs)
-  {
-    return quotaUs < 0 || periodUs == 0
-           ? -1
-           : (double) quotaUs / periodUs;
   }
 }

@@ -32,9 +32,7 @@ import java.util.List;
 public class NestedPathPartTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private static final TypeReference<List<NestedPathPart>> TYPE_REF = new TypeReference<List<NestedPathPart>>()
-  {
-  };
+  private static final TypeReference<List<NestedPathPart>> TYPE_REF = new TypeReference<>() {};
 
   @Test
   public void testMapFieldSerde() throws JsonProcessingException

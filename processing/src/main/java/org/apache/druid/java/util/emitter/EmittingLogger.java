@@ -29,8 +29,11 @@ import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 /**
+ * {@link Logger} which also has an {@link ServiceEmitter}. Primarily useful for constructing and emitting "alerts" in
+ * the form of {@link AlertBuilder}, which will log when {@link AlertBuilder#emit()} is called.
  */
 public class EmittingLogger extends Logger
 {
@@ -62,12 +65,34 @@ public class EmittingLogger extends Logger
     return new EmittingLogger(getSlf4jLogger(), false);
   }
 
-  public AlertBuilder makeAlert(String message, Object... objects)
+  /**
+   * Make an {@link AlertBuilder} which will call {@link #warn(String, Object...)} when {@link AlertBuilder#emit()} is
+   * called.
+   */
+  public AlertBuilder makeWarningAlert(String message, Object... objects)
   {
-    return makeAlert(null, message, objects);
+    return makeAlert(null, false, message, objects);
   }
 
+  /**
+   * Make an {@link AlertBuilder} which will call {@link #error(String, Object...)} when {@link AlertBuilder#emit()} is
+   * called.
+   */
+  public AlertBuilder makeAlert(String message, Object... objects)
+  {
+    return makeAlert(null, true, message, objects);
+  }
+
+  /**
+   * Make an {@link AlertBuilder} which will call {@link #error(Throwable, String, Object...)} when
+   * {@link AlertBuilder#emit()} is called.
+   */
   public AlertBuilder makeAlert(@Nullable Throwable t, String message, Object... objects)
+  {
+    return makeAlert(t, true, message, objects);
+  }
+
+  public AlertBuilder makeAlert(@Nullable Throwable t, boolean isError, String message, Object... objects)
   {
     if (emitter == null) {
       final String errorMessage = StringUtils.format(
@@ -87,20 +112,22 @@ public class EmittingLogger extends Logger
       throw e;
     }
 
-    return new EmittingAlertBuilder(t, StringUtils.format(message, objects), emitter)
+    return new LoggingAlertBuilder(t, StringUtils.format(message, objects), emitter, isError)
         .addData("class", className);
   }
 
-  public class EmittingAlertBuilder extends AlertBuilder
+  public class LoggingAlertBuilder extends AlertBuilder
   {
     private final Throwable t;
+    private final boolean isError;
 
     private volatile boolean emitted = false;
 
-    private EmittingAlertBuilder(Throwable t, String description, ServiceEmitter emitter)
+    private LoggingAlertBuilder(Throwable t, String description, ServiceEmitter emitter, boolean isError)
     {
       super(description, emitter);
       this.t = t;
+      this.isError = isError;
       addThrowable(t);
     }
 
@@ -126,15 +153,22 @@ public class EmittingLogger extends Logger
     private void logIt(String format)
     {
       if (t == null) {
-        error(format, description, dataMap);
+        if (isError) {
+          error(format, description, dataMap);
+        } else {
+          warn(format, description, dataMap);
+        }
       } else {
         // Filter out the stack trace from the message, because it should be in the logline already if it's wanted.
-        error(
-            t,
-            format,
-            description,
-            Maps.filterKeys(dataMap, Predicates.not(Predicates.equalTo("exceptionStackTrace")))
+        final Map<String, Object> filteredDataMap = Maps.filterKeys(
+            dataMap,
+            Predicates.not(Predicates.equalTo("exceptionStackTrace"))
         );
+        if (isError) {
+          error(t, format, description, filteredDataMap);
+        } else {
+          warn(t, format, description, filteredDataMap);
+        }
       }
     }
   }

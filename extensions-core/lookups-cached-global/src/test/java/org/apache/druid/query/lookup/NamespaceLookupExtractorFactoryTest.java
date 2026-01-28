@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Json;
@@ -70,10 +69,6 @@ import static org.mockito.Mockito.when;
 
 public class NamespaceLookupExtractorFactoryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final ObjectMapper mapper = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

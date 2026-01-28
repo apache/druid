@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -34,18 +35,30 @@ import com.google.inject.Key;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.Accumulator;
+import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
@@ -53,12 +66,14 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -80,12 +95,15 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
+import org.eclipse.jetty.http.HttpHeader;
+import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -96,21 +114,27 @@ import javax.ws.rs.core.Response.Status;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class QueryResourceTest
 {
-  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
+  private static final DefaultQueryRunnerFactoryConglomerate CONGLOMERATE = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(
+      ImmutableMap.of());
   private static final AuthenticationResult AUTHENTICATION_RESULT =
       new AuthenticationResult("druid", "druid", null, null);
 
@@ -180,6 +204,22 @@ public class QueryResourceTest
       + "    \"context\": { \"priority\": -1 }"
       + "}";
 
+  private static final String SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ],\n"
+      + "    \"context\": { \"writeExceptionBodyAsResponseRow\": \"true\" }"
+      + "}";
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
   private static final DruidNode DRUID_NODE = new DruidNode(
@@ -197,6 +237,7 @@ public class QueryResourceTest
   private QueryResource queryResource;
   private QueryScheduler queryScheduler;
   private TestRequestLogger testRequestLogger;
+  private StubServiceEmitter emitter;
 
   @BeforeClass
   public static void staticSetup()
@@ -217,6 +258,7 @@ public class QueryResourceTest
 
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
+    emitter = StubServiceEmitter.createStarted();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
@@ -224,22 +266,28 @@ public class QueryResourceTest
   {
     return new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        responseContextConfig,
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            responseContextConfig,
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
   }
 
@@ -248,33 +296,47 @@ public class QueryResourceTest
   {
     expectPermissiveHappyPathAuth();
 
-    Assert.assertEquals(200, expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY).getStatus());
+    HttpServletResponse servletResponse = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(200, servletResponse.getStatus());
+    Assert.assertTrue(servletResponse.containsHeader(HttpHeader.TRAILER.toString()));
+
+    final Map<String, String> fields = servletResponse.getTrailerFields().get();
+    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
   }
 
   @Test
   public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
   {
-    String overrideConfigKey = "priority";
-    String overrideConfigValue = "678";
+    final String overrideConfigKey = "priority";
+    final String overrideConfigValue = "678";
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -284,7 +346,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );
@@ -312,7 +374,7 @@ public class QueryResourceTest
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             new QuerySegmentWalker()
             {
               @Override
@@ -336,25 +398,33 @@ public class QueryResourceTest
               }
             },
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
 
     final Response response = expectSynchronousRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
 
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
     MatcherAssert.assertThat(
@@ -375,6 +445,282 @@ public class QueryResourceTest
         overrideConfigValue,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
+  }
+
+  @Test
+  public void testResponseWithIncludeTrailerHeader() throws IOException
+  {
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                return (queryPlus, responseContext) -> new Sequence<T>()
+                {
+                  @Override
+                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                  {
+                    if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
+                      try {
+                        ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
+                      }
+                      catch (IOException ignore) {
+                      }
+                    }
+
+                    throw new QueryTimeoutException();
+                  }
+
+                  @Override
+                  public <OutType> Yielder<OutType> toYielder(
+                      OutType initValue,
+                      YieldingAccumulator<OutType, T> accumulator
+                  )
+                  {
+                    return Yielders.done(initValue, null);
+                  }
+                };
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
+
+    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
+
+    final Map<String, String> fields = response.getTrailerFields().get();
+    Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+    Assert.assertEquals(
+        fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
+        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query."
+    );
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+  }
+
+  @Test
+  public void testResponseWithMidFlightExceptions() throws IOException
+  {
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                return (queryPlus, responseContext) -> new Sequence<T>()
+                {
+                  @Override
+                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                  {
+                    accumulator.accumulate(null,
+                                           (T) new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
+                    );
+                    throw InvalidInput.exception("mid-flight exception");
+                  }
+
+                  @Override
+                  public <OutType> Yielder<OutType> toYielder(
+                      OutType initValue,
+                      YieldingAccumulator<OutType, T> accumulator
+                  )
+                  {
+                    throw new UnsupportedOperationException("not implemented");
+                  }
+                };
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    MockHttpServletResponse response = expectAsyncRequestFlow(testServletRequest,
+                                                              SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW.getBytes(
+                                                                  StandardCharsets.UTF_8),
+                                                              queryResource
+    );
+    String actualOutput = response.baos.toString(Charset.defaultCharset());
+    Assert.assertEquals(
+        "[{\"maxTime\":\"2014-08-02T00:00:00.000Z\"},{\"error\":\"druidException\","
+        + "\"errorCode\":\"invalidInput\",\"persona\":\"USER\",\"category\":\"INVALID_INPUT\","
+        + "\"errorMessage\":\"mid-flight exception\",\"context\":{}}]",
+        actualOutput
+    );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(400, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
+  }
+
+  @Test
+  public void testResponseContextContainsMissingSegments_whenLastSegmentIsMissing() throws IOException
+  {
+    final SegmentDescriptor missingSegDesc = new SegmentDescriptor(
+        Intervals.of("2025-01-01/P1D"), "0", 1
+    );
+
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+              {
+                return (queryPlus, responseContext) -> new BaseSequence<>(
+                    new BaseSequence.IteratorMaker<T, Iterator<T>>() {
+                      @Override
+                      public Iterator<T> make()
+                      {
+                        List<T> data = Collections.singletonList((T) ImmutableMap.of("dummy", 1));
+                        Iterator<T> realIterator = data.iterator();
+
+                        return new Iterator<T>() {
+                          private boolean done = false;
+
+                          @Override
+                          public boolean hasNext()
+                          {
+                            if (realIterator.hasNext()) {
+                              return true;
+                            } else if (!done) {
+                              // Simulate a segment failure in the end after initialize() has run
+                              responseContext.addMissingSegments(ImmutableList.of(missingSegDesc));
+                              done = true;
+                            }
+                            return false;
+                          }
+
+                          @Override
+                          public T next()
+                          {
+                            return realIterator.next();
+                          }
+                        };
+                      }
+
+                      @Override
+                      public void cleanup(Iterator<T> iterFromMake)
+                      {
+                      }
+                    }
+                );
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        ),
+        jsonMapper,
+        queryScheduler,
+        null,
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
+
+    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeader(HttpHeader.TRAILER.toString()));
+
+    final Map<String, String> fields = response.getTrailerFields().get();
+    Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
+    Assert.assertEquals(
+        jsonMapper.writeValueAsString(ImmutableMap.of("missingSegments", ImmutableList.of(missingSegDesc))),
+        response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT)
+    );
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals("true", fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
 
@@ -409,38 +755,46 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
 
-        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig))
+        new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, Suppliers.ofInstance(overrideConfig))
         {
           @Override
           public QueryLifecycle factorize()
           {
             return new QueryLifecycle(
-                WAREHOUSE,
+                CONGLOMERATE,
                 querySegmentWalker,
                 new DefaultGenericQueryMetricsFactory(),
-                new NoopServiceEmitter(),
+                emitter,
                 testRequestLogger,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 overrideConfig,
                 new AuthConfig(),
+                NoopPolicyEnforcer.instance(),
                 System.currentTimeMillis(),
-                System.nanoTime())
+                System.nanoTime()
+            )
             {
               @Override
               public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
               {
+                super.emitLogsAndMetrics(e, remoteAddress, bytesWritten);
                 Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }
             };
           }
         },
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -453,9 +807,12 @@ public class QueryResourceTest
         entity.getUnderlyingException(),
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,
-            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException")
+            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException"
+        )
             .expectMessageIs("something")
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -466,22 +823,28 @@ public class QueryResourceTest
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(overrideConfig)
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -490,7 +853,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );
@@ -510,6 +873,8 @@ public class QueryResourceTest
         -1,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -534,6 +899,8 @@ public class QueryResourceTest
         expectedException,
         jsonMapper.readValue(response.baos.toByteArray(), QueryInterruptedException.class).toString()
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -548,6 +915,10 @@ public class QueryResourceTest
         queryResource
     );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -560,6 +931,10 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is null, the response content type should be same as the value of 'Content-Type' header
     Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -573,6 +948,10 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is empty, the response content type should be same as the value of 'Content-Type' header
     Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -588,6 +967,10 @@ public class QueryResourceTest
 
     // Content-Type in response should be Smile
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -608,6 +991,10 @@ public class QueryResourceTest
 
     // Content-Type in response should be Smile
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -627,6 +1014,10 @@ public class QueryResourceTest
 
     // Content-Type in response should default to Content-Type from request
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -691,7 +1082,7 @@ public class QueryResourceTest
           public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             if (resource.getName().equals("allow")) {
-              return new Access(true);
+              return Access.allowWithRestriction(RowFilterPolicy.from(new NullFilter("col", null)));
             } else {
               return new Access(false);
             }
@@ -703,22 +1094,28 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
 
@@ -741,7 +1138,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );
@@ -778,22 +1175,28 @@ public class QueryResourceTest
 
     final QueryResource timeoutQueryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             timeoutSegmentWalker,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        jsonMapper,
         queryScheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            jsonMapper
+        )
     );
     expectPermissiveHappyPathAuth();
 
@@ -824,6 +1227,8 @@ public class QueryResourceTest
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test(timeout = 60_000L)
@@ -874,22 +1279,28 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -981,22 +1392,28 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             authMapper,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         queryScheduler,
-        new AuthConfig(),
         authMapper,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1110,6 +1527,18 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+    Assert.assertEquals(2, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(1, queryResource.getFailedQueryCount());
+
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
   }
 
   @Test(timeout = 10_000L)
@@ -1180,6 +1609,16 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
   }
 
   @Test(timeout = 10_000L)
@@ -1190,7 +1629,7 @@ public class QueryResourceTest
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null, null),
         new HiLoQueryLaningStrategy(1),
         new ServerConfig()
     );
@@ -1248,6 +1687,55 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
+  }
+
+  @Test
+  public void testNativeQueryWriter_goodResponse() throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final QueryResultPusher.Writer writer = new QueryResource.NativeQueryWriter(jsonMapper, baos);
+    writer.writeResponseStart();
+    writer.writeRow(Arrays.asList("foo", "bar"));
+    writer.writeRow(Collections.singletonList("baz"));
+    writer.writeResponseEnd();
+    writer.close();
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableList.of("foo", "bar"),
+            ImmutableList.of("baz")
+        ),
+        jsonMapper.readValue(baos.toByteArray(), Object.class)
+    );
+  }
+
+  @Test
+  public void testNativeQueryWriter_truncatedResponse() throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final QueryResultPusher.Writer writer = new QueryResource.NativeQueryWriter(jsonMapper, baos);
+    writer.writeResponseStart();
+    writer.writeRow(Arrays.asList("foo", "bar"));
+    writer.close(); // Simulate an error that occurs midstream; close writer without calling writeResponseEnd.
+
+    final JsonProcessingException e = Assert.assertThrows(
+        JsonProcessingException.class,
+        () -> jsonMapper.readValue(baos.toByteArray(), Object.class)
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("expected close marker for Array"))
+    );
   }
 
   private void createScheduledQueryResource(
@@ -1293,22 +1781,28 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             texasRanger,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         jsonMapper,
-        smileMapper,
         scheduler,
-        new AuthConfig(),
         null,
-        ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        new QueryResourceQueryResultPusherFactory(
+            jsonMapper,
+            ResponseContextConfig.newConfig(true),
+            DRUID_NODE
+        ),
+        new ResourceIOReaderWriterFactory(
+            jsonMapper,
+            smileMapper
+        )
     );
   }
 

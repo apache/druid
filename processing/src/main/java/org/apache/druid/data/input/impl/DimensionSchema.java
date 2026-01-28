@@ -25,13 +25,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
 import com.google.common.base.Strings;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -42,9 +46,27 @@ import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import java.util.Objects;
 
 /**
+ * Defines the schema of a single dimension in a dataset.
+ * <p>
+ * Includes metadata such as the dimension's name, type, and whether it
+ * can hold multiple values. Supports Jackson serialization/deserialization,
+ * including polymorphic types via {@code @JsonSubTypes}.
+ * </p>
+ *
+ * <p>
+ * Example JSON:
+ * <pre>{@code
+ * {
+ *     "type": "string",
+ *     "name": "country",
+ *     "multiValue": false
+ * }
+ * }</pre>
+ * </p>
  */
 @PublicApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = StringDimensionSchema.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.LONG_TYPE_NAME, value = LongDimensionSchema.class),
@@ -69,7 +91,7 @@ public abstract class DimensionSchema
         return new DoubleDimensionSchema(name);
       default:
         // the auto column indexer can handle any type
-        return new AutoTypeColumnSchema(name, null);
+        return AutoTypeColumnSchema.of(name);
     }
   }
 
@@ -110,10 +132,9 @@ public abstract class DimensionSchema
       return name == null ? ofDefault() : valueOf(StringUtils.toUpperCase(name));
     }
 
-    // this can be system configuration
     public static MultiValueHandling ofDefault()
     {
-      return SORTED_ARRAY;
+      return BuiltInTypesModule.getStringMultiValueHandlingMode();
     }
   }
 
@@ -155,6 +176,17 @@ public abstract class DimensionSchema
   @JsonIgnore
   public abstract ColumnType getColumnType();
 
+  /**
+   * Returns true if the {@link DimensionHandler#makeIndexer()} of this schema can produce multi-valued
+   * {@link ColumnType#STRING} columns. This method is used by MSQ compaction to determine if it needs to download the
+   * segments to check if any are actually multi-valued.
+   */
+  @JsonIgnore
+  public boolean canBeMultiValued()
+  {
+    return false;
+  }
+
   @JsonIgnore
   public DimensionHandler getDimensionHandler()
   {
@@ -164,6 +196,17 @@ public abstract class DimensionSchema
         IncrementalIndex.makeDefaultCapabilitiesFromValueType(getColumnType()),
         multiValueHandling
     );
+  }
+
+  /**
+   * Computes the 'effective' {@link DimensionSchema}, allowing columns which provide mechanisms for customizing storage
+   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparing the
+   * operator explicitly defined schema with the 'effective' schema that was written to the segments for things like
+   * comparing compaction state.
+   */
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    return this;
   }
 
   @Override

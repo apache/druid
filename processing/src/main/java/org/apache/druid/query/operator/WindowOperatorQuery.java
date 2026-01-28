@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -32,9 +34,9 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +99,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     super(
         validateMaybeRewriteDataSource(dataSource, leafOperators != null),
         intervals,
-        false,
         context
     );
     this.rowSignature = rowSignature;
@@ -114,11 +115,11 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
           ScanQuery scan = (ScanQuery) subQuery;
 
           ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+          for (OrderBy orderBy : scan.getOrderBys()) {
             ordering.add(
                 new ColumnWithDirection(
                     orderBy.getColumnName(),
-                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    Order.DESCENDING == orderBy.getOrder()
                     ? ColumnWithDirection.Direction.DESC
                     : ColumnWithDirection.Direction.ASC
                 )
@@ -161,6 +162,12 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   public RowSignature getRowSignature()
   {
     return rowSignature;
+  }
+
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return getRowSignature();
   }
 
   @Override

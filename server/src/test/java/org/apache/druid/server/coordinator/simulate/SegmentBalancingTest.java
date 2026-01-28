@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -37,7 +38,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   private DruidServer historicalT11;
   private DruidServer historicalT12;
 
-  private final String datasource = DS.WIKI;
+  private final String datasource = TestDataSource.WIKI;
   private final List<DataSegment> segments = Segments.WIKI_10X1D;
 
   @Override
@@ -89,6 +90,47 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(5, historicalT11.getTotalSegments());
     Assert.assertEquals(5, historicalT12.getTotalSegments());
     verifyDatasourceIsFullyLoaded(datasource);
+  }
+
+  @Test
+  public void testBalancingDoesNotUnderReplicateSegment()
+  {
+    // historicals = 2(T1), replicas = 1(T1)
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    // Put all the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run cycle and verify that segments have been chosen for balancing
+    startSimulation(sim);
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    // Load segments, skip callbacks and verify that some segments are now loaded on histT12
+    loadQueuedSegmentsSkipCallbacks();
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    // Run another coordinator cycle
+    runCoordinatorCycle();
+    loadQueuedSegmentsSkipCallbacks();
+
+    // Verify that segments have not been dropped from either server since
+    // MOVE_FROM operation is still not complete
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+    verifyNotEmitted(Metric.DROPPED_COUNT);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+
+    // Finish the move operations
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
   }
 
   @Test
@@ -245,7 +287,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
         CoordinatorSimulation.builder()
                              .withSegments(Segments.KOALA_100X100D)
                              .withServers(historicals)
-                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.KOALA, Load.on(Tier.T1, 1).forever())
                              .build();
 
     startSimulation(sim);
@@ -254,7 +296,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
     verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
     verifyNotEmitted(Metric.MOVED_COUNT);
-    verifyValue(Metric.MOVE_SKIPPED, 100L);
+    verifySum(Metric.MOVE_SKIPPED, 100L);
 
     // Run 2: Add 10 more historicals, some segments are moved to them
     for (int i = 11; i <= 20; ++i) {

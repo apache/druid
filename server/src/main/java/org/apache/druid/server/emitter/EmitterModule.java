@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -58,10 +59,10 @@ public class EmitterModule implements Module
   private static final Logger log = new Logger(EmitterModule.class);
   private static final String EMITTER_PROPERTY = "druid.emitter";
 
-  private final Properties props;
+  private Properties props;
 
   @Inject
-  public EmitterModule(
+  public void setProps(
       Properties props
   )
   {
@@ -72,7 +73,6 @@ public class EmitterModule implements Module
   public void configure(Binder binder)
   {
     String emitterType = props.getProperty(EMITTER_PROPERTY, "");
-
     binder.install(new NoopEmitterModule());
     binder.install(new LogEmitterModule());
     binder.install(new HttpEmitterModule());
@@ -99,16 +99,18 @@ public class EmitterModule implements Module
   public ServiceEmitter getServiceEmitter(
       @Self Supplier<DruidNode> configSupplier,
       Emitter emitter,
-      @ExtraServiceDimensions Map<String, String> extraServiceDimensions
+      @ExtraServiceDimensions Map<String, String> extraServiceDimensions,
+      TaskHolder taskHolder
   )
   {
     final DruidNode config = configSupplier.get();
-    log.info("Using emitter [%s] for metrics and alerts, with dimensions [%s].", emitter, extraServiceDimensions);
+    log.info("Using emitter [%s] for metrics and alerts, with dimensions [%s] and taskHolder[%s].", emitter, extraServiceDimensions, taskHolder);
     final ServiceEmitter retVal = new ServiceEmitter(
         config.getServiceName(),
         config.getHostAndPortToUse(),
         emitter,
-        ImmutableMap.copyOf(extraServiceDimensions)
+        ImmutableMap.copyOf(extraServiceDimensions),
+        taskHolder
     );
     EmittingLogger.registerEmitter(retVal);
     return retVal;
@@ -130,7 +132,9 @@ public class EmitterModule implements Module
     @Inject
     public void inject(Injector injector)
     {
-      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>() {});
+      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<>()
+      {
+      });
 
       if (Strings.isNullOrEmpty(emitterType)) {
         // If the emitter is unspecified, we want to default to the no-op emitter. Include empty string here too, just

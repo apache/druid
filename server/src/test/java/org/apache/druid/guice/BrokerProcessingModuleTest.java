@@ -28,10 +28,8 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.java.util.common.config.Config;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -40,7 +38,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Properties;
 
@@ -66,7 +63,7 @@ public class BrokerProcessingModuleTest
   public void testIntermediateResultsPool()
   {
     DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
-    target.getIntermediateResultsPool(druidProcessingConfig);
+    target.getIntermediateResultsPool(druidProcessingConfig, JvmUtils.getRuntimeInfo());
   }
 
 
@@ -74,7 +71,7 @@ public class BrokerProcessingModuleTest
   public void testMergeBufferPool()
   {
     DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
-    target.getMergeBufferPool(druidProcessingConfig);
+    target.getMergeBufferPool(druidProcessingConfig, JvmUtils.getRuntimeInfo());
   }
 
   @Test
@@ -83,20 +80,6 @@ public class BrokerProcessingModuleTest
     BrokerParallelMergeConfig config = injector.getInstance(BrokerParallelMergeConfig.class);
     BrokerProcessingModule module = new BrokerProcessingModule();
     module.getMergeProcessingPoolProvider(config);
-  }
-
-  @Test
-  public void testMergeProcessingPoolLegacyConfigs()
-  {
-    Properties props = new Properties();
-    props.put("druid.processing.merge.pool.parallelism", "10");
-    props.put("druid.processing.merge.pool.defaultMaxQueryParallelism", "10");
-    props.put("druid.processing.merge.task.targetRunTimeMillis", "1000");
-    Injector gadget = makeInjector(props);
-    BrokerParallelMergeConfig config = gadget.getInstance(BrokerParallelMergeConfig.class);
-    Assert.assertEquals(10, config.getParallelism());
-    Assert.assertEquals(10, config.getDefaultMaxQueryParallelism());
-    Assert.assertEquals(1000, config.getTargetRunTimeMillis());
   }
 
   @Test
@@ -123,7 +106,7 @@ public class BrokerProcessingModuleTest
 
     DruidProcessingConfig processingBufferConfig = injector1.getInstance(DruidProcessingConfig.class);
     BrokerProcessingModule module = new BrokerProcessingModule();
-    module.getMergeBufferPool(processingBufferConfig);
+    module.getMergeBufferPool(processingBufferConfig, JvmUtils.getRuntimeInfo());
   }
 
   private Injector makeInjector(Properties props)
@@ -138,10 +121,6 @@ public class BrokerProcessingModuleTest
                   binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
                   binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
                   binder.bind(Properties.class).toInstance(props);
-                  ConfigurationObjectFactory factory = Config.createFactory(props);
-                  LegacyBrokerParallelMergeConfig legacyConfig = factory.build(LegacyBrokerParallelMergeConfig.class);
-                  binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
-                  binder.bind(LegacyBrokerParallelMergeConfig.class).toInstance(legacyConfig);
                 },
                 target
             ).with((binder) -> {

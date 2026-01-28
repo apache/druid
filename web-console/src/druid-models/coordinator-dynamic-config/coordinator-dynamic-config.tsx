@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -31,8 +30,6 @@ export interface CoordinatorDynamicConfig {
   maxKillTaskSlots?: number;
   killPendingSegmentsSkipList?: string[];
   maxSegmentsInNodeLoadingQueue?: number;
-  mergeBytesLimit?: number;
-  mergeSegmentsLimit?: number;
   millisToWaitBeforeDeleting?: number;
   replicantLifetime?: number;
   replicationThrottleLimit?: number;
@@ -41,6 +38,7 @@ export interface CoordinatorDynamicConfig {
   replicateAfterLoadTimeout?: boolean;
   useRoundRobinSegmentAssignment?: boolean;
   smartSegmentLoading?: boolean;
+  turboLoadingNodes?: string[];
 
   // Undocumented
   debugDimensions?: any;
@@ -222,18 +220,6 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
-    name: 'mergeBytesLimit',
-    type: 'size-bytes',
-    defaultValue: 524288000,
-    info: <>The maximum total uncompressed size in bytes of segments to merge.</>,
-  },
-  {
-    name: 'mergeSegmentsLimit',
-    type: 'number',
-    defaultValue: 100,
-    info: <>The maximum number of segments that can be in a single append task.</>,
-  },
-  {
     name: 'millisToWaitBeforeDeleting',
     type: 'number',
     defaultValue: 900000,
@@ -256,6 +242,26 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         historical server. This helps improve the segment availability if there are a few slow
         historicals in the cluster. However, the slow historical may still load the segment later
         and the coordinator may issue drop requests if the segment is over-replicated.
+      </>
+    ),
+  },
+  {
+    name: 'turboLoadingNodes',
+    type: 'string-array',
+    experimental: true,
+    info: (
+      <>
+        <p>
+          List of Historical servers to place in turbo loading mode. These servers use a larger
+          thread-pool to load segments faster but at the cost of query performance. For servers
+          specified in <Code>turboLoadingNodes</Code>,{' '}
+          <Code>druid.coordinator.loadqueuepeon.http.batchSize</Code> is ignored and the coordinator
+          uses the value of the respective <Code>numLoadingThreads</Code> instead.
+        </p>
+        <p>
+          Please use this config with caution. All servers should eventually be removed from this
+          list once the segment loading on the respective historicals is finished.
+        </p>
       </>
     ),
   },

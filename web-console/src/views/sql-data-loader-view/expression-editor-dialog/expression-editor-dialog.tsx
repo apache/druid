@@ -18,7 +18,7 @@
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression } from '@druid-toolkit/query';
+import { SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { FlexibleQueryInput } from '../../workbench-view/flexible-query-input/flexible-query-input';

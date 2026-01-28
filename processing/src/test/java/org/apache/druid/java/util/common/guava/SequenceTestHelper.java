@@ -55,7 +55,7 @@ public class SequenceTestHelper
     Iterator<Integer> numsIter = nums.iterator();
     Yielder<Integer> yielder = seq.toYielder(
         0,
-        new YieldingAccumulator<Integer, Integer>()
+        new YieldingAccumulator<>()
         {
           final Iterator<Integer> valsIter = nums.iterator();
           int count = 0;
@@ -65,7 +65,7 @@ public class SequenceTestHelper
           {
             if (++count >= numToTake) {
               count = 0;
-              yield();
+              this.yield();
             }
 
             Assert.assertEquals(prefix, valsIter.next(), in);
@@ -105,7 +105,7 @@ public class SequenceTestHelper
 
     int sum = seq.accumulate(
         0,
-        new Accumulator<Integer, Integer>()
+        new Accumulator<>()
         {
           final Iterator<Integer> valsIter = nums.iterator();
 
@@ -144,7 +144,7 @@ public class SequenceTestHelper
     try {
       yielder = seq.toYielder(
           1,
-          new YieldingAccumulator<Integer, Integer>()
+          new YieldingAccumulator<>()
           {
             @Override
             public Integer accumulate(Integer accumulated, Integer in)

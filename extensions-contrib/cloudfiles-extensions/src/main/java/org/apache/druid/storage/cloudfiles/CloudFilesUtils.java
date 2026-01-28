@@ -31,7 +31,7 @@ import java.io.IOException;
 public class CloudFilesUtils
 {
 
-  public static final Predicate<Throwable> CLOUDFILESRETRY = new Predicate<Throwable>()
+  public static final Predicate<Throwable> CLOUDFILESRETRY = new Predicate<>()
   {
     @Override
     public boolean apply(Throwable e)

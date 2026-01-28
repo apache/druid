@@ -201,4 +201,19 @@ public class DoublesSketchAggregatorFactoryTest
     ac.fold(new TestDoublesSketchColumnValueSelector());
     Assert.assertNotNull(ac.getObject());
   }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    final DoublesSketchAggregatorFactory sketch = new DoublesSketchAggregatorFactory("sketch", "x", 1024, 1000L, null);
+    final DoublesSketchAggregatorFactory sketch2 = new DoublesSketchAggregatorFactory("other", "x", 1024, 2000L, null);
+    final DoublesSketchAggregatorFactory sketch3 = new DoublesSketchAggregatorFactory("another", "x", 2048, 1000L, null);
+    final DoublesSketchAggregatorFactory incompatible = new DoublesSketchAggregatorFactory("incompatible", "y", 1024, 1000L, null);
+
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch2.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch.substituteCombiningFactory(incompatible));
+    Assert.assertNull(sketch3.substituteCombiningFactory(sketch));
+  }
 }

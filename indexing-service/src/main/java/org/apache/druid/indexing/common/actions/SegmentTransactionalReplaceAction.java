@@ -105,9 +105,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**
@@ -185,12 +183,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
             upgradedPendingSegment
         )
     );
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override
