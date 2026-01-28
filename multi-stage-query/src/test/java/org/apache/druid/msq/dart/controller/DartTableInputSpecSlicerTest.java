@@ -243,7 +243,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // This slicer cannot sliceDynamic.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     Assertions.assertFalse(slicer.canSliceDynamic(inputSpec));
     Assertions.assertThrows(
         UnsupportedOperationException.class,
@@ -257,7 +257,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
     // When 1 slice is requested, all segments are assigned to one server, even if that server doesn't actually
     // currently serve those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 1);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -313,7 +313,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // When 2 slices are requested, we assign segments to the servers that have those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -375,7 +375,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // When 3 slices are requested, only 2 are returned, because we only have two workers.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 3);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -436,7 +436,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   @Test
   public void test_sliceStatic_nonexistentTable()
   {
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE_NONEXISTENT, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE_NONEXISTENT, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 1);
     Assertions.assertEquals(
         Collections.emptyList(),
@@ -451,6 +451,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
 
     final TableInputSpec inputSpec = new TableInputSpec(
         DATASOURCE,
+        null,
         null,
         new EqualityFilter(PARTITION_DIM, ColumnType.STRING, "abc", null),
         null
@@ -515,6 +516,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
         DATASOURCE,
         Collections.singletonList(Intervals.of("2000/P1Y")),
         null,
+        null,
         null
     );
 
@@ -559,7 +561,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
 
     // When 2 slices are requested, we assign segments to the servers that have those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
     // Expect segment 2 and then the realtime segments 5 and 6 to be assigned round-robin.
     Assertions.assertEquals(

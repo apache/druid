@@ -63,7 +63,7 @@ public class InputSpecsTest
   {
     Assert.assertFalse(
         InputSpecs.hasLeafInputs(
-            ImmutableList.of(new TableInputSpec("tbl", null, null, null)),
+            ImmutableList.of(new TableInputSpec("tbl", null, null, null, null)),
             IntSet.of(0)
         )
     );
@@ -75,7 +75,7 @@ public class InputSpecsTest
     Assert.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null, null, null),
                 new StageInputSpec(0)
             ),
             IntSets.emptySet()
@@ -89,7 +89,7 @@ public class InputSpecsTest
     Assert.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null, null, null),
                 new StageInputSpec(0)
             ),
             IntSet.of(1)
@@ -103,7 +103,7 @@ public class InputSpecsTest
     Assert.assertFalse(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null, null, null),
                 new StageInputSpec(0)
             ),
             IntSet.of(0)
@@ -117,8 +117,8 @@ public class InputSpecsTest
     Assert.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
-                new TableInputSpec("tbl2", null, null, null)
+                new TableInputSpec("tbl", null, null, null, null),
+                new TableInputSpec("tbl2", null, null, null, null)
             ),
             IntSet.of(1)
         )

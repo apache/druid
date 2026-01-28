@@ -53,6 +53,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -61,7 +62,9 @@ import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -121,6 +124,11 @@ public class DataSourcePlan
     }
   }
 
+  DataSourcePlan withDataSource(DataSource newDataSource)
+  {
+    return new DataSourcePlan(newDataSource, inputSpecs, broadcastInputs, subQueryDefBuilder);
+  }
+
   /**
    * Build a plan.
    *
@@ -161,7 +169,7 @@ public class DataSourcePlan
     if (dataSource instanceof TableDataSource) {
       return forTable(
           (TableDataSource) dataSource,
-          querySegmentSpecIntervals(querySegmentSpec),
+          querySegmentSpec,
           filter,
           filterFields,
           broadcast
@@ -169,7 +177,7 @@ public class DataSourcePlan
     } else if (dataSource instanceof RestrictedDataSource) {
       return forRestricted(
           (RestrictedDataSource) dataSource,
-          querySegmentSpecIntervals(querySegmentSpec),
+          querySegmentSpec,
           filter,
           filterFields,
           broadcast
@@ -360,15 +368,24 @@ public class DataSourcePlan
 
   private static DataSourcePlan forTable(
       final TableDataSource dataSource,
-      final List<Interval> intervals,
+      final QuerySegmentSpec querySegmentSpec,
       @Nullable final DimFilter filter,
       @Nullable final Set<String> filterFields,
       final boolean broadcast
   )
   {
+    final List<SegmentDescriptor> segments;
+    if (querySegmentSpec instanceof MultipleSpecificSegmentSpec) {
+      segments = ((MultipleSpecificSegmentSpec) querySegmentSpec).getDescriptors();
+    } else if (querySegmentSpec instanceof SpecificSegmentSpec) {
+      segments = List.of(((SpecificSegmentSpec) querySegmentSpec).getDescriptor());
+    } else {
+      segments = null;
+    }
+    List<Interval> intervals = querySegmentSpec.getIntervals();
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
-        Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter, filterFields)),
+        List.of(new TableInputSpec(dataSource.getName(), intervals, segments, filter, filterFields)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -376,20 +393,16 @@ public class DataSourcePlan
 
   private static DataSourcePlan forRestricted(
       final RestrictedDataSource dataSource,
-      final List<Interval> intervals,
+      final QuerySegmentSpec querySegmentSpec,
       @Nullable final DimFilter filter,
       @Nullable final Set<String> filterFields,
       final boolean broadcast
   )
   {
-    return new DataSourcePlan(
-        (broadcast && dataSource.isGlobal())
-        ? dataSource
-        : new RestrictedInputNumberDataSource(0, dataSource.getPolicy()),
-        Collections.singletonList(new TableInputSpec(dataSource.getBase().getName(), intervals, filter, filterFields)),
-        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
-        null
-    );
+    DataSource restricted = (broadcast && dataSource.isGlobal())
+                            ? dataSource
+                            : new RestrictedInputNumberDataSource(0, dataSource.getPolicy());
+    return forTable(dataSource.getBase(), querySegmentSpec, filter, filterFields, broadcast).withDataSource(restricted);
   }
 
   private static DataSourcePlan forExternal(
@@ -791,7 +804,7 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   *
+   * <p>
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
