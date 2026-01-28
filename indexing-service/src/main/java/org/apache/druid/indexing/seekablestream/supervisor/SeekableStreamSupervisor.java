@@ -3403,50 +3403,53 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         });
 
-    // Phase 1 of scale-during-rollover: detect and set up.
+    // Phase 1 of scale-during-rollover: detect, set up, and continue draining.
     // The taskCount change and re-allocation happen in Phase 2 after all tasks have stopped.
     // We respect maxAllowedStops to avoid worker capacity exhaustion - rollover may take multiple cycles.
-    if (!futures.isEmpty() && taskAutoScaler != null && pendingRolloverTaskCount == null) {
+    Integer targetRolloverTaskCount = pendingRolloverTaskCount;
+    if (targetRolloverTaskCount == null && !futures.isEmpty() && taskAutoScaler != null) {
+      // Detect new rollover opportunity
       int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
       if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
         log.info(
             "Autoscaler recommends scaling to [%d] tasks during rollover for supervisor[%s]. "
-            + "Setting up pending rollover - will apply after all tasks stop.",
+            + "Setting up a pending rollover - will apply after all tasks stop.",
             rolloverTaskCount, supervisorId
         );
-
-        // Stop remaining active groups while respecting maxAllowedStops to avoid
-        // worker capacity exhaustion. Publishing tasks continue consuming worker slots,
-        // so stopping all at once could leave no capacity for new tasks.
-        int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
-                                                                        .mapToInt(List::size).sum();
-        int availableStops = ioConfig.getMaxAllowedStops() - numPendingCompletionTaskGroups - numStoppedTasks.get();
-
-        int stoppedForRollover = 0;
-        for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
-          Integer groupId = entry.getKey();
-          if (!futureGroupIds.contains(groupId)) {
-            if (stoppedForRollover >= availableStops) {
-              log.info(
-                  "Deferring stop of taskGroup[%d] to next cycle - maxAllowedStops[%d] reached. "
-                  + "Publishing tasks: [%d], stopped this cycle: [%d].",
-                  groupId, ioConfig.getMaxAllowedStops(), numPendingCompletionTaskGroups, numStoppedTasks.get()
-              );
-              continue;
-            }
-            log.info(
-                "Stopping taskGroup[%d] for autoscaler rollover to [%d] tasks.",
-                groupId, rolloverTaskCount
-            );
-            futureGroupIds.add(groupId);
-            futures.add(checkpointTaskGroup(entry.getValue(), true));
-            stoppedForRollover++;
-          }
-        }
-
-        // Set the pending rollover flag - actual change applied in Phase 2
-        // when ALL actively reading task groups have stopped
+        targetRolloverTaskCount = rolloverTaskCount;
         pendingRolloverTaskCount = rolloverTaskCount;
+      }
+    }
+
+    // Stop remaining active groups for rollover while respecting maxAllowedStops to avoid
+    // worker capacity exhaustion. Publishing tasks continue consuming worker slots,
+    // so stopping all at once could leave no capacity for new tasks.
+    if (targetRolloverTaskCount != null) {
+      int numPendingCompletionTaskGroups = pendingCompletionTaskGroups.values().stream()
+                                                                      .mapToInt(List::size).sum();
+      int availableStops = ioConfig.getMaxAllowedStops() - numPendingCompletionTaskGroups - numStoppedTasks.get();
+      int stoppedForRollover = 0;
+
+      for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
+        Integer groupId = entry.getKey();
+        if (!futureGroupIds.contains(groupId)) {
+          if (stoppedForRollover >= availableStops) {
+            log.info(
+                "Deferring stop of taskGroup[%d] to next cycle - maxAllowedStops[%d] reached. "
+                + "Pending rollover to [%d] tasks. Publishing tasks: [%d], stopped this cycle: [%d].",
+                groupId, ioConfig.getMaxAllowedStops(), targetRolloverTaskCount,
+                numPendingCompletionTaskGroups, numStoppedTasks.get()
+            );
+            break;
+          }
+          log.info(
+              "Stopping taskGroup[%d] for rollover to [%d] tasks.",
+              groupId, targetRolloverTaskCount
+          );
+          futureGroupIds.add(groupId);
+          futures.add(checkpointTaskGroup(entry.getValue(), true));
+          stoppedForRollover++;
+        }
       }
     }
 
