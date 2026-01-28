@@ -411,15 +411,14 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
                 for (final Object item : ((List) rawValue)) {
                   final String itemString;
 
+                  // When useStringValueOfNullInLists is true, null items are converted to the string "null".
+                  // When false, null items are preserved as actual null values, consistent with Rows.objectToStrings.
                   if (useStringValueOfNullInLists) {
                     itemString = String.valueOf(item);
                   } else {
                     itemString = item == null ? null : String.valueOf(item);
                   }
 
-                  // Behavior with null item is to convert it to string "null". This is not what most other areas of Druid
-                  // would do when treating a null as a string, but it's consistent with Rows.objectToStrings, which is
-                  // commonly used when retrieving strings from input-row-like objects.
                   if (extractionFn == null) {
                     values.add(itemString);
                   } else {
