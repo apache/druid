@@ -27,6 +27,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 
@@ -40,20 +41,19 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Optimization utilities for filter rule application during reindexing
- *
+ * Optimization utilities for applying {@link ReindexingDeletionRule}s during reindexing
  * <p>
- * When reindexing with {@link org.apache.druid.server.compaction.ReindexingFilterRule}s, it is possible that candidate
- * segments have already applied some or all of the filters in previous reindexing runs. Reapplying such filters would
- * be wasteful and redundant. This class provides funcionality to optimize the set of filters to be applied by
+ * When reindexing with {@link ReindexingDeletionRule}s, it is possible that candidate
+ * segments have already applied some or all of the deletion rules in previous reindexing runs. Reapplying such rules would
+ * be wasteful and redundant. This class provides funcionality to optimize the set of rules to be applied by
  * any given reindexing task.
  */
-public class ReindexingFilterRuleOptimizer
+public class ReindexingDeletionRuleOptimizer
 {
-  private static final Logger LOG = new Logger(ReindexingFilterRuleOptimizer.class);
+  private static final Logger LOG = new Logger(ReindexingDeletionRuleOptimizer.class);
 
   /**
-   * Computes the required set of filter rules to be applied for the given {@link CompactionCandidate}.
+   * Computes the required set of deletion rules to be applied for the given {@link CompactionCandidate}.
    * <p>
    * We only want to apply the rules that have not yet been applied to all segments in the candidate. This reduces
    * the amount of work the task needs to do while processing rows during reindexing.
@@ -61,8 +61,8 @@ public class ReindexingFilterRuleOptimizer
    *
    * @param candidateSegments the {@link CompactionCandidate}
    * @param expectedFilter the expected filter (as a NotDimFilter wrapping an OrDimFilter)
-   * @param fingerprintMapper the fingerprint mapper to retrieve applied filters from segment fingerprints
-   * @return the set of unapplied filter rules wrapped in a NotDimFilter, or null if all rules have been applied
+   * @param fingerprintMapper the fingerprint mapper to retrieve applied rules from segment fingerprints
+   * @return the set of unapplied deletion rules wrapped in a NotDimFilter, or null if all rules have been applied
    */
   @Nullable
   public static NotDimFilter computeRequiredSetOfFilterRulesForCandidate(
@@ -125,8 +125,8 @@ public class ReindexingFilterRuleOptimizer
   }
 
   /**
-   * Filters virtual columns to only include ones referenced by the given filter.
-   * This removes virtual columns that were used by filter rules that have been optimized away.
+   * Filters virtual columns to only include ones referenced by the given {@link DimFilter}.
+   * This removes virtual columns that were used by deletion rules that have been optimized away.
    *
    * @param filter         the reduced filter to check for column references
    * @param virtualColumns the original set of virtual columns

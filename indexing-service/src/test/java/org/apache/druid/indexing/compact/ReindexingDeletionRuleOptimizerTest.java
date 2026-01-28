@@ -54,7 +54,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ReindexingFilterRuleOptimizerTest
+public class ReindexingDeletionRuleOptimizerTest
 {
   private static final DataSegment WIKI_SEGMENT
       = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 0))
@@ -84,7 +84,7 @@ public class ReindexingFilterRuleOptimizerTest
 
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -103,7 +103,7 @@ public class ReindexingFilterRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(filterB);
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -126,7 +126,7 @@ public class ReindexingFilterRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -149,7 +149,7 @@ public class ReindexingFilterRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -177,7 +177,7 @@ public class ReindexingFilterRuleOptimizerTest
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -210,7 +210,7 @@ public class ReindexingFilterRuleOptimizerTest
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -242,7 +242,7 @@ public class ReindexingFilterRuleOptimizerTest
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -268,7 +268,7 @@ public class ReindexingFilterRuleOptimizerTest
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -293,7 +293,7 @@ public class ReindexingFilterRuleOptimizerTest
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -317,7 +317,7 @@ public class ReindexingFilterRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
 
-    NotDimFilter result = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         expectedFilter,
         fingerprintMapper
@@ -429,7 +429,7 @@ public class ReindexingFilterRuleOptimizerTest
         )
     );
 
-    VirtualColumns filtered = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+    VirtualColumns filtered = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
         filter,
         virtualColumns
     );
@@ -471,7 +471,7 @@ public class ReindexingFilterRuleOptimizerTest
     // Create a filter that references a physical column, not virtual columns
     DimFilter filter = new SelectorDimFilter("regularColumn", "value", null);
 
-    VirtualColumns filtered = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+    VirtualColumns filtered = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
         filter,
         virtualColumns
     );

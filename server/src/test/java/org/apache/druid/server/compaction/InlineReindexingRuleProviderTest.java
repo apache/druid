@@ -61,8 +61,8 @@ public class InlineReindexingRuleProviderTest
     InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(null, null, null, null,
                                                                              null, null, null);
 
-    Assert.assertNotNull(provider.getFilterRules());
-    Assert.assertTrue(provider.getFilterRules().isEmpty());
+    Assert.assertNotNull(provider.getDeletionRules());
+    Assert.assertTrue(provider.getDeletionRules().isEmpty());
     Assert.assertNotNull(provider.getMetricsRules());
     Assert.assertTrue(provider.getMetricsRules().isEmpty());
     Assert.assertNotNull(provider.getDimensionsRules());
@@ -80,13 +80,13 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_returnsDistinctSortedPeriods()
   {
-    ReindexingFilterRule filter30d = createFilterRule("f1", Period.days(30));
-    ReindexingFilterRule filter60d = createFilterRule("f2", Period.days(60));
+    ReindexingDeletionRule filter30d = createFilterRule("f1", Period.days(30));
+    ReindexingDeletionRule filter60d = createFilterRule("f2", Period.days(60));
     ReindexingGranularityRule gran30d = createGranularityRule("g1", Period.days(30)); // Duplicate P30D
     ReindexingGranularityRule gran90d = createGranularityRule("g2", Period.days(90));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(filter30d, filter60d))
+        .deletionRules(ImmutableList.of(filter30d, filter60d))
         .granularityRules(ImmutableList.of(gran30d, gran90d))
         .build();
 
@@ -112,22 +112,22 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_additiveRules_allScenarios()
   {
-    ReindexingFilterRule rule30d = createFilterRule("filter-30d", Period.days(30));
-    ReindexingFilterRule rule60d = createFilterRule("filter-60d", Period.days(60));
-    ReindexingFilterRule rule90d = createFilterRule("filter-90d", Period.days(90));
+    ReindexingDeletionRule rule30d = createFilterRule("filter-30d", Period.days(30));
+    ReindexingDeletionRule rule60d = createFilterRule("filter-60d", Period.days(60));
+    ReindexingDeletionRule rule90d = createFilterRule("filter-90d", Period.days(90));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(rule30d, rule60d, rule90d))
+        .deletionRules(ImmutableList.of(rule30d, rule60d, rule90d))
         .build();
 
-    List<ReindexingFilterRule> noMatch = provider.getFilterRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingDeletionRule> noMatch = provider.getDeletionRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
     Assert.assertTrue("No rules should match interval that's too recent", noMatch.isEmpty());
 
-    List<ReindexingFilterRule> oneMatch = provider.getFilterRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingDeletionRule> oneMatch = provider.getDeletionRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
     Assert.assertEquals("Only rule30d should match", 1, oneMatch.size());
     Assert.assertEquals("filter-30d", oneMatch.get(0).getId());
 
-    List<ReindexingFilterRule> multiMatch = provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
+    List<ReindexingDeletionRule> multiMatch = provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
     Assert.assertEquals("All 3 additive rules should be returned", 3, multiMatch.size());
     Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-30d")));
     Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-60d")));
@@ -157,7 +157,7 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_allRuleTypesWireCorrectly_withInterval()
   {
-    ReindexingFilterRule filterRule = createFilterRule("filter", Period.days(30));
+    ReindexingDeletionRule filterRule = createFilterRule("filter", Period.days(30));
     ReindexingMetricsRule metricsRule = createMetricsRule("metrics", Period.days(30));
     ReindexingDimensionsRule dimensionsRule = createDimensionsRule("dimensions", Period.days(30));
     ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
@@ -166,7 +166,7 @@ public class InlineReindexingRuleProviderTest
     ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(filterRule))
+        .deletionRules(ImmutableList.of(filterRule))
         .metricsRules(ImmutableList.of(metricsRule))
         .dimensionsRules(ImmutableList.of(dimensionsRule))
         .ioConfigRules(ImmutableList.of(ioConfigRule))
@@ -175,8 +175,8 @@ public class InlineReindexingRuleProviderTest
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
         .build();
 
-    Assert.assertEquals(1, provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("filter", provider.getFilterRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assert.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assert.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
     Assert.assertEquals("metrics", provider.getMetricsRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
@@ -199,9 +199,9 @@ public class InlineReindexingRuleProviderTest
     Assert.assertEquals("inline", provider.getType());
   }
 
-  private ReindexingFilterRule createFilterRule(String id, Period period)
+  private ReindexingDeletionRule createFilterRule(String id, Period period)
   {
-    return new ReindexingFilterRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
+    return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
   }
 
   private ReindexingMetricsRule createMetricsRule(String id, Period period)

@@ -38,7 +38,7 @@ import java.util.Objects;
  * processing.
  * <p>
  * This is an additive rule. Multiple rules can apply to the same segment. When multiple rules apply, they are combined
- * as NOT(A OR B OR C) where A, B, and C come from distinct {@link ReindexingFilterRule}s.
+ * as NOT(A OR B OR C) where A, B, and C come from distinct {@link ReindexingDeletionRule}s.
  * <p>
  * Example usage:
  * <pre>{@code
@@ -82,13 +82,13 @@ import java.util.Objects;
  * }
  * }</pre>
  */
-public class ReindexingFilterRule extends AbstractReindexingRule
+public class ReindexingDeletionRule extends AbstractReindexingRule
 {
   private final DimFilter deleteWhere;
   private final VirtualColumns virtualColumns;
 
   @JsonCreator
-  public ReindexingFilterRule(
+  public ReindexingDeletionRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("olderThan") @Nonnull Period olderThan,

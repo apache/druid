@@ -146,7 +146,7 @@ public class ReindexingConfigBuilder
 
   private int applyFilterRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
-    List<ReindexingFilterRule> rules = provider.getFilterRules(interval, referenceTime);
+    List<ReindexingDeletionRule> rules = provider.getDeletionRules(interval, referenceTime);
     if (rules.isEmpty()) {
       return 0;
     }
@@ -155,7 +155,7 @@ public class ReindexingConfigBuilder
     List<DimFilter> removeConditions = new ArrayList<>();
     List<VirtualColumn> allVirtualColumns = new ArrayList<>();
 
-    for (ReindexingFilterRule rule : rules) {
+    for (ReindexingDeletionRule rule : rules) {
       removeConditions.add(rule.getDeleteWhere());
 
       if (rule.getVirtualColumns() != null) {

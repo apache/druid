@@ -52,7 +52,7 @@ import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingFilterRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingGranularityRule;
 import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
@@ -299,8 +299,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         createTuningConfigWithPartitionsSpec(new DimensionRangePartitionsSpec(1000, null, List.of("item"), false))
     );
 
-    ReindexingFilterRule filterRule = new ReindexingFilterRule(
-        "filterRule",
+    ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
+        "deletionRule",
         "Drop rows where item is 'hat'",
         Period.days(7),
         new SelectorDimFilter("item", "hat", null),
@@ -310,7 +310,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
                                                                             .granularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
-                                                                            .filterRules(List.of(filterRule));
+                                                                            .deletionRules(List.of(deletionRule));
 
     if (compactionEngine == CompactionEngine.NATIVE) {
       ruleProvider = ruleProvider.ioConfigRules(
@@ -377,8 +377,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
 
-    ReindexingFilterRule filterRule = new ReindexingFilterRule(
-        "filterByNestedField",
+    ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
+        "deleteByNestedField",
         "Remove rows where extraInfo.fieldA = 'valueA'",
         Period.days(7),
         new SelectorDimFilter("extractedFieldA", "valueA", null),
@@ -397,7 +397,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         null,
         InlineReindexingRuleProvider.builder()
-                                    .filterRules(List.of(filterRule))
+                                    .deletionRules(List.of(deletionRule))
                                     .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
         compactionEngine,

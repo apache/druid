@@ -30,7 +30,7 @@ public class AbstractReindexingRuleTest
   {
     Period period = Period.months(1).withDays(-40);
 
-    new ReindexingFilterRule(
+    new ReindexingDeletionRule(
         "test-rule",
         null,
         period,
@@ -44,7 +44,7 @@ public class AbstractReindexingRuleTest
   {
     Period period = new Period(1, -13, 0, 0, 0, 0, 0, 0);
 
-    new ReindexingFilterRule(
+    new ReindexingDeletionRule(
         "test-rule",
         null,
         period,

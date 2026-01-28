@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
  *       "type": "inline",
  *       "granularityRules": [{
  *         "id": "recent-data-granularity",
- *         "period": "P7D",
+ *         "olderThan": "P7D",
  *         "granularity": "HOUR"
  *       }]
  *     },
@@ -66,13 +66,13 @@ import java.util.stream.Collectors;
  *       "type": "inline",
  *       "granularityRules": [{
  *         "id": "default-granularity",
- *         "period": "P1D",
+ *         "olderThan": "P1D",
  *         "granularity": "DAY"
  *       }],
- *       "filterRules": [{
+ *       "deletionRules": [{
  *         "id": "remove-bots",
- *         "period": "P30D",
- *         "filter": {
+ *         "olderThan": "P30D",
+ *         "deleteWhere": {
  *           "type": "selector",
  *           "dimension": "isRobot",
  *           "value": "true"
@@ -141,20 +141,20 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingFilterRule> getFilterRules()
+  public List<ReindexingDeletionRule> getDeletionRules()
   {
     return providers.stream()
-                    .map(ReindexingRuleProvider::getFilterRules)
+                    .map(ReindexingRuleProvider::getDeletionRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
   }
 
   @Override
-  public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingDeletionRule> getDeletionRules(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getFilterRules(interval, referenceTime))
+                    .map(p -> p.getDeletionRules(interval, referenceTime))
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());

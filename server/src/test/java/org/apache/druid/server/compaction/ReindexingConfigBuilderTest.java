@@ -183,7 +183,7 @@ public class ReindexingConfigBuilderTest
     );
 
     // Two filter rules (additive)
-    ReindexingFilterRule filterRule1 = new ReindexingFilterRule(
+    ReindexingDeletionRule filterRule1 = new ReindexingDeletionRule(
         "filter-30d",
         null,
         Period.days(30),
@@ -191,7 +191,7 @@ public class ReindexingConfigBuilderTest
         null
     );
 
-    ReindexingFilterRule filterRule2 = new ReindexingFilterRule(
+    ReindexingDeletionRule filterRule2 = new ReindexingDeletionRule(
         "filter-60d",
         null,
         Period.days(60),
@@ -206,7 +206,7 @@ public class ReindexingConfigBuilderTest
         .dimensionsRules(ImmutableList.of(dimensionsRule))
         .ioConfigRules(ImmutableList.of(ioConfigRule))
         .projectionRules(ImmutableList.of(projectionRule1, projectionRule2))
-        .filterRules(ImmutableList.of(filterRule1, filterRule2))
+        .deletionRules(ImmutableList.of(filterRule1, filterRule2))
         .build();
   }
 }

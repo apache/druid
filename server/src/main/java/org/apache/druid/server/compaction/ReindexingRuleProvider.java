@@ -81,21 +81,21 @@ public interface ReindexingRuleProvider
   List<Period> getCondensedAndSortedPeriods(DateTime referenceTime);
 
   /**
-   * Returns all reindexing filter rules that apply to the given interval.
+   * Returns all reindexing deletion rules that apply to the given interval.
    * <p>
    * Handling partial overlaps is the responsibility of the provider implementation and should be clearly documented.
    * </p>
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return The list of {@link ReindexingFilterRule} rules that apply to the given interval.
+   * @return The list of {@link ReindexingDeletionRule} rules that apply to the given interval.
    */
-  List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime);
+  List<ReindexingDeletionRule> getDeletionRules(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL reindexing filter rules.
+   * Returns ALL reindexing deletion rules.
    */
-  List<ReindexingFilterRule> getFilterRules();
+  List<ReindexingDeletionRule> getDeletionRules();
 
   /**
    * Returns the matched reindexing metrics rule that applies to the given interval.

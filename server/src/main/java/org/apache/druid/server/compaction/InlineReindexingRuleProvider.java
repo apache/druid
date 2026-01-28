@@ -54,11 +54,11 @@ import java.util.stream.Stream;
  * <pre>{@code
  * {
  *   "type": "inline",
- *   "reindexingFilterRules": [
+ *   "reindexingDeletionRules": [
  *     {
  *       "id": "remove-bots-90d",
- *       "period": "P90D",
- *       "filter": {
+ *       "olderThan": "P90D",
+ *       "deleteWhere": {
  *         "type": "not",
  *         "field": {
  *           "type": "selector",
@@ -70,8 +70,8 @@ import java.util.stream.Stream;
  *     },
  *     {
  *       "id": "remove-low-priority-180d",
- *       "period": "P180D",
- *       "filter": {
+ *       "olderThan": "P180D",
+ *       "deleteWhere": {
  *         "type": "not",
  *         "field": {
  *           "type": "in",
@@ -89,7 +89,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 {
   public static final String TYPE = "inline";
 
-  private final List<ReindexingFilterRule> reindexingFilterRules;
+  private final List<ReindexingDeletionRule> reindexingDeletionRules;
   private final List<ReindexingMetricsRule> reindexingMetricsRules;
   private final List<ReindexingDimensionsRule> reindexingDimensionsRules;
   private final List<ReindexingIOConfigRule> reindexingIOConfigRules;
@@ -100,7 +100,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 
   @JsonCreator
   public InlineReindexingRuleProvider(
-      @JsonProperty("reindexingFilterRules") @Nullable List<ReindexingFilterRule> reindexingFilterRules,
+      @JsonProperty("reindexingDeletionRules") @Nullable List<ReindexingDeletionRule> reindexingDeletionRules,
       @JsonProperty("reindexingMetricsRules") @Nullable List<ReindexingMetricsRule> reindexingMetricsRules,
       @JsonProperty("reindexingDimensionsRules") @Nullable List<ReindexingDimensionsRule> reindexingDimensionsRules,
       @JsonProperty("reindexingIOConfigRules") @Nullable List<ReindexingIOConfigRule> reindexingIOConfigRules,
@@ -109,7 +109,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules
   )
   {
-    this.reindexingFilterRules = Configs.valueOrDefault(reindexingFilterRules, Collections.emptyList());
+    this.reindexingDeletionRules = Configs.valueOrDefault(reindexingDeletionRules, Collections.emptyList());
     this.reindexingMetricsRules = Configs.valueOrDefault(reindexingMetricsRules, Collections.emptyList());
     this.reindexingDimensionsRules = Configs.valueOrDefault(reindexingDimensionsRules, Collections.emptyList());
     this.reindexingIOConfigRules = Configs.valueOrDefault(reindexingIOConfigRules, Collections.emptyList());
@@ -131,10 +131,10 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("reindexingFilterRules")
-  public List<ReindexingFilterRule> getFilterRules()
+  @JsonProperty("reindexingDeletionRules")
+  public List<ReindexingDeletionRule> getDeletionRules()
   {
-    return reindexingFilterRules;
+    return reindexingDeletionRules;
   }
 
   @Override
@@ -184,7 +184,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
   {
     return Stream.of(
-                     reindexingFilterRules,
+                     reindexingDeletionRules,
                      reindexingMetricsRules,
                      reindexingDimensionsRules,
                      reindexingIOConfigRules,
@@ -204,9 +204,9 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingFilterRule> getFilterRules(Interval interval, DateTime referenceTime)
+  public List<ReindexingDeletionRule> getDeletionRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingFilterRules, interval, referenceTime);
+    return getApplicableRules(reindexingDeletionRules, interval, referenceTime);
   }
 
   @Override
@@ -306,7 +306,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       return false;
     }
     InlineReindexingRuleProvider that = (InlineReindexingRuleProvider) o;
-    return Objects.equals(reindexingFilterRules, that.reindexingFilterRules)
+    return Objects.equals(reindexingDeletionRules, that.reindexingDeletionRules)
            && Objects.equals(reindexingMetricsRules, that.reindexingMetricsRules)
            && Objects.equals(reindexingDimensionsRules, that.reindexingDimensionsRules)
            && Objects.equals(reindexingIOConfigRules, that.reindexingIOConfigRules)
@@ -319,7 +319,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public int hashCode()
   {
     return Objects.hash(
-        reindexingFilterRules,
+        reindexingDeletionRules,
         reindexingMetricsRules,
         reindexingDimensionsRules,
         reindexingIOConfigRules,
@@ -333,7 +333,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public String toString()
   {
     return "InlineReindexingRuleProvider{"
-           + "reindexingFilterRules=" + reindexingFilterRules
+           + "reindexingDeletionRules=" + reindexingDeletionRules
            + ", reindexingMetricsRules=" + reindexingMetricsRules
            + ", reindexingDimensionsRules=" + reindexingDimensionsRules
            + ", reindexingIOConfigRules=" + reindexingIOConfigRules
@@ -345,7 +345,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 
   public static class Builder
   {
-    private List<ReindexingFilterRule> reindexingFilterRules;
+    private List<ReindexingDeletionRule> reindexingDeletionRules;
     private List<ReindexingMetricsRule> reindexingMetricsRules;
     private List<ReindexingDimensionsRule> reindexingDimensionsRules;
     private List<ReindexingIOConfigRule> reindexingIOConfigRules;
@@ -353,9 +353,9 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     private List<ReindexingGranularityRule> reindexingGranularityRules;
     private List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
 
-    public Builder filterRules(List<ReindexingFilterRule> reindexingFilterRules)
+    public Builder deletionRules(List<ReindexingDeletionRule> reindexingDeletionRules)
     {
-      this.reindexingFilterRules = reindexingFilterRules;
+      this.reindexingDeletionRules = reindexingDeletionRules;
       return this;
     }
 
@@ -398,7 +398,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     public InlineReindexingRuleProvider build()
     {
       return new InlineReindexingRuleProvider(
-          reindexingFilterRules,
+          reindexingDeletionRules,
           reindexingMetricsRules,
           reindexingDimensionsRules,
           reindexingIOConfigRules,

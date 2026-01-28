@@ -176,14 +176,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       if (shouldOptimizeFilterRules(candidate, config)) {
 
         // Compute the minimal set of filter rules needed for this candidate
-        NotDimFilter reducedTransformSpecFilter = ReindexingFilterRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
+        NotDimFilter reducedTransformSpecFilter = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
             candidate,
             (NotDimFilter) config.getTransformSpec().getFilter(),
             params.getFingerprintMapper()
         );
 
         // Filter virtual columns to only include ones referenced by the reduced filter
-        VirtualColumns reducedVirtualColumns = ReindexingFilterRuleOptimizer.filterVirtualColumnsForFilter(
+        VirtualColumns reducedVirtualColumns = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
             reducedTransformSpecFilter,
             config.getTransformSpec().getVirtualColumns()
         );

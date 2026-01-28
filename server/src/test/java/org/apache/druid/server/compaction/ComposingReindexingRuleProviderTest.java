@@ -80,7 +80,7 @@ public class ComposingReindexingRuleProviderTest
 
     Assert.assertEquals("composing", composing.getType());
     Assert.assertTrue(composing.isReady());
-    Assert.assertTrue(composing.getFilterRules().isEmpty());
+    Assert.assertTrue(composing.getDeletionRules().isEmpty());
   }
 
 
@@ -121,26 +121,26 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getFilterRules_compositingBehavior()
+  public void test_getDeletionRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().filterRules(rules).build(),
-        ComposingReindexingRuleProvider::getFilterRules,
+        rules -> InlineReindexingRuleProvider.builder().deletionRules(rules).build(),
+        ComposingReindexingRuleProvider::getDeletionRules,
         createFilterRule("rule1", Period.days(7)),
         createFilterRule("rule2", Period.days(30)),
-        ReindexingFilterRule::getId
+        ReindexingDeletionRule::getId
     );
   }
 
   @Test
-  public void test_getFilterRulesWithInterval_compositingBehavior()
+  public void test_getDeletionRulesWithInterval_compositingBehavior()
   {
     testComposingBehaviorForAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().filterRules(rules).build(),
-        (provider, it) -> provider.getFilterRules(it.interval, it.time),
+        rules -> InlineReindexingRuleProvider.builder().deletionRules(rules).build(),
+        (provider, it) -> provider.getDeletionRules(it.interval, it.time),
         createFilterRule("rule1", Period.days(7)),
         createFilterRule("rule2", Period.days(30)),
-        ReindexingFilterRule::getId
+        ReindexingDeletionRule::getId
     );
   }
 
@@ -159,14 +159,14 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_getCondensedAndSortedPeriods_mergesFromAllProviders()
   {
-    ReindexingFilterRule rule1 = createFilterRule("rule1", Period.days(7));
-    ReindexingFilterRule rule2 = createFilterRule("rule2", Period.months(1));
-    ReindexingFilterRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
+    ReindexingDeletionRule rule1 = createFilterRule("rule1", Period.days(7));
+    ReindexingDeletionRule rule2 = createFilterRule("rule2", Period.months(1));
+    ReindexingDeletionRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
 
     ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(rule1)).build();
+                                                                   .deletionRules(ImmutableList.of(rule1)).build();
     ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(rule2, rule3)).build();
+                                                                   .deletionRules(ImmutableList.of(rule2, rule3)).build();
 
     ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
         ImmutableList.of(provider1, provider2)
@@ -318,7 +318,7 @@ public class ComposingReindexingRuleProviderTest
   {
     ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder().build();
     ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
+        .deletionRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
         .build();
 
     ComposingReindexingRuleProvider composing1 = new ComposingReindexingRuleProvider(
@@ -337,7 +337,7 @@ public class ComposingReindexingRuleProviderTest
   {
     ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder().build();
     ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
-        .filterRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
+        .deletionRules(ImmutableList.of(createFilterRule("rule1", Period.days(30))))
         .build();
 
     ComposingReindexingRuleProvider composing1 = new ComposingReindexingRuleProvider(
@@ -509,9 +509,9 @@ public class ComposingReindexingRuleProviderTest
     };
   }
 
-  private ReindexingFilterRule createFilterRule(String id, Period period)
+  private ReindexingDeletionRule createFilterRule(String id, Period period)
   {
-    return new ReindexingFilterRule(
+    return new ReindexingDeletionRule(
         id,
         "Test rule",
         period,

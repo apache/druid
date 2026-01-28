@@ -34,7 +34,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ReindexingFilterRuleTest
+public class ReindexingDeletionRuleTest
 {
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_30_DAYS = Period.days(30);
@@ -52,7 +52,7 @@ public class ReindexingFilterRuleTest
   );
 
 
-  private final ReindexingFilterRule rule = new ReindexingFilterRule(
+  private final ReindexingDeletionRule rule = new ReindexingDeletionRule(
       "test-filter-rule",
       "Remove robot traffic",
       PERIOD_30_DAYS,
@@ -149,7 +149,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule(null, "description", PERIOD_30_DAYS, testFilter, null)
+        () -> new ReindexingDeletionRule(null, "description", PERIOD_30_DAYS, testFilter, null)
     );
   }
 
@@ -158,7 +158,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule("test-id", "description", null, testFilter, null)
+        () -> new ReindexingDeletionRule("test-id", "description", null, testFilter, null)
     );
   }
 
@@ -168,7 +168,7 @@ public class ReindexingFilterRuleTest
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter, null)
+        () -> new ReindexingDeletionRule("test-id", "description", zeroPeriod, testFilter, null)
     );
   }
 
@@ -178,7 +178,7 @@ public class ReindexingFilterRuleTest
     Period negativePeriod = Period.days(-30);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter, null)
+        () -> new ReindexingDeletionRule("test-id", "description", negativePeriod, testFilter, null)
     );
   }
 
@@ -187,7 +187,7 @@ public class ReindexingFilterRuleTest
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingFilterRule("test-id", "description", PERIOD_30_DAYS, null, null)
+        () -> new ReindexingDeletionRule("test-id", "description", PERIOD_30_DAYS, null, null)
     );
   }
 
@@ -198,7 +198,7 @@ public class ReindexingFilterRuleTest
   {
     // P6M should work - months are valid even though they're variable length
     Period period = Period.months(6);
-    ReindexingFilterRule rule = new ReindexingFilterRule(
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
         "test-id",
         "6 month rule",
         period,
@@ -214,7 +214,7 @@ public class ReindexingFilterRuleTest
   {
     // P1Y should work - years are valid even though they're variable length
     Period period = Period.years(1);
-    ReindexingFilterRule rule = new ReindexingFilterRule(
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
         "test-id",
         "1 year rule",
         period,
@@ -230,7 +230,7 @@ public class ReindexingFilterRuleTest
   {
     // P6M15D should work - mixed months and days
     Period period = Period.months(6).plusDays(15);
-    ReindexingFilterRule rule = new ReindexingFilterRule(
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
         "test-id",
         "6 months 15 days rule",
         period,
@@ -246,7 +246,7 @@ public class ReindexingFilterRuleTest
   {
     // P1Y3M10D should work - complex period with years, months, and days
     Period period = Period.years(1).plusMonths(3).plusDays(10);
-    ReindexingFilterRule rule = new ReindexingFilterRule(
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
         "test-id",
         "1 year 3 months 10 days rule",
         period,
@@ -264,7 +264,7 @@ public class ReindexingFilterRuleTest
     Period zeroPeriod = Period.months(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", zeroPeriod, testFilter, null)
+        () -> new ReindexingDeletionRule("test-id", "description", zeroPeriod, testFilter, null)
     );
   }
 
@@ -275,7 +275,7 @@ public class ReindexingFilterRuleTest
     Period negativePeriod = Period.months(-6);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingFilterRule("test-id", "description", negativePeriod, testFilter, null)
+        () -> new ReindexingDeletionRule("test-id", "description", negativePeriod, testFilter, null)
     );
   }
 
@@ -288,7 +288,7 @@ public class ReindexingFilterRuleTest
     // Expected threshold: 2025-06-19T12:00:00Z (6 months before reference)
 
     Period sixMonths = Period.months(6);
-    ReindexingFilterRule monthRule = new ReindexingFilterRule(
+    ReindexingDeletionRule monthRule = new ReindexingDeletionRule(
         "test-month-rule",
         "6 months rule",
         sixMonths,
@@ -327,7 +327,7 @@ public class ReindexingFilterRuleTest
     // Expected threshold: 2024-12-19T12:00:00Z (1 year before reference)
 
     Period oneYear = Period.years(1);
-    ReindexingFilterRule yearRule = new ReindexingFilterRule(
+    ReindexingDeletionRule yearRule = new ReindexingDeletionRule(
         "test-year-rule",
         "1 year rule",
         oneYear,
