@@ -193,7 +193,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
                      reindexingTuningConfigRules
                  )
                  .flatMap(List::stream)
-                 .map(ReindexingRule::getPeriod)
+                 .map(ReindexingRule::getOlderThan)
                  .distinct()
                  .sorted(Comparator.comparingLong(period -> {
                    DateTime endTime = referenceTime.plus(period);
@@ -290,7 +290,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     return Collections.min(
         applicableRules,
         Comparator.comparingLong(r -> {
-          DateTime threshold = referenceTime.minus(r.getPeriod());
+          DateTime threshold = referenceTime.minus(r.getOlderThan());
           return threshold.getMillis();
         })
     );

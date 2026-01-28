@@ -112,9 +112,9 @@ public class ReindexingTuningConfigRuleTest
   }
 
   @Test
-  public void test_getPeriod_returnsConfiguredPeriod()
+  public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_21_DAYS, rule.getPeriod());
+    Assert.assertEquals(PERIOD_21_DAYS, rule.getOlderThan());
   }
 
   @Test

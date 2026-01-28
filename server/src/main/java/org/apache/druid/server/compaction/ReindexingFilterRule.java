@@ -30,30 +30,27 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * A compaction filter rule that specifies rows to remove from segments older than a specified period.
+ * A {@link ReindexingRule} that specifies patterns to match for removing rows during reindexing.
  * <p>
- * The filter defines rows to REMOVE from compacted segments. For example, a filter
- * {@code selector(isRobot=true)} means "remove rows where isRobot=true". The compaction framework
- * automatically wraps these filters in NOT logic during processing.
+ * The filter defines rows to REMOVE from reindexed segments. For example, a filter
+ * {@code selector(isRobot=true)} with {@link AbstractReindexingRule#olderThan} P90D "remove rows where isRobot=true
+ * from data older than 90 days". The reindexing framework automatically wraps these filters in NOT logic during
+ * processing.
  * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P90D will apply
- * to any segment where the segment's end time is before ("now" - 90 days).
- * <p>
- * Multiple rules can apply to the same segment. When multiple rules apply, they are combined as
- * NOT(A OR B OR C) for optimal bitmap performance, which is equivalent to NOT A AND NOT B AND NOT C
- * but uses fewer operations.
+ * This is an additive rule. Multiple rules can apply to the same segment. When multiple rules apply, they are combined
+ * as NOT(A OR B OR C) where A, B, and C come from distinct {@link ReindexingFilterRule}s.
  * <p>
  * Example usage:
  * <pre>{@code
  * {
  *   "id": "remove-robots-90d",
- *   "period": "P90D",
+ *   "olderThan": "P90D",
  *   "filter": {
  *     "type": "selector",
  *     "dimension": "isRobot",
  *     "value": "true"
  *   },
- *   "description": "Remove robot traffic from segments older than 90 days"
+ *   "description": "Remove robot traffic from data older than 90 days"
  * }
  * }</pre>
  * <p>
@@ -62,10 +59,12 @@ import java.util.Objects;
  * It is important to note that when using virtual columns in the filter, the virtual columns must be defined
  * with unique names. Users will have to take care to ensure a rule always has the same unique virtual column names
  * to not impact the fingerprinting of segments reindexed with the rule.
+ * <p>
+ * Example inline useage with virtual column:
  * <pre>{@code
  * {
  *   "id": "remove-using-nested-field-filter",
- *   "period": "P90D",
+ *   "olderThan": "P90D",
  *   "filter": {
  *     "type": "selector",
  *     "dimension": "extractedField",
@@ -92,12 +91,12 @@ public class ReindexingFilterRule extends AbstractReindexingRule
   public ReindexingFilterRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
-      @JsonProperty("period") @Nonnull Period period,
+      @JsonProperty("olderThan") @Nonnull Period olderThan,
       @JsonProperty("filter") @Nonnull DimFilter filter,
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
-    super(id, description, period);
+    super(id, description, olderThan);
     this.filter = Objects.requireNonNull(filter, "filter cannot be null");
     this.virtualColumns = virtualColumns;
   }

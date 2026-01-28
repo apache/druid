@@ -29,19 +29,16 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * A compaction IO config rule that specifies input/output configuration for segments older than a specified period.
- * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P30D will apply
- * to any segment where the segment's end time is before ("now" - 30 days).
+ * A {@link ReindexingRule} that specifies a {@link UserCompactionTaskIOConfig} for tasks to configure.
  * <p>
  * This is a non-additive rule. Multiple IO config rules cannot be applied to the same interval safely,
  * as a compaction job can only use one IO configuration.
  * <p>
- * Example usage:
+ * Example inline usage:
  * <pre>{@code
  * {
  *   "id": "dropExistingFalse-false",
- *   "period": "P90D",
+ *   "olderThan": "P90D",
  *   "ioConfig": {
  *     "dropExisting": false
  *   },
@@ -56,11 +53,11 @@ public class ReindexingIOConfigRule extends AbstractReindexingRule
   public ReindexingIOConfigRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
-      @JsonProperty("period") @Nonnull Period period,
+      @JsonProperty("olderThan") @Nonnull Period olderThan,
       @JsonProperty("ioConfig") @Nonnull UserCompactionTaskIOConfig ioConfig
   )
   {
-    super(id, description, period);
+    super(id, description, olderThan);
     this.ioConfig = Objects.requireNonNull(ioConfig, "ioConfig cannot be null");
   }
 

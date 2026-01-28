@@ -30,22 +30,18 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A compaction projection rule that specifies aggregate projections to add to segments older than a specified period.
+ * A {@link ReindexingRule} that specifies {@link AggregateProjectionSpec}s to use while building segments.
  * <p>
  * This rule defines pre-aggregated views of data that can accelerate specific query patterns. Projections are
  * particularly useful for older data where query patterns are well-understood and storage efficiency is valuable.
  * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P90D will apply
- * to any segment where the segment's end time is before ("now" - 90 days).
+ * This is a non-additive rule.
  * <p>
- * This is an additive rule. Multiple projection rules can apply to the same interval, and all projections
- * are combined into a single list on the compacted segment.
- * <p>
- * Example usage:
+ * Example inline usage:
  * <pre>{@code
  * {
  *   "id": "hourly-projection-90d",
- *   "period": "P90D",
+ *   "olderThan": "P90D",
  *   "projections": [
  *     {
  *       "name": "hourly_agg",
@@ -55,7 +51,7 @@ import java.util.Objects;
  *       ]
  *     }
  *   ],
- *   "description": "Add hourly aggregation projection for data older than 90 days"
+ *   "description": "create hourly aggregation projection for data older than 90 days"
  * }
  * }</pre>
  */
@@ -67,11 +63,11 @@ public class ReindexingProjectionRule extends AbstractReindexingRule
   public ReindexingProjectionRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
-      @JsonProperty("period") @Nonnull Period period,
+      @JsonProperty("olderThan") @Nonnull Period olderThan,
       @JsonProperty("projections") @Nonnull List<AggregateProjectionSpec> projections
   )
   {
-    super(id, description, period);
+    super(id, description, olderThan);
     this.projections = Objects.requireNonNull(projections, "projections cannot be null");
   }
 

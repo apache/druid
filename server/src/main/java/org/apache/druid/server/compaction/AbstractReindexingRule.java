@@ -33,9 +33,9 @@ import java.util.Objects;
 /**
  * Base implementation for reindexing rules that apply based on data age thresholds.
  * <p>
- * Provides period-based applicability logic: a rule with period P7D applies to data
- * older than 7 days. Subclasses define specific reindexing configuration (granularity,
- * filters, tuning, etc.) and whether multiple rules can combine (additive vs non-additive).
+ * Provides period-based applicability logic: a rule with {@link AbstractReindexingRule#olderThan} of P7D applies to
+ * data older than 7 days as compared to the time of evaluation. Subclasses define specific reindexing configuration
+ * (granularity, filters, tuning, etc.) and whether multiple rules can combine (additive vs non-additive).
  * <p>
  * The {@link #appliesTo(Interval, DateTime)} method determines if an interval is fully,
  * partially, or not covered by this rule's threshold, enabling cascading reindexing
@@ -47,19 +47,19 @@ public abstract class AbstractReindexingRule implements ReindexingRule
 
   private final String id;
   private final String description;
-  private final Period period;
+  private final Period olderThan;
 
   public AbstractReindexingRule(
       @Nonnull String id,
       @Nullable String description,
-      @Nonnull Period period
+      @Nonnull Period olderThan
   )
   {
     this.id = Objects.requireNonNull(id, "id cannot be null");
     this.description = description;
-    this.period = Objects.requireNonNull(period, "period cannot be null");
+    this.olderThan = Objects.requireNonNull(olderThan, "olderThan period cannot be null");
 
-    validatePeriodIsPositive(period);
+    validatePeriodIsPositive(olderThan);
   }
 
   /**
@@ -130,9 +130,9 @@ public abstract class AbstractReindexingRule implements ReindexingRule
 
   @JsonProperty
   @Override
-  public Period getPeriod()
+  public Period getOlderThan()
   {
-    return period;
+    return olderThan;
   }
 
   @Override
@@ -142,7 +142,7 @@ public abstract class AbstractReindexingRule implements ReindexingRule
     DateTime intervalEnd = interval.getEnd();
     DateTime intervalStart = interval.getStart();
 
-    DateTime threshold = now.minus(period);
+    DateTime threshold = now.minus(olderThan);
 
     if (intervalEnd.isBefore(threshold) || intervalEnd.isEqual(threshold)) {
       LOG.debug("Reindexing rule [%s] applies FULLY to interval [%s]. Threshold: [%s]", id, interval, threshold);

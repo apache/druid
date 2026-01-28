@@ -109,9 +109,9 @@ public class ReindexingProjectionRuleTest
   }
 
   @Test
-  public void test_getPeriod_returnsConfiguredPeriod()
+  public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_45_DAYS, rule.getPeriod());
+    Assert.assertEquals(PERIOD_45_DAYS, rule.getOlderThan());
   }
 
   @Test

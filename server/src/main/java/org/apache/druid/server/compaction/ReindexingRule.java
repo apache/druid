@@ -29,7 +29,9 @@ import javax.annotation.Nullable;
  * Defines a reindexing configuration that applies to data based on age thresholds.
  * <p>
  * Rules encapsulate specific aspects of reindexing (granularity, filters, tuning, etc.)
- * and specify when they should apply via a period threshold.
+ * and specify when they should apply via a {@link Period} which defines the age threshold for applicability.
+ * <p>
+ * Rules conditionally apply to data "older than" the rules threshold relative to the time of rule evaluation.
  */
 public interface ReindexingRule
 {
@@ -52,7 +54,7 @@ public interface ReindexingRule
 
   String getDescription();
 
-  Period getPeriod();
+  Period getOlderThan();
 
   /**
    * Check if this rule applies to the given interval.

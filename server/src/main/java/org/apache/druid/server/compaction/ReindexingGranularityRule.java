@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Period;
 
@@ -29,28 +30,25 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * A compaction granularity rule that specifies segment and query granularity for segments older than a specified period.
+ * A {@link ReindexingRule} that specifies a {@link UserCompactionTaskDimensionsConfig} for tasks to configure.
  * <p>
- * This rule controls how time-series data is bucketed during compaction. For example, changing from
- * 15-minute segments to hourly segments reduces segment count and improves query performance for
- * older data that doesn't require fine-grained time resolution.
+ * This rule controls how time-series data is bucketed during reindexing as well as the granularity of individual rows
+ * written to segments. For example, changing from 15-minute segments to hourly segments reduces segment count and
+ * improves query performance for older data that doesn't require fine-grained time resolution.
  * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P7D will apply
- * to any segment where the segment's end time is before ("now" - 7 days).
+ * This is a non-additive rule. Multiple granularity rules cannot be applied to the same interval,
+ * as a segment can only have one granularity for each of query and segment granularity.
  * <p>
- * This is a non-additive rule. Multiple granularity rules cannot be applied to the same interval safely,
- * as a segment can only have one granularity.
- * <p>
- * Example usage:
+ * Example inline usage:
  * <pre>{@code
  * {
  *   "id": "daily-30d",
- *   "period": "P30D",
+ *   "olderThan": "P30D",
  *   "granularityConfig": {
  *     "segmentGranularity": "DAY",
  *     "queryGranularity": "HOUR"
  *   },
- *   "description": "Compact to daily segments for data older than 30 days"
+ *   "description": "Compact to daily segments with hour query granularity for data older than 30 days"
  * }
  * }</pre>
  */
@@ -63,10 +61,10 @@ public class ReindexingGranularityRule extends AbstractReindexingRule
   public ReindexingGranularityRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
-      @JsonProperty("period") @Nonnull Period period,
+      @JsonProperty("olderThan") @Nonnull Period olderThan,
       @JsonProperty("granularityConfig") @Nonnull UserCompactionTaskGranularityConfig granularityConfig)
   {
-    super(id, description, period);
+    super(id, description, olderThan);
     this.granularityConfig = Objects.requireNonNull(granularityConfig, "granularityConfig cannot be null");
   }
 

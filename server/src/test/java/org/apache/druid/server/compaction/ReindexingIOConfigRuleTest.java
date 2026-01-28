@@ -109,9 +109,9 @@ public class ReindexingIOConfigRuleTest
   }
 
   @Test
-  public void test_getPeriod_returnsConfiguredPeriod()
+  public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_60_DAYS, rule.getPeriod());
+    Assert.assertEquals(PERIOD_60_DAYS, rule.getOlderThan());
   }
 
   @Test

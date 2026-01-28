@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Period;
 
@@ -29,23 +30,19 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * A compaction tuning config rule that specifies tuning parameters for segments older than a specified period.
+ * A {@link ReindexingRule} that specifies a {@link TuningConfig} for tasks to configure.
  * <p>
- * This rule controls partitioning strategy, indexing behavior, and resource usage during compaction.
- * For example, applying range partitioning with specific dimensions to older data can optimize
- * query performance for common access patterns.
+ * This rule controls things like partitioning strategy. For example, applying range partitioning over specific
+ * dimensions to older data can optimize query performance for common access patterns.
  * <p>
- * Rules are evaluated at compaction time based on segment age. A rule with period P30D will apply
- * to any segment where the segment's end time is before ("now" - 30 days).
+ * This is a non-additive rule. Multiple tuning config rules cannot be applied to the same interval, as a compaction
+ * job can only use one tuning configuration.
  * <p>
- * This is a non-additive rule. Multiple tuning config rules cannot be applied to the same interval safely,
- * as a compaction job can only use one tuning configuration.
- * <p>
- * Example usage:
+ * Example inline usage:
  * <pre>{@code
  * {
  *   "id": "range-partition-30d",
- *   "period": "P30D",
+ *   "olderThan": "P30D",
  *   "tuningConfig": {
  *     "partitionsSpec": {
  *       "type": "range",
@@ -65,11 +62,11 @@ public class ReindexingTuningConfigRule extends AbstractReindexingRule
   public ReindexingTuningConfigRule(
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
-      @JsonProperty("period") @Nonnull Period period,
+      @JsonProperty("olderThan") @Nonnull Period olderThan,
       @JsonProperty("tuningConfig") @Nonnull UserCompactionTaskQueryTuningConfig tuningConfig
   )
   {
-    super(id, description, period);
+    super(id, description, olderThan);
     this.tuningConfig = Objects.requireNonNull(tuningConfig, "tuningConfig cannot be null");
   }
 
