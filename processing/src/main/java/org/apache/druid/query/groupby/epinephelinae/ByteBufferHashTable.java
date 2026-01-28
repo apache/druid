@@ -202,7 +202,7 @@ public class ByteBufferHashTable
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
-        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
+        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & Groupers.USED_FLAG_MASK;
         final int newBucket = findBucket(true, newBuckets, newTableBuffer, keyBuffer, keyHash);
 
         if (newBucket < 0) {
@@ -308,7 +308,7 @@ public class ByteBufferHashTable
       final int bucketOffset = bucket * bucketSizeWithHash;
       final int storedHashWithUsedFlag = targetTableBuffer.getInt(bucketOffset);
 
-      if ((storedHashWithUsedFlag & 0x80000000) == 0) {
+      if ((storedHashWithUsedFlag & Groupers.USED_FLAG_BIT) == 0) {
         // Found unused bucket before finding our key
         return allowNewBucket ? bucket : -1;
       }

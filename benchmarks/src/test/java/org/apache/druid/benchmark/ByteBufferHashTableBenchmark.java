@@ -115,7 +115,7 @@ public class ByteBufferHashTableBenchmark
       ByteBuffer keyBuffer = insertedKeysBuffer.slice();
       insertedKeysBuffer.clear(); // Reset limit for next iteration
 
-      int keyHash = Groupers.smear(keyBuffer.getInt(0)) & 0x7FFFFFFF;
+      int keyHash = Groupers.smear(keyBuffer.getInt(0)) & Groupers.USED_FLAG_MASK;
       insertedKeyHashes[i] = keyHash;
 
       int bucket = hashTable.findBucket0(true, keyBuffer, keyHash);
@@ -150,7 +150,7 @@ public class ByteBufferHashTableBenchmark
       lookupKeys[i] = lookupKeysBuffer.slice();
       lookupKeysBuffer.clear();
 
-      lookupKeyHashes[i] = Groupers.smear(lookupKeys[i].getInt(0)) & 0x7FFFFFFF;
+      lookupKeyHashes[i] = Groupers.smear(lookupKeys[i].getInt(0)) & Groupers.USED_FLAG_MASK;
     }
 
     // Fill the rest with existing keys (copy from insertedKeysBuffer)

@@ -544,7 +544,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
           // Put the entry in the new hash table
-          final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
+          final int keyHash = entryBuffer.getInt(entryBuffer.position()) & Groupers.USED_FLAG_MASK;
           final int newBucket = findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
 
           if (newBucket < 0) {
