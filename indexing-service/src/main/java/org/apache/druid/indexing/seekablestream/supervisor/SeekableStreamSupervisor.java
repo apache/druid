@@ -4303,6 +4303,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
 
   /**
+   * Gets 'lag' for each task replica.
+   */
+  @Nullable
+  protected abstract Map<String, Long> getReplicaLag();
+
+  /**
    * Gets highest current offsets of all the tasks (actively reading and publishing) for all partitions of the stream.
    * In case if no task is reading for a partition, returns offset stored in metadata storage for that partition.
    * In case of no active and publishing task groups, returns offsets stored in metadata storage.
@@ -4341,6 +4347,29 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     // if supervisor is suspended or is idle and nothing is running, use offsets in metadata, if exist
     return offsetsFromMetadataStorage;
+  }
+
+  /**
+   * Gets current offsets of all the actively reading tasks.
+   * In case of no active task groups, returns null.
+   * Used to compute replica lag by comparing with highest offsets for partition.
+   */
+  protected Map<String, Map<PartitionIdType, SequenceOffsetType>> getTasksCurrentOffsets()
+  {
+    if (!spec.isSuspended()) {
+      if (activelyReadingTaskGroups.size() > 0) {
+        Map<String, Map<PartitionIdType, SequenceOffsetType>> currentOffsets = activelyReadingTaskGroups
+            .values()
+            .stream()
+            .flatMap(taskGroup -> taskGroup.tasks.entrySet().stream())
+            .collect(Collectors.toMap(
+                Entry::getKey,
+                Entry -> Entry.getValue().currentSequences
+            ));
+        return currentOffsets;
+      }
+    }
+    return null;
   }
 
   private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
@@ -4721,11 +4750,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
       Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
+      Map<String, Long> taskLag = getReplicaLag();
+
+      final String type = spec.getType();
+      Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
+
+      if (taskLag != null && ioConfig.getReplicas() > 1) {
+        for (Entry<String, Long> entry : taskLag.entrySet()) {
+          // we only emit this metric when the replica is lagging by more than 50 events.
+          if (entry.getValue() >= 50) {
+            emitter.emit(
+                ServiceMetricEvent.builder()
+                    .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                    .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                    .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                    .setDimension(DruidMetrics.TASK_ID, entry.getKey())
+                    .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
+                    .setMetric(
+                        StringUtils.format("ingest/%s/replicaLag", type),
+                        entry.getValue()
+                    )
+            );
+          }
+        }
+      }
 
       if (partitionRecordLags == null && partitionTimeLags == null) {
         throw new ISE("Latest offsets have not been fetched");
       }
-      final String type = spec.getType();
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
         if (partitionLags == null) {
@@ -4748,7 +4800,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         final LagStats lagStats = aggregatePartitionLags(partitionLags);
-        Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
               ServiceMetricEvent.builder()
