@@ -91,6 +91,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final WeightedCostFunction costFunction;
   private volatile CostMetrics lastKnownMetrics;
 
+  private int scaleDownCounter = 0;
+
   public CostBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
       CostBasedAutoScalerConfig config,
@@ -149,7 +151,12 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public int computeTaskCountForRollover()
   {
-    return computeOptimalTaskCount(lastKnownMetrics);
+    if (config.isScaleDownOnTaskRolloverOnly()) {
+      return computeOptimalTaskCount(lastKnownMetrics);
+    } else {
+      scaleDownCounter = 0;
+      return -1;
+    }
   }
 
   public int computeTaskCountForScaleAction()
@@ -158,11 +165,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
-    // Perform only scale-up actions
+    // Perform scale-up actions; scale-down actions only if configured.
     int taskCount = -1;
     if (optimalTaskCount > currentTaskCount) {
       taskCount = optimalTaskCount;
-      log.info("New task count [%d] on supervisor [%s]", taskCount, supervisorId);
+      scaleDownCounter = 0; // Nullify the scaleDown counter after a successful scaleup too.
+      log.info("New task count [%d] on supervisor [%s], scaling up", taskCount, supervisorId);
+    } else if (!config.isScaleDownOnTaskRolloverOnly()
+               && optimalTaskCount < currentTaskCount
+               && ++scaleDownCounter >= config.getScaleDownBarrier()) {
+      taskCount = optimalTaskCount;
+      scaleDownCounter = 0;
+      log.info("New task count [%d] on supervisor [%s], scaling down", taskCount, supervisorId);
     } else {
       log.info("No scaling required for supervisor [%s]", supervisorId);
     }

@@ -69,6 +69,7 @@ function _build_distribution() {
     && rm conf/druid/auto/_common/common.runtime.properties.bak \
     && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/auto/_common/common.runtime.properties \
     && echo -e "\n\ndruid.export.storage.baseDir=/" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.sql.planner.enableSysQueriesTable=true" >> conf/druid/auto/_common/common.runtime.properties \
     && echo -e "\n\ndruid.msq.dart.enabled=true" >> conf/druid/auto/_common/common.runtime.properties \
     && echo -e "\n\ndruid.msq.dart.controller.maxRetainedReportCount=100" >> conf/druid/auto/_common/common.runtime.properties \
     && echo -e "\n\ndruid.msq.dart.controller.maxRetainedReportDuration=PT3600S" >> conf/druid/auto/_common/common.runtime.properties \

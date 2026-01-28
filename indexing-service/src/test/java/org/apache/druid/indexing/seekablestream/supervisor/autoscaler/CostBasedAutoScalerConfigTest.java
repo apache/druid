@@ -24,6 +24,13 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_IDLE_WEIGHT;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_PROCESSING_RATE;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_DOWN_BARRIER;
+
 public class CostBasedAutoScalerConfigTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
@@ -42,7 +49,9 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
-                  + "  \"defaultProcessingRate\": 3\n"
+                  + "  \"defaultProcessingRate\": 2000.0,\n"
+                  + "  \"scaleDownBarrier\": 10,\n"
+                  + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
                   + "}";
 
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -56,7 +65,9 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
-    Assert.assertEquals(3.0, config.getDefaultProcessingRate(), 0.01);
+    Assert.assertEquals(2000.0, config.getDefaultProcessingRate(), 0.001);
+    Assert.assertEquals(10, config.getScaleDownBarrier());
+    Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);
@@ -82,10 +93,15 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(2, config.getTaskCountMin());
 
     // Check defaults
-    Assert.assertEquals(900000L, config.getScaleActionPeriodMillis());
-    Assert.assertEquals(1200000L, config.getMinTriggerScaleActionFrequencyMillis());
-    Assert.assertEquals(0.25, config.getLagWeight(), 0.001);
-    Assert.assertEquals(0.75, config.getIdleWeight(), 0.001);
+    Assert.assertEquals(DEFAULT_SCALE_ACTION_PERIOD_MILLIS, config.getScaleActionPeriodMillis());
+    Assert.assertEquals(DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS, config.getMinTriggerScaleActionFrequencyMillis());
+    Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
+    Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
+    Assert.assertEquals(DEFAULT_PROCESSING_RATE, config.getDefaultProcessingRate(), 0.001);
+    Assert.assertEquals(DEFAULT_SCALE_DOWN_BARRIER, config.getScaleDownBarrier());
+    Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertNull(config.getTaskCountStart());
+    Assert.assertNull(config.getStopTaskCountRatio());
   }
 
   @Test
@@ -99,6 +115,9 @@ public class CostBasedAutoScalerConfigTest
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
 
     Assert.assertFalse(config.getEnableTaskAutoScaler());
+    // When disabled, taskCountMax and taskCountMin default to 0
+    Assert.assertEquals(0, config.getTaskCountMax());
+    Assert.assertEquals(0, config.getTaskCountMin());
   }
 
   @Test(expected = RuntimeException.class)
@@ -149,5 +168,37 @@ public class CostBasedAutoScalerConfigTest
                              .stopTaskCountRatio(1.5)
                              .enableTaskAutoScaler(true)
                              .build();
+  }
+
+  @Test
+  public void testBuilder()
+  {
+    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
+                                                                 .taskCountMax(100)
+                                                                 .taskCountMin(5)
+                                                                 .taskCountStart(10)
+                                                                 .enableTaskAutoScaler(true)
+                                                                 .minTriggerScaleActionFrequencyMillis(600000L)
+                                                                 .stopTaskCountRatio(0.8)
+                                                                 .scaleActionPeriodMillis(60000L)
+                                                                 .lagWeight(0.6)
+                                                                 .idleWeight(0.4)
+                                                                 .defaultProcessingRate(2000.0)
+                                                                 .scaleDownBarrier(10)
+                                                                 .scaleDownDuringTaskRolloverOnly(true)
+                                                                 .build();
+
+    Assert.assertTrue(config.getEnableTaskAutoScaler());
+    Assert.assertEquals(100, config.getTaskCountMax());
+    Assert.assertEquals(5, config.getTaskCountMin());
+    Assert.assertEquals(Integer.valueOf(10), config.getTaskCountStart());
+    Assert.assertEquals(600000L, config.getMinTriggerScaleActionFrequencyMillis());
+    Assert.assertEquals(Double.valueOf(0.8), config.getStopTaskCountRatio());
+    Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
+    Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
+    Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
+    Assert.assertEquals(2000.0, config.getDefaultProcessingRate(), 0.001);
+    Assert.assertEquals(10, config.getScaleDownBarrier());
+    Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
   }
 }
