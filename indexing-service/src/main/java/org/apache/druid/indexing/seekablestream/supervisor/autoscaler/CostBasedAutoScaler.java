@@ -170,8 +170,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       taskCount = optimalTaskCount;
       scaleDownCounter = 0; // Nullify the scaleDown counter after a successful scaleup too.
       log.info("New task count [%d] on supervisor [%s], scaling up", taskCount, supervisorId);
-    } else if (!config.isScaleDownOnTaskRolloverOnly() && optimalTaskCount < currentTaskCount &&
-               (config.getScaleDownBarrier() == 0 || ++scaleDownCounter == config.getScaleDownBarrier())) {
+    } else if (!config.isScaleDownOnTaskRolloverOnly()
+               && optimalTaskCount < currentTaskCount
+               && ++scaleDownCounter >= config.getScaleDownBarrier()) {
       taskCount = optimalTaskCount;
       scaleDownCounter = 0;
       log.info("New task count [%d] on supervisor [%s], scaling down", taskCount, supervisorId);

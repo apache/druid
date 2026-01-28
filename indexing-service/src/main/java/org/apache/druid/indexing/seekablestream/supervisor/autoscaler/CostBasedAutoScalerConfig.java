@@ -43,12 +43,12 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
-  private static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 5 * 60 * 1000; // 5 minutes
-  private static final double DEFAULT_LAG_WEIGHT = 0.25;
-  private static final double DEFAULT_IDLE_WEIGHT = 0.75;
-  private static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
-  private static final int DEFAULT_SCALE_DOWN_BARRIER = 5; // We delay scale down by 5 * DEFAULT_SCALE_ACTION_PERIOD_MILLIS
+  static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
+  static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 5 * 60 * 1000; // 5 minutes
+  static final double DEFAULT_LAG_WEIGHT = 0.25;
+  static final double DEFAULT_IDLE_WEIGHT = 0.75;
+  static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
+  static final int DEFAULT_SCALE_DOWN_BARRIER = 5; // We delay scale down by 5 * DEFAULT_SCALE_ACTION_PERIOD_MILLIS
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -218,7 +218,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return scaleDownBarrier;
   }
 
-  @JsonProperty
+  @JsonProperty("scaleDownDuringTaskRolloverOnly")
   public boolean isScaleDownOnTaskRolloverOnly()
   {
     return scaleDownDuringTaskRolloverOnly;
