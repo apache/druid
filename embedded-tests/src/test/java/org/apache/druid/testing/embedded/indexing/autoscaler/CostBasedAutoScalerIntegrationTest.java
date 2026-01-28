@@ -132,6 +132,8 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
+        .scaleDownDuringTaskRolloverOnly(false)
+        .scaleDownBarrier(1)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
@@ -225,6 +227,9 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
         .lagWeight(0.1)
         .idleWeight(0.9)
+        .scaleDownDuringTaskRolloverOnly(false)
+        // Do not slow scale-downs
+        .scaleDownBarrier(0)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);

@@ -43,11 +43,12 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 15 * 60 * 1000; // 15 minutes
-  private static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 1200000; // 20 minutes
-  private static final double DEFAULT_LAG_WEIGHT = 0.25;
-  private static final double DEFAULT_IDLE_WEIGHT = 0.75;
-  private static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
+  static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
+  static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 5 * 60 * 1000; // 5 minutes
+  static final double DEFAULT_LAG_WEIGHT = 0.25;
+  static final double DEFAULT_IDLE_WEIGHT = 0.75;
+  static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
+  static final int DEFAULT_SCALE_DOWN_BARRIER = 5; // We delay scale down by 5 * DEFAULT_SCALE_ACTION_PERIOD_MILLIS
 
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
@@ -60,6 +61,18 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final double lagWeight;
   private final double idleWeight;
   private final double defaultProcessingRate;
+  /**
+   * Represents the threshold value used to prevent the auto-scaler from scaling down tasks immediately,
+   * when the computed cost-based metrics fall below this barrier.
+   * A higher value implies a more conservative scaling down behavior, ensuring that tasks
+   * are not prematurely terminated in scenarios of potential workload spikes or insufficient cost savings.
+   */
+  private final int scaleDownBarrier;
+  /**
+   * Indicates whether task scaling down is limited to periods during task rollovers only.
+   * If set to {@code false}, allows scaling down during normal task run time.
+   */
+  private final boolean scaleDownDuringTaskRolloverOnly;
 
   @JsonCreator
   public CostBasedAutoScalerConfig(
@@ -72,7 +85,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("defaultProcessingRate") Double defaultProcessingRate
+      @Nullable @JsonProperty("defaultProcessingRate") Double defaultProcessingRate,
+      @Nullable @JsonProperty("scaleDownBarrier") Integer scaleDownBarrier,
+      @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -90,6 +105,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.defaultProcessingRate = Configs.valueOrDefault(defaultProcessingRate, DEFAULT_PROCESSING_RATE);
+    this.scaleDownBarrier = Configs.valueOrDefault(scaleDownBarrier, DEFAULT_SCALE_DOWN_BARRIER);
+    this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -107,17 +124,16 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     }
     this.taskCountStart = taskCountStart;
 
-    // Validate stopTaskCountRatio
     Preconditions.checkArgument(
         stopTaskCountRatio == null || (stopTaskCountRatio > 0.0 && stopTaskCountRatio <= 1.0),
         "0.0 < stopTaskCountRatio <= 1.0"
     );
     this.stopTaskCountRatio = stopTaskCountRatio;
 
-    // Validate weights are non-negative
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
     Preconditions.checkArgument(this.defaultProcessingRate > 0, "defaultProcessingRate must be > 0");
+    Preconditions.checkArgument(this.scaleDownBarrier >= 0, "scaleDownBarrier must be >= 0");
   }
 
   /**
@@ -196,6 +212,18 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return defaultProcessingRate;
   }
 
+  @JsonProperty
+  public int getScaleDownBarrier()
+  {
+    return scaleDownBarrier;
+  }
+
+  @JsonProperty("scaleDownDuringTaskRolloverOnly")
+  public boolean isScaleDownOnTaskRolloverOnly()
+  {
+    return scaleDownDuringTaskRolloverOnly;
+  }
+
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -222,6 +250,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
            && Double.compare(that.defaultProcessingRate, defaultProcessingRate) == 0
+           && scaleDownBarrier == that.scaleDownBarrier
+           && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -239,7 +269,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         scaleActionPeriodMillis,
         lagWeight,
         idleWeight,
-        defaultProcessingRate
+        defaultProcessingRate,
+        scaleDownBarrier,
+        scaleDownDuringTaskRolloverOnly
     );
   }
 
@@ -257,6 +289,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
            ", defaultProcessingRate=" + defaultProcessingRate +
+           ", scaleDownBarrier=" + scaleDownBarrier +
+           ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            '}';
   }
 
@@ -276,6 +310,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Double lagWeight;
     private Double idleWeight;
     private Double defaultProcessingRate;
+    private Integer scaleDownBarrier;
+    private Boolean scaleDownDuringTaskRolloverOnly;
 
     private Builder()
     {
@@ -341,6 +377,18 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder scaleDownBarrier(int scaleDownBarrier)
+    {
+      this.scaleDownBarrier = scaleDownBarrier;
+      return this;
+    }
+
+    public Builder scaleDownDuringTaskRolloverOnly(boolean scaleDownDuringTaskRolloverOnly)
+    {
+      this.scaleDownDuringTaskRolloverOnly = scaleDownDuringTaskRolloverOnly;
+      return this;
+    }
+
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -353,7 +401,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
-          defaultProcessingRate
+          defaultProcessingRate,
+          scaleDownBarrier,
+          scaleDownDuringTaskRolloverOnly
       );
     }
   }
