@@ -138,12 +138,15 @@ public interface SqlEngine
    *
    * @param selfOnly               whether to only include queries running on this server. If false, this server should
    *                               contact all other servers to build a full list of all running queries.
+   * @param includeComplete        whether to include completed queries in the response. The number of completed queries
+   *                               returned is determined by engine-specific retention settings.
    * @param authenticationResult   implementations should use this for filtering the list of visible queries
    * @param stateReadAuthorization authorization for the STATE READ resource. If this is authorized, implementations
    *                               should allow all queries to be visible
    */
   default GetQueriesResponse getRunningQueries(
       boolean selfOnly,
+      boolean includeComplete,
       AuthenticationResult authenticationResult,
       AuthorizationResult stateReadAuthorization
   )

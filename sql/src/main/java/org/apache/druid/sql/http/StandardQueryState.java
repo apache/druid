@@ -19,28 +19,19 @@
 
 package org.apache.druid.sql.http;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
- * Information about a SQL query. Implementations are engine-specific.
+ * Standard strings returned by {@link QueryInfo#state()}. Engines can add their own if they like.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "engine")
-public interface QueryInfo
+public class StandardQueryState
 {
-  /**
-   * Returns the engine name for this query, matching the JSON "engine" property.
-   */
-  String engine();
+  public static final String ACCEPTED = "ACCEPTED";
+  public static final String RUNNING = "RUNNING";
+  public static final String SUCCESS = "SUCCESS";
+  public static final String FAILED = "FAILED";
+  public static final String CANCELED = "CANCELED";
 
-  /**
-   * Returns the state of this query, which may be an engine-specific string. Standard strings
-   * are in {@link StandardQueryState}, although engines can use additional strings if they like.
-   */
-  String state();
-
-  /**
-   * Returns the execution ID for this query. This is the system-generated ID used internally,
-   * such as the dartQueryId for Dart queries.
-   */
-  String executionId();
+  private StandardQueryState()
+  {
+    // No instantiation.
+  }
 }
