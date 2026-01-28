@@ -171,7 +171,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // --------------------------------------------------------
 
   /**
-   * A TaskGroup is the main data structure used by SeekableStreamSupervisor to organize and monitor stream partitions and
+   * A Pankaj TaskGroup is the main data structure used by SeekableStreamSupervisor to organize and monitor stream partitions and
    * indexing tasks. All the tasks in a TaskGroup should always be doing the same thing (reading the same partitions and
    * starting from the same sequences) and if [replicas] is configured to be 1, a TaskGroup will contain a single task (the
    * exception being if the supervisor started up and discovered and adopted some already running tasks). At any given
