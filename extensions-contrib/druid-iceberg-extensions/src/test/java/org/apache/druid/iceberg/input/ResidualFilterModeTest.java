@@ -29,12 +29,10 @@ public class ResidualFilterModeTest
   public void testFromString()
   {
     Assert.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("ignore"));
-    Assert.assertEquals(ResidualFilterMode.WARN, ResidualFilterMode.fromString("warn"));
     Assert.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("fail"));
 
     // Test case insensitivity
     Assert.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("IGNORE"));
-    Assert.assertEquals(ResidualFilterMode.WARN, ResidualFilterMode.fromString("Warn"));
     Assert.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("FAIL"));
   }
 
@@ -51,7 +49,6 @@ public class ResidualFilterModeTest
   public void testGetValue()
   {
     Assert.assertEquals("ignore", ResidualFilterMode.IGNORE.getValue());
-    Assert.assertEquals("warn", ResidualFilterMode.WARN.getValue());
     Assert.assertEquals("fail", ResidualFilterMode.FAIL.getValue());
   }
 
@@ -62,12 +59,10 @@ public class ResidualFilterModeTest
 
     // Test serialization
     Assert.assertEquals("\"ignore\"", mapper.writeValueAsString(ResidualFilterMode.IGNORE));
-    Assert.assertEquals("\"warn\"", mapper.writeValueAsString(ResidualFilterMode.WARN));
     Assert.assertEquals("\"fail\"", mapper.writeValueAsString(ResidualFilterMode.FAIL));
 
     // Test deserialization
     Assert.assertEquals(ResidualFilterMode.IGNORE, mapper.readValue("\"ignore\"", ResidualFilterMode.class));
-    Assert.assertEquals(ResidualFilterMode.WARN, mapper.readValue("\"warn\"", ResidualFilterMode.class));
     Assert.assertEquals(ResidualFilterMode.FAIL, mapper.readValue("\"fail\"", ResidualFilterMode.class));
   }
 }

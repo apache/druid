@@ -147,8 +147,7 @@ To control this behavior, you can set the `residualFilterMode` property on the I
 
 | Mode | Description |
 |------|-------------|
-| `ignore` | Default. Residual rows are ingested unless filtered by `transformSpec`. |
-| `warn` | Log a warning when residual filters are detected, but continue with ingestion. |
+| `ignore` | Default. Residual rows are ingested with a warning log unless filtered by `transformSpec`. |
 | `fail` | Fail the ingestion job when residual filters are detected. Use this to ensure that filters only target partition columns. |
 
 Example:

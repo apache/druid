@@ -38,12 +38,6 @@ public enum ResidualFilterMode
   IGNORE("ignore"),
 
   /**
-   * Log a warning when residual filters are detected, but continue with ingestion.
-   * Useful for identifying potential data quality issues without failing the job.
-   */
-  WARN("warn"),
-
-  /**
    * Fail the ingestion job when residual filters are detected.
    * Use this mode to ensure that only partition-column filters are used,
    * preventing unintended residual rows from being ingested.
@@ -71,7 +65,7 @@ public enum ResidualFilterMode
       }
     }
     throw new IllegalArgumentException(
-        "Unknown residualFilterMode: " + value + ". Valid values are: ignore, warn, fail"
+        "Unknown residualFilterMode: " + value + ". Valid values are: ignore, fail"
     );
   }
 }

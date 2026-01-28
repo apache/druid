@@ -21,6 +21,7 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
@@ -36,7 +37,6 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,25 +62,6 @@ public abstract class IcebergCatalog
   /**
    * Extract the iceberg data files upto the latest snapshot associated with the table
    *
-   * @param tableNamespace The catalog namespace under which the table is defined
-   * @param tableName      The iceberg table name
-   * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
-   * @param snapshotTime      Datetime that will be used to fetch the most recent snapshot as of this time
-   * @return a list of data file paths
-   */
-  public List<String> extractSnapshotDataFiles(
-      String tableNamespace,
-      String tableName,
-      IcebergFilter icebergFilter,
-      DateTime snapshotTime
-  )
-  {
-    return extractSnapshotDataFiles(tableNamespace, tableName, icebergFilter, snapshotTime, null);
-  }
-
-  /**
-   * Extract the iceberg data files upto the latest snapshot associated with the table
-   *
    * @param tableNamespace     The catalog namespace under which the table is defined
    * @param tableName          The iceberg table name
    * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
@@ -94,7 +75,7 @@ public abstract class IcebergCatalog
       String tableName,
       IcebergFilter icebergFilter,
       DateTime snapshotTime,
-      @Nullable ResidualFilterMode residualFilterMode
+      ResidualFilterMode residualFilterMode
   )
   {
     Catalog catalog = retrieveCatalog();
@@ -102,7 +83,6 @@ public abstract class IcebergCatalog
     String tableIdentifier = tableNamespace + "." + tableName;
 
     List<String> dataFilePaths = new ArrayList<>();
-    ResidualFilterMode effectiveMode = residualFilterMode != null ? residualFilterMode : ResidualFilterMode.IGNORE;
 
     ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
@@ -132,8 +112,8 @@ public abstract class IcebergCatalog
       for (FileScanTask task : tasks) {
         dataFilePaths.add(task.file().path().toString());
 
-        // Check for residual filters if mode is not IGNORE
-        if (effectiveMode != ResidualFilterMode.IGNORE && detectedResidual == null) {
+        // Check for residual filters
+        if (detectedResidual == null) {
           Expression residual = task.residual();
           if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
             detectedResidual = residual;
@@ -151,21 +131,18 @@ public abstract class IcebergCatalog
             detectedResidual
         );
 
-        if (effectiveMode == ResidualFilterMode.FAIL) {
-          throw new IAE(
-              "%s To allow residual rows, set residualFilterMode to 'ignore' or 'warn', "
-              + "or add a corresponding filter in transformSpec.",
-              message
-          );
-        } else if (effectiveMode == ResidualFilterMode.WARN) {
-          log.warn(message);
+        if (residualFilterMode == ResidualFilterMode.FAIL) {
+          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(message);
         }
+        log.warn(message);
       }
 
       long duration = System.currentTimeMillis() - start;
       log.info("Data file scan and fetch took [%d ms] time for [%d] paths", duration, dataFilePaths.size());
     }
-    catch (IAE e) {
+    catch (DruidException e) {
       throw e;
     }
     catch (Exception e) {

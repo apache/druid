@@ -25,12 +25,13 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Files;
+import org.apache.iceberg.PartitionKey;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -239,23 +240,6 @@ public class IcebergInputSourceTest
   }
 
   @Test
-  public void testResidualFilterModeWarn() throws IOException
-  {
-    // Filter on non-partition column with WARN mode should succeed (warning logged)
-    IcebergInputSource inputSource = new IcebergInputSource(
-        TABLENAME,
-        NAMESPACE,
-        new IcebergEqualsFilter("id", "123988"),
-        testCatalog,
-        new LocalInputSourceFactory(),
-        null,
-        ResidualFilterMode.WARN
-    );
-    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(1, splits.count());
-  }
-
-  @Test
   public void testResidualFilterModeFail() throws IOException
   {
     // Filter on non-partition column with FAIL mode should throw exception
@@ -268,11 +252,12 @@ public class IcebergInputSourceTest
         null,
         ResidualFilterMode.FAIL
     );
-    IAE exception = Assert.assertThrows(
-        IAE.class,
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
         () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
     );
     Assert.assertTrue(
+        "Expect residual error to be thrown",
         exception.getMessage().contains("residual")
     );
   }
@@ -321,11 +306,12 @@ public class IcebergInputSourceTest
           null,
           ResidualFilterMode.FAIL
       );
-      IAE exception = Assert.assertThrows(
-          IAE.class,
+      DruidException exception = Assert.assertThrows(
+          DruidException.class,
           () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
       );
       Assert.assertTrue(
+          "Expect residual error to be thrown",
           exception.getMessage().contains("residual")
       );
     }
@@ -391,7 +377,7 @@ public class IcebergInputSourceTest
     OutputFile file = icebergTable.io().newOutputFile(filepath);
 
     // Create a partition key for the partition spec
-    org.apache.iceberg.PartitionKey partitionKey = new org.apache.iceberg.PartitionKey(partitionSpec, tableSchema);
+    PartitionKey partitionKey = new PartitionKey(partitionSpec, tableSchema);
     partitionKey.partition(record.copy(tableData));
 
     DataWriter<GenericRecord> dataWriter =

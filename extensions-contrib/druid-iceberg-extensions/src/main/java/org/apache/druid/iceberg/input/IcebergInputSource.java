@@ -22,6 +22,7 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -96,7 +97,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.icebergFilter = icebergFilter;
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
-    this.residualFilterMode = residualFilterMode;
+    this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
   }
 
   @Override
