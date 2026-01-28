@@ -204,6 +204,7 @@ public class DiscoveryDruidNode
         druidNode.getHostAndPort(),
         druidNode.getHostAndTlsPort(),
         dataNodeService.getMaxSize(),
+        dataNodeService.getStorageSize(),
         dataNodeService.getServerType(),
         dataNodeService.getTier(),
         dataNodeService.getPriority()

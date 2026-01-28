@@ -87,6 +87,7 @@ public class IndexerDataServerQueryHandlerTest
       "host1:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0
@@ -96,6 +97,7 @@ public class IndexerDataServerQueryHandlerTest
       "host2:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0

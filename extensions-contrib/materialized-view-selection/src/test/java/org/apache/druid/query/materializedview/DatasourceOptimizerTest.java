@@ -146,6 +146,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         "localhost:1234",
         null,
         10000000L,
+        null,
         ServerType.HISTORICAL,
         "default_tier",
         0

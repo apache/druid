@@ -88,6 +88,17 @@ public class DruidServerConfig
     return maxSize.getBytes();
   }
 
+  /**
+   * Physical size of the storage locations configured for this server. This value is always computed using
+   * {@link SegmentLoaderConfig#getCombinedMaxSize()}, and may differ from {@link #getMaxSize()} since the latter
+   * can be explicitly set via config, or computed to some very large value when
+   * {@link SegmentLoaderConfig#isVirtualStorage()} is true.
+   */
+  public long getStorageSize()
+  {
+    return segmentLoaderConfig.getCombinedMaxSize();
+  }
+
   public String getTier()
   {
     return tier;
