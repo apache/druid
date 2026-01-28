@@ -276,6 +276,29 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     return result;
   }
 
+  /**
+   * Creates a builder initialized with all fields from this config.
+   * Useful for creating modified copies of an existing config.
+   */
+  public Builder toBuilder()
+  {
+    return new Builder()
+        .forDataSource(this.dataSource)
+        .withTaskPriority(this.taskPriority)
+        .withInputSegmentSizeBytes(this.inputSegmentSizeBytes)
+        .withMaxRowsPerSegment(this.maxRowsPerSegment)
+        .withSkipOffsetFromLatest(this.skipOffsetFromLatest)
+        .withTuningConfig(this.tuningConfig)
+        .withGranularitySpec(this.granularitySpec)
+        .withDimensionsSpec(this.dimensionsSpec)
+        .withMetricsSpec(this.metricsSpec)
+        .withTransformSpec(this.transformSpec)
+        .withProjections(this.projections)
+        .withIoConfig(this.ioConfig)
+        .withEngine(this.engine)
+        .withTaskContext(this.taskContext);
+  }
+
   public static class Builder
   {
     private String dataSource;

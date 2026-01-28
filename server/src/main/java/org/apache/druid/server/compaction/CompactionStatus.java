@@ -60,6 +60,7 @@ public class CompactionStatus
   private static final Logger log = new Logger(CompactionStatus.class);
 
   private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null);
+  public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
   {
@@ -522,7 +523,7 @@ public class CompactionStatus
       if (uncompactedSegments.isEmpty()) {
         return COMPLETE;
       } else {
-        return CompactionStatus.pending("not compacted yet");
+        return CompactionStatus.pending(NEVER_COMPACTED_REASON);
       }
     }
 

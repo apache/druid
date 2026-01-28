@@ -1431,7 +1431,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null),
                     indexSpec,
                     null,
                     null
@@ -1445,7 +1445,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null)),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null),
                     indexSpec,
                     null,
                     null
@@ -1459,7 +1459,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    new CompactionTransformSpec(null),
+                    new CompactionTransformSpec(null, null),
                     indexSpec,
                     null,
                     null
@@ -1474,7 +1474,7 @@ public class NewestSegmentFirstPolicyTest
     // Auto compaction config sets filter=SelectorDimFilter("dim1", "bar", null)
     CompactionSegmentIterator iterator = createIterator(
         configBuilder().withTransformSpec(
-            new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null))
+            new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null)
         ).build(),
         timeline
     );
@@ -1518,7 +1518,7 @@ public class NewestSegmentFirstPolicyTest
     // Auto compaction config sets filter=null
     iterator = createIterator(
         configBuilder().withTransformSpec(
-            new CompactionTransformSpec(null)
+            new CompactionTransformSpec(null, null)
         ).build(),
         timeline
     );

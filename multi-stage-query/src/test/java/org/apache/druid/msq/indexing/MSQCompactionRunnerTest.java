@@ -672,7 +672,7 @@ public class MSQCompactionRunnerTest
   )
   {
     CompactionTransformSpec transformSpec =
-        new CompactionTransformSpec(dimFilter);
+        new CompactionTransformSpec(dimFilter, null);
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         DATA_SOURCE,
         null
