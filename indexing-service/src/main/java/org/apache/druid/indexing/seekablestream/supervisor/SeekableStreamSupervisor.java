@@ -4799,7 +4799,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
+<<<<<<< HEAD
+        LagStats lagStats = computeLags(partitionLags);
+=======
         final LagStats lagStats = aggregatePartitionLags(partitionLags);
+        Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
+>>>>>>> master
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
               ServiceMetricEvent.builder()
