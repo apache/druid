@@ -135,7 +135,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         inputRowHolder::getRowId,
         RowAdapters.standardRow(),
         RowSignature.empty(),
-        true,
         true
     );
 

@@ -65,7 +65,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   private final RowAdapter<T> adapter;
   private final ColumnInspector columnInspector;
   private final boolean throwParseExceptions;
-  private final boolean useStringValueOfNullInLists;
 
   /**
    * Full constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
@@ -76,8 +75,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       @Nullable final RowIdSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions,
-      final boolean useStringValueOfNullInLists
+      final boolean throwParseExceptions
   )
   {
     this.rowSupplier = rowSupplier;
@@ -85,7 +83,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     this.adapter = adapter;
     this.columnInspector = Preconditions.checkNotNull(columnInspector, "columnInspector must be nonnull");
     this.throwParseExceptions = throwParseExceptions;
-    this.useStringValueOfNullInLists = useStringValueOfNullInLists;
   }
 
   /**
@@ -101,16 +98,12 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
    *                                    {@link org.apache.druid.segment.column.RowSignature#empty()}.
    * @param throwParseExceptions        whether numeric selectors should throw parse exceptions or use a default/null
    *                                    value when their inputs are not actually numeric
-   * @param useStringValueOfNullInLists whether nulls in multi-value strings should be replaced with the string "null".
-   *                                    for example: the list ["a", null] would be converted to ["a", "null"]. Useful
-   *                                    for callers that need compatibility with {@link Rows#objectToStrings}.
    */
   public static <RowType> RowBasedColumnSelectorFactory<RowType> create(
       final RowAdapter<RowType> adapter,
       final Supplier<RowType> supplier,
       final ColumnInspector columnInspector,
-      final boolean throwParseExceptions,
-      final boolean useStringValueOfNullInLists
+      final boolean throwParseExceptions
   )
   {
     return new RowBasedColumnSelectorFactory<>(
@@ -118,8 +111,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         null,
         adapter,
         columnInspector,
-        throwParseExceptions,
-        useStringValueOfNullInLists
+        throwParseExceptions
     );
   }
 
@@ -411,13 +403,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
                 for (final Object item : ((List) rawValue)) {
                   final String itemString;
 
-                  // When useStringValueOfNullInLists is true, null items are converted to the string "null".
-                  // When false, null items are preserved as actual null values, consistent with Rows.objectToStrings.
-                  if (useStringValueOfNullInLists) {
-                    itemString = String.valueOf(item);
-                  } else {
-                    itemString = item == null ? null : String.valueOf(item);
-                  }
+                  itemString = item == null ? null : String.valueOf(item);
 
                   if (extractionFn == null) {
                     values.add(itemString);
