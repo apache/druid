@@ -265,59 +265,52 @@ public class IcebergInputSourceTest
   @Test
   public void testResidualFilterModeFailWithPartitionedTable() throws IOException
   {
+    // Cleanup default table first
+    tearDown();
     // Create a partitioned table and filter on the partition column
-    TableIdentifier partitionedTableId = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable");
-    createAndLoadPartitionedTable(partitionedTableId);
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable");
+    createAndLoadPartitionedTable(tableIdentifier);
 
-    try {
-      // Filter on partition column with FAIL mode should succeed (no residual)
-      IcebergInputSource inputSource = new IcebergInputSource(
-          "partitionedTable",
-          NAMESPACE,
-          new IcebergEqualsFilter("id", "123988"),
-          testCatalog,
-          new LocalInputSourceFactory(),
-          null,
-          ResidualFilterMode.FAIL
-      );
-      Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-      Assert.assertEquals(1, splits.count());
-    }
-    finally {
-      dropTableFromCatalog(partitionedTableId);
-    }
+    IcebergInputSource inputSource = new IcebergInputSource(
+        "partitionedTable",
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL
+    );
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    Assert.assertEquals(1, splits.count());
   }
 
   @Test
   public void testResidualFilterModeFailWithPartitionedTableNonPartitionColumn() throws IOException
   {
+    // Cleanup default table first
+    tearDown();
     // Create a partitioned table and filter on a non-partition column
-    TableIdentifier partitionedTableId = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable2");
-    createAndLoadPartitionedTable(partitionedTableId);
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable2");
+    createAndLoadPartitionedTable(tableIdentifier);
 
-    try {
-      // Filter on non-partition column with FAIL mode should throw exception
-      IcebergInputSource inputSource = new IcebergInputSource(
-          "partitionedTable2",
-          NAMESPACE,
-          new IcebergEqualsFilter("name", "Foo"),
-          testCatalog,
-          new LocalInputSourceFactory(),
-          null,
-          ResidualFilterMode.FAIL
-      );
-      DruidException exception = Assert.assertThrows(
-          DruidException.class,
-          () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
-      );
-      Assert.assertTrue(
-          "Expect residual error to be thrown",
-          exception.getMessage().contains("residual")
-      );
-    }
-    finally {
-      dropTableFromCatalog(partitionedTableId);
-    }
+    // Filter on non-partition column with FAIL mode should throw exception
+    IcebergInputSource inputSource = new IcebergInputSource(
+        "partitionedTable2",
+        NAMESPACE,
+        new IcebergEqualsFilter("name", "Foo"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL
+    );
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
+    );
+    Assert.assertTrue(
+        "Expect residual error to be thrown",
+        exception.getMessage().contains("residual")
+    );
   }
 
   @After

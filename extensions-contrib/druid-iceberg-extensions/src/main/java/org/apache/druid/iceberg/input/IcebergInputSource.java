@@ -183,7 +183,6 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return snapshotTime;
   }
 
-  @Nullable
   @JsonProperty
   public ResidualFilterMode getResidualFilterMode()
   {
