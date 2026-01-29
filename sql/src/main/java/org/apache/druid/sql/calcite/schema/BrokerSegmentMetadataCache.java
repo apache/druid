@@ -358,10 +358,34 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private void updateDSMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)
   {
     final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
-    if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
-      log.info("[%s] has new signature: %s.", dataSource, physicalDatasourceMetadata.getRowSignature());
+    final RowSignature newRowSignature = physicalDatasourceMetadata.getRowSignature();
+    final int newRowSignatureColumnCount = newRowSignature.getColumnNames().size();
+
+    final ServiceMetricEvent.Builder builder =
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
+
+    if (oldTable == null) {
+      log.info(
+          "Row signature for datasource[%s] initialized with [%d] columns - signature[%s]",
+          dataSource, newRowSignatureColumnCount, newRowSignature
+      );
+
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, 1, builder);
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newRowSignatureColumnCount, builder);
+      return;
+    }
+
+    final RowSignature oldRowSignature = oldTable.getRowSignature();
+    if (!oldRowSignature.equals(newRowSignature)) {
+      log.info(
+          "Row signature for datasource[%s] updated from [%d] columns to [%d] columns - new signature[%s]",
+          dataSource, oldRowSignature.getColumnNames().size(), newRowSignatureColumnCount, newRowSignature
+      );
+
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_CHANGED, 1, builder);
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newRowSignatureColumnCount, builder);
     } else {
-      log.debug("[%s] signature is unchanged.", dataSource);
+      log.debug("Row signature for datasource[%s] is unchanged.", dataSource);
     }
   }
 }
