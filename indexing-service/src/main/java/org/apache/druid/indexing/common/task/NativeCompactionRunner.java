@@ -78,6 +78,18 @@ public class NativeCompactionRunner implements CompactionRunner
   }
 
   @Override
+  public boolean requireAlignedInterval()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean forceDropExisting()
+  {
+    return false;
+  }
+
+  @Override
   public CurrentSubTaskHolder getCurrentSubTaskHolder()
   {
     return currentSubTaskHolder;

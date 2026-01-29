@@ -267,7 +267,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Override
-  @Ignore("REPLACE_LEGACY mode is not supported in MSQ")
+  @Ignore("dropExisting must set to true in MSQ")
   @Test
   public void testPartialIntervalCompactWithFinerSegmentGranularityThenFullIntervalCompactWithDropExistingFalse()
   {
@@ -290,7 +290,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
 
     final CompactionTask compactionTask =
         compactionTaskBuilder(new ClientCompactionTaskGranularitySpec(segmentGranularity, null, true))
-            .interval(inputInterval)
+            .interval(TEST_INTERVAL_DAY, true)
             .metricsSpec(new AggregatorFactory[]{new LongMaxAggregatorFactory("val", "val")})
             .build();
 
@@ -396,7 +396,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     // Reindex with new MINUTE segment granularity. MSQ engine doesn't support disjoint intervals.
     // each hour has 59 tombstones, and 1 real segment.
     final CompactionTask fullCompactionTask =
-        compactionTaskBuilder(Granularities.MINUTE).interval(TEST_INTERVAL).build();
+        compactionTaskBuilder(Granularities.MINUTE).interval(TEST_INTERVAL, true).build();
 
     // **** FULL COMPACTION ****
     final Pair<TaskStatus, DataSegmentsWithSchemas> fullCompactionResult = runTask(fullCompactionTask);
@@ -437,7 +437,8 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assume.assumeTrue(useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
-    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
+    final CompactionTask compactionTask =
+        compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
 
     // make sure that compactionTask becomes ready first, then the appendTask becomes ready, then compactionTask runs
     final CountDownLatch appendTaskReadyLatch = new CountDownLatch(1);
@@ -483,7 +484,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     final String version = Iterables.getOnlyElement(compactionResult.rhs.getSegments()).getVersion();
     Assert.assertTrue(usedSegments.stream().allMatch(segment -> segment.getVersion().equals(version)));
 
-    CompactionTask finalTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
+    CompactionTask finalTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
     Pair<TaskStatus, DataSegmentsWithSchemas> finalResult = runTask(finalTask);
     verifyTaskSuccessRowsAndSchemaMatch(finalResult, 19);
   }
@@ -495,7 +496,8 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assume.assumeTrue(useConcurrentLocks);
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
-    final CompactionTask compactionTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
+    final CompactionTask compactionTask =
+        compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
 
     // make sure that appendTask becomes ready first, then compactionTask becomes ready, then indexTask runs
     final CountDownLatch appendTaskReadyLatch = new CountDownLatch(1);
@@ -541,7 +543,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     final String version = Iterables.getOnlyElement(compactionResult.rhs.getSegments()).getVersion();
     Assert.assertTrue(usedSegments.stream().allMatch(segment -> segment.getVersion().equals(version)));
 
-    CompactionTask finalTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval).build();
+    CompactionTask finalTask = compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
     Pair<TaskStatus, DataSegmentsWithSchemas> finalResult = runTask(finalTask);
     verifyTaskSuccessRowsAndSchemaMatch(finalResult, 19);
   }

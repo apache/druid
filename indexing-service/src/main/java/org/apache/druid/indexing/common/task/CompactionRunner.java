@@ -43,6 +43,28 @@ public interface CompactionRunner
   String TYPE_PROPERTY = "type";
 
   /**
+   * Returns whether this runner requires aligned intervals for compaction.
+   * When true, the compaction task will throw an error if the IOConfig has allowNonAlignedInterval enabled.
+   *
+   * @return true if aligned intervals are required by this runner, false otherwise. Default is true.
+   */
+  default boolean requireAlignedInterval()
+  {
+    return true;
+  }
+
+  /**
+   * Returns whether this runner requires dropExisting to be enabled for compaction.
+   * When true, the compaction task will fail if dropExisting is not set to true in the IOConfig.
+   *
+   * @return true if dropExisting must be enabled, false otherwise. Default is true.
+   */
+  default boolean forceDropExisting()
+  {
+    return true;
+  }
+
+  /**
    * Creates and runs sub-tasks for the given CompactionTask, one interval at a time.
    */
   TaskStatus runCompactionTasks(
