@@ -76,38 +76,54 @@ public class CostBasedAutoScalerTest
   public void testComputeValidTaskCounts()
   {
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
-    int[] validTaskCounts = computeValidTaskCounts(100, 25, 0L, 100);
+    int[] validTaskCounts = computeValidTaskCounts(100, 25, 0L, 1, 100);
     Assert.assertTrue("Should contain the current task count", contains(validTaskCounts, 25));
     Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
 
     // Edge cases
-    Assert.assertEquals(0, computeValidTaskCounts(0, 10, 0L, 100).length);
-    Assert.assertEquals(0, computeValidTaskCounts(-5, 10, 0L, 100).length);
+    Assert.assertEquals(0, computeValidTaskCounts(0, 10, 0L, 1, 100).length);
+    Assert.assertEquals(0, computeValidTaskCounts(-5, 10, 0L, 1, 100).length);
 
     // Single partition
-    int[] singlePartition = computeValidTaskCounts(1, 1, 0L, 100);
+    int[] singlePartition = computeValidTaskCounts(1, 1, 0L, 1, 100);
     Assert.assertTrue("Single partition should have at least one valid count", singlePartition.length > 0);
     Assert.assertTrue("Single partition should contain 1", contains(singlePartition, 1));
 
     // Current exceeds partitions - should still yield valid, deduplicated options
-    int[] exceedsPartitions = computeValidTaskCounts(2, 5, 0L, 100);
+    int[] exceedsPartitions = computeValidTaskCounts(2, 5, 0L, 1, 100);
     Assert.assertEquals(2, exceedsPartitions.length);
     Assert.assertTrue(contains(exceedsPartitions, 1));
     Assert.assertTrue(contains(exceedsPartitions, 2));
 
     // Lag expansion: low lag should not include max, high lag should
-    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 30);
+    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30);
     Assert.assertFalse("Low lag should not include max task count", contains(lowLagCounts, 30));
     Assert.assertTrue("Low lag should cap scale up around 4 tasks", contains(lowLagCounts, 4));
 
     long highAggregateLag = 30L * 500_000L;
-    int[] highLagCounts = computeValidTaskCounts(30, 3, highAggregateLag, 30);
+    int[] highLagCounts = computeValidTaskCounts(30, 3, highAggregateLag, 1, 30);
     Assert.assertTrue("High lag should allow scaling to max tasks", contains(highLagCounts, 30));
 
     // Respects taskCountMax
-    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 3);
+    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 1, 3);
     Assert.assertTrue("Should include taskCountMax when doable", contains(cappedCounts, 3));
     Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
+
+    // Respects taskCountMin - filters out values below the minimum
+    // With partitionCount=100, currentTaskCount=10, the computed range includes values like 8, 9, 10, 12, 13
+    int[] minCappedCounts = computeValidTaskCounts(100, 10, 0L, 10, 100);
+    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 8));
+    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 9));
+    Assert.assertTrue("Should include values at taskCountMin", contains(minCappedCounts, 10));
+    Assert.assertTrue("Should include values above taskCountMin", contains(minCappedCounts, 12));
+
+    // Both bounds applied together
+    int[] bothBounds = computeValidTaskCounts(100, 10, 0L, 10, 12);
+    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 8));
+    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 9));
+    Assert.assertFalse("Should not exceed taskCountMax", contains(bothBounds, 13));
+    Assert.assertTrue("Should include values at taskCountMin", contains(bothBounds, 10));
+    Assert.assertTrue("Should include values at taskCountMax", contains(bothBounds, 12));
   }
 
   @Test
@@ -170,7 +186,7 @@ public class CostBasedAutoScalerTest
 
     for (Example example : examples) {
       long aggregateLag = example.lagPerPartition * partitionCount;
-      int[] validCounts = computeValidTaskCounts(partitionCount, example.currentTasks, aggregateLag, taskCountMax);
+      int[] validCounts = computeValidTaskCounts(partitionCount, example.currentTasks, aggregateLag, 1, taskCountMax);
       Assert.assertTrue(
           "Should include expected task count for current=" + example.currentTasks + ", lag=" + example.lagPerPartition,
           contains(validCounts, example.expectedTasks)

@@ -215,6 +215,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         partitionCount,
         currentTaskCount,
         (long) metrics.getAggregateLag(),
+        config.getTaskCountMin(),
         config.getTaskCountMax()
     );
 
@@ -276,6 +277,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       int partitionCount,
       int currentTaskCount,
       double aggregateLag,
+      int taskCountMin,
       int taskCountMax
   )
   {
@@ -302,7 +304,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask; partitionsPerTask--) {
       final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
-      if (taskCount <= taskCountMax) {
+      if (taskCount >= taskCountMin && taskCount <= taskCountMax) {
         result.add(taskCount);
       }
     }
