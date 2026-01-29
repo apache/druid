@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -44,9 +45,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -95,6 +94,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final CompactionEngine engine;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
+  private final Period skipOffsetFromLatest;
+  private final Period skipOffsetFromNow;
 
   @JsonCreator
   public CascadingReindexingTemplate(
@@ -103,7 +104,9 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("ruleProvider") ReindexingRuleProvider ruleProvider,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
-      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
+      @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
+      @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow
   )
   {
     this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
@@ -112,6 +115,20 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     this.taskContext = taskContext;
     this.taskPriority = Objects.requireNonNullElse(taskPriority, DEFAULT_COMPACTION_TASK_PRIORITY);
     this.inputSegmentSizeBytes = Objects.requireNonNullElse(inputSegmentSizeBytes, DEFAULT_INPUT_SEGMENT_SIZE_BYTES);
+
+    if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
+      throw new IAE("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
+    }
+    if (skipOffsetFromLatest != null) {
+      this.skipOffsetFromLatest = skipOffsetFromLatest;
+      this.skipOffsetFromNow = null;
+    } else if (skipOffsetFromNow != null) {
+      this.skipOffsetFromNow = skipOffsetFromNow;
+      this.skipOffsetFromLatest = null;
+    } else {
+      this.skipOffsetFromLatest = null;
+      this.skipOffsetFromNow = null;
+    }
   }
 
   @Override
@@ -161,6 +178,21 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private ReindexingRuleProvider getRuleProvider()
   {
     return ruleProvider;
+  }
+
+  @Override
+  @JsonProperty
+  @Nullable
+  public Period getSkipOffsetFromLatest()
+  {
+    return skipOffsetFromLatest;
+  }
+
+  @JsonProperty
+  @Nullable
+  private Period getSkipOffsetFromNow()
+  {
+    return skipOffsetFromNow;
   }
 
   /**
@@ -256,15 +288,25 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    // Full data range covered by the timeline
-    TimelineObjectHolder<String, DataSegment> first = timeline.first();
-    TimelineObjectHolder<String, DataSegment> last = timeline.last();
-    Interval dataRange = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
+    Interval adjustedTimelineInterval = applySkipOffset(
+        new Interval(timeline.first().getInterval().getStart(), timeline.last().getInterval().getEnd()),
+        jobParams.getScheduleStartTime()
+    );
+    if (adjustedTimelineInterval == null) {
+      LOG.warn("All data for dataSource[%s] is within skip offsets, no reindexing jobs will be created", dataSource);
+      return Collections.emptyList();
+    }
 
     for (Interval reindexingInterval : intervals) {
 
-      if (!reindexingInterval.overlaps(dataRange)) {
-        LOG.info("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, dataRange);
+      if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
+        LOG.debug("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, adjustedTimelineInterval);
+        continue;
+      }
+
+      reindexingInterval = clampIntervalToBounds(reindexingInterval, adjustedTimelineInterval);
+      if (reindexingInterval == null) {
+        LOG.warn("Clamped reindexing interval is empty after applying bounds, meaning no search interval exists. Skipping.");
         continue;
       }
 
@@ -277,7 +319,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         LOG.info("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
         allJobs.addAll(
             createJobsForSearchInterval(
-                new CompactionConfigBasedJobTemplate(builder.build(), createCascadingFinalizer()),
+                createJobTemplateForInterval(builder.build()),
                 reindexingInterval,
                 source,
                 jobParams
@@ -288,6 +330,63 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       }
     }
     return allJobs;
+  }
+
+  protected CompactionJobTemplate createJobTemplateForInterval(
+      InlineSchemaDataSourceCompactionConfig config
+  )
+  {
+    return new CompactionConfigBasedJobTemplate(config, createCascadingFinalizer());
+  }
+
+  @Nullable
+  private Interval clampIntervalToBounds(Interval interval, Interval bounds)
+  {
+    DateTime start = interval.getStart();
+    DateTime end = interval.getEnd();
+
+    if (start.isBefore(bounds.getStart())) {
+      LOG.debug(
+          "Adjusting start of search interval[%s] to match bounds start[%s]",
+          interval,
+          bounds.getStart()
+      );
+      start = bounds.getStart();
+    }
+
+    if (end.isAfter(bounds.getEnd())) {
+      LOG.debug(
+          "Adjusting end of search interval[%s] to match bounds end[%s]",
+          interval,
+          bounds.getEnd()
+      );
+      end = bounds.getEnd();
+    }
+
+    if (end.isBefore(start)) {
+      return null;
+    }
+
+    return new Interval(start, end);
+  }
+
+  @Nullable
+  private Interval applySkipOffset(
+      Interval interval,
+      DateTime skipFromNowReferenceTime
+  )
+  {
+    DateTime maybeAdjustedEnd = interval.getEnd();
+    if (skipOffsetFromNow != null) {
+      maybeAdjustedEnd = skipFromNowReferenceTime.minus(skipOffsetFromNow);
+    } else if (skipOffsetFromLatest != null) {
+      maybeAdjustedEnd = maybeAdjustedEnd.minus(skipOffsetFromLatest);
+    }
+    if (maybeAdjustedEnd.isBefore(interval.getStart())) {
+      return null;
+    } else {
+      return new Interval(interval.getStart(), maybeAdjustedEnd);
+    }
   }
 
   private InlineSchemaDataSourceCompactionConfig.Builder createBaseBuilder()
@@ -343,12 +442,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public Integer getMaxRowsPerSegment()
   {
     return 0;
-  }
-
-  @Override
-  public Period getSkipOffsetFromLatest()
-  {
-    return null;
   }
 
   @Nullable

@@ -324,6 +324,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         null,
         ruleProvider.build(),
         compactionEngine,
+        null,
+        null,
         null
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
@@ -401,6 +403,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                     .tuningConfigRules(List.of(tuningConfigRule))
                                     .build(),
         compactionEngine,
+        null,
+        null,
         null
     );
 
