@@ -79,6 +79,7 @@ public class StorageNodeModule implements Module
         node.getHostAndPort(),
         node.getHostAndTlsPort(),
         config.getMaxSize(),
+        config.getStorageSize(),
         serverTypeConfig.getServerType(),
         config.getTier(),
         config.getPriority()
@@ -109,6 +110,7 @@ public class StorageNodeModule implements Module
     return new DataNodeService(
         config.getTier(),
         config.getMaxSize(),
+        config.getStorageSize(),
         serverTypeConfig.getServerType(),
         config.getPriority(),
         isSegmentCacheConfigured

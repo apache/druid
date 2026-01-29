@@ -606,7 +606,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,

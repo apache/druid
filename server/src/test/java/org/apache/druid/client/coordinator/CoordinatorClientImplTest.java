@@ -363,6 +363,7 @@ public class CoordinatorClientImplTest
                 "testhost:9092",
                 null,
                 1,
+                null,
                 ServerType.INDEXER_EXECUTOR,
                 "tier1",
                 0

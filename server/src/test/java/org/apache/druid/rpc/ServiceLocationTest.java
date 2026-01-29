@@ -75,6 +75,7 @@ public class ServiceLocationTest
         "hostName:9092",
         null,
         1,
+        null,
         ServerType.INDEXER_EXECUTOR,
         "tier1",
         2
@@ -94,6 +95,7 @@ public class ServiceLocationTest
         null,
         "hostName:8100",
         1,
+        null,
         ServerType.INDEXER_EXECUTOR,
         "tier1",
         2

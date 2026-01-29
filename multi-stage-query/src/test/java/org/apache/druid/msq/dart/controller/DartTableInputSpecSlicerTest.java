@@ -82,9 +82,9 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * This makes tests deterministic.
    */
   private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(
-      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2), // plaintext
-      new DruidServerMetadata("no", null, "localhost:1002", 1, ServerType.HISTORICAL, "__default", 1), // TLS
-      new DruidServerMetadata("no", "localhost:1003", null, 1, ServerType.REALTIME, "__default", 0)
+      new DruidServerMetadata("no", "localhost:1001", null, 1, null, ServerType.HISTORICAL, "__default", 2), // plaintext
+      new DruidServerMetadata("no", null, "localhost:1002", 1, null, ServerType.HISTORICAL, "__default", 1), // TLS
+      new DruidServerMetadata("no", "localhost:1003", null, 1, null, ServerType.REALTIME, "__default", 0)
   );
 
   /**
@@ -207,15 +207,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
       );
       for (int serverNumber : segmentServers) {
         final DruidServerMetadata serverMetadata = SERVERS.get(serverNumber);
-        final DruidServer server = new DruidServer(
-            serverMetadata.getName(),
-            serverMetadata.getHostAndPort(),
-            serverMetadata.getHostAndTlsPort(),
-            serverMetadata.getMaxSize(),
-            serverMetadata.getType(),
-            serverMetadata.getTier(),
-            serverMetadata.getPriority()
-        );
+        final DruidServer server = new DruidServer(serverMetadata);
         serverSelector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), dataSegment);
       }
       timeline.add(

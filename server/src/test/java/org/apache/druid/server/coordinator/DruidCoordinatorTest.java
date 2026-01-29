@@ -228,7 +228,7 @@ public class DruidCoordinatorTest
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    final DruidServer druidServer = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, tier, 0);
+    final DruidServer druidServer = new DruidServer("server1", "localhost", null, 5L, null, ServerType.HISTORICAL, tier, 0);
     final LoadQueuePeon loadQueuePeon = createImmediateLoadPeonFor(druidServer);
     setupPeons(Collections.singletonMap("server1", loadQueuePeon));
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
@@ -307,8 +307,8 @@ public class DruidCoordinatorTest
     final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
     final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1), null);
     final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1), null);
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, null, ServerType.HISTORICAL, hotTierName, 0);
+    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
         new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
@@ -375,11 +375,11 @@ public class DruidCoordinatorTest
     final String coldTierName = "cold";
     final String tierName1 = "tier1";
     final String tierName2 = "tier2";
-    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
-    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);
-    final DruidServer brokerServer1 = new DruidServer("broker1", "broker1", null, 5L, ServerType.BROKER, tierName1, 0);
-    final DruidServer brokerServer2 = new DruidServer("broker2", "broker2", null, 5L, ServerType.BROKER, tierName2, 0);
-    final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, ServerType.INDEXER_EXECUTOR, tierName2, 0);
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, null, ServerType.HISTORICAL, hotTierName, 0);
+    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, null, ServerType.HISTORICAL, coldTierName, 0);
+    final DruidServer brokerServer1 = new DruidServer("broker1", "broker1", null, 5L, null, ServerType.BROKER, tierName1, 0);
+    final DruidServer brokerServer2 = new DruidServer("broker2", "broker2", null, 5L, null, ServerType.BROKER, tierName2, 0);
+    final DruidServer peonServer = new DruidServer("peon", "peon", null, 5L, null, ServerType.INDEXER_EXECUTOR, tierName2, 0);
 
     final Set<DataSegment> dataSegments = Set.of(
         new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
@@ -760,8 +760,8 @@ public class DruidCoordinatorTest
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    final DruidServer druidServer1 = new DruidServer("server1", "localhost", null, 5L, ServerType.HISTORICAL, hotTier, 0);
-    final DruidServer druidServer2 = new DruidServer("server2", "localhost", null, 5L, ServerType.HISTORICAL, coldTier, 0);
+    final DruidServer druidServer1 = new DruidServer("server1", "localhost", null, 5L, null, ServerType.HISTORICAL, hotTier, 0);
+    final DruidServer druidServer2 = new DruidServer("server2", "localhost", null, 5L, null, ServerType.HISTORICAL, coldTier, 0);
 
     // For hot server, use a load queue peon that does not perform immediate load
     setupPeons(ImmutableMap.of(

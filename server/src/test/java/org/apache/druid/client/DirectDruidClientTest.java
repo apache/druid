@@ -177,7 +177,7 @@ public class DirectDruidClientTest
         conglomerateRule.getConglomerate(), DataSegment.builder(SegmentId.dummy("test")).build(), index, false
     );
     testHttpClient.addServerAndRunner(
-        new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", hostName, null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         simpleServerManager
     );
     testHttpClient.addUrlAndRunner(
@@ -378,7 +378,7 @@ public class DirectDruidClientTest
   {
     final QueryableIndex index = makeQueryableIndex();
     httpClient.addServerAndRunner(
-        new DruidServer("test1", hostName, null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", hostName, null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         new TestHttpClient.SimpleServerManager(
             conglomerateRule.getConglomerate(), DataSegment.builder(SegmentId.dummy("test")).build(), index, throwQueryError
         )

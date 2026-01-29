@@ -34,6 +34,7 @@ public class ZkCoordinatorTest
       "dummyHost",
       null,
       0,
+      null,
       ServerType.HISTORICAL,
       "normal",
       0

@@ -734,7 +734,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1, null, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,

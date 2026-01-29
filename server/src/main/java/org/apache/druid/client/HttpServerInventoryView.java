@@ -205,6 +205,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                       druidNode.getHostAndPort(),
                       druidNode.getHostAndTlsPort(),
                       0L,
+                      0L,
                       ServerType.fromNodeRole(node.getNodeRole()),
                       DruidServer.DEFAULT_TIER,
                       DruidServer.DEFAULT_PRIORITY
@@ -215,6 +216,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                     druidNode.getHostAndPort(),
                     druidNode.getHostAndTlsPort(),
                     dataNodeService.getMaxSize(),
+                    dataNodeService.getStorageSize(),
                     dataNodeService.getServerType(),
                     dataNodeService.getTier(),
                     dataNodeService.getPriority()

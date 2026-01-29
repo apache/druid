@@ -94,6 +94,7 @@ public class CachingClusteredClientPerfTest
         "localhost:9000",
         null,
         Long.MAX_VALUE,
+        null,
         ServerType.HISTORICAL,
         DruidServer.DEFAULT_TIER,
         DruidServer.DEFAULT_PRIORITY

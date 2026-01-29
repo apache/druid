@@ -251,6 +251,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         "localhost:5",
         null,
         10000000L,
+        null,
         ServerType.BROKER,
         "default_tier",
         0
@@ -566,6 +567,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         name,
         null,
         1000000,
+        null,
         serverType,
         tier,
         priority
