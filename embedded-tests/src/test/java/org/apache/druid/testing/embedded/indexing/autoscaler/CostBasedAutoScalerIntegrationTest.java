@@ -227,7 +227,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
         .lagWeight(0.1)
         .idleWeight(0.9)
-        .scaleDownDuringTaskRolloverOnly(false)
+        .scaleDownDuringTaskRolloverOnly(true)
         // Do not slow scale-downs
         .scaleDownBarrier(0)
         .build();
