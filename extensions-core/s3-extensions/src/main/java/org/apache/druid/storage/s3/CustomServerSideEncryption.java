@@ -19,49 +19,58 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class CustomServerSideEncryption implements ServerSideEncryption
 {
-  private final SSECustomerKey key;
+  private static final String ALGORITHM = "AES256";
+  private final String base64EncodedKey;
 
   @JsonCreator
   CustomServerSideEncryption(@JacksonInject S3SSECustomConfig config)
   {
-    this.key = new SSECustomerKey(config.getBase64EncodedKey());
+    this.base64EncodedKey = config.getBase64EncodedKey();
   }
 
   @Override
-  public PutObjectRequest decorate(PutObjectRequest request)
+  public PutObjectRequest.Builder decorate(PutObjectRequest.Builder builder)
   {
-    return request.withSSECustomerKey(key);
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey);
   }
 
   @Override
-  public GetObjectRequest decorate(GetObjectRequest request)
+  public GetObjectRequest.Builder decorate(GetObjectRequest.Builder builder)
   {
-    return request.withSSECustomerKey(key);
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey);
   }
 
   @Override
-  public GetObjectMetadataRequest decorate(GetObjectMetadataRequest request)
+  public HeadObjectRequest.Builder decorate(HeadObjectRequest.Builder builder)
   {
-    return request.withSSECustomerKey(key);
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey);
   }
 
   @Override
-  public CopyObjectRequest decorate(CopyObjectRequest request)
+  public CopyObjectRequest.Builder decorate(CopyObjectRequest.Builder builder)
   {
     // Note: users might want to use a different key when they copy existing objects. This might additionally need to
     // manage key history or support updating keys at run time, either of which requires a huge refactoring. We simply
     // don't support changing keys for now.
-    return request.withSourceSSECustomerKey(key)
-                  .withDestinationSSECustomerKey(key);
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey)
+        .copySourceSSECustomerAlgorithm(ALGORITHM)
+        .copySourceSSECustomerKey(base64EncodedKey);
   }
 }

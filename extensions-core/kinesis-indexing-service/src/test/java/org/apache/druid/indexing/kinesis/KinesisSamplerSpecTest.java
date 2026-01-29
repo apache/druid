@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -60,9 +59,11 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -111,9 +112,9 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             stream,
             "1",
             "6",
-            Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")))))
+            Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")))))
         ),
-        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))))
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))))
     );
   }
 
@@ -431,7 +432,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
   private static List<KinesisRecordEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
-      return Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
+      return Collections.singletonList(new KinesisRecordEntity(buildKinesisClientRecord(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
           ImmutableMap.builder()
               .put("timestamp", ts)
               .put("dim1", dim1)
@@ -445,6 +446,16 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static KinesisClientRecord buildKinesisClientRecord(ByteBuffer data)
+  {
+    return KinesisClientRecord.builder()
+        .data(data)
+        .partitionKey("key")
+        .sequenceNumber("0")
+        .approximateArrivalTimestamp(Instant.now())
+        .build();
   }
 
   private class TestableKinesisSamplerSpec extends KinesisSamplerSpec
