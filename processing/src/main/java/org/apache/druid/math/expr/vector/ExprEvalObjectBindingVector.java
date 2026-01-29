@@ -141,7 +141,8 @@ public class ExprEvalObjectBindingVector<T> implements ExprEvalVector<T>
     }
   }
 
-  public static VectorCache createCache(int maxSize) {
+  public static VectorCache createCache(int maxSize)
+  {
     return new VectorCache(maxSize);
   }
 
