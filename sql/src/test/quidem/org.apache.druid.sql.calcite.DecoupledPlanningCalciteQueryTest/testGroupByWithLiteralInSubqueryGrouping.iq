@@ -38,45 +38,21 @@ SELECT
 !ok
 LogicalProject(t1=['dummy'], t2=[$0])
   LogicalAggregate(group=[{0}])
-    LogicalProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)])
-      LogicalAggregate(group=[{4}])
-        LogicalTableScan(table=[[druid, numfoo]])
+    LogicalProject($f0=[CASE(=($4, 'b'), $4, null:VARCHAR)])
+      LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   DruidAggregate(group=[{0}], druid=[logical])
-    DruidProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)], druid=[logical])
-      DruidAggregate(group=[{4}], druid=[logical])
-        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+    DruidProject($f0=[CASE(=($4, 'b'), $4, null:VARCHAR)], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {
   "queryType" : "groupBy",
   "dataSource" : {
-    "type" : "query",
-    "query" : {
-      "queryType" : "groupBy",
-      "dataSource" : {
-        "type" : "table",
-        "name" : "numfoo"
-      },
-      "intervals" : {
-        "type" : "intervals",
-        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-      },
-      "granularity" : {
-        "type" : "all"
-      },
-      "dimensions" : [ {
-        "type" : "default",
-        "dimension" : "dim4",
-        "outputName" : "d0",
-        "outputType" : "STRING"
-      } ],
-      "limitSpec" : {
-        "type" : "NoopLimitSpec"
-      }
-    }
+    "type" : "table",
+    "name" : "numfoo"
   },
   "intervals" : {
     "type" : "intervals",
@@ -85,7 +61,7 @@ DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "case_searched((\"d0\" == 'b'),\"d0\",null)",
+    "expression" : "case_searched((\"dim4\" == 'b'),\"dim4\",null)",
     "outputType" : "STRING"
   } ],
   "granularity" : {
@@ -94,7 +70,7 @@ DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   "dimensions" : [ {
     "type" : "default",
     "dimension" : "v0",
-    "outputName" : "_d0",
+    "outputName" : "d0",
     "outputType" : "STRING"
   } ],
   "postAggregations" : [ {
