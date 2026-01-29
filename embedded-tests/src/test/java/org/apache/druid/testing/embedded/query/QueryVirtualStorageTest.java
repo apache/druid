@@ -226,6 +226,11 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         HumanReadableBytes.parse("1MiB"),
         coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
     );
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        HumanReadableBytes.parse("100MiB"),
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+    );
   }
 
 
