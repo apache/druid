@@ -24,7 +24,12 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
@@ -34,6 +39,7 @@ import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
+import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
@@ -105,6 +111,9 @@ import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.StandardRetryPolicy;
+import org.apache.druid.rpc.indexing.OverlordClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -238,5 +247,21 @@ public class MSQIndexingModule implements DruidModule
               .addBinding(WindowOperatorQuery.class)
               .to(WindowOperatorQueryKit.class);
     binder.bind(WindowOperatorQueryKit.class).in(LazySingleton.class);
+  }
+
+  @Provides
+  IndexerControllerContext.Builder providesContextBuilder(Injector injector)
+  {
+    ServiceClientFactory clientFactory =
+        injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
+    OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
+                                            .withRetryPolicy(StandardRetryPolicy.unlimited());
+    return (MSQControllerTask task, TaskToolbox toolbox) -> new IndexerControllerContext(
+        task,
+        toolbox,
+        injector,
+        clientFactory,
+        overlordClient
+    );
   }
 }

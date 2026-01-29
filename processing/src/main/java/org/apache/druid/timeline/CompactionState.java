@@ -79,6 +79,93 @@ public class CompactionState
     this.projections = projections;
   }
 
+  public Builder toBuilder()
+  {
+    return new Builder(this);
+  }
+
+  public static class Builder
+  {
+    private PartitionsSpec partitionsSpec;
+    private DimensionsSpec dimensionsSpec;
+    private CompactionTransformSpec transformSpec;
+    private IndexSpec indexSpec;
+    private GranularitySpec granularitySpec;
+    private List<AggregatorFactory> metricsSpec;
+    @Nullable
+    private List<AggregateProjectionSpec> projections;
+
+    public Builder()
+    {
+    }
+
+    public Builder(CompactionState compactionState)
+    {
+      this.partitionsSpec = compactionState.partitionsSpec;
+      this.dimensionsSpec = compactionState.dimensionsSpec;
+      this.transformSpec = compactionState.transformSpec;
+      this.indexSpec = compactionState.indexSpec;
+      this.granularitySpec = compactionState.granularitySpec;
+      this.metricsSpec = compactionState.metricsSpec;
+      this.projections = compactionState.projections;
+    }
+
+    public Builder partitionsSpec(PartitionsSpec partitionsSpec)
+    {
+      this.partitionsSpec = partitionsSpec;
+      return this;
+    }
+
+    public Builder dimensionsSpec(DimensionsSpec dimensionsSpec)
+    {
+      this.dimensionsSpec = dimensionsSpec;
+      return this;
+    }
+
+    public Builder transformSpec(CompactionTransformSpec transformSpec)
+    {
+      this.transformSpec = transformSpec;
+      return this;
+    }
+
+    public Builder indexSpec(IndexSpec indexSpec)
+    {
+      this.indexSpec = indexSpec;
+      return this;
+    }
+
+    public Builder granularitySpec(GranularitySpec granularitySpec)
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Builder metricsSpec(List<AggregatorFactory> metricsSpec)
+    {
+      this.metricsSpec = metricsSpec;
+      return this;
+    }
+
+    public Builder projections(@Nullable List<AggregateProjectionSpec> projections)
+    {
+      this.projections = projections;
+      return this;
+    }
+
+    public CompactionState build()
+    {
+      return new CompactionState(
+          partitionsSpec,
+          dimensionsSpec,
+          metricsSpec,
+          transformSpec,
+          indexSpec,
+          granularitySpec,
+          projections
+      );
+    }
+  }
+
   @JsonProperty
   public PartitionsSpec getPartitionsSpec()
   {
