@@ -29,11 +29,10 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingGranularityRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -69,18 +68,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         50,
         1000000L,
         InlineReindexingRuleProvider.builder()
-            .granularityRules(List.of(
-                new ReindexingGranularityRule(
+            .segmentGranularityRules(List.of(
+                new ReindexingSegmentGranularityRule(
                     "hourRule",
                     null,
                     Period.days(7),
-                    new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                    Granularities.HOUR
                 ),
-                new ReindexingGranularityRule(
+                new ReindexingSegmentGranularityRule(
                     "dayRule",
                     null,
                     Period.days(30),
-                    new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
+                    Granularities.DAY
                 )
             ))
             .build(),
@@ -109,12 +108,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         30,
         500000L,
         InlineReindexingRuleProvider.builder()
-            .granularityRules(List.of(
-                new ReindexingGranularityRule(
+            .segmentGranularityRules(List.of(
+                new ReindexingSegmentGranularityRule(
                     "rule1",
                     null,
                     Period.days(7),
-                    new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+                    Granularities.HOUR
                 )
             ))
             .build(),
@@ -424,17 +423,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
   private ReindexingRuleProvider createMockProvider(DateTime referenceTime, List<Period> periods)
   {
-    ReindexingGranularityRule mockGranularityRule = new ReindexingGranularityRule(
+    ReindexingSegmentGranularityRule mockGranularityRule = new ReindexingSegmentGranularityRule(
         "test-rule",
         null,
         Period.days(1),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+        Granularities.HOUR
     );
 
     ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
     EasyMock.expect(mockProvider.isReady()).andReturn(true);
     EasyMock.expect(mockProvider.getCondensedAndSortedPeriods(referenceTime)).andReturn(periods);
-    EasyMock.expect(mockProvider.getGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(mockGranularityRule).anyTimes();
+    EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(mockGranularityRule).anyTimes();
+    EasyMock.expect(mockProvider.getQueryGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getMetricsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDimensionsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getIOConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();

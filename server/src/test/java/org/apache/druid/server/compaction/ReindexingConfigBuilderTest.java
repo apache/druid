@@ -32,7 +32,6 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
@@ -62,12 +61,16 @@ public class ReindexingConfigBuilderTest
 
     int count = configBuilder.applyTo(builder);
 
-    Assert.assertEquals(8, count); // 6 non-additive + 2 filter rules
+    Assert.assertEquals(9, count); // 7 non-additive + 2 filter rules
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
-    Assert.assertNotNull(config.getGranularitySpec());
+    Assert.assertNotNull(config.getGranularitySpec().getSegmentGranularity());
     Assert.assertEquals(Granularities.DAY, config.getGranularitySpec().getSegmentGranularity());
+
+    Assert.assertNotNull(config.getGranularitySpec().getQueryGranularity());
+    Assert.assertEquals(Granularities.HOUR, config.getGranularitySpec().getQueryGranularity());
+    Assert.assertTrue(config.getGranularitySpec().isRollup());
 
     Assert.assertNotNull(config.getTuningConfig());
     Assert.assertNotNull(config.getMetricsSpec());
@@ -122,11 +125,19 @@ public class ReindexingConfigBuilderTest
 
   private ReindexingRuleProvider createFullyPopulatedProvider()
   {
-    ReindexingGranularityRule granularityRule = new ReindexingGranularityRule(
+    ReindexingSegmentGranularityRule segmentGranularityRule = new ReindexingSegmentGranularityRule(
         "gran-30d",
         null,
         Period.days(30),
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
+        Granularities.DAY
+    );
+
+    ReindexingQueryGranularityRule queryGranularityRule = new ReindexingQueryGranularityRule(
+        "query-gran-30d",
+        null,
+        Period.days(30),
+        Granularities.HOUR,
+        true
     );
 
     ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
@@ -200,7 +211,8 @@ public class ReindexingConfigBuilderTest
     );
 
     return InlineReindexingRuleProvider.builder()
-        .granularityRules(ImmutableList.of(granularityRule))
+        .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
+        .queryGranularityRules(ImmutableList.of(queryGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
         .metricsRules(ImmutableList.of(metricsRule))
         .dimensionsRules(ImmutableList.of(dimensionsRule))

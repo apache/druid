@@ -94,7 +94,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   private final List<ReindexingDimensionsRule> reindexingDimensionsRules;
   private final List<ReindexingIOConfigRule> reindexingIOConfigRules;
   private final List<ReindexingProjectionRule> reindexingProjectionRules;
-  private final List<ReindexingGranularityRule> reindexingGranularityRules;
+  private final List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
+  private final List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules;
   private final List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
 
 
@@ -105,7 +106,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       @JsonProperty("reindexingDimensionsRules") @Nullable List<ReindexingDimensionsRule> reindexingDimensionsRules,
       @JsonProperty("reindexingIOConfigRules") @Nullable List<ReindexingIOConfigRule> reindexingIOConfigRules,
       @JsonProperty("reindexingProjectionRules") @Nullable List<ReindexingProjectionRule> reindexingProjectionRules,
-      @JsonProperty("reindexingGranularityRules") @Nullable List<ReindexingGranularityRule> reindexingGranularityRules,
+      @JsonProperty("reindexingSegmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules,
+      @JsonProperty("reindexingQueryGranularityRules") @Nullable List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules,
       @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules
   )
   {
@@ -114,7 +116,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     this.reindexingDimensionsRules = Configs.valueOrDefault(reindexingDimensionsRules, Collections.emptyList());
     this.reindexingIOConfigRules = Configs.valueOrDefault(reindexingIOConfigRules, Collections.emptyList());
     this.reindexingProjectionRules = Configs.valueOrDefault(reindexingProjectionRules, Collections.emptyList());
-    this.reindexingGranularityRules = Configs.valueOrDefault(reindexingGranularityRules, Collections.emptyList());
+    this.reindexingSegmentGranularityRules = Configs.valueOrDefault(reindexingSegmentGranularityRules, Collections.emptyList());
+    this.reindexingQueryGranularityRules = Configs.valueOrDefault(reindexingQueryGranularityRules, Collections.emptyList());
     this.reindexingTuningConfigRules = Configs.valueOrDefault(reindexingTuningConfigRules, Collections.emptyList());
   }
 
@@ -166,10 +169,17 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("reindexingGranularityRules")
-  public List<ReindexingGranularityRule> getGranularityRules()
+  @JsonProperty("reindexingQueryGranularityRules")
+  public List<ReindexingQueryGranularityRule> getQueryGranularityRules()
   {
-    return reindexingGranularityRules;
+    return reindexingQueryGranularityRules;
+  }
+
+  @Override
+  @JsonProperty("reindexingSegmentGranularityRules")
+  public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
+  {
+    return reindexingSegmentGranularityRules;
   }
 
   @Override
@@ -189,7 +199,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
                      reindexingDimensionsRules,
                      reindexingIOConfigRules,
                      reindexingProjectionRules,
-                     reindexingGranularityRules,
+                     reindexingSegmentGranularityRules,
+                     reindexingQueryGranularityRules,
                      reindexingTuningConfigRules
                  )
                  .flatMap(List::stream)
@@ -239,9 +250,22 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 
   @Override
   @Nullable
-  public ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime)
+  public ReindexingSegmentGranularityRule getSegmentGranularityRule(
+      Interval interval,
+      DateTime referenceTime
+  )
   {
-    return getApplicableRule(reindexingGranularityRules, interval, referenceTime);
+    return getApplicableRule(reindexingSegmentGranularityRules, interval, referenceTime);
+  }
+
+  @Override
+  @Nullable
+  public ReindexingQueryGranularityRule getQueryGranularityRule(
+      Interval interval,
+      DateTime referenceTime
+  )
+  {
+    return getApplicableRule(reindexingQueryGranularityRules, interval, referenceTime);
   }
 
   @Override
@@ -312,7 +336,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
            && Objects.equals(reindexingDimensionsRules, that.reindexingDimensionsRules)
            && Objects.equals(reindexingIOConfigRules, that.reindexingIOConfigRules)
            && Objects.equals(reindexingProjectionRules, that.reindexingProjectionRules)
-           && Objects.equals(reindexingGranularityRules, that.reindexingGranularityRules)
+           && Objects.equals(reindexingSegmentGranularityRules, that.reindexingSegmentGranularityRules)
+           && Objects.equals(reindexingQueryGranularityRules, that.reindexingQueryGranularityRules)
            && Objects.equals(reindexingTuningConfigRules, that.reindexingTuningConfigRules);
   }
 
@@ -325,7 +350,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
         reindexingDimensionsRules,
         reindexingIOConfigRules,
         reindexingProjectionRules,
-        reindexingGranularityRules,
+        reindexingSegmentGranularityRules,
+        reindexingQueryGranularityRules,
         reindexingTuningConfigRules
     );
   }
@@ -339,7 +365,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
            + ", reindexingDimensionsRules=" + reindexingDimensionsRules
            + ", reindexingIOConfigRules=" + reindexingIOConfigRules
            + ", reindexingProjectionRules=" + reindexingProjectionRules
-           + ", reindexingGranularityRules=" + reindexingGranularityRules
+           + ", reindexingSegmentGranularityRules=" + reindexingSegmentGranularityRules
+           + ", reindexingQueryGranularityRules=" + reindexingQueryGranularityRules
            + ", reindexingTuningConfigRules=" + reindexingTuningConfigRules
            + '}';
   }
@@ -351,7 +378,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     private List<ReindexingDimensionsRule> reindexingDimensionsRules;
     private List<ReindexingIOConfigRule> reindexingIOConfigRules;
     private List<ReindexingProjectionRule> reindexingProjectionRules;
-    private List<ReindexingGranularityRule> reindexingGranularityRules;
+    private List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
+    private List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules;
     private List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
 
     public Builder deletionRules(List<ReindexingDeletionRule> reindexingDeletionRules)
@@ -384,9 +412,15 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       return this;
     }
 
-    public Builder granularityRules(List<ReindexingGranularityRule> reindexingGranularityRules)
+    public Builder segmentGranularityRules(List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules)
     {
-      this.reindexingGranularityRules = reindexingGranularityRules;
+      this.reindexingSegmentGranularityRules = reindexingSegmentGranularityRules;
+      return this;
+    }
+
+    public Builder queryGranularityRules(List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules)
+    {
+      this.reindexingQueryGranularityRules = reindexingQueryGranularityRules;
       return this;
     }
 
@@ -404,7 +438,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
           reindexingDimensionsRules,
           reindexingIOConfigRules,
           reindexingProjectionRules,
-          reindexingGranularityRules,
+          reindexingSegmentGranularityRules,
+          reindexingQueryGranularityRules,
           reindexingTuningConfigRules
       );
     }

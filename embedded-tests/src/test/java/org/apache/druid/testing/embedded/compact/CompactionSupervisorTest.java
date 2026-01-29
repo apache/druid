@@ -53,8 +53,8 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingGranularityRule;
 import org.apache.druid.server.compaction.ReindexingIOConfigRule;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -279,17 +279,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(16, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
 
-    ReindexingGranularityRule hourRule = new ReindexingGranularityRule(
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
         "hourRule",
         "Compact to HOUR granularity for data older than 1 days",
         Period.days(1),
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, false)
+        Granularities.HOUR
     );
-    ReindexingGranularityRule dayRule = new ReindexingGranularityRule(
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule(
         "dayRule",
         "Compact to DAY granularity for data older than 7 days",
         Period.days(7),
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
+        Granularities.DAY
     );
 
     ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
@@ -308,7 +308,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     InlineReindexingRuleProvider.Builder ruleProvider = InlineReindexingRuleProvider.builder()
-                                                                            .granularityRules(List.of(hourRule, dayRule))
+                                                                            .segmentGranularityRules(List.of(hourRule, dayRule))
                                                                             .tuningConfigRules(List.of(tuningConfigRule))
                                                                             .deletionRules(List.of(deletionRule));
 

@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
@@ -145,14 +144,26 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getGranularityRules_compositingBehavior()
+  public void test_getSegmentGranularityRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().granularityRules(rules).build(),
-        ComposingReindexingRuleProvider::getGranularityRules,
-        createGranularityRule("rule1", Period.days(7)),
-        createGranularityRule("rule2", Period.days(30)),
-        ReindexingGranularityRule::getId
+        rules -> InlineReindexingRuleProvider.builder().segmentGranularityRules(rules).build(),
+        ComposingReindexingRuleProvider::getSegmentGranularityRules,
+        createSegmentGranularityRule("rule1", Period.days(7)),
+        createSegmentGranularityRule("rule2", Period.days(30)),
+        ReindexingSegmentGranularityRule::getId
+    );
+  }
+
+  @Test
+  public void test_getQueryGranularityRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().queryGranularityRules(rules).build(),
+        ComposingReindexingRuleProvider::getQueryGranularityRules,
+        createQueryGranularityRule("rule1", Period.days(7)),
+        createQueryGranularityRule("rule2", Period.days(30)),
+        ReindexingQueryGranularityRule::getId
     );
   }
 
@@ -301,17 +312,28 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getGranularityRuleWithInterval_compositingBehavior()
+  public void test_getSegmentGranularityRuleWithInterval_compositingBehavior()
   {
     testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().granularityRules(rules).build(),
-        (provider, it) -> provider.getGranularityRule(it.interval, it.time),
-        createGranularityRule("rule1", Period.days(7)),
-        createGranularityRule("rule2", Period.days(30)),
-        ReindexingGranularityRule::getId
+        rules -> InlineReindexingRuleProvider.builder().segmentGranularityRules(rules).build(),
+        (provider, it) -> provider.getSegmentGranularityRule(it.interval, it.time),
+        createSegmentGranularityRule("rule1", Period.days(7)),
+        createSegmentGranularityRule("rule2", Period.days(30)),
+        ReindexingSegmentGranularityRule::getId
     );
   }
 
+  @Test
+  public void test_getQueryGranularityRuleWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().queryGranularityRules(rules).build(),
+        (provider, it) -> provider.getQueryGranularityRule(it.interval, it.time),
+        createQueryGranularityRule("rule1", Period.days(7)),
+        createQueryGranularityRule("rule2", Period.days(30)),
+        ReindexingQueryGranularityRule::getId
+    );
+  }
 
   @Test
   public void test_equals_sameProviders_returnsTrue()
@@ -499,7 +521,7 @@ public class ComposingReindexingRuleProviderTest
    */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null)
+    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null, null)
     {
       @Override
       public boolean isReady()
@@ -520,13 +542,24 @@ public class ComposingReindexingRuleProviderTest
     );
   }
 
-  private ReindexingGranularityRule createGranularityRule(String id, Period period)
+  private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)
   {
-    return new ReindexingGranularityRule(
+    return new ReindexingSegmentGranularityRule(
         id,
         "Test granularity rule",
         period,
-        new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
+        Granularities.DAY
+    );
+  }
+
+  private ReindexingQueryGranularityRule createQueryGranularityRule(String id, Period period)
+  {
+    return new ReindexingQueryGranularityRule(
+        id,
+        "Test granularity rule",
+        period,
+        Granularities.DAY,
+        false
     );
   }
 

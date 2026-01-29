@@ -178,7 +178,7 @@ public interface ReindexingRuleProvider
   List<ReindexingProjectionRule> getProjectionRules();
 
   /**
-   * Returns the matched reindexing granularity rule that applies to the given interval.
+   * Returns the matched reindexing segment granularity rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
    * implementation and should be clearly documented.
@@ -187,15 +187,35 @@ public interface ReindexingRuleProvider
    * @param interval      The interval to check applicability against.
    * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
    *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingGranularityRule} rule that applies to the given interval.
+   * @return {@link ReindexingSegmentGranularityRule} rule that applies to the given interval.
    */
   @Nullable
-  ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime);
+  ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime);
 
   /**
-   * Returns ALL reindexing granularity rules.
+   * Returns ALL reindexing segment granularity rules.
    */
-  List<ReindexingGranularityRule> getGranularityRules();
+  List<ReindexingSegmentGranularityRule> getSegmentGranularityRules();
+
+  /**
+   * Returns the matched reindexing query granularity rule that applies to the given interval.
+   * <p>
+   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
+   * implementation and should be clearly documented.
+   * </p>
+   *
+   * @param interval      The interval to check applicability against.
+   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
+   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
+   * @return {@link ReindexingQueryGranularityRule} rule that applies to the given interval.
+   */
+  @Nullable
+  ReindexingQueryGranularityRule getQueryGranularityRule(Interval interval, DateTime referenceTime);
+
+  /**
+   * Returns ALL reindexing query granularity rules.
+   */
+  List<ReindexingQueryGranularityRule> getQueryGranularityRules();
 
   /**
    * Returns the matched reindexing tuning config rule that applies to the given interval.

@@ -22,23 +22,23 @@ package org.apache.druid.server.compaction;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ReindexingGranularityRuleTest
+public class ReindexingSegmentGranularityRuleTest
 {
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_7_DAYS = Period.days(7);
 
-  private final ReindexingGranularityRule rule = new ReindexingGranularityRule(
+  private final ReindexingSegmentGranularityRule rule = new ReindexingSegmentGranularityRule(
       "test-rule",
-      "Test granularity rule",
+      "Test segment granularity rule",
       PERIOD_7_DAYS,
-      new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null)
+      Granularities.HOUR
   );
 
   @Test
@@ -90,12 +90,12 @@ public class ReindexingGranularityRuleTest
   }
 
   @Test
-  public void test_getGranularityConfig_returnsConfiguredValue()
+  public void test_getGranularity_returnsConfiguredValue()
   {
-    UserCompactionTaskGranularityConfig config = rule.getGranularityConfig();
+    Granularity granularity = rule.getSegmentGranularity();
 
-    Assert.assertNotNull(config);
-    Assert.assertEquals(Granularities.HOUR, config.getSegmentGranularity());
+    Assert.assertNotNull(granularity);
+    Assert.assertEquals(Granularities.HOUR, granularity);
   }
 
   @Test
@@ -107,7 +107,7 @@ public class ReindexingGranularityRuleTest
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assert.assertEquals("Test granularity rule", rule.getDescription());
+    Assert.assertEquals("Test segment granularity rule", rule.getDescription());
   }
 
   @Test
@@ -119,67 +119,47 @@ public class ReindexingGranularityRuleTest
   @Test
   public void test_constructor_nullId_throwsNullPointerException()
   {
-    UserCompactionTaskGranularityConfig config = new UserCompactionTaskGranularityConfig(
-        Granularities.HOUR,
-        null,
-        null
-    );
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingGranularityRule(null, "description", PERIOD_7_DAYS, config)
+        () -> new ReindexingSegmentGranularityRule(null, "description", PERIOD_7_DAYS, Granularities.HOUR)
     );
   }
 
   @Test
   public void test_constructor_nullPeriod_throwsNullPointerException()
   {
-    UserCompactionTaskGranularityConfig config = new UserCompactionTaskGranularityConfig(
-        Granularities.HOUR,
-        null,
-        null
-    );
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingGranularityRule("test-id", "description", null, config)
+        () -> new ReindexingSegmentGranularityRule("test-id", "description", null, Granularities.HOUR)
     );
   }
 
   @Test
   public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
   {
-    UserCompactionTaskGranularityConfig config = new UserCompactionTaskGranularityConfig(
-        Granularities.HOUR,
-        null,
-        null
-    );
     Period zeroPeriod = Period.days(0);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingGranularityRule("test-id", "description", zeroPeriod, config)
+        () -> new ReindexingSegmentGranularityRule("test-id", "description", zeroPeriod, Granularities.HOUR)
     );
   }
 
   @Test
   public void test_constructor_negativePeriod_throwsIllegalArgumentException()
   {
-    UserCompactionTaskGranularityConfig config = new UserCompactionTaskGranularityConfig(
-        Granularities.HOUR,
-        null,
-        null
-    );
     Period negativePeriod = Period.days(-7);
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> new ReindexingGranularityRule("test-id", "description", negativePeriod, config)
+        () -> new ReindexingSegmentGranularityRule("test-id", "description", negativePeriod, Granularities.HOUR)
     );
   }
 
   @Test
-  public void test_constructor_nullGranularityConfig_throwsNullPointerException()
+  public void test_constructor_nullGranularity_throwsNullPointerException()
   {
     Assert.assertThrows(
         NullPointerException.class,
-        () -> new ReindexingGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
+        () -> new ReindexingSegmentGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
     );
   }
 }

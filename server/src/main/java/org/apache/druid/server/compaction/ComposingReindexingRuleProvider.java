@@ -56,36 +56,42 @@ import java.util.stream.Collectors;
  *   "providers": [
  *     {
  *       "type": "inline",
- *       "granularityRules": [{
- *         "id": "recent-data-granularity",
- *         "olderThan": "P7D",
- *         "granularity": "HOUR"
- *       }]
+ *       "segmentGranularityRules": [
+ *         {
+ *           "id": "recent-data-granularity",
+ *           "olderThan": "P7D",
+ *           "segmentGranularity": "HOUR"
+ *         }
+ *       ]
  *     },
  *     {
  *       "type": "inline",
- *       "granularityRules": [{
- *         "id": "default-granularity",
- *         "olderThan": "P1D",
- *         "granularity": "DAY"
- *       }],
- *       "deletionRules": [{
- *         "id": "remove-bots",
- *         "olderThan": "P30D",
- *         "deleteWhere": {
- *           "type": "selector",
- *           "dimension": "isRobot",
- *           "value": "true"
+ *       "segmentGranularityRules": [
+ *         {
+ *           "id": "default-granularity",
+ *           "olderThan": "P1D",
+ *           "segmentGranularity": "DAY"
  *         }
- *       }]
+ *       ],
+ *       "deletionRules": [
+ *         {
+ *           "id": "remove-bots",
+ *           "olderThan": "P30D",
+ *           "deleteWhere": {
+ *             "type": "selector",
+ *             "dimension": "isRobot",
+ *             "value": "true"
+ *           }
+ *         }
+ *       ]
  *     }
  *   ]
  * }
  * }</pre>
  * In this example:
  * <ul>
- *   <li>Granularity rules come from the first provider (HOUR granularity for recent data)</li>
- *   <li>Filter rules come from the second provider (first provider with filters)</li>
+ *   <li>Granularity rules come from the first provider (HOUR segment granularity for recent data)</li>
+ *   <li>Deletion rules come from the second provider (first provider with rules)</li>
  * </ul>
  */
 public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
@@ -245,10 +251,21 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingGranularityRule> getGranularityRules()
+  @Nullable
+  public ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(ReindexingRuleProvider::getGranularityRules)
+                    .map(p -> p.getSegmentGranularityRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+  }
+
+  @Override
+  public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
+  {
+    return providers.stream()
+                    .map(ReindexingRuleProvider::getSegmentGranularityRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
@@ -256,13 +273,23 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
 
   @Override
   @Nullable
-  public ReindexingGranularityRule getGranularityRule(Interval interval, DateTime referenceTime)
+  public ReindexingQueryGranularityRule getQueryGranularityRule(Interval interval, DateTime referenceTime)
   {
     return providers.stream()
-                    .map(p -> p.getGranularityRule(interval, referenceTime))
+                    .map(p -> p.getQueryGranularityRule(interval, referenceTime))
                     .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(null);
+  }
+
+  @Override
+  public List<ReindexingQueryGranularityRule> getQueryGranularityRules()
+  {
+    return providers.stream()
+                    .map(ReindexingRuleProvider::getQueryGranularityRules)
+                    .filter(rules -> !rules.isEmpty())
+                    .findFirst()
+                    .orElse(Collections.emptyList());
   }
 
   @Override

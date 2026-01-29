@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -27,6 +28,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -70,12 +72,6 @@ public class ReindexingConfigBuilder
     int count = 0;
 
     count += applyIfPresent(
-        builder::withGranularitySpec,
-        provider.getGranularityRule(interval, referenceTime),
-        ReindexingGranularityRule::getGranularityConfig
-    );
-
-    count += applyIfPresent(
         builder::withTuningConfig,
         provider.getTuningConfigRule(interval, referenceTime),
         ReindexingTuningConfigRule::getTuningConfig
@@ -105,6 +101,8 @@ public class ReindexingConfigBuilder
         ReindexingProjectionRule::getProjections
     );
 
+    count += applyGranularityRules(builder);
+
     count += applyFilterRules(builder);
 
     return count;
@@ -127,6 +125,46 @@ public class ReindexingConfigBuilder
       return 1;
     }
     return 0;
+  }
+
+  private int applyGranularityRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  {
+    ReindexingSegmentGranularityRule segmentGranularityRule = provider.getSegmentGranularityRule(
+        interval,
+        referenceTime
+    );
+    ReindexingQueryGranularityRule queryGranularityRule = provider.getQueryGranularityRule(
+        interval,
+        referenceTime
+    );
+
+    if (segmentGranularityRule == null && queryGranularityRule == null) {
+      return 0;
+    }
+
+    // Extract granularities from rules (null if rule doesn't exist)
+    Granularity segmentGranularity = segmentGranularityRule != null ? segmentGranularityRule.getSegmentGranularity() : null;
+
+    Granularity queryGranularity = queryGranularityRule != null ? queryGranularityRule.getQueryGranularity() : null;
+    Boolean rollup = queryGranularityRule != null ? queryGranularityRule.getRollup() : null;
+
+    // Build and apply the combined granularity config
+    UserCompactionTaskGranularityConfig granularityConfig =
+        new UserCompactionTaskGranularityConfig(segmentGranularity, queryGranularity, rollup);
+
+    builder.withGranularitySpec(granularityConfig);
+
+    int count = 0;
+    if (segmentGranularityRule != null) {
+      LOG.debug("Applied segment granularity rule [%s] for interval [%s]", segmentGranularityRule.getId(), interval);
+      count++;
+    }
+    if (queryGranularityRule != null) {
+      LOG.debug("Applied query granularity rule [%s] for interval [%s]", queryGranularityRule.getId(), interval);
+      count++;
+    }
+
+    return count;
   }
 
   private int applyFilterRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
