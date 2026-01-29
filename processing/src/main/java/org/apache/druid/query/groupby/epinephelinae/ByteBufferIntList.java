@@ -30,6 +30,8 @@ public class ByteBufferIntList
   private final int maxElements;
   private int numElements;
 
+  private int maxMergeBufferUsedBytes;
+
   public ByteBufferIntList(
       ByteBuffer buffer,
       int maxElements
@@ -38,6 +40,7 @@ public class ByteBufferIntList
     this.buffer = buffer;
     this.maxElements = maxElements;
     this.numElements = 0;
+    this.maxMergeBufferUsedBytes = 0;
 
     if (buffer.capacity() < (maxElements * Integer.BYTES)) {
       throw new IAE(
@@ -55,6 +58,7 @@ public class ByteBufferIntList
     }
     buffer.putInt(numElements * Integer.BYTES, val);
     numElements++;
+    maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, numElements * Integer.BYTES);
   }
 
   public void set(int index, int val)
@@ -70,5 +74,10 @@ public class ByteBufferIntList
   public void reset()
   {
     numElements = 0;
+  }
+
+  public int getMaxMergeBufferUsedBytes()
+  {
+    return maxMergeBufferUsedBytes;
   }
 }

@@ -27,7 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
+ * Collects groupBy query metrics (spilled bytes, merge buffer usage, dictionary size) per-query, then
+ * aggregates them when queries complete. Stats are retrieved and reset periodically via {@link #getStatsSince()}.
  */
 @LazySingleton
 public class GroupByStatsProvider
@@ -60,7 +61,9 @@ public class GroupByStatsProvider
 
   public synchronized AggregateStats getStatsSince()
   {
-    return aggregateStatsContainer.reset();
+    AggregateStats aggregateStats = new AggregateStats(aggregateStatsContainer);
+    aggregateStatsContainer.reset();
+    return aggregateStats;
   }
 
   public static class AggregateStats
@@ -68,6 +71,8 @@ public class GroupByStatsProvider
     private long mergeBufferQueries = 0;
     private long mergeBufferAcquisitionTimeNs = 0;
     private long maxMergeBufferAcquisitionTimeNs = 0;
+    private long totalMergeBufferUsedBytes = 0;
+    private long maxMergeBufferUsedBytes = 0;
     private long spilledQueries = 0;
     private long spilledBytes = 0;
     private long maxSpilledBytes = 0;
@@ -78,10 +83,28 @@ public class GroupByStatsProvider
     {
     }
 
+    public AggregateStats(AggregateStats aggregateStats)
+    {
+      this(
+          aggregateStats.mergeBufferQueries,
+          aggregateStats.mergeBufferAcquisitionTimeNs,
+          aggregateStats.maxMergeBufferAcquisitionTimeNs,
+          aggregateStats.totalMergeBufferUsedBytes,
+          aggregateStats.maxMergeBufferUsedBytes,
+          aggregateStats.spilledQueries,
+          aggregateStats.spilledBytes,
+          aggregateStats.maxSpilledBytes,
+          aggregateStats.mergeDictionarySize,
+          aggregateStats.maxMergeDictionarySize
+      );
+    }
+
     public AggregateStats(
         long mergeBufferQueries,
         long mergeBufferAcquisitionTimeNs,
         long maxMergeBufferAcquisitionTimeNs,
+        long totalMergeBufferUsedBytes,
+        long maxMergeBufferUsedBytes,
         long spilledQueries,
         long spilledBytes,
         long maxSpilledBytes,
@@ -92,6 +115,8 @@ public class GroupByStatsProvider
       this.mergeBufferQueries = mergeBufferQueries;
       this.mergeBufferAcquisitionTimeNs = mergeBufferAcquisitionTimeNs;
       this.maxMergeBufferAcquisitionTimeNs = maxMergeBufferAcquisitionTimeNs;
+      this.totalMergeBufferUsedBytes = totalMergeBufferUsedBytes;
+      this.maxMergeBufferUsedBytes = maxMergeBufferUsedBytes;
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
       this.maxSpilledBytes = maxSpilledBytes;
@@ -112,6 +137,16 @@ public class GroupByStatsProvider
     public long getMaxMergeBufferAcquisitionTimeNs()
     {
       return maxMergeBufferAcquisitionTimeNs;
+    }
+
+    public long getTotalMergeBufferUsedBytes()
+    {
+      return totalMergeBufferUsedBytes;
+    }
+
+    public long getMaxMergeBufferUsedBytes()
+    {
+      return maxMergeBufferUsedBytes;
     }
 
     public long getSpilledQueries()
@@ -148,6 +183,8 @@ public class GroupByStatsProvider
             maxMergeBufferAcquisitionTimeNs,
             perQueryStats.getMergeBufferAcquisitionTimeNs()
         );
+        totalMergeBufferUsedBytes += perQueryStats.getMergeBufferTotalUsedBytes();
+        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMergeBufferTotalUsedBytes());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
@@ -160,42 +197,36 @@ public class GroupByStatsProvider
       maxMergeDictionarySize = Math.max(maxMergeDictionarySize, perQueryStats.getMergeDictionarySize());
     }
 
-    public AggregateStats reset()
+    public void reset()
     {
-      AggregateStats aggregateStats =
-          new AggregateStats(
-              mergeBufferQueries,
-              mergeBufferAcquisitionTimeNs,
-              maxMergeBufferAcquisitionTimeNs,
-              spilledQueries,
-              spilledBytes,
-              maxSpilledBytes,
-              mergeDictionarySize,
-              maxMergeDictionarySize
-          );
-
       this.mergeBufferQueries = 0;
       this.mergeBufferAcquisitionTimeNs = 0;
       this.maxMergeBufferAcquisitionTimeNs = 0;
+      this.totalMergeBufferUsedBytes = 0;
+      this.maxMergeBufferUsedBytes = 0;
       this.spilledQueries = 0;
       this.spilledBytes = 0;
       this.maxSpilledBytes = 0;
       this.mergeDictionarySize = 0;
       this.maxMergeDictionarySize = 0;
-
-      return aggregateStats;
     }
   }
 
   public static class PerQueryStats
   {
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
+    private final AtomicLong mergeBufferTotalUsedBytes = new AtomicLong(0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
     public void mergeBufferAcquisitionTime(long delay)
     {
       mergeBufferAcquisitionTimeNs.addAndGet(delay);
+    }
+
+    public void mergeBufferTotalUsedBytes(long bytes)
+    {
+      mergeBufferTotalUsedBytes.addAndGet(bytes);
     }
 
     public void spilledBytes(long bytes)
@@ -211,6 +242,11 @@ public class GroupByStatsProvider
     public long getMergeBufferAcquisitionTimeNs()
     {
       return mergeBufferAcquisitionTimeNs.get();
+    }
+
+    public long getMergeBufferTotalUsedBytes()
+    {
+      return mergeBufferTotalUsedBytes.get();
     }
 
     public long getSpilledBytes()

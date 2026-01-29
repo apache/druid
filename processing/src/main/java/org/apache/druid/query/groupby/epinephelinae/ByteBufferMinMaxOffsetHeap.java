@@ -44,6 +44,7 @@ public class ByteBufferMinMaxOffsetHeap
 
   private int heapSize;
   private int maxHeapSize;
+  private int maxMergeBufferUsedBytes;
 
   public ByteBufferMinMaxOffsetHeap(
       ByteBuffer buf,
@@ -55,6 +56,7 @@ public class ByteBufferMinMaxOffsetHeap
     this.buf = buf;
     this.limit = limit;
     this.heapSize = 0;
+    this.maxMergeBufferUsedBytes = 0;
     this.minComparator = minComparator;
     this.maxComparator = Ordering.from(minComparator).reverse();
     this.heapIndexUpdater = heapIndexUpdater;
@@ -71,9 +73,9 @@ public class ByteBufferMinMaxOffsetHeap
     int pos = heapSize;
     buf.putInt(pos * Integer.BYTES, offset);
     heapSize++;
-    if (heapSize > maxHeapSize) {
-      maxHeapSize = heapSize;
-    }
+
+    maxHeapSize = Math.max(maxHeapSize, heapSize);
+    maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, maxHeapSize * Integer.BYTES);
 
     if (heapIndexUpdater != null) {
       heapIndexUpdater.updateHeapIndexForOffset(offset, pos);
@@ -224,6 +226,11 @@ public class ByteBufferMinMaxOffsetHeap
   public int getHeapSize()
   {
     return heapSize;
+  }
+
+  public int getMaxMergeBufferUsedBytes()
+  {
+    return maxMergeBufferUsedBytes;
   }
 
   private void bubbleUp(int pos)
