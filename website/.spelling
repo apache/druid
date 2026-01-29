@@ -224,6 +224,7 @@ ROUTINE_SCHEMA
 ROUTINE_TYPE
 Rackspace
 Redis
+residualFilterMode
 S3
 SAS
 SDK
