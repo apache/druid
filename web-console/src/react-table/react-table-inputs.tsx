@@ -90,7 +90,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
         </Popover>
       }
       value={focusedText ?? needle}
-      onChange={e => setFocusedText(e.target.value)}
+      onChange={e => setFocusedText(e.target.value.trimStart())}
       onKeyDown={e => {
         if (e.key === 'Enter') {
           const inputValue = (e.target as HTMLInputElement).value;
