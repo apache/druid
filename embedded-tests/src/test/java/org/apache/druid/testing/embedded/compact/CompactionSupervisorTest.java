@@ -39,6 +39,7 @@ import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -131,6 +132,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
+            .withIoConfig(new UserCompactionTaskIOConfig(true))
             .withTuningConfig(
                 new UserCompactionTaskQueryTuningConfig(
                     null,
@@ -172,6 +174,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
             )
+            .withIoConfig(new UserCompactionTaskIOConfig(true))
             .withTuningConfig(
                 new UserCompactionTaskQueryTuningConfig(
                     null,
@@ -237,6 +240,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
             )
+            .withIoConfig(new UserCompactionTaskIOConfig(true))
             .withTuningConfig(
                 new UserCompactionTaskQueryTuningConfig(
                     null,
