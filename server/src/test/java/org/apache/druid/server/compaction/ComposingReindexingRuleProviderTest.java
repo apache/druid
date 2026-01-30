@@ -168,30 +168,6 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getCondensedAndSortedPeriods_mergesFromAllProviders()
-  {
-    ReindexingDeletionRule rule1 = createFilterRule("rule1", Period.days(7));
-    ReindexingDeletionRule rule2 = createFilterRule("rule2", Period.months(1));
-    ReindexingDeletionRule rule3 = createFilterRule("rule3", Period.days(7)); // Duplicate period
-
-    ReindexingRuleProvider provider1 = InlineReindexingRuleProvider.builder()
-                                                                   .deletionRules(ImmutableList.of(rule1)).build();
-    ReindexingRuleProvider provider2 = InlineReindexingRuleProvider.builder()
-                                                                   .deletionRules(ImmutableList.of(rule2, rule3)).build();
-
-    ComposingReindexingRuleProvider composing = new ComposingReindexingRuleProvider(
-        ImmutableList.of(provider1, provider2)
-    );
-
-    List<Period> result = composing.getCondensedAndSortedPeriods(REFERENCE_TIME);
-
-    Assert.assertEquals(2, result.size());
-    Assert.assertEquals(Period.days(7), result.get(0));
-    Assert.assertEquals(Period.months(1), result.get(1));
-  }
-
-
-  @Test
   public void test_getMetricsRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(

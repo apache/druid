@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingMetricsRule;
+import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -199,7 +200,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -211,10 +212,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
     Assert.assertEquals(2, processedIntervals.size());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getStart());
-    Assert.assertEquals(referenceTime.minusDays(10), processedIntervals.get(0).getEnd());
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getEnd());
+    // Intervals are now in chronological order (oldest first)
+    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assert.assertEquals(referenceTime.minusDays(10), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -224,7 +226,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -245,7 +247,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -257,10 +259,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
     Assert.assertEquals(2, processedIntervals.size());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getStart());
-    Assert.assertEquals(referenceTime.minusDays(15), processedIntervals.get(0).getEnd());
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getEnd());
+    // Intervals are now in chronological order (oldest first)
+    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assert.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -270,7 +273,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -293,7 +296,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -314,7 +317,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -326,10 +329,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
     Assert.assertEquals(2, processedIntervals.size());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getStart());
-    Assert.assertEquals(referenceTime.minusDays(20), processedIntervals.get(0).getEnd());
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getEnd());
+    // Intervals are now in chronological order (oldest first)
+    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assert.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -339,7 +343,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(referenceTime, List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -711,19 +715,25 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     return SegmentTimeline.forSegments(Collections.singletonList(segment));
   }
 
-  private ReindexingRuleProvider createMockProvider(DateTime referenceTime, List<Period> periods)
+  private ReindexingRuleProvider createMockProvider(List<Period> periods)
   {
-    ReindexingSegmentGranularityRule mockGranularityRule = new ReindexingSegmentGranularityRule(
-        "test-rule",
-        null,
-        Period.days(1),
-        Granularities.HOUR
-    );
+    // Create segment granularity rules for each period
+    List<ReindexingSegmentGranularityRule> segmentGranularityRules = new ArrayList<>();
+    for (int i = 0; i < periods.size(); i++) {
+      segmentGranularityRules.add(new ReindexingSegmentGranularityRule(
+          "segment-gran-rule-" + i,
+          null,
+          periods.get(i),
+          Granularities.HOUR
+      ));
+    }
 
     ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
     EasyMock.expect(mockProvider.isReady()).andReturn(true);
-    EasyMock.expect(mockProvider.getCondensedAndSortedPeriods(referenceTime)).andReturn(periods);
-    EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(mockGranularityRule).anyTimes();
+    EasyMock.expect(mockProvider.getSegmentGranularityRules()).andReturn(segmentGranularityRules).anyTimes();
+    // Return a fresh stream on each call to avoid "stream has already been operated upon or closed" errors
+    EasyMock.expect(mockProvider.streamAllRules()).andAnswer(() -> segmentGranularityRules.stream().map(r -> (ReindexingRule) r)).anyTimes();
+    EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(segmentGranularityRules.get(0)).anyTimes();
     EasyMock.expect(mockProvider.getQueryGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getMetricsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDimensionsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();

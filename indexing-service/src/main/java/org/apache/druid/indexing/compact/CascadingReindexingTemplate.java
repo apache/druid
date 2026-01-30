@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -290,14 +291,16 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     final List<CompactionJob> allJobs = new ArrayList<>();
     final DateTime currentTime = jobParams.getScheduleStartTime();
 
-    List<Interval> intervals = generateAlignedSearchIntervals(currentTime);
-    if (intervals.isEmpty()) {
-      return Collections.emptyList();
-    }
     SegmentTimeline timeline = jobParams.getTimeline(dataSource);
 
     if (timeline == null || timeline.isEmpty()) {
       LOG.warn("Segment timeline null or empty for [%s] skipping creating compaction jobs.", dataSource);
+      return Collections.emptyList();
+    }
+
+    List<Interval> searchIntervals = generateAlignedSearchIntervals(currentTime);
+    if (searchIntervals.isEmpty()) {
+      LOG.warn("No search intervals generated for dataSource[%s], no reindexing jobs will be created", dataSource);
       return Collections.emptyList();
     }
 
@@ -310,7 +313,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    for (Interval reindexingInterval : intervals) {
+    for (Interval reindexingInterval : searchIntervals) {
 
       if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
         LOG.debug("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, adjustedTimelineInterval);
@@ -345,6 +348,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return allJobs;
   }
 
+  @VisibleForTesting
   protected CompactionJobTemplate createJobTemplateForInterval(
       InlineSchemaDataSourceCompactionConfig config
   )
@@ -352,6 +356,15 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return new CompactionConfigBasedJobTemplate(config, createCascadingFinalizer());
   }
 
+  /**
+   * Clamps an interval to fit within the specified bounds by adjusting start and/or end times.
+   * If the interval extends beyond the bounds, it is trimmed to fit. Returns null if the
+   * resulting interval would be invalid (end before start).
+   *
+   * @param interval the interval to clamp
+   * @param bounds the bounds to clamp to
+   * @return the clamped interval, or null if the result would be invalid
+   */
   @Nullable
   private Interval clampIntervalToBounds(Interval interval, Interval bounds)
   {
@@ -383,6 +396,15 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return new Interval(start, end);
   }
 
+  /**
+   * Applies the configured skip offset to an interval by adjusting its end time. Uses either
+   * skipOffsetFromNow (relative to reference time) or skipOffsetFromLatest (relative to interval end).
+   * Returns null if the adjusted end would be before the interval start.
+   *
+   * @param interval the interval to adjust
+   * @param skipFromNowReferenceTime the reference time for skipOffsetFromNow calculation
+   * @return the interval with adjusted end time, or null if the result would be invalid
+   */
   @Nullable
   private Interval applySkipOffset(
       Interval interval,
@@ -418,11 +440,13 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * then splits them at non-segment-granularity rule thresholds where safe to do so.
    * <p>
    * Algorithm:
-   * 1. Generate base timeline from segment granularity rules
-   * 2. Collect thresholds from all non-segment-granularity rules
-   * 3. For each base interval, find thresholds that fall within it
-   * 4. Align those thresholds to the interval's segment granularity
-   * 5. Split intervals at aligned thresholds
+   * <ol>
+   *   <li>Generate base timeline from segment granularity rules</li>
+   *   <li>Collect thresholds from all non-segment-granularity rules</li>
+   *   <li>For each base interval, find thresholds that fall within it</li>
+   *   <li>Align those thresholds to the interval's segment granularity</li>
+   *   <li>Split intervals at aligned thresholds</li>
+   * </ol>
    *
    * @param referenceTime the reference time for calculating period thresholds
    * @return list of split and aligned intervals, ordered from oldest to newest
@@ -431,7 +455,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   List<Interval> generateAlignedSearchIntervals(DateTime referenceTime)
   {
     // Step 1: Generate base timeline from segment granularity rules
-    List<IntervalWithGranularity> baseTimeline = generateBaseTimelineWithGranularities(referenceTime);
+    List<IntervalWithGranularity> baseTimeline = generateBaseSegmentGranularityAlignedTimeline(referenceTime);
 
     // Step 2: Collect thresholds from non-segment-granularity rules
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
@@ -484,19 +508,38 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Generates the base timeline with segment granularities tracked.
+   * Generates a base timeline aligned to segment granularities found in segment granularity rules and if necessary,
+   * the default granularity for the supervisor.
    * <p>
-   * If segment granularity rules exist, uses them to build the base timeline.
-   * If not, uses the smallest period from non-segment-granularity rules with the default granularity.
+   * Algorithm:
+   * <ol>
+   *   <li>If no segment granularity rules exist:
+   *     <ol type="a">
+   *       <li>Find the most recent threshold from non-segment-granularity rules</li>
+   *       <li>Use the default granularity to align an interval from [-inf, most recent threshold)</li>
+   *     </ol>
+   *   </li>
+   *   <li>If segment granularity rules exist:
+   *     <ol type="a">
+   *       <li>Sort rules by period from longest to shortest (oldest to most recent threshold)</li>
+   *       <li>Create intervals for each rule, adjusting the interval end to be aligned to the rule's segment granularity</li>
+   *       <li>If non-segment-granularity thresholds exist that are more recent than the most recent segment granularity rule's end:
+   *         <ol type="i">
+   *           <li>Prepend an interval from [most recent segment granularity end, most recent non-segment-granularity threshold)</li>
+   *         </ol>
+   *       </li>
+   *     </ol>
+   *   </li>
+   * </ol>
    */
-  private List<IntervalWithGranularity> generateBaseTimelineWithGranularities(DateTime referenceTime)
+  private List<IntervalWithGranularity> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
   {
+    // Collect all rules upfront for efficient reuse
     List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
+    List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
     if (segmentGranRules.isEmpty()) {
       // No segment granularity rules - use default granularity with smallest period from other rules
-      List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
-
       if (nonSegmentGranThresholds.isEmpty()) {
         throw new IAE(
             "CascadingReindexingTemplate requires at least one reindexing rule "
@@ -508,9 +551,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       DateTime mostRecentThreshold = Collections.max(nonSegmentGranThresholds);
       DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentThreshold);
 
-      LOG.info(
-          "No segment granularity rules found. Creating base interval with default granularity [%s] "
-          + "and threshold [%s] (aligned: [%s])",
+      LOG.debug(
+          "No segment granularity rules found for cascading supervisor[%s]. Creating base interval with "
+          + "default granularity [%s] and threshold [%s] (aligned: [%s])",
+          dataSource,
           defaultSegmentGranularity,
           mostRecentThreshold,
           alignedEnd
@@ -558,7 +602,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     // Check if we need to prepend an interval for non-segment-gran rules that are more recent
     // than the most recent segment gran rule
-    List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
     if (!nonSegmentGranThresholds.isEmpty()) {
       DateTime mostRecentNonSegmentGranThreshold = Collections.max(nonSegmentGranThresholds);
       DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).interval.getEnd();
@@ -567,19 +610,30 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         // Need to prepend an interval for more recent non-segment-gran rules
         DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
 
-        LOG.info(
-            "Most recent non-segment-gran threshold [%s] is after most recent segment gran interval end [%s]. "
-            + "Prepending interval with default granularity [%s] (aligned end: [%s])",
-            mostRecentNonSegmentGranThreshold,
-            mostRecentSegmentGranEnd,
-            defaultSegmentGranularity,
-            alignedEnd
-        );
+        if (alignedEnd.isBefore(mostRecentSegmentGranEnd) || alignedEnd.isEqual(mostRecentSegmentGranEnd)) {
+          LOG.debug(
+              "Most recent non-segment-gran threshold [%s] aligns to [%s], which is not after "
+              + "most recent segment gran end [%s]. No prepended interval needed.",
+              mostRecentNonSegmentGranThreshold,
+              alignedEnd,
+              mostRecentSegmentGranEnd
+          );
+          return baseTimeline;
+        } else {
+          LOG.debug(
+              "Most recent non-segment-gran threshold [%s] is after most recent segment gran interval end [%s]. "
+              + "Prepending interval with default granularity [%s] (aligned end: [%s])",
+              mostRecentNonSegmentGranThreshold,
+              mostRecentSegmentGranEnd,
+              defaultSegmentGranularity,
+              alignedEnd
+          );
 
-        baseTimeline.add(new IntervalWithGranularity(
-            new Interval(mostRecentSegmentGranEnd, alignedEnd),
-            defaultSegmentGranularity
-        ));
+          baseTimeline.add(new IntervalWithGranularity(
+              new Interval(mostRecentSegmentGranEnd, alignedEnd),
+              defaultSegmentGranularity
+          ));
+        }
       }
     }
 
@@ -591,70 +645,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    */
   private List<DateTime> collectNonSegmentGranularityThresholds(DateTime referenceTime)
   {
-    List<DateTime> thresholds = new ArrayList<>();
-
-    // Collect from all rule types
-    ruleProvider.getMetricsRules().stream()
+    return ruleProvider.streamAllRules()
+        .filter(rule -> !(rule instanceof ReindexingSegmentGranularityRule))
         .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getDimensionsRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getIOConfigRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getProjectionRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getQueryGranularityRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getTuningConfigRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    ruleProvider.getDeletionRules().stream()
-        .map(rule -> referenceTime.minus(rule.getOlderThan()))
-        .forEach(thresholds::add);
-
-    return thresholds;
-  }
-
-  /**
-   * Helper class to track an interval with its associated segment granularity.
-   */
-  private static class IntervalWithGranularity
-  {
-    final Interval interval;
-    final Granularity granularity;
-
-    IntervalWithGranularity(Interval interval, Granularity granularity)
-    {
-      this.interval = interval;
-      this.granularity = granularity;
-    }
-  }
-
-  @Deprecated
-  private List<Interval> generateSearchIntervals(List<Period> sortedPeriods, DateTime referenceTime)
-  {
-    List<Interval> intervals = new ArrayList<>(sortedPeriods.size());
-    for (int i = 0; i < sortedPeriods.size(); i++) {
-      DateTime end = referenceTime.minus(sortedPeriods.get(i));
-      DateTime start;
-      if (i + 1 < sortedPeriods.size()) {
-        start = referenceTime.minus(sortedPeriods.get(i + 1));
-      } else {
-        start = DateTimes.MIN;
-      }
-      intervals.add(new Interval(start, end));
-    }
-    return intervals;
+        .collect(Collectors.toList());
   }
 
   private List<CompactionJob> createJobsForSearchInterval(
@@ -674,6 +668,21 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public CompactionState toCompactionState()
   {
     throw new UnsupportedOperationException("CascadingReindexingTemplate cannot be transformed to a CompactionState object");
+  }
+
+  /**
+   * Helper class to track an interval with its associated segment granularity.
+   */
+  private static class IntervalWithGranularity
+  {
+    final Interval interval;
+    final Granularity granularity;
+
+    IntervalWithGranularity(Interval interval, Granularity granularity)
+    {
+      this.interval = interval;
+      this.granularity = granularity;
+    }
   }
 
   // Legacy fields from DataSourceCompactionConfig that are not used by this template

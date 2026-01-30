@@ -23,11 +23,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Provides compaction rules for different aspects of reindexing configuration.
@@ -70,15 +69,6 @@ public interface ReindexingRuleProvider
   {
     return true;
   }
-
-  /**
-   * Returns all unique periods used by the rules provided by this provider, condensed and sorted in ascending order.
-   * <p>
-   * Ascending order means from shortest to longest period. For example, [P1D, P7D, P30D].
-   * </p>
-   */
-  @Nonnull
-  List<Period> getCondensedAndSortedPeriods(DateTime referenceTime);
 
   /**
    * Returns all reindexing deletion rules that apply to the given interval.
@@ -235,4 +225,27 @@ public interface ReindexingRuleProvider
    * Returns ALL reindexing tuning config rules.
    */
   List<ReindexingTuningConfigRule> getTuningConfigRules();
+
+  /**
+   * Returns a stream of all reindexing rules across all types.
+   * <p>
+   * This provides a flexible way to filter, map, and process rules without needing
+   * specific methods for every possible combination. For example, to get all non-segment-granularity
+   * rules, you can filter: {@code streamAllRules().filter(rule -> !(rule instanceof ReindexingSegmentGranularityRule))}
+   *
+   * @return a stream of all rules from all rule types
+   */
+  default Stream<ReindexingRule> streamAllRules()
+  {
+    return Stream.of(
+        getMetricsRules().stream(),
+        getDimensionsRules().stream(),
+        getIOConfigRules().stream(),
+        getProjectionRules().stream(),
+        getQueryGranularityRules().stream(),
+        getTuningConfigRules().stream(),
+        getDeletionRules().stream(),
+        getSegmentGranularityRules().stream()
+    ).flatMap(s -> s);
+  }
 }

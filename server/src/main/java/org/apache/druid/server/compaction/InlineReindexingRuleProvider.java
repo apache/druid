@@ -23,19 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Rule provider that returns a static list of rules defined inline in the configuration.
@@ -187,31 +182,6 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public List<ReindexingTuningConfigRule> getTuningConfigRules()
   {
     return reindexingTuningConfigRules;
-  }
-
-  @Override
-  @Nonnull
-  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
-  {
-    return Stream.of(
-                     reindexingDeletionRules,
-                     reindexingMetricsRules,
-                     reindexingDimensionsRules,
-                     reindexingIOConfigRules,
-                     reindexingProjectionRules,
-                     reindexingSegmentGranularityRules,
-                     reindexingQueryGranularityRules,
-                     reindexingTuningConfigRules
-                 )
-                 .flatMap(List::stream)
-                 .map(ReindexingRule::getOlderThan)
-                 .distinct()
-                 .sorted(Comparator.comparingLong(period -> {
-                   DateTime endTime = referenceTime.plus(period);
-                   return new Duration(referenceTime, endTime).getMillis();
-                 }))
-                 .collect(Collectors.toList());
-
   }
 
   @Override

@@ -22,17 +22,12 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * A meta-provider that composes multiple {@link ReindexingRuleProvider}s with first-wins semantics.
@@ -129,21 +124,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   {
     // All providers must be ready
     return providers.stream().allMatch(ReindexingRuleProvider::isReady);
-  }
-
-  @Override
-  @Nonnull
-  public List<Period> getCondensedAndSortedPeriods(DateTime referenceTime)
-  {
-    // Collect all unique periods from all providers, sorted ascending
-    return providers.stream()
-                    .flatMap(p -> p.getCondensedAndSortedPeriods(referenceTime).stream())
-                    .distinct()
-                    .sorted(Comparator.comparingLong(period -> {
-                      DateTime endTime = referenceTime.plus(period);
-                      return new Duration(referenceTime, endTime).getMillis();
-                    }))
-                    .collect(Collectors.toList());
   }
 
   @Override

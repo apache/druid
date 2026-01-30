@@ -81,38 +81,6 @@ public class InlineReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getCondensedAndSortedPeriods_returnsDistinctSortedPeriods()
-  {
-    ReindexingDeletionRule filter30d = createFilterRule("f1", Period.days(30));
-    ReindexingDeletionRule filter60d = createFilterRule("f2", Period.days(60));
-    ReindexingSegmentGranularityRule gran30d = createSegmentGranularityRule("g1", Period.days(30)); // Duplicate P30D
-    ReindexingSegmentGranularityRule gran90d = createSegmentGranularityRule("g2", Period.days(90));
-
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .deletionRules(ImmutableList.of(filter30d, filter60d))
-        .segmentGranularityRules(ImmutableList.of(gran30d, gran90d))
-        .build();
-
-    List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
-
-    Assert.assertEquals(3, periods.size());
-
-    Assert.assertEquals(Period.days(30), periods.get(0));
-    Assert.assertEquals(Period.days(60), periods.get(1));
-    Assert.assertEquals(Period.days(90), periods.get(2));
-  }
-
-  @Test
-  public void test_getCondensedAndSortedPeriods_withEmptyRules_returnsEmpty()
-  {
-    InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
-
-    List<Period> periods = provider.getCondensedAndSortedPeriods(REFERENCE_TIME);
-
-    Assert.assertTrue(periods.isEmpty());
-  }
-
-  @Test
   public void test_reindexingRules_validateAdditivity()
   {
     ReindexingDeletionRule rule30d = createFilterRule("filter-30d", Period.days(30));
