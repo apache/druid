@@ -50,8 +50,6 @@ import java.util.List;
 
 public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
-
   private final boolean finalizeSketch;
 
   protected ThetaSketchBaseSqlAggregator(boolean finalizeSketch)
@@ -93,7 +91,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      sketchSize = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(sketchSizeArg), NAME, "size").intValue();
+      sketchSize = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(sketchSizeArg), getName(), "size").intValue();
     } else {
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
@@ -175,6 +173,8 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  protected abstract String getName();
 
   private boolean isValidComplexInputType(ColumnType columnType)
   {

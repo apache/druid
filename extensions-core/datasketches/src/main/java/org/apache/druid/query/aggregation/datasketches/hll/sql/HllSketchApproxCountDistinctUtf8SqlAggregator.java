@@ -81,4 +81,10 @@ public class HllSketchApproxCountDistinctUtf8SqlAggregator
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorFactory.getName()) : null
     );
   }
+
+  @Override
+  protected String getName()
+  {
+    return NAME;
+  }
 }

@@ -110,7 +110,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      k = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "resolution").intValue();
+      k = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "k").intValue();
     } else {
       k = DoublesSketchAggregatorFactory.DEFAULT_K;
     }

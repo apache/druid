@@ -53,7 +53,6 @@ import java.util.List;
 public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 {
   private static final boolean ROUND = true;
-  private static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
 
   private final boolean finalizeSketch;
   private final StringEncoding stringEncoding;
@@ -94,7 +93,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      logK = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(logKarg), NAME, "logK").intValue();
+      logK = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(logKarg), getName(), "logK").intValue();
     } else {
       logK = HllSketchAggregatorFactory.DEFAULT_LG_K;
     }
@@ -205,6 +204,8 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  protected abstract String getName();
 
   private boolean isValidComplexInputType(ColumnType columnType)
   {
