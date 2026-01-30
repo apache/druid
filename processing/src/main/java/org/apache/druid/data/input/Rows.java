@@ -87,7 +87,7 @@ public final class Rows
     } else if (inputValue instanceof Object[]) {
       return Arrays.stream((Object[]) inputValue).map(Evals::asString).collect(Collectors.toList());
     } else {
-      return Collections.singletonList(String.valueOf(inputValue));
+      return Collections.singletonList(Evals.asString(inputValue));
     }
   }
 

@@ -55,6 +55,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 public class HadoopDruidIndexerConfigTest
@@ -218,80 +219,77 @@ public class HadoopDruidIndexerConfigTest
     Assert.assertEquals(maxRowsPerSegment, targetPartitionSize);
   }
 
+  /**
+   * Tests that INDEX_MERGER is configured correctly based on the properties.
+   * Verifies the merger type (V9 or V10) and storeEmptyColumns flag match what properties dictate.
+   */
   @Test
-  public void testIndexMergerIsInitialized()
+  public void testIndexMergerMatchesProperties() throws Exception
   {
-    // Verify INDEX_MERGER is initialized and not null
     IndexMerger indexMerger = HadoopDruidIndexerConfig.INDEX_MERGER;
-    Assert.assertNotNull("INDEX_MERGER should not be null", indexMerger);
+    Properties properties = HadoopDruidIndexerConfig.PROPERTIES;
 
-    // By default, buildV10 is false, so it should be IndexMergerV9
-    // (unless system property druid.indexer.task.buildV10=true is set)
-    String buildV10Property = HadoopDruidIndexerConfig.PROPERTIES.getProperty("druid.indexer.task.buildV10", "false");
-    if (Boolean.parseBoolean(buildV10Property)) {
+    boolean buildV10 = Boolean.parseBoolean(properties.getProperty("druid.indexer.task.buildV10", "false"));
+    boolean expectedStoreEmptyColumns = buildV10 ||
+        Boolean.parseBoolean(properties.getProperty("druid.indexer.task.storeEmptyColumns", "true"));
+
+    if (buildV10) {
       Assert.assertTrue(
-          "INDEX_MERGER should be IndexMergerV10 when buildV10=true",
+          "When buildV10=true, INDEX_MERGER should be IndexMergerV10",
           indexMerger instanceof IndexMergerV10
       );
     } else {
       Assert.assertTrue(
-          "INDEX_MERGER should be IndexMergerV9 when buildV10=false",
+          "When buildV10=false, INDEX_MERGER should be IndexMergerV9",
           indexMerger instanceof IndexMergerV9
       );
-    }
-  }
-
-  @Test
-  public void testIndexMergerStoreEmptyColumnsConfiguration() throws Exception
-  {
-    IndexMerger indexMerger = HadoopDruidIndexerConfig.INDEX_MERGER;
-
-    // Check the storeEmptyColumns setting based on the merger type
-    String buildV10Property = HadoopDruidIndexerConfig.PROPERTIES.getProperty("druid.indexer.task.buildV10", "false");
-    boolean buildV10 = Boolean.parseBoolean(buildV10Property);
-
-    if (buildV10) {
-      // V10 always stores empty columns
-      Assert.assertTrue(indexMerger instanceof IndexMergerV10);
-    } else {
-      // V9 should have storeEmptyColumns based on property (default true)
-      Assert.assertTrue(indexMerger instanceof IndexMergerV9);
-
-      // Use reflection to verify storeEmptyColumns value
+      // Use reflection to verify storeEmptyColumns on IndexMergerV9
       Field storeEmptyColumnsField = IndexMergerV9.class.getDeclaredField("storeEmptyColumns");
       storeEmptyColumnsField.setAccessible(true);
-      boolean storeEmptyColumns = (boolean) storeEmptyColumnsField.get(indexMerger);
-
-      String storeEmptyColumnsProperty = HadoopDruidIndexerConfig.PROPERTIES.getProperty(
-          "druid.indexer.task.storeEmptyColumns",
-          "true"
-      );
-      boolean expectedStoreEmptyColumns = Boolean.parseBoolean(storeEmptyColumnsProperty);
+      boolean actualStoreEmptyColumns = (boolean) storeEmptyColumnsField.get(indexMerger);
       Assert.assertEquals(
-          "storeEmptyColumns should match property value (default true)",
+          "storeEmptyColumns flag should match property value",
           expectedStoreEmptyColumns,
-          storeEmptyColumns
+          actualStoreEmptyColumns
       );
     }
   }
 
+  /**
+   * Tests that druid.indexer.task properties are passed to Hadoop jobs via getAllowedProperties().
+   */
   @Test
-  public void testDefaultPropertiesForIndexMerger()
+  public void testIndexerPropertiesArePassedToHadoopJobs()
   {
-    // Verify default property values used for INDEX_MERGER creation
-    // buildV10 defaults to false
-    String buildV10Default = HadoopDruidIndexerConfig.PROPERTIES.getProperty(
-        "druid.indexer.task.buildV10",
-        "false"
-    );
-    Assert.assertNotNull(buildV10Default);
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder().build();
+    HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
 
-    // storeEmptyColumns defaults to true (matching native batch behavior)
-    String storeEmptyColumnsDefault = HadoopDruidIndexerConfig.PROPERTIES.getProperty(
-        "druid.indexer.task.storeEmptyColumns",
-        "true"
-    );
-    Assert.assertNotNull(storeEmptyColumnsDefault);
+    String storeEmptyColumnsKey = "druid.indexer.task.storeEmptyColumns";
+    String buildV10Key = "druid.indexer.task.buildV10";
+    String originalStoreEmpty = HadoopDruidIndexerConfig.PROPERTIES.getProperty(storeEmptyColumnsKey);
+    String originalBuildV10 = HadoopDruidIndexerConfig.PROPERTIES.getProperty(buildV10Key);
+
+    try {
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(storeEmptyColumnsKey, "true");
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(buildV10Key, "true");
+
+      Map<String, String> allowedProperties = config.getAllowedProperties();
+      Assert.assertEquals("true", allowedProperties.get(storeEmptyColumnsKey));
+      Assert.assertEquals("true", allowedProperties.get(buildV10Key));
+    }
+    finally {
+      restoreProperty(storeEmptyColumnsKey, originalStoreEmpty);
+      restoreProperty(buildV10Key, originalBuildV10);
+    }
+  }
+
+  private void restoreProperty(String key, String originalValue)
+  {
+    if (originalValue != null) {
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(key, originalValue);
+    } else {
+      HadoopDruidIndexerConfig.PROPERTIES.remove(key);
+    }
   }
 
   private static class HadoopIngestionSpecBuilder

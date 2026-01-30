@@ -25,6 +25,7 @@ import com.google.common.primitives.Doubles;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -401,9 +402,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
                 //noinspection rawtypes
                 for (final Object item : ((List) rawValue)) {
-                  final String itemString;
-
-                  itemString = item == null ? null : String.valueOf(item);
+                  final String itemString = Evals.asString(item);
 
                   if (extractionFn == null) {
                     values.add(itemString);
