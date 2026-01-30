@@ -26,7 +26,6 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -49,7 +48,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -101,6 +99,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final long inputSegmentSizeBytes;
   private final Period skipOffsetFromLatest;
   private final Period skipOffsetFromNow;
+  private final Granularity defaultSegmentGranularity;
 
   @JsonCreator
   public CascadingReindexingTemplate(
@@ -111,7 +110,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow
+      @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow,
+      @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity
   )
   {
     this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
@@ -120,6 +120,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     this.taskContext = taskContext;
     this.taskPriority = Objects.requireNonNullElse(taskPriority, DEFAULT_COMPACTION_TASK_PRIORITY);
     this.inputSegmentSizeBytes = Objects.requireNonNullElse(inputSegmentSizeBytes, DEFAULT_INPUT_SEGMENT_SIZE_BYTES);
+    this.defaultSegmentGranularity = Objects.requireNonNull(
+        defaultSegmentGranularity,
+        "'defaultSegmentGranularity' cannot be null"
+    );
 
     if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
       throw new IAE("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
@@ -198,6 +202,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private Period getSkipOffsetFromNow()
   {
     return skipOffsetFromNow;
+  }
+
+  @JsonProperty
+  public Granularity getDefaultSegmentGranularity()
+  {
+    return defaultSegmentGranularity;
   }
 
   /**
@@ -475,16 +485,41 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
   /**
    * Generates the base timeline with segment granularities tracked.
+   * <p>
+   * If segment granularity rules exist, uses them to build the base timeline.
+   * If not, uses the smallest period from non-segment-granularity rules with the default granularity.
    */
   private List<IntervalWithGranularity> generateBaseTimelineWithGranularities(DateTime referenceTime)
   {
     List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
 
     if (segmentGranRules.isEmpty()) {
-      throw new IAE(
-          "CascadingReindexingTemplate requires at least one segment granularity rule. "
-          + "TODO: Support templates with only non-segment-granularity rules"
+      // No segment granularity rules - use default granularity with smallest period from other rules
+      List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
+
+      if (nonSegmentGranThresholds.isEmpty()) {
+        throw new IAE(
+            "CascadingReindexingTemplate requires at least one reindexing rule "
+            + "(segment granularity or other type)"
+        );
+      }
+
+      // Find the smallest period (most recent threshold = largest DateTime value)
+      DateTime mostRecentThreshold = Collections.max(nonSegmentGranThresholds);
+      DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentThreshold);
+
+      LOG.info(
+          "No segment granularity rules found. Creating base interval with default granularity [%s] "
+          + "and threshold [%s] (aligned: [%s])",
+          defaultSegmentGranularity,
+          mostRecentThreshold,
+          alignedEnd
       );
+
+      return Collections.singletonList(new IntervalWithGranularity(
+          new Interval(DateTimes.MIN, alignedEnd),
+          defaultSegmentGranularity
+      ));
     }
 
     // Sort rules by period from longest to shortest (oldest to most recent threshold)
@@ -519,6 +554,33 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       ));
 
       previousAlignedEnd = alignedEnd;
+    }
+
+    // Check if we need to prepend an interval for non-segment-gran rules that are more recent
+    // than the most recent segment gran rule
+    List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
+    if (!nonSegmentGranThresholds.isEmpty()) {
+      DateTime mostRecentNonSegmentGranThreshold = Collections.max(nonSegmentGranThresholds);
+      DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).interval.getEnd();
+
+      if (mostRecentNonSegmentGranThreshold.isAfter(mostRecentSegmentGranEnd)) {
+        // Need to prepend an interval for more recent non-segment-gran rules
+        DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
+
+        LOG.info(
+            "Most recent non-segment-gran threshold [%s] is after most recent segment gran interval end [%s]. "
+            + "Prepending interval with default granularity [%s] (aligned end: [%s])",
+            mostRecentNonSegmentGranThreshold,
+            mostRecentSegmentGranEnd,
+            defaultSegmentGranularity,
+            alignedEnd
+        );
+
+        baseTimeline.add(new IntervalWithGranularity(
+            new Interval(mostRecentSegmentGranEnd, alignedEnd),
+            defaultSegmentGranularity
+        ));
+      }
     }
 
     return baseTimeline;

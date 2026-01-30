@@ -326,7 +326,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         compactionEngine,
         null,
         null,
-        null
+        null,
+        Granularities.DAY
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
@@ -405,7 +406,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         compactionEngine,
         null,
         null,
-        null
+        null,
+        Granularities.DAY
     );
 
     runCompactionWithSpec(cascadingTemplate);

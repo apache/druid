@@ -88,7 +88,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         CompactionEngine.NATIVE,
         ImmutableMap.of("context_key", "context_value"),
         null,
-        null
+        null,
+        Granularities.DAY
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(template);
@@ -122,7 +123,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         CompactionEngine.MSQ,
         ImmutableMap.of("key", "value"),
         null,
-        null
+        null,
+        Granularities.HOUR
     );
 
     // Serialize and deserialize as DataSourceCompactionConfig interface
@@ -156,7 +158,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null
+        null,
+        Granularities.DAY
     );
 
     // Call createCompactionJobs - should return empty list without processing
@@ -182,7 +185,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             null,
             null,
             Period.days(7),  // skipOffsetFromLatest
-            Period.days(3)   // skipOffsetFromNow
+            Period.days(3),   // skipOffsetFromNow
+            Granularities.DAY
         )
     );
 
@@ -379,7 +383,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null
+        null,
+        Granularities.DAY
     );
 
     List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
@@ -455,7 +460,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null
+        null,
+        Granularities.DAY
     );
 
     List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
@@ -500,6 +506,141 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(6).getEnd());
   }
 
+  @Test
+  public void test_generateAlignedSearchIntervals_withNoSegmentGranularityRules()
+  {
+    // Reference time: 2025-01-29T16:15
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    // No segment granularity rules - only metrics rules
+    // P8D  -> 2025-01-21T16:15 (smallest/most recent)
+    // P14D -> 2025-01-15T16:15
+    // P45D -> 2024-12-15T16:15
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .metricsRules(List.of(
+            new ReindexingMetricsRule("metrics-8d", null, Period.days(8), new AggregatorFactory[0]),
+            new ReindexingMetricsRule("metrics-14d", null, Period.days(14), new AggregatorFactory[0]),
+            new ReindexingMetricsRule("metrics-45d", null, Period.days(45), new AggregatorFactory[0])
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.DAY  // default granularity
+    );
+
+    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+
+    // Expected: One base interval [-inf, aligned(smallest period)) then split by other rules
+    // Smallest period is P8D -> threshold: 2025-01-21T16:15
+    // Aligned to DAY: 2025-01-21T00:00
+    // Then split by P14D (2025-01-15T00:00) and P45D (2024-12-15T00:00)
+    //
+    // Result: 4 intervals
+    // 1. [-inf, 2024-12-15T00:00)
+    // 2. [2024-12-15T00:00, 2025-01-15T00:00)
+    // 3. [2025-01-15T00:00, 2025-01-21T00:00)
+    // 4. [2025-01-21T00:00, 2025-01-21T00:00) - WAIT, this would be zero-length!
+
+    // Actually, P14D and P45D both fall within the base interval [-inf, 2025-01-21T00:00)
+    // So they will split it:
+    // 1. [-inf, 2024-12-15T00:00)                - before P45D
+    // 2. [2024-12-15T00:00, 2025-01-15T00:00)   - between P45D and P14D
+    // 3. [2025-01-15T00:00, 2025-01-21T00:00)   - after P14D, before base end
+
+    Assert.assertEquals(3, intervals.size());
+
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(0).getEnd());
+
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(1).getEnd());
+
+    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(2).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-21T00:00:00Z"), intervals.get(2).getEnd());
+  }
+
+  @Test
+  public void test_generateAlignedSearchIntervals_prependIntervalForShortNonSegmentGranRules()
+  {
+    // Reference time: 2025-01-29T16:15
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    // Segment granularity rules:
+    // P1M -> 2024-12-29T16:15 (most recent segment gran threshold)
+    // P3M -> 2024-10-29T16:15
+    //
+    // Non-segment-gran rules (more recent than P1M!):
+    // P7D  -> 2025-01-22T16:15
+    // P14D -> 2025-01-15T16:15
+    // P21D -> 2025-01-08T16:15
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY)
+        ))
+        .metricsRules(List.of(
+            new ReindexingMetricsRule("metrics-7d", null, Period.days(7), new AggregatorFactory[0]),
+            new ReindexingMetricsRule("metrics-14d", null, Period.days(14), new AggregatorFactory[0]),
+            new ReindexingMetricsRule("metrics-21d", null, Period.days(21), new AggregatorFactory[0])
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.HOUR  // default for prepended interval
+    );
+
+    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+
+    // Expected base timeline:
+    // 1. [-inf, 2024-10-01T00:00)              - P3M with MONTH gran
+    // 2. [2024-10-01T00:00, 2024-12-29T00:00)  - P1M with DAY gran
+    // 3. [2024-12-29T00:00, 2025-01-22T16:00)  - PREPENDED with HOUR gran (for P7D)
+    //
+    // Then split by P14D (2025-01-15T16:00) and P21D (2025-01-08T16:00) which fall in interval 3:
+    // 3a. [2024-12-29T00:00, 2025-01-08T16:00)
+    // 3b. [2025-01-08T16:00, 2025-01-15T16:00)
+    // 3c. [2025-01-15T16:00, 2025-01-22T16:00)
+
+    Assert.assertEquals(5, intervals.size());
+
+    // Interval 1: oldest
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+
+    // Interval 2: middle
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getEnd());
+
+    // Interval 3a: prepended interval, split by P21D
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(2).getEnd());
+
+    // Interval 3b: between P21D and P14D
+    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(3).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(3).getEnd());
+
+    // Interval 3c: after P14D
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(4).getEnd());
+  }
+
   private static class TestCascadingReindexingTemplate extends CascadingReindexingTemplate
   {
     // Capture intervals that were processed for assertions
@@ -517,7 +658,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     )
     {
       super(dataSource, taskPriority, inputSegmentSizeBytes, ruleProvider,
-            engine, taskContext, skipOffsetFromLatest, skipOffsetFromNow);
+            engine, taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY);
     }
 
     public List<Interval> getProcessedIntervals()
