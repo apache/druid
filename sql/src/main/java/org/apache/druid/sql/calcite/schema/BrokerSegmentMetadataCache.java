@@ -359,7 +359,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   {
     final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
     final RowSignature newRowSignature = physicalDatasourceMetadata.getRowSignature();
-    final int newRowSignatureColumnCount = newRowSignature.getColumnNames().size();
+    final int newColumnCount = newRowSignature.getColumnNames().size();
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -367,11 +367,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     if (oldTable == null) {
       log.info(
           "Row signature for datasource[%s] initialized with [%d] columns - signature[%s]",
-          dataSource, newRowSignatureColumnCount, newRowSignature
+          dataSource, newColumnCount, newRowSignature
       );
 
       emitMetric(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, 1, builder);
-      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newRowSignatureColumnCount, builder);
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newColumnCount, builder);
       return;
     }
 
@@ -379,11 +379,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     if (!oldRowSignature.equals(newRowSignature)) {
       log.info(
           "Row signature for datasource[%s] updated from [%d] columns to [%d] columns - new signature[%s]",
-          dataSource, oldRowSignature.getColumnNames().size(), newRowSignatureColumnCount, newRowSignature
+          dataSource, oldRowSignature.getColumnNames().size(), newColumnCount, newRowSignature
       );
 
       emitMetric(Metric.SCHEMA_ROW_SIGNATURE_CHANGED, 1, builder);
-      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newRowSignatureColumnCount, builder);
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newColumnCount, builder);
     } else {
       log.debug("Row signature for datasource[%s] is unchanged.", dataSource);
     }
