@@ -182,7 +182,7 @@ public class CostBasedAutoScalerTest
         new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 3, 30),
         new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
         new Example(20, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
-        new Example(25, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD* 10, 30)
+        new Example(25, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30)
     };
 
     for (Example example : examples) {
