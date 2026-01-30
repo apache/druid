@@ -388,7 +388,6 @@ public class ExpressionTestHelper
                 RowAdapters.standardRow(),
                 () -> new MapBasedRow(0L, bindings),
                 rowSignature,
-                false,
                 false
             ),
             VirtualColumns.create(virtualColumns)

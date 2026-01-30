@@ -300,7 +300,6 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
             RowAdapters.standardRow(),
             () -> new MapBasedRow(0L, ImmutableMap.of(COLUMN_NAME, ImmutableList.of("a", "b", "c", "d"))),
             rowSignature,
-            false,
             false
         ),
         VirtualColumns.create(ImmutableList.of(virtualColumn))
