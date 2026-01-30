@@ -27,6 +27,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -273,7 +274,7 @@ public class CompactionStatus
           expectedState
       );
     }
-    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate();
+    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate().rhs;
   }
 
   @Nullable
@@ -344,7 +345,7 @@ public class CompactionStatus
    * Evaluates {@link #CHECKS} to determine the compaction status of a
    * {@link CompactionCandidate}.
    */
-  private static class Evaluator
+  static class Evaluator
   {
     private final DataSourceCompactionConfig compactionConfig;
     private final CompactionCandidate candidateSegments;
@@ -353,14 +354,14 @@ public class CompactionStatus
 
     private final List<DataSegment> fingerprintedSegments = new ArrayList<>();
     private final List<DataSegment> compactedSegments = new ArrayList<>();
-    private final List<DataSegment> uncompactedSegments = new ArrayList<>();
+    final List<DataSegment> uncompactedSegments = new ArrayList<>();
     private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
 
     @Nullable
     private final String targetFingerprint;
     private final IndexingStateFingerprintMapper fingerprintMapper;
 
-    private Evaluator(
+    Evaluator(
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         @Nullable String targetFingerprint,
@@ -375,11 +376,11 @@ public class CompactionStatus
       this.fingerprintMapper = fingerprintMapper;
     }
 
-    private CompactionStatus evaluate()
+    Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluate()
     {
-      final CompactionStatus inputBytesCheck = inputBytesAreWithinLimit();
-      if (inputBytesCheck.isSkipped()) {
-        return inputBytesCheck;
+      final CompactionCandidateSearchPolicy.Eligibility inputBytesCheck = inputBytesAreWithinLimit();
+      if (inputBytesCheck != null) {
+        return Pair.of(inputBytesCheck, CompactionStatus.skipped(inputBytesCheck.getReason()));
       }
 
       List<String> reasonsForCompaction = new ArrayList<>();
@@ -411,7 +412,7 @@ public class CompactionStatus
         );
 
         // Any segments left in unknownStateToSegments passed all checks and are considered compacted
-        this.compactedSegments.addAll(
+        compactedSegments.addAll(
             unknownStateToSegments
                 .values()
                 .stream()
@@ -421,12 +422,18 @@ public class CompactionStatus
       }
 
       if (reasonsForCompaction.isEmpty()) {
-        return COMPLETE;
+        return Pair.of(
+            CompactionCandidateSearchPolicy.Eligibility.fail("All checks are passed, no reason to compact"),
+            CompactionStatus.COMPLETE
+        );
       } else {
-        return CompactionStatus.pending(
-            createStats(this.compactedSegments),
-            createStats(uncompactedSegments),
-            reasonsForCompaction.get(0)
+        return Pair.of(
+            CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+            CompactionStatus.pending(
+                createStats(compactedSegments),
+                createStats(uncompactedSegments),
+                reasonsForCompaction.get(0)
+            )
         );
       }
     }
@@ -464,9 +471,9 @@ public class CompactionStatus
         // Cannot evaluate further without a fingerprint mapper
         uncompactedSegments.addAll(
             mismatchedFingerprintToSegmentMap.values()
-                                            .stream()
-                                            .flatMap(List::stream)
-                                            .collect(Collectors.toList())
+                                             .stream()
+                                             .flatMap(List::stream)
+                                             .collect(Collectors.toList())
         );
         return CompactionStatus.pending("Segments have a mismatched fingerprint and no fingerprint mapper is available");
       }
@@ -490,7 +497,8 @@ public class CompactionStatus
                 }
                 segments.addAll(e.getValue());
                 return segments;
-              });
+              }
+          );
         }
       }
 
@@ -579,7 +587,8 @@ public class CompactionStatus
       } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
         existingPartionsSpec = new DynamicPartitionsSpec(
             existingPartionsSpec.getMaxRowsPerSegment(),
-            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE)
+        );
       }
       return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
@@ -609,17 +618,17 @@ public class CompactionStatus
       );
     }
 
-    private CompactionStatus inputBytesAreWithinLimit()
+    @Nullable
+    private CompactionCandidateSearchPolicy.Eligibility inputBytesAreWithinLimit()
     {
       final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
       if (candidateSegments.getTotalBytes() > inputSegmentSize) {
-        return CompactionStatus.skipped(
+        return CompactionCandidateSearchPolicy.Eligibility.fail(
             "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
             candidateSegments.getTotalBytes(), inputSegmentSize
         );
-      } else {
-        return COMPLETE;
       }
+      return null;
     }
 
     private CompactionStatus segmentGranularityIsUpToDate(CompactionState lastCompactionState)

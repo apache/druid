@@ -217,7 +217,7 @@ public class CompactionJobQueue
     final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      if (startJobIfPendingAndReady(job, searchPolicy, pendingJobs, slotManager)) {
+      if (startJobIfPendingAndReady(job, pendingJobs, slotManager)) {
         runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
       }
     }
@@ -267,7 +267,6 @@ public class CompactionJobQueue
    */
   private boolean startJobIfPendingAndReady(
       CompactionJob job,
-      CompactionCandidateSearchPolicy policy,
       List<CompactionJob> pendingJobs,
       CompactionSlotManager slotManager
   )
@@ -282,7 +281,7 @@ public class CompactionJobQueue
     }
 
     // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = getCurrentStatusForJob(job, policy);
+    final CompactionStatus compactionStatus = getCurrentStatusForJob(job);
     switch (compactionStatus.getState()) {
       case RUNNING:
         return false;
@@ -378,9 +377,9 @@ public class CompactionJobQueue
     }
   }
 
-  public CompactionStatus getCurrentStatusForJob(CompactionJob job, CompactionCandidateSearchPolicy policy)
+  public CompactionStatus getCurrentStatusForJob(CompactionJob job)
   {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
+    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate());
     final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
     statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
     return compactionStatus;

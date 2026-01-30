@@ -39,7 +39,8 @@ public class MostFragmentedIntervalFirstPolicyTest
   @Test
   public void test_thresholdValues_ofDefaultPolicy()
   {
-    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(null, null, null, null);
+    final MostFragmentedIntervalFirstPolicy policy =
+        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null);
     Assertions.assertEquals(100, policy.getMinUncompactedCount());
     Assertions.assertEquals(new HumanReadableBytes("10MiB"), policy.getMinUncompactedBytes());
     Assertions.assertEquals(new HumanReadableBytes("2GiB"), policy.getMaxAverageUncompactedBytesPerSegment());
@@ -54,6 +55,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         minUncompactedCount,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null
     );
 
@@ -64,7 +66,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         policy.checkEligibilityForCompaction(createCandidate(1, 100L), null)
     );
     Assertions.assertEquals(
-        CompactionCandidateSearchPolicy.Eligibility.OK,
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
         policy.checkEligibilityForCompaction(createCandidate(10_001, 100L), null)
     );
   }
@@ -77,6 +79,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         minUncompactedBytes,
         HumanReadableBytes.valueOf(10_000),
+        null,
         null
     );
 
@@ -87,7 +90,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         policy.checkEligibilityForCompaction(createCandidate(1, 100L), null)
     );
     Assertions.assertEquals(
-        CompactionCandidateSearchPolicy.Eligibility.OK,
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
         policy.checkEligibilityForCompaction(createCandidate(100, 10_000L), null)
     );
   }
@@ -100,6 +103,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(100),
         maxAvgSegmentSize,
+        null,
         null
     );
 
@@ -110,7 +114,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         policy.checkEligibilityForCompaction(createCandidate(1, 10_000L), null)
     );
     Assertions.assertEquals(
-        CompactionCandidateSearchPolicy.Eligibility.OK,
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
         policy.checkEligibilityForCompaction(createCandidate(1, 100L), null)
     );
   }
@@ -122,14 +126,21 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null
     );
 
     final CompactionCandidate candidateA = createCandidate(1, 1000L);
     final CompactionCandidate candidateB = createCandidate(2, 500L);
 
-    verifyCandidateIsEligible(candidateA, policy);
-    verifyCandidateIsEligible(candidateB, policy);
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateA, null)
+    );
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateB, null)
+    );
 
     Assertions.assertTrue(policy.compareCandidates(candidateA, candidateB) > 0);
     Assertions.assertTrue(policy.compareCandidates(candidateB, candidateA) < 0);
@@ -142,14 +153,21 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null
     );
 
     final CompactionCandidate candidateA = createCandidate(1, 1000L);
     final CompactionCandidate candidateB = createCandidate(2, 1000L);
 
-    verifyCandidateIsEligible(candidateA, policy);
-    verifyCandidateIsEligible(candidateB, policy);
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateA, null)
+    );
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateB, null)
+    );
 
     Assertions.assertTrue(policy.compareCandidates(candidateA, candidateB) > 0);
     Assertions.assertTrue(policy.compareCandidates(candidateB, candidateA) < 0);
@@ -162,14 +180,21 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(10_000),
+        null,
         null
     );
 
     final CompactionCandidate candidateA = createCandidate(10, 500L);
     final CompactionCandidate candidateB = createCandidate(10, 1000L);
 
-    verifyCandidateIsEligible(candidateA, policy);
-    verifyCandidateIsEligible(candidateB, policy);
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateA, null)
+    );
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateB, null)
+    );
 
     Assertions.assertTrue(policy.compareCandidates(candidateA, candidateB) < 0);
     Assertions.assertTrue(policy.compareCandidates(candidateB, candidateA) > 0);
@@ -182,14 +207,21 @@ public class MostFragmentedIntervalFirstPolicyTest
         100,
         HumanReadableBytes.valueOf(1),
         HumanReadableBytes.valueOf(100),
+        null,
         null
     );
 
     final CompactionCandidate candidateA = createCandidate(100, 25);
     final CompactionCandidate candidateB = createCandidate(400, 100);
 
-    verifyCandidateIsEligible(candidateA, policy);
-    verifyCandidateIsEligible(candidateB, policy);
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateA, null)
+    );
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidateB, null)
+    );
 
     Assertions.assertEquals(0, policy.compareCandidates(candidateA, candidateB));
     Assertions.assertEquals(0, policy.compareCandidates(candidateB, candidateA));
@@ -211,6 +243,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(2),
         HumanReadableBytes.valueOf(3),
+        null,
         "foo"
     );
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
@@ -222,11 +255,74 @@ public class MostFragmentedIntervalFirstPolicyTest
   @Test
   public void test_serde_noFieldsSet() throws IOException
   {
-    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(null, null, null, null);
+    final MostFragmentedIntervalFirstPolicy policy =
+        new MostFragmentedIntervalFirstPolicy(null, null, null, null, null);
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     final CompactionCandidateSearchPolicy policy2 =
         mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
     Assertions.assertEquals(policy, policy2);
+  }
+
+  @Test
+  public void test_checkEligibilityForCompaction_returnsIncrementalCompaction_whenRatioBelowThreshold()
+  {
+    // Set threshold to 0.5 (50%)
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        1,
+        HumanReadableBytes.valueOf(1),
+        HumanReadableBytes.valueOf(10_000),
+        0.5,
+        null
+    );
+
+    final CompactionCandidate candidate = createCandidateWithStats(1200L, 400L, 100);
+
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.incrementalCompaction(
+            "Uncompacted bytes ratio[0.25] is below threshold[0.50]"),
+        policy.checkEligibilityForCompaction(candidate, null)
+    );
+  }
+
+  @Test
+  public void test_checkEligibilityForCompaction_returnsFullCompaction_whenRatioAboveThreshold()
+  {
+    // Set threshold to 0.5 (50%)
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        1,
+        HumanReadableBytes.valueOf(1),
+        HumanReadableBytes.valueOf(10_000),
+        0.5,
+        null
+    );
+
+    final CompactionCandidate candidate = createCandidateWithStats(500L, 600L, 100);
+
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidate, null)
+    );
+  }
+
+  @Test
+  public void test_checkEligibilityForCompaction_returnsFullCompaction_whenThresholdIsDefault()
+  {
+    // Default threshold is 0.0
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        1,
+        HumanReadableBytes.valueOf(1),
+        HumanReadableBytes.valueOf(10_000),
+        null,
+        null
+    );
+
+    // With default threshold 0.0, any positive ratio >= 0.0, so always FULL_COMPACTION_OK
+    final CompactionCandidate candidate = createCandidateWithStats(1000L, 100L, 100);
+
+    Assertions.assertEquals(
+        CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+        policy.checkEligibilityForCompaction(candidate, null)
+    );
   }
 
   private CompactionCandidate createCandidate(int numSegments, long avgSizeBytes)
@@ -241,11 +337,20 @@ public class MostFragmentedIntervalFirstPolicyTest
                               .withCurrentStatus(CompactionStatus.pending(dummyCompactedStats, uncompactedStats, ""));
   }
 
-  private void verifyCandidateIsEligible(CompactionCandidate candidate, MostFragmentedIntervalFirstPolicy policy)
+  private CompactionCandidate createCandidateWithStats(
+      long compactedBytes,
+      long uncompactedBytes,
+      int uncompactedSegments
+  )
   {
-    Assertions.assertEquals(
-        CompactionCandidateSearchPolicy.Eligibility.OK,
-        policy.checkEligibilityForCompaction(candidate, null)
+    final CompactionStatistics compactedStats = CompactionStatistics.create(compactedBytes, 1L, 1L);
+    final CompactionStatistics uncompactedStats = CompactionStatistics.create(
+        uncompactedBytes,
+        uncompactedSegments,
+        1L
     );
+    return CompactionCandidate.from(List.of(SEGMENT), null)
+                              .withCurrentStatus(CompactionStatus.pending(compactedStats, uncompactedStats, ""));
   }
+
 }

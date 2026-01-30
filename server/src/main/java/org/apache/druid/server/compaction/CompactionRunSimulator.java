@@ -88,12 +88,9 @@ public class CompactionRunSimulator
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker()
     {
       @Override
-      public CompactionStatus computeCompactionStatus(
-          CompactionCandidate candidate,
-          CompactionCandidateSearchPolicy searchPolicy
-      )
+      public CompactionStatus computeCompactionStatus(CompactionCandidate candidate)
       {
-        return statusTracker.computeCompactionStatus(candidate, searchPolicy);
+        return statusTracker.computeCompactionStatus(candidate);
       }
 
       @Override

@@ -19,15 +19,19 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,6 +48,7 @@ public class CompactionCandidate
   private final long totalBytes;
   private final int numIntervals;
 
+  private final CompactionCandidateSearchPolicy.Eligibility policyEligiblity;
   private final CompactionStatus currentStatus;
 
   public static CompactionCandidate from(
@@ -68,6 +73,7 @@ public class CompactionCandidate
         umbrellaInterval,
         compactionInterval,
         segmentIntervals.size(),
+        null,
         null
     );
   }
@@ -77,6 +83,7 @@ public class CompactionCandidate
       Interval umbrellaInterval,
       Interval compactionInterval,
       int numDistinctSegmentIntervals,
+      CompactionCandidateSearchPolicy.Eligibility policyEligiblity,
       @Nullable CompactionStatus currentStatus
   )
   {
@@ -88,6 +95,7 @@ public class CompactionCandidate
 
     this.numIntervals = numDistinctSegmentIntervals;
     this.dataSource = segments.get(0).getDataSource();
+    this.policyEligiblity = policyEligiblity;
     this.currentStatus = currentStatus;
   }
 
@@ -160,12 +168,99 @@ public class CompactionCandidate
     return currentStatus;
   }
 
+  @Nullable
+  public CompactionCandidateSearchPolicy.Eligibility getPolicyEligibility()
+  {
+    return policyEligiblity;
+  }
+
   /**
    * Creates a copy of this CompactionCandidate object with the given status.
    */
   public CompactionCandidate withCurrentStatus(CompactionStatus status)
   {
-    return new CompactionCandidate(segments, umbrellaInterval, compactionInterval, numIntervals, status);
+    return new CompactionCandidate(
+        segments,
+        umbrellaInterval,
+        compactionInterval,
+        numIntervals,
+        policyEligiblity,
+        status
+    );
+  }
+
+  public CompactionCandidate withPolicyEligibility(CompactionCandidateSearchPolicy.Eligibility eligibility)
+  {
+    return new CompactionCandidate(
+        segments,
+        umbrellaInterval,
+        compactionInterval,
+        numIntervals,
+        eligibility,
+        currentStatus
+    );
+  }
+
+  /**
+   * Evaluates this candidate for compaction eligibility based on the provided
+   * compaction configuration and search policy.
+   * <p>
+   * This method first evaluates the candidate against the compaction configuration
+   * using a {@link CompactionStatus.Evaluator} to determine if any segments need
+   * compaction. If segments are pending compaction, the search policy is consulted
+   * to determine the type of compaction:
+   * <ul>
+   * <li><b>NOT_ELIGIBLE</b>: Returns a candidate with status SKIPPED, indicating
+   *     the policy decided compaction should not occur at this time</li>
+   * <li><b>FULL_COMPACTION</b>: Returns this candidate with status PENDING,
+   *     indicating all segments should be compacted</li>
+   * <li><b>INCREMENTAL_COMPACTION</b>: Returns a new candidate containing only
+   *     the uncompacted segments (as determined by the evaluator), with status
+   *     PENDING for incremental compaction</li>
+   * </ul>
+   *
+   * @param config       the compaction configuration for the datasource
+   * @param searchPolicy the policy used to determine compaction eligibility
+   * @return a CompactionCandidate with updated status and potentially filtered segments
+   */
+  public CompactionCandidate evaluate(DataSourceCompactionConfig config, CompactionCandidateSearchPolicy searchPolicy)
+  {
+    CompactionStatus.Evaluator evaluator = new CompactionStatus.Evaluator(this, config, null, null);
+    Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluated = evaluator.evaluate();
+    switch (Objects.requireNonNull(evaluated.lhs).getPolicyEligibility()) {
+      case NOT_ELIGIBLE: // failed evaluator check
+        return this.withPolicyEligibility(evaluated.lhs)
+                   .withCurrentStatus(CompactionStatus.skipped("Rejected[%s]", evaluated.lhs.getReason()));
+      case FULL_COMPACTION:
+        final CompactionCandidateSearchPolicy.Eligibility searchPolicyEligibility =
+            searchPolicy.checkEligibilityForCompaction(this, null);
+        switch (searchPolicyEligibility.getPolicyEligibility()) {
+          case
+              NOT_ELIGIBLE: // although evaluator thinks this interval qualifies for compaction, but policy decided not its turn yet.
+            return this.withPolicyEligibility(searchPolicyEligibility)
+                       .withCurrentStatus(CompactionStatus.skipped(
+                           "Rejected by search policy: %s",
+                           searchPolicyEligibility.getReason()
+                       ));
+          case FULL_COMPACTION:
+            return this.withPolicyEligibility(searchPolicyEligibility).withCurrentStatus(evaluated.rhs);
+          case
+              INCREMENTAL_COMPACTION: // policy decided to perform an incremental compaction, the uncompactedSegments is a subset of the original segments.
+            return new CompactionCandidate(
+                evaluator.uncompactedSegments,
+                umbrellaInterval,
+                compactionInterval,
+                numIntervals,
+                searchPolicyEligibility,
+                evaluated.rhs
+            );
+          default:
+            throw DruidException.defensive("Unexpected eligibility[%s]", searchPolicyEligibility);
+        }
+      case INCREMENTAL_COMPACTION:
+      default:
+        throw DruidException.defensive("Unexpected eligibility[%s]", evaluated.rhs);
+    }
   }
 
   @Override
