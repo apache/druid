@@ -203,7 +203,7 @@ Include the `capacity` field in a POST API call to `/druid/indexer/v1/k8s/taskru
 
 #### Server properties table
 
-The `server_properties` table exposes the runtime properties configured for each Druid server. Each row represents a single property key-value pair associated with a specific server.
+The `sys.server_properties` table exposes the runtime properties configured for each Druid server. Each row represents a single property key-value pair associated with a specific server.
 
 [#18692](https://github.com/apache/druid/pull/18692)
 
