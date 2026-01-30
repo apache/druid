@@ -26,6 +26,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -38,6 +39,7 @@ import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingConfigBuilder;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -47,15 +49,18 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Template to perform period-based cascading reindexing. {@link ReindexingRule} are provided by a {@link ReindexingRuleProvider}
@@ -275,12 +280,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     final List<CompactionJob> allJobs = new ArrayList<>();
     final DateTime currentTime = jobParams.getScheduleStartTime();
 
-    List<Period> sortedPeriods = ruleProvider.getCondensedAndSortedPeriods(currentTime);
-    if (sortedPeriods.isEmpty()) {
+    List<Interval> intervals = generateAlignedSearchIntervals(currentTime);
+    if (intervals.isEmpty()) {
       return Collections.emptyList();
     }
-
-    List<Interval> intervals = generateSearchIntervals(sortedPeriods, currentTime);
     SegmentTimeline timeline = jobParams.getTimeline(dataSource);
 
     if (timeline == null || timeline.isEmpty()) {
@@ -400,6 +403,182 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .withSkipOffsetFromLatest(Period.ZERO);
   }
 
+  /**
+   * Generates granularity-aligned search intervals based on segment granularity rules,
+   * then splits them at non-segment-granularity rule thresholds where safe to do so.
+   * <p>
+   * Algorithm:
+   * 1. Generate base timeline from segment granularity rules
+   * 2. Collect thresholds from all non-segment-granularity rules
+   * 3. For each base interval, find thresholds that fall within it
+   * 4. Align those thresholds to the interval's segment granularity
+   * 5. Split intervals at aligned thresholds
+   *
+   * @param referenceTime the reference time for calculating period thresholds
+   * @return list of split and aligned intervals, ordered from oldest to newest
+   * @throws IAE if no segment granularity rules are found
+   */
+  List<Interval> generateAlignedSearchIntervals(DateTime referenceTime)
+  {
+    // Step 1: Generate base timeline from segment granularity rules
+    List<IntervalWithGranularity> baseTimeline = generateBaseTimelineWithGranularities(referenceTime);
+
+    // Step 2: Collect thresholds from non-segment-granularity rules
+    List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
+
+    // Step 3: For each base interval, collect and apply split points
+    List<Interval> finalIntervals = new ArrayList<>();
+
+    for (IntervalWithGranularity baseInterval : baseTimeline) {
+      List<DateTime> splitPoints = new ArrayList<>();
+
+      // Find thresholds that fall within this base interval
+      for (DateTime threshold : nonSegmentGranThresholds) {
+        if (threshold.isAfter(baseInterval.interval.getStart()) &&
+            threshold.isBefore(baseInterval.interval.getEnd())) {
+
+          // Align threshold to this interval's segment granularity
+          DateTime alignedThreshold = baseInterval.granularity.bucketStart(threshold);
+
+          // Only add if it's not at the boundaries (would create zero-length interval)
+          if (alignedThreshold.isAfter(baseInterval.interval.getStart()) &&
+              alignedThreshold.isBefore(baseInterval.interval.getEnd())) {
+            splitPoints.add(alignedThreshold);
+          }
+        }
+      }
+
+      // Sort and deduplicate split points
+      splitPoints = splitPoints.stream()
+          .distinct()
+          .sorted()
+          .collect(Collectors.toList());
+
+      // Split this base interval at the split points
+      if (splitPoints.isEmpty()) {
+        LOG.debug("No splits for interval [%s]", baseInterval.interval);
+        finalIntervals.add(baseInterval.interval);
+      } else {
+        LOG.debug("Splitting interval [%s] at [%d] points", baseInterval.interval, splitPoints.size());
+        DateTime start = baseInterval.interval.getStart();
+        for (DateTime splitPoint : splitPoints) {
+          finalIntervals.add(new Interval(start, splitPoint));
+          start = splitPoint;
+        }
+        // Add the final segment
+        finalIntervals.add(new Interval(start, baseInterval.interval.getEnd()));
+      }
+    }
+
+    return finalIntervals;
+  }
+
+  /**
+   * Generates the base timeline with segment granularities tracked.
+   */
+  private List<IntervalWithGranularity> generateBaseTimelineWithGranularities(DateTime referenceTime)
+  {
+    List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
+
+    if (segmentGranRules.isEmpty()) {
+      throw new IAE(
+          "CascadingReindexingTemplate requires at least one segment granularity rule. "
+          + "TODO: Support templates with only non-segment-granularity rules"
+      );
+    }
+
+    // Sort rules by period from longest to shortest (oldest to most recent threshold)
+    List<ReindexingSegmentGranularityRule> sortedRules = segmentGranRules.stream()
+        .sorted(Comparator.comparingLong(rule -> {
+          DateTime threshold = referenceTime.minus(rule.getOlderThan());
+          return threshold.getMillis(); // Ascending = oldest first
+        }))
+        .collect(Collectors.toList());
+
+    // Build base timeline with granularities tracked
+    List<IntervalWithGranularity> baseTimeline = new ArrayList<>();
+    DateTime previousAlignedEnd = null;
+
+    for (ReindexingSegmentGranularityRule rule : sortedRules) {
+      DateTime rawEnd = referenceTime.minus(rule.getOlderThan());
+      DateTime alignedEnd = rule.getSegmentGranularity().bucketStart(rawEnd);
+      DateTime alignedStart = (previousAlignedEnd != null) ? previousAlignedEnd : DateTimes.MIN;
+
+      LOG.debug(
+          "Base interval for rule [%s]: raw end [%s] -> aligned [%s/%s) with granularity [%s]",
+          rule.getId(),
+          rawEnd,
+          alignedStart,
+          alignedEnd,
+          rule.getSegmentGranularity()
+      );
+
+      baseTimeline.add(new IntervalWithGranularity(
+          new Interval(alignedStart, alignedEnd),
+          rule.getSegmentGranularity()
+      ));
+
+      previousAlignedEnd = alignedEnd;
+    }
+
+    return baseTimeline;
+  }
+
+  /**
+   * Collects thresholds from all non-segment-granularity rules.
+   */
+  private List<DateTime> collectNonSegmentGranularityThresholds(DateTime referenceTime)
+  {
+    List<DateTime> thresholds = new ArrayList<>();
+
+    // Collect from all rule types
+    ruleProvider.getMetricsRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getDimensionsRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getIOConfigRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getProjectionRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getQueryGranularityRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getTuningConfigRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    ruleProvider.getDeletionRules().stream()
+        .map(rule -> referenceTime.minus(rule.getOlderThan()))
+        .forEach(thresholds::add);
+
+    return thresholds;
+  }
+
+  /**
+   * Helper class to track an interval with its associated segment granularity.
+   */
+  private static class IntervalWithGranularity
+  {
+    final Interval interval;
+    final Granularity granularity;
+
+    IntervalWithGranularity(Interval interval, Granularity granularity)
+    {
+      this.interval = interval;
+      this.granularity = granularity;
+    }
+  }
+
+  @Deprecated
   private List<Interval> generateSearchIntervals(List<Period> sortedPeriods, DateTime referenceTime)
   {
     List<Interval> intervals = new ArrayList<>(sortedPeriods.size());

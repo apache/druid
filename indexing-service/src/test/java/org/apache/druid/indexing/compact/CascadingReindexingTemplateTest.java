@@ -28,7 +28,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingMetricsRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -349,6 +351,153 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     Assert.assertEquals(referenceTime.minusDays(40), processedIntervals.get(0).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
+  }
+
+  @Test
+  public void test_generateAlignedSearchIntervals_withGranularityAlignment()
+  {
+    // Reference time: 2025-01-29T16:15
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    // Create rules with different periods and granularities
+    // P7D with HOUR granularity -> raw end: 2025-01-22T16:15 -> aligned: 2025-01-22T16:00
+    // P1M with DAY granularity -> raw end: 2024-12-29T16:15 -> aligned: 2024-12-29T00:00
+    // P3M with MONTH granularity -> raw end: 2024-10-29T16:15 -> aligned: 2024-10-01T00:00
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY),
+            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH)
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null
+    );
+
+    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+
+    // Expected 3 intervals, ordered from oldest to newest:
+    // 1. [-inf, 2024-10-01T00:00) - P3M rule with MONTH granularity
+    // 2. [2024-10-01T00:00, 2024-12-29T00:00) - P1M rule with DAY granularity
+    // 3. [2024-12-29T00:00, 2025-01-22T16:00) - P7D rule with HOUR granularity
+
+    Assert.assertEquals(3, intervals.size());
+
+    // Interval 1: oldest
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+
+    // Interval 2: middle
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getEnd());
+
+    // Interval 3: most recent
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(2).getEnd());
+  }
+
+  @Test
+  public void test_generateAlignedSearchIntervals_withNonSegmentGranularityRuleSplits()
+  {
+    // Reference time: 2025-01-29T16:15
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    // Segment granularity rules create base timeline:
+    // [-inf, 2024-10-01T00:00) MONTH
+    // [2024-10-01T00:00, 2024-12-29T00:00) DAY
+    // [2024-12-29T00:00, 2025-01-22T16:00) HOUR
+    //
+    // Non-segment-gran rules with thresholds:
+    // P8D  -> 2025-01-21T16:15 -> falls in HOUR interval -> aligned: 2025-01-21T16:00
+    // P14D -> 2025-01-15T16:15 -> falls in HOUR interval -> aligned: 2025-01-15T16:00
+    // P45D -> 2024-12-15T16:15 -> falls in DAY interval  -> aligned: 2024-12-15T00:00
+    // P100D -> 2024-10-21T16:15 -> falls in MONTH interval -> aligned: 2024-10-01T00:00 (at boundary, no split)
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY),
+            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH)
+        ))
+        .metricsRules(List.of(
+            new ReindexingMetricsRule(
+                "metrics-8d", null, Period.days(8),
+                new AggregatorFactory[0]
+            ),
+            new ReindexingMetricsRule(
+                "metrics-14d", null, Period.days(14),
+                new AggregatorFactory[0]
+            ),
+            new ReindexingMetricsRule(
+                "metrics-45d", null, Period.days(45),
+                new AggregatorFactory[0]
+            ),
+            new ReindexingMetricsRule(
+                "metrics-100d", null, Period.days(100),
+                new AggregatorFactory[0]
+            )
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null
+    );
+
+    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+
+    // Expected 7 intervals after splitting:
+    // 1. [-inf, 2024-10-01T00:00)                      - no split in MONTH interval
+    // 2. [2024-10-01T00:00, 2024-10-21T00:00)         - split by P100D (falls in DAY interval!)
+    // 3. [2024-10-21T00:00, 2024-12-15T00:00)         - between P100D and P45D
+    // 4. [2024-12-15T00:00, 2024-12-29T00:00)         - split by P45D
+    // 5. [2024-12-29T00:00, 2025-01-15T16:00)         - split by P14D
+    // 6. [2025-01-15T16:00, 2025-01-21T16:00)         - between P14D and P8D
+    // 7. [2025-01-21T16:00, 2025-01-22T16:00)         - split by P8D
+
+    Assert.assertEquals(7, intervals.size());
+
+    // Interval 1: no split in MONTH interval
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+
+    // Interval 2: split by P100D (2024-10-21 falls in DAY granularity interval)
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(1).getEnd());
+
+    // Interval 3: between P100D and P45D
+    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(2).getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(2).getEnd());
+
+    // Interval 4: split by P45D
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(3).getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(3).getEnd());
+
+    // Interval 5: split by P14D
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(4).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getEnd());
+
+    // Interval 6: between P14D and P8D
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(5).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(5).getEnd());
+
+    // Interval 7: split by P8D
+    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(6).getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(6).getEnd());
   }
 
   private static class TestCascadingReindexingTemplate extends CascadingReindexingTemplate
