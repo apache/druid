@@ -310,7 +310,7 @@ public class WeightedCostFunctionTest
     int partitionCount = 30;
     double pollIdleRatio = 0.1;
 
-    CostMetrics lowLag = createMetrics(40_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+    CostMetrics lowLag = createMetrics(5_000.0, currentTaskCount, partitionCount, pollIdleRatio);
     CostMetrics highLag = createMetrics(500_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
     double lowLagCost = costFunction.computeCost(lowLag, proposedTaskCount, idleOnlyConfig).totalCost();
