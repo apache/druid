@@ -216,7 +216,7 @@ public class StringSqlAggregator implements SqlAggregator
 
         throw SimpleSqlAggregator.badTypeException(
             columnName,
-            "STRING_AGG",
+            NAME,
             ((RowSignatures.ComplexSqlType) type).getColumnType()
         );
       }
