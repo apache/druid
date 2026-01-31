@@ -326,7 +326,7 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     loadBytes: 0,
     loadTime: 0,
     loadWait: 0,
-    loadFiles: 0
+    loadFiles: 0,
   };
 }
 
@@ -628,7 +628,7 @@ export class Stages {
               loadBytes: sum(c.loadBytes || []),
               loadTime: sum(c.loadTime || []),
               loadWait: sum(c.loadWait || []),
-              loadFiles: sum(c.loadFiles || [])
+              loadFiles: sum(c.loadFiles || []),
             }
           : zeroChannelFields();
       }

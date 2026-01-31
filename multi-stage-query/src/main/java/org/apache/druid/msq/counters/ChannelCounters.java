@@ -149,7 +149,7 @@ public class ChannelCounters implements QueryCounter
       final long nTime,
       final long nWait,
       final long nFiles
-      )
+  )
   {
     synchronized (this) {
       ensureCapacityForPartitionLoad(partitionNumber);
