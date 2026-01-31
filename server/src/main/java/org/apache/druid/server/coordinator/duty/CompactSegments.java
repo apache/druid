@@ -34,6 +34,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -244,8 +245,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       final String dataSourceName = entry.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionStatus compactionStatus =
-          statusTracker.computeCompactionStatus(entry, policy);
+      final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(entry);
       final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
       statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
 
@@ -366,6 +366,10 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
 
     final CompactionEngine compactionEngine = config.getEngine() == null ? defaultEngine : config.getEngine();
+    if (CompactionEngine.MSQ.equals(compactionEngine) && !Boolean.TRUE.equals(dropExisting)) {
+      LOG.info("Forcing dropExisting to true as required by MSQ engine.");
+      dropExisting = true;
+    }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
     if (candidate.getCurrentStatus() != null) {
@@ -460,14 +464,27 @@ public class CompactSegments implements CoordinatorCustomDuty
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
+    Preconditions.checkArgument(entry.getPolicyEligibility() != null, "Must have a policy eligibility");
+    switch (entry.getPolicyEligibility().getPolicyEligibility()) {
+      case FULL_COMPACTION:
+        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
+        break;
+      case INCREMENTAL_COMPACTION:
+        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(
+            entry.getCompactionInterval(),
+            entry.getSegments().stream().map(DataSegment::toDescriptor).collect(Collectors.toList()),
+            null
+        );
+        break;
+      default:
+        throw DruidException.defensive("Unexpected policy eligibility[%s]", entry.getPolicyEligibility());
+    }
 
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null),
-            dropExisting
-        ),
+        new ClientCompactionIOConfig(clientCompactionIntervalSpec, dropExisting),
         tuningConfig,
         granularitySpec,
         dimensionsSpec,

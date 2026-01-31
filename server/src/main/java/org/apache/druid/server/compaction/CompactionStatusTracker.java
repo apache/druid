@@ -80,10 +80,7 @@ public class CompactionStatusTracker
    * This method assumes that the given candidate is eligible for compaction
    * based on the current compaction config/supervisor of the datasource.
    */
-  public CompactionStatus computeCompactionStatus(
-      CompactionCandidate candidate,
-      CompactionCandidateSearchPolicy searchPolicy
-  )
+  public CompactionStatus computeCompactionStatus(CompactionCandidate candidate)
   {
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
@@ -101,14 +98,7 @@ public class CompactionStatusTracker
       );
     }
 
-    // Skip intervals that have been filtered out by the policy
-    final CompactionCandidateSearchPolicy.Eligibility eligibility
-        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
-    if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
-    } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
-    }
+    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**

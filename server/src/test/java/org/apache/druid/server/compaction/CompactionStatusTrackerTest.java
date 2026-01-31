@@ -110,7 +110,7 @@ public class CompactionStatusTrackerTest
 
     // Verify that interval is originally eligible for compaction
     CompactionStatus status
-        = statusTracker.computeCompactionStatus(candidateSegments, policy);
+        = statusTracker.computeCompactionStatus(candidateSegments);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
     Assert.assertEquals("Not compacted yet", status.getReason());
 
@@ -119,7 +119,7 @@ public class CompactionStatusTrackerTest
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
-    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
+    status = statusTracker.computeCompactionStatus(candidateSegments);
     Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
     Assert.assertEquals(
         "Segment timeline not updated since last compaction task succeeded",
@@ -128,7 +128,7 @@ public class CompactionStatusTrackerTest
 
     // Verify that interval becomes eligible again after timeline has been updated
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
-    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
+    status = statusTracker.computeCompactionStatus(candidateSegments);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
   }
 }

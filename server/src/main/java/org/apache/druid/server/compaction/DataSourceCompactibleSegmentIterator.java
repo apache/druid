@@ -80,6 +80,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   // run of the compaction job and skip any interval that was already previously compacted.
   private final Set<Interval> queuedIntervals = new HashSet<>();
 
+  private final CompactionCandidateSearchPolicy searchPolicy;
   private final PriorityQueue<CompactionCandidate> queue;
 
   public DataSourceCompactibleSegmentIterator(
@@ -92,6 +93,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   {
     this.config = config;
     this.dataSource = config.getDataSource();
+    this.searchPolicy = searchPolicy;
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
     this.fingerprintMapper = indexingStateFingerprintMapper;
 
@@ -329,17 +331,16 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
-      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config, fingerprintMapper);
-      final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
+      final CompactionCandidate candidatesWithStatus =
+          CompactionCandidate.from(segments, config.getSegmentGranularity()).evaluate(config, searchPolicy);
 
-      if (compactionStatus.isComplete()) {
+      if (candidatesWithStatus.getCurrentStatus().isComplete()) {
         compactedSegments.add(candidatesWithStatus);
-      } else if (compactionStatus.isSkipped()) {
+      } else if (candidatesWithStatus.getCurrentStatus().isSkipped()) {
         skippedSegments.add(candidatesWithStatus);
-      } else if (!queuedIntervals.contains(candidates.getUmbrellaInterval())) {
+      } else if (!queuedIntervals.contains(candidatesWithStatus.getUmbrellaInterval())) {
         queue.add(candidatesWithStatus);
-        queuedIntervals.add(candidates.getUmbrellaInterval());
+        queuedIntervals.add(candidatesWithStatus.getUmbrellaInterval());
       }
     }
   }

@@ -51,8 +51,6 @@ public interface CompactionCandidateSearchPolicy
    * Checks if the given {@link CompactionCandidate} is eligible for compaction
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
-   *
-   * @return {@link Eligibility#OK} only if eligible.
    */
   Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
@@ -64,18 +62,25 @@ public interface CompactionCandidateSearchPolicy
    */
   class Eligibility
   {
-    public static final Eligibility OK = new Eligibility(true, null);
+    public enum PolicyEligibility
+    {
+      FULL_COMPACTION,
+      INCREMENTAL_COMPACTION,
+      NOT_ELIGIBLE
+    }
 
-    private final boolean eligible;
+    public static final Eligibility FULL_COMPACTION_OK = new Eligibility(PolicyEligibility.FULL_COMPACTION, null);
+
+    private final PolicyEligibility eligible;
     private final String reason;
 
-    private Eligibility(boolean eligible, String reason)
+    private Eligibility(PolicyEligibility eligible, String reason)
     {
       this.eligible = eligible;
       this.reason = reason;
     }
 
-    public boolean isEligible()
+    public PolicyEligibility getPolicyEligibility()
     {
       return eligible;
     }
@@ -85,9 +90,14 @@ public interface CompactionCandidateSearchPolicy
       return reason;
     }
 
+    public static Eligibility incrementalCompaction(String messageFormat, Object... args)
+    {
+      return new Eligibility(PolicyEligibility.INCREMENTAL_COMPACTION, StringUtils.format(messageFormat, args));
+    }
+
     public static Eligibility fail(String messageFormat, Object... args)
     {
-      return new Eligibility(false, StringUtils.format(messageFormat, args));
+      return new Eligibility(PolicyEligibility.NOT_ELIGIBLE, StringUtils.format(messageFormat, args));
     }
 
     @Override

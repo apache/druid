@@ -301,7 +301,7 @@ public class ClientCompactionTaskQuerySerdeTest
         id,
         "datasource",
         new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), null, "testSha256OfSortedSegmentIds"), true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
