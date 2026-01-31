@@ -178,9 +178,22 @@ export interface ChannelCounter {
   frames?: number[];
   files?: number[];
   totalFiles?: number[];
+  loadBytes?: number[];
+  loadTime?: number[];
+  loadWait?: number[];
+  loadFiles?: number[];
 }
 
-export type ChannelFields = 'rows' | 'bytes' | 'frames' | 'files' | 'totalFiles';
+export type ChannelFields =
+  | 'rows'
+  | 'bytes'
+  | 'frames'
+  | 'files'
+  | 'totalFiles'
+  | 'loadBytes'
+  | 'loadTime'
+  | 'loadWait'
+  | 'loadFiles';
 
 export interface SortProgressCounter {
   type: 'sortProgress';
@@ -310,6 +323,10 @@ function zeroChannelFields(): Record<ChannelFields, number> {
     frames: 0,
     files: 0,
     totalFiles: 0,
+    loadBytes: 0,
+    loadTime: 0,
+    loadWait: 0,
+    loadFiles: 0,
   };
 }
 
@@ -608,6 +625,10 @@ export class Stages {
               frames: sum(c.frames || []),
               files: sum(c.files || []),
               totalFiles: sum(c.totalFiles || []),
+              loadBytes: sum(c.loadBytes || []),
+              loadTime: sum(c.loadTime || []),
+              loadWait: sum(c.loadWait || []),
+              loadFiles: sum(c.loadFiles || []),
             }
           : zeroChannelFields();
       }
@@ -700,6 +721,10 @@ export class Stages {
           c.frames += channelCounter.frames?.[i] || 0;
           c.files += channelCounter.files?.[i] || 0;
           c.totalFiles += channelCounter.totalFiles?.[i] || 0;
+          c.loadBytes += channelCounter.loadBytes?.[i] || 0;
+          c.loadTime += channelCounter.loadTime?.[i] || 0;
+          c.loadWait += channelCounter.loadWait?.[i] || 0;
+          c.loadFiles += channelCounter.loadFiles?.[i] || 0;
         }
       }
     }

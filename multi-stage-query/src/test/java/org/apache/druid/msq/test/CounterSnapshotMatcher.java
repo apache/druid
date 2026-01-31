@@ -34,6 +34,10 @@ public class CounterSnapshotMatcher
   private long[] frames;
   private long[] files;
   private long[] totalFiles;
+  private long[] loadBytes;
+  private long[] loadTime;
+  private long[] loadWait;
+  private long[] loadFiles;
   private Long segmentRowsProcessed;
 
   public static CounterSnapshotMatcher with()
@@ -76,6 +80,30 @@ public class CounterSnapshotMatcher
     return this;
   }
 
+  public CounterSnapshotMatcher loadBytes(long... loadBytes)
+  {
+    this.loadBytes = loadBytes;
+    return this;
+  }
+
+  public CounterSnapshotMatcher loadTime(long... loadTime)
+  {
+    this.loadTime = loadTime;
+    return this;
+  }
+
+  public CounterSnapshotMatcher loadWait(long... loadWait)
+  {
+    this.loadWait = loadWait;
+    return this;
+  }
+
+  public CounterSnapshotMatcher loadFiles(long... loadFiles)
+  {
+    this.loadFiles = loadFiles;
+    return this;
+  }
+
   /**
    * Asserts that the matcher matches the queryCounterSnapshot parameter. If a parameter in this class is null, the
    * match is not checked
@@ -96,6 +124,18 @@ public class CounterSnapshotMatcher
     }
     if (totalFiles != null) {
       Assert.assertArrayEquals(errorMessageFormat, totalFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getTotalFiles());
+    }
+    if (loadBytes != null) {
+      Assert.assertArrayEquals(errorMessageFormat, loadBytes, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadBytes());
+    }
+    if (loadTime != null) {
+      Assert.assertArrayEquals(errorMessageFormat, loadTime, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadTime());
+    }
+    if (loadWait != null) {
+      Assert.assertArrayEquals(errorMessageFormat, loadWait, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadWait());
+    }
+    if (loadFiles != null) {
+      Assert.assertArrayEquals(errorMessageFormat, loadFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadFiles());
     }
     if (segmentRowsProcessed != null) {
       Assert.assertEquals(errorMessageFormat, segmentRowsProcessed.longValue(), ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsProcessed());
