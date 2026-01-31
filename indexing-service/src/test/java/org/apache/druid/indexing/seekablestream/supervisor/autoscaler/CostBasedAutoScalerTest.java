@@ -38,6 +38,7 @@ import java.util.Map;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.FIVE_MINUTE_NAME;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.ONE_MINUTE_NAME;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.computeExtraMaxPartitionsPerTaskIncrease;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.computeValidTaskCounts;
@@ -174,14 +175,14 @@ public class CostBasedAutoScalerTest
     }
 
     Example[] examples = new Example[]{
-        new Example(3, 50_000L, 8),
-        new Example(3, 300_000L, 15),
-        new Example(3, 500_000L, 30),
-        new Example(10, 100_000L, 15),
-        new Example(10, 300_000L, 30),
-        new Example(10, 500_000L, 30),
-        new Example(20, 500_000L, 30),
-        new Example(25, 500_000L, 30)
+        new Example(3, EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, 8),
+        new Example(3, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 3, 15),
+        new Example(3, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 5, 30),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD - 1, 15),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 3, 30),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
+        new Example(20, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
+        new Example(25, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30)
     };
 
     for (Example example : examples) {
@@ -217,13 +218,13 @@ public class CostBasedAutoScalerTest
   public void testComputeExtraPPTIncrease()
   {
     // No extra increase below the threshold
-    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * 49_000L, 30, 3, 30));
+    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD - 1, 30, 3, 30));
     Assert.assertEquals(4, computeExtraMaxPartitionsPerTaskIncrease(30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, 30, 3, 30));
 
     // More aggressive increase when the lag is high
-    Assert.assertEquals(6, computeExtraMaxPartitionsPerTaskIncrease(30L * 300_000L, 30, 3, 30));
+    Assert.assertEquals(8, computeExtraMaxPartitionsPerTaskIncrease(30L * AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 5, 30, 3, 30));
     // Zero when on max task count
-    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * 500_000L, 30, 30, 30));
+    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30, 30, 30));
   }
 
   @Test

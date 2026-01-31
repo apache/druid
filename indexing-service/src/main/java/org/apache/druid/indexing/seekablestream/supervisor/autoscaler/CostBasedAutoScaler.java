@@ -62,7 +62,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * This constant helps control the granularity of lag considerations in scaling decisions,
    * ensuring smoother transitions between scaled states and avoiding abrupt changes in task counts.
    */
-  private static final int LAG_STEP = 100_000;
+  private static final int LAG_STEP = 50_000;
   /**
    * This parameter fine-tunes autoscaling behavior by adding extra flexibility
    * when calculating maximum allowable partitions per task in response to lag,
@@ -71,10 +71,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    */
   private static final int BASE_RAW_EXTRA = 5;
   // Base PPT lag threshold allowing to activate a burst scaleup to eliminate high lag.
-  static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
+  static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 25_000;
   // Extra PPT lag threshold allowing activation of even more aggressive scaleup to eliminate high lag,
   // also enabling lag-amplified idle calculation decay in the cost function (to reduce idle weight).
-  static final int AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD = 100_000;
+  static final int AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
 
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
@@ -172,6 +172,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       log.info("New task count [%d] on supervisor [%s], scaling up", taskCount, supervisorId);
     } else if (!config.isScaleDownOnTaskRolloverOnly()
                && optimalTaskCount < currentTaskCount
+               && optimalTaskCount > 0
                && ++scaleDownCounter >= config.getScaleDownBarrier()) {
       taskCount = optimalTaskCount;
       scaleDownCounter = 0;
