@@ -487,6 +487,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         "host:8083",
         "host:8283",
         1000L,
+        null,
         ServerType.HISTORICAL,
         "tier",
         0

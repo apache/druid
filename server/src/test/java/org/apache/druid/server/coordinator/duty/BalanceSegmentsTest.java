@@ -86,10 +86,10 @@ public class BalanceSegmentsTest
     segment5 = createHourlySegment("datasourceBroadcast", start2, version);
     allSegments = new DataSegment[]{segment1, segment2, segment3, segment4, segment5};
 
-    server1 = new DruidServer("server1", "server1", null, 100L, ServerType.HISTORICAL, "normal", 0);
-    server2 = new DruidServer("server2", "server2", null, 100L, ServerType.HISTORICAL, "normal", 0);
-    server3 = new DruidServer("server3", "server3", null, 100L, ServerType.HISTORICAL, "normal", 0);
-    server4 = new DruidServer("server4", "server4", null, 100L, ServerType.HISTORICAL, "normal", 0);
+    server1 = new DruidServer("server1", "server1", null, 100L, null, ServerType.HISTORICAL, "normal", 0);
+    server2 = new DruidServer("server2", "server2", null, 100L, null, ServerType.HISTORICAL, "normal", 0);
+    server3 = new DruidServer("server3", "server3", null, 100L, null, ServerType.HISTORICAL, "normal", 0);
+    server4 = new DruidServer("server4", "server4", null, 100L, null, ServerType.HISTORICAL, "normal", 0);
 
     balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalanceSegmentsTest-%d"));
     balancerStrategy = new CostBalancerStrategy(balancerStrategyExecutor);
