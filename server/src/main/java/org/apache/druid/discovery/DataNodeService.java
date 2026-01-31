@@ -37,6 +37,7 @@ public class DataNodeService extends DruidService
 
   private final String tier;
   private final long maxSize;
+  private final long storageSize;
   private final ServerType serverType;
   private final int priority;
   private final boolean isDiscoverable;
@@ -45,26 +46,29 @@ public class DataNodeService extends DruidService
   public static DataNodeService fromJson(
       @JsonProperty("tier") String tier,
       @JsonProperty("maxSize") long maxSize,
-      @JsonProperty(SERVER_TYPE_PROP_KEY) @Nullable ServerType serverType,
+      @JsonProperty("storageSize") @Nullable Long storageSize,
+      @JsonProperty(SERVER_TYPE_PROP_KEY) ServerType serverType,
       @JsonProperty("priority") int priority
   )
   {
-    return new DataNodeService(tier, maxSize, serverType, priority);
+    return new DataNodeService(tier, maxSize, storageSize, serverType, priority);
   }
 
   public DataNodeService(
       String tier,
       long maxSize,
+      @Nullable Long storageSize,
       ServerType serverType,
       int priority
   )
   {
-    this(tier, maxSize, serverType, priority, true);
+    this(tier, maxSize, storageSize, serverType, priority, true);
   }
 
   public DataNodeService(
       String tier,
       long maxSize,
+      @Nullable Long storageSize,
       ServerType serverType,
       int priority,
       boolean isDiscoverable
@@ -72,6 +76,7 @@ public class DataNodeService extends DruidService
   {
     this.tier = tier;
     this.maxSize = maxSize;
+    this.storageSize = storageSize == null ? maxSize : storageSize;
     this.serverType = serverType;
     this.priority = priority;
     this.isDiscoverable = isDiscoverable;
@@ -94,6 +99,12 @@ public class DataNodeService extends DruidService
   public long getMaxSize()
   {
     return maxSize;
+  }
+
+  @JsonProperty
+  public long getStorageSize()
+  {
+    return storageSize;
   }
 
   @JsonProperty
@@ -126,6 +137,7 @@ public class DataNodeService extends DruidService
     }
     DataNodeService that = (DataNodeService) o;
     return maxSize == that.maxSize &&
+           storageSize == that.storageSize &&
            priority == that.priority &&
            Objects.equals(tier, that.tier) &&
            serverType == that.serverType;
@@ -134,7 +146,7 @@ public class DataNodeService extends DruidService
   @Override
   public int hashCode()
   {
-    return Objects.hash(tier, maxSize, serverType, priority);
+    return Objects.hash(tier, maxSize, storageSize, serverType, priority);
   }
 
   @Override
@@ -143,6 +155,7 @@ public class DataNodeService extends DruidService
     return "DataNodeService{" +
            "tier='" + tier + '\'' +
            ", maxSize=" + maxSize +
+           ", storageSize=" + storageSize +
            ", serverType=" + serverType +
            ", priority=" + priority +
            '}';

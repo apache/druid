@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -163,6 +164,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
 
     LatchableEmitter emitter = historical.latchableEmitter();
+    LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
+
     // clear out the pipe to get zerod out storage monitor metrics
     ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
     while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
@@ -217,6 +220,17 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
     Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
+
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        HumanReadableBytes.parse("1MiB"),
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
+    );
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    Assertions.assertEquals(
+        HumanReadableBytes.parse("100MiB"),
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+    );
   }
 
 

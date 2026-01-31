@@ -199,6 +199,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return server.getMaxSize();
   }
 
+  public long getStorageSize()
+  {
+    return server.getStorageSize();
+  }
+
   /**
    * Total projected disk usage of this server in bytes.
    * <p>
