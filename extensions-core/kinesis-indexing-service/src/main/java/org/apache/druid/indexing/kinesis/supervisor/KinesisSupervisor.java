@@ -348,6 +348,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
+  protected Map<String, Long> getReplicaLag()
+  {
+    return null;
+  }
+
+  @Override
   protected String baseTaskName()
   {
     return "index_kinesis";

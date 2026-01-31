@@ -264,6 +264,13 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
     return null;
   }
 
+  @Nullable
+  @Override
+  protected Map<String, Long> getReplicaLag()
+  {
+    return null;
+  }
+
   // suppress use of CollectionUtils.mapValues() since the valueMapper function
   // is
   // dependent on map key here

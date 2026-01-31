@@ -284,6 +284,25 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
   }
 
+  @Override
+  protected Map<String, Long> getReplicaLag()
+  {
+    Map<KafkaTopicPartition, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+    Map<String, Map<KafkaTopicPartition, Long>> currOffset = getTasksCurrentOffsets();
+    if (currOffset == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, Long> replicaLag = new HashMap<>();
+    for (Entry<String, Map<KafkaTopicPartition, Long>> taskData : currOffset.entrySet()) {
+      long lag = 0;
+      for (Entry<KafkaTopicPartition, Long> sequence : taskData.getValue().entrySet()) {
+        lag += highestCurrentOffsets.get(sequence.getKey()) - sequence.getValue();
+      }
+      replicaLag.put(taskData.getKey(), lag);
+    }
+    return replicaLag;
+  }
+
   @Nullable
   @Override
   protected Map<KafkaTopicPartition, Long> getPartitionTimeLag()
