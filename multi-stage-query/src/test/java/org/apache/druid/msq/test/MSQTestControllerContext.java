@@ -127,10 +127,10 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       Injector injector,
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
-      List<ImmutableSegmentLoadInfo> loadedSegments,
       TaskLockType taskLockType,
       QueryContext queryContext,
-      ServiceEmitter serviceEmitter
+      ServiceEmitter serviceEmitter,
+      CoordinatorClient coordinatorClient
   )
   {
     this.queryId = queryId;
@@ -138,8 +138,35 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     this.serviceEmitter = serviceEmitter;
-    coordinatorClient = Mockito.mock(CoordinatorClient.class);
+    this.coordinatorClient = coordinatorClient;
+    this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
+    this.queryContext = queryContext;
+  }
 
+  public MSQTestControllerContext(
+      String queryId,
+      ObjectMapper mapper,
+      Injector injector,
+      TaskActionClient taskActionClient,
+      WorkerMemoryParameters workerMemoryParameters,
+      List<ImmutableSegmentLoadInfo> loadedSegments,
+      TaskLockType taskLockType,
+      QueryContext queryContext,
+      ServiceEmitter serviceEmitter
+  )
+  {
+    this(
+        queryId,
+        mapper,
+        injector,
+        taskActionClient,
+        workerMemoryParameters,
+        taskLockType,
+        queryContext,
+        serviceEmitter,
+        Mockito.mock(CoordinatorClient.class)
+    );
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.any()
@@ -173,10 +200,6 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         return Futures.immediateFailedFuture(new ISE("Segment[%s] not found", segmentId));
       }
     });
-
-    this.workerMemoryParameters = workerMemoryParameters;
-    this.taskLockType = taskLockType;
-    this.queryContext = queryContext;
   }
 
   /**

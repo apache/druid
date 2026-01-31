@@ -372,9 +372,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
               Granularities.HOUR,
               Granularities.MINUTE,
               true,
-
-              // Umbrella interval for all segments, since CompactionTasks generated a single granularitySpec.
-              ImmutableList.of(Intervals.of("2014-01-01/2014-01-01T03:00:00"))
+              ImmutableList.of(INTERVAL_TO_INDEX)
           ),
           null
       );
