@@ -14492,6 +14492,57 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testStringAggWithStringMaxBytes()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT STRING_AGG(dim1, ',', 'abc') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+    }
+  }
+
+  @Test
+  public void testArrayAggWithStringMaxBytes()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT ARRAY_AGG(dim1, 'abc') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+    }
+  }
+
+  @Test
+  public void testArrayConcatAggWithStringMaxBytes()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT ARRAY_CONCAT_AGG(MV_TO_ARRAY(dim3), 'abc') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+    }
+  }
+
   /**
    * see {@link TestDataBuilder#RAW_ROWS1_WITH_NUMERIC_DIMS}
    * for the input data source of this test
