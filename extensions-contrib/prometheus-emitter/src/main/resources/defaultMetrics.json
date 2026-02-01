@@ -49,10 +49,13 @@
 
   "mergeBuffer/used": { "dimensions":  [], "type":  "gauge", "help":  "Number of merge buffers used"},
   "mergeBuffer/acquisitionTimeNs": { "dimensions":  [], "type":  "timer", "help":  "Total time in nanoseconds to acquire merge buffer for groupBy queries."},
+  "mergeBuffer/maxAcquisitionTimeNs": { "dimensions":  [], "type":  "timer", "help":  "Maximum time in nanoseconds to acquire merge buffer for any single groupBy query within the emission period."},
   "mergeBuffer/queries": { "dimensions":  [], "type":  "gauge", "help":  "Number of groupBy queries that acquired a batch of buffers from the merge buffer pool."},
   "groupBy/spilledQueries": { "dimensions":  [], "type":  "gauge", "help":  "Number of groupBy queries that have spilled onto the disk."},
+  "groupBy/maxSpilledBytes": { "dimensions":  [], "type":  "gauge", "help":  "Maximum number of bytes spilled to disk by any single groupBy query within the emission period."},
   "groupBy/spilledBytes": { "dimensions":  [], "type":  "gauge", "help":  "Number of bytes spilled on the disk by the groupBy queries."},
   "groupBy/mergeDictionarySize": { "dimensions":  [], "type":  "gauge", "help":  "Size of on-heap merge dictionary in bytes."},
+  "groupBy/maxMergeDictionarySize": { "dimensions":  [], "type":  "gauge", "help":  "Maximum size of the on-heap merge dictionary in bytes observed for any single groupBy query within the emission period."},
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "gauge", "help": "Number of entries in cache"},
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "gauge", "help": "Size of cache in bytes."},
