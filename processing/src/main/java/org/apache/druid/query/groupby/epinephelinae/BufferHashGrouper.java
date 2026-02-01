@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -50,7 +49,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
   private final boolean useDefaultSorting;
 
-  @Nullable
   private ByteBufferIntList offsetList;
 
   public BufferHashGrouper(
@@ -152,6 +150,18 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     hashTable.reset();
     keySerde.reset();
     aggregators.reset();
+  }
+
+  @Override
+  public long getMergeBufferUsedBytes()
+  {
+    if (!initialized) {
+      return 0L;
+    }
+
+    long hashTableUsage = hashTable.getMaxMergeBufferUsedBytes();
+    long offSetListUsage = offsetList.getMaxMergeBufferUsedBytes();
+    return hashTableUsage + offSetListUsage;
   }
 
   @Override

@@ -26,6 +26,14 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 
+/**
+ * A fixed-width, open-addressing hash table that lives inside a caller-provided byte buffer.
+ * <p>
+ * The table uses a contiguous slice of the input {@link ByteBuffer} as its backing store. Each bucket holds
+ * at most one entry, and occupies {@code bucketSizeWithHash} number of bytes. Collisions are resolved by continuously
+ * probing the next bucket to find an empty bucket to slot the new entry. The current table view {@code tableBuffer}
+ * is maintained as a {@link ByteBuffer} slice that moves and grows within the arena as the table expands.
+ */
 public class ByteBufferHashTable
 {
   public static int calculateTableArenaSizeWithPerBucketAdditionalSize(
@@ -79,6 +87,9 @@ public class ByteBufferHashTable
   @Nullable
   protected BucketUpdateHandler bucketUpdateHandler;
 
+  // Tracks maximum bytes used for the entire lifecycle of this hash table.
+  protected long maxMergeBufferUsedBytes;
+
   public ByteBufferHashTable(
       float maxLoadFactor,
       int initialBuckets,
@@ -97,6 +108,7 @@ public class ByteBufferHashTable
     this.maxSizeForTesting = maxSizeForTesting;
     this.tableArenaSize = buffer.capacity();
     this.bucketUpdateHandler = bucketUpdateHandler;
+    this.maxMergeBufferUsedBytes = 0;
   }
 
   public void reset()
@@ -139,6 +151,7 @@ public class ByteBufferHashTable
     bufferDup.position(tableStart);
     bufferDup.limit(tableStart + maxBuckets * bucketSizeWithHash);
     tableBuffer = bufferDup.slice();
+    updateMaxMergeBufferUsedBytes();
 
     // Clear used bits of new table
     for (int i = 0; i < maxBuckets; i++) {
@@ -245,6 +258,7 @@ public class ByteBufferHashTable
     tableBuffer.putInt(Groupers.getUsedFlag(keyHash));
     tableBuffer.put(keyBuffer);
     size++;
+    updateMaxMergeBufferUsedBytes();
 
     if (bucketUpdateHandler != null) {
       bucketUpdateHandler.handleNewBucket(offset);
@@ -425,6 +439,16 @@ public class ByteBufferHashTable
   public int getGrowthCount()
   {
     return growthCount;
+  }
+
+  protected void updateMaxMergeBufferUsedBytes()
+  {
+    maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, (long) size * bucketSizeWithHash);
+  }
+
+  public long getMaxMergeBufferUsedBytes()
+  {
+    return maxMergeBufferUsedBytes;
   }
 
   public interface BucketUpdateHandler
