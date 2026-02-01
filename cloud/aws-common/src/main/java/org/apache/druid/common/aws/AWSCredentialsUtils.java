@@ -19,26 +19,28 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.auth.AWSCredentialsProviderChain;
-import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
-import com.amazonaws.auth.WebIdentityTokenCredentialsProvider;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.SystemPropertyCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 
 public class AWSCredentialsUtils
 {
-  public static AWSCredentialsProviderChain defaultAWSCredentialsProviderChain(final AWSCredentialsConfig config)
+  public static AwsCredentialsProvider defaultAWSCredentialsProviderChain(final AWSCredentialsConfig config)
   {
-    return new AWSCredentialsProviderChain(
+    return AwsCredentialsProviderChain.of(
         new ConfigDrivenAwsCredentialsConfigProvider(config),
         new LazyFileSessionCredentialsProvider(config),
-        new EnvironmentVariableCredentialsProvider(),
-        new SystemPropertiesCredentialsProvider(),
-        WebIdentityTokenCredentialsProvider.create(),        
-        new ProfileCredentialsProvider(),
-        new EC2ContainerCredentialsProviderWrapper(),
-        InstanceProfileCredentialsProvider.getInstance());
+        EnvironmentVariableCredentialsProvider.create(),
+        SystemPropertyCredentialsProvider.create(),
+        WebIdentityTokenFileCredentialsProvider.create(),
+        ProfileCredentialsProvider.create(),
+        ContainerCredentialsProvider.builder().build(),
+        InstanceProfileCredentialsProvider.create()
+    );
   }
 }
