@@ -264,17 +264,7 @@ public class CompactionStatus
       @Nullable IndexingStateFingerprintMapper fingerprintMapper
   )
   {
-    final CompactionState expectedState = config.toCompactionState();
-    String expectedFingerprint;
-    if (fingerprintMapper == null) {
-      expectedFingerprint = null;
-    } else {
-      expectedFingerprint = fingerprintMapper.generateFingerprint(
-          config.getDataSource(),
-          expectedState
-      );
-    }
-    return new Evaluator(candidateSegments, config, expectedFingerprint, fingerprintMapper).evaluate().rhs;
+    return new Evaluator(candidateSegments, config, fingerprintMapper).evaluate().rhs;
   }
 
   @Nullable
@@ -358,13 +348,13 @@ public class CompactionStatus
     private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
 
     @Nullable
-    private final String targetFingerprint;
     private final IndexingStateFingerprintMapper fingerprintMapper;
+    @Nullable
+    private final String targetFingerprint;
 
     Evaluator(
         CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
-        @Nullable String targetFingerprint,
         @Nullable IndexingStateFingerprintMapper fingerprintMapper
     )
     {
@@ -372,8 +362,15 @@ public class CompactionStatus
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
-      this.targetFingerprint = targetFingerprint;
       this.fingerprintMapper = fingerprintMapper;
+      if (fingerprintMapper == null) {
+        targetFingerprint = null;
+      } else {
+        targetFingerprint = fingerprintMapper.generateFingerprint(
+            compactionConfig.getDataSource(),
+            compactionConfig.toCompactionState()
+        );
+      }
     }
 
     Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluate()
@@ -423,12 +420,13 @@ public class CompactionStatus
 
       if (reasonsForCompaction.isEmpty()) {
         return Pair.of(
-            CompactionCandidateSearchPolicy.Eligibility.fail("All checks are passed, no reason to compact"),
+            CompactionCandidateSearchPolicy.Eligibility.NOT_APPLICABLE,
+            //fail("All checks are passed, no reason to compact"),
             CompactionStatus.COMPLETE
         );
       } else {
         return Pair.of(
-            CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_OK,
+            CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_ELIGIBLE,
             CompactionStatus.pending(
                 createStats(compactedSegments),
                 createStats(uncompactedSegments),

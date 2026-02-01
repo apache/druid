@@ -66,10 +66,12 @@ public interface CompactionCandidateSearchPolicy
     {
       FULL_COMPACTION,
       INCREMENTAL_COMPACTION,
-      NOT_ELIGIBLE
+      NOT_ELIGIBLE,
+      NOT_APPLICABLE
     }
 
-    public static final Eligibility FULL_COMPACTION_OK = new Eligibility(PolicyEligibility.FULL_COMPACTION, null);
+    public static final Eligibility FULL_COMPACTION_ELIGIBLE = new Eligibility(PolicyEligibility.FULL_COMPACTION, null);
+    public static final Eligibility NOT_APPLICABLE = new Eligibility(PolicyEligibility.NOT_APPLICABLE, null);
 
     private final PolicyEligibility eligible;
     private final String reason;

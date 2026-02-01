@@ -73,7 +73,7 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
       CompactionTaskStatus latestTaskStatus
   )
   {
-    return Eligibility.FULL_COMPACTION_OK;
+    return Eligibility.FULL_COMPACTION_ELIGIBLE;
   }
 
   /**

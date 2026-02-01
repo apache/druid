@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -223,15 +224,19 @@ public class CompactionCandidate
    * @param searchPolicy the policy used to determine compaction eligibility
    * @return a CompactionCandidate with updated status and potentially filtered segments
    */
-  public CompactionCandidate evaluate(DataSourceCompactionConfig config, CompactionCandidateSearchPolicy searchPolicy)
+  public CompactionCandidate evaluate(
+      DataSourceCompactionConfig config,
+      CompactionCandidateSearchPolicy searchPolicy,
+      IndexingStateFingerprintMapper fingerprintMapper
+  )
   {
-    CompactionStatus.Evaluator evaluator = new CompactionStatus.Evaluator(this, config, null, null);
+    CompactionStatus.Evaluator evaluator = new CompactionStatus.Evaluator(this, config, fingerprintMapper);
     Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluated = evaluator.evaluate();
     switch (Objects.requireNonNull(evaluated.lhs).getPolicyEligibility()) {
-      case NOT_ELIGIBLE: // failed evaluator check
-        return this.withPolicyEligibility(evaluated.lhs)
-                   .withCurrentStatus(CompactionStatus.skipped("Rejected[%s]", evaluated.lhs.getReason()));
-      case FULL_COMPACTION:
+      case NOT_APPLICABLE:
+      case NOT_ELIGIBLE:
+        return this.withPolicyEligibility(evaluated.lhs).withCurrentStatus(evaluated.rhs);
+      case FULL_COMPACTION: // evaluator has decided compaction is needed, policy needs to further check
         final CompactionCandidateSearchPolicy.Eligibility searchPolicyEligibility =
             searchPolicy.checkEligibilityForCompaction(this, null);
         switch (searchPolicyEligibility.getPolicyEligibility()) {
@@ -255,9 +260,9 @@ public class CompactionCandidate
                 evaluated.rhs
             );
           default:
-            throw DruidException.defensive("Unexpected eligibility[%s]", searchPolicyEligibility);
+            throw DruidException.defensive("Unexpected eligibility[%s] from policy", searchPolicyEligibility);
         }
-      case INCREMENTAL_COMPACTION:
+      case INCREMENTAL_COMPACTION: // evaluator cant decide when to perform an incremental compaction
       default:
         throw DruidException.defensive("Unexpected eligibility[%s]", evaluated.rhs);
     }
