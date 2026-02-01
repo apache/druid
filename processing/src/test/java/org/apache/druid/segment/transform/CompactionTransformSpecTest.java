@@ -19,10 +19,17 @@
 
 package org.apache.druid.segment.transform;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,9 +50,22 @@ public class CompactionTransformSpecTest
   public void testSerde() throws IOException
   {
     final CompactionTransformSpec expected = new CompactionTransformSpec(
-        new SelectorDimFilter("dim1", "foo", null)
+        new SelectorDimFilter("dim1", "foo", null),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "isRobotFiltered",
+                    "concat(isRobot, '_filtered')",
+                    ColumnType.STRING,
+                    ExprMacroTable.nil()
+                )
+            )
+        )
     );
     final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+    );
     final byte[] json = mapper.writeValueAsBytes(expected);
     final CompactionTransformSpec fromJson = (CompactionTransformSpec) mapper.readValue(
         json,
