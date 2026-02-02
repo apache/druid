@@ -21,7 +21,6 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.github.resilience4j.core.lang.NonNull;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Period;
 
@@ -59,7 +58,7 @@ public class ReindexingQueryGranularityRule extends AbstractReindexingRule
       @JsonProperty("id") @Nonnull String id,
       @JsonProperty("description") @Nullable String description,
       @JsonProperty("olderThan") @Nonnull Period olderThan,
-      @JsonProperty("queryGranularity") @NonNull Granularity queryGranularity,
+      @JsonProperty("queryGranularity") @Nonnull Granularity queryGranularity,
       @JsonProperty("rollup") @Nonnull Boolean rollup
   )
   {
