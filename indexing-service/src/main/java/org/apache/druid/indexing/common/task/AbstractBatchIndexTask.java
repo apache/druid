@@ -356,42 +356,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  /**
-   * Attempts to acquire a lock that covers certain segments.
-   * <p>
-   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
-   * <p>
-   * This method will initialize {@link #taskLockHelper} as a side effect.
-   *
-   * @return whether the lock was acquired
-   */
-  boolean determineLockGranularityAndTryLockWithSegments(
-      TaskActionClient client,
-      List<DataSegment> segments,
-      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
-  ) throws IOException
-  {
-    final boolean forceTimeChunkLock = getContextValue(
-        Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
-        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
-    );
-
-    if (forceTimeChunkLock) {
-      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = createLockHelper(LockGranularity.TIME_CHUNK);
-      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
-      return tryTimeChunkLock(
-          client,
-          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
-      );
-    } else {
-      final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = createLockHelper(result.lockGranularity);
-      segmentCheckFunction.accept(result.lockGranularity, segments);
-      return tryLockWithDetermineResult(client, result);
-    }
-  }
-
   private LockGranularityDetermineResult determineSegmentGranularity(TaskActionClient client, List<Interval> intervals)
       throws IOException
   {
