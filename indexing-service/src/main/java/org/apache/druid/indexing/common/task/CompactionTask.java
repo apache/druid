@@ -251,9 +251,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           this.compactionRunner.getClass()
       );
     }
-    if (this.compactionRunner.forceDropExisting() && !this.ioConfig.isDropExisting()) {
-      throw new IAE("Invalid config: runner[%s] must run with dropExisting=true", this.compactionRunner.getClass());
-    }
     this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.

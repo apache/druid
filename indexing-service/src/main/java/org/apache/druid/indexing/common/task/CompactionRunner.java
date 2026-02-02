@@ -54,17 +54,6 @@ public interface CompactionRunner
   }
 
   /**
-   * Returns whether this runner requires dropExisting to be enabled for compaction.
-   * When true, the compaction task will fail if dropExisting is not set to true in the IOConfig.
-   *
-   * @return true if dropExisting must be enabled, false otherwise. Default is true.
-   */
-  default boolean forceDropExisting()
-  {
-    return true;
-  }
-
-  /**
    * Creates and runs sub-tasks for the given CompactionTask, one interval at a time.
    */
   TaskStatus runCompactionTasks(

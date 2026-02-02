@@ -84,12 +84,6 @@ public class NativeCompactionRunner implements CompactionRunner
   }
 
   @Override
-  public boolean forceDropExisting()
-  {
-    return false;
-  }
-
-  @Override
   public CurrentSubTaskHolder getCurrentSubTaskHolder()
   {
     return currentSubTaskHolder;
