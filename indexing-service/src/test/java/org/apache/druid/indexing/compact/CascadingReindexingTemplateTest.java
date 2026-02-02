@@ -40,7 +40,6 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.easymock.EasyMock;
-import org.jetbrains.annotations.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -48,6 +47,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -683,7 +683,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         }
 
         @Override
-        public @Nullable Granularity getSegmentGranularity()
+        @Nullable
+        public Granularity getSegmentGranularity()
         {
           return null;
         }
