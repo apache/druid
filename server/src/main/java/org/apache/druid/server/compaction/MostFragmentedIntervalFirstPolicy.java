@@ -145,10 +145,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     }
     MostFragmentedIntervalFirstPolicy policy = (MostFragmentedIntervalFirstPolicy) o;
     return minUncompactedCount == policy.minUncompactedCount
-           && incrementalCompactionUncompactedBytesRatioThreshold
-              == policy.incrementalCompactionUncompactedBytesRatioThreshold
            && Objects.equals(minUncompactedBytes, policy.minUncompactedBytes)
-           && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment);
+           && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment)
+           // Use Double.compare instead of == to handle NaN correctly and keep equals() consistent with hashCode() (especially for +0.0 vs -0.0).
+           && Double.compare(
+        incrementalCompactionUncompactedBytesRatioThreshold,
+        policy.incrementalCompactionUncompactedBytesRatioThreshold
+    ) == 0;
   }
 
   @Override
