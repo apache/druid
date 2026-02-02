@@ -208,7 +208,7 @@ The following table outlines the configuration properties related to the `costBa
 |`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25|
 |`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
 |`defaultProcessingRate`|A planned processing rate per task, required for first cost estimations. | No | 1000 |
-|`scaleDownBarrier`| A number of successful scale down attempts which should be skipped  to prevent the auto-scaler from scaling down tasks immediately.  | No | 5 |
+|`minScaleDownDelay`| Minimum duration between successful scale actions, specified as an ISO-8601 duration string. | No | `PT50M` |
 |`scaleDownDuringTaskRolloverOnly`| Indicates whether task scaling down is limited to periods during task rollovers only. | No | False |
 
 The following example shows a supervisor spec with `lagBased` autoscaler:

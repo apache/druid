@@ -321,6 +321,88 @@ public class WeightedCostFunctionTest
     );
   }
 
+  @Test
+  public void testCustomLagThresholdsAffectCostCalculation()
+  {
+    // Test that custom threshold values change behavior compared to defaults
+    int currentTaskCount = 3;
+    int proposedTaskCount = 8;
+    int partitionCount = 30;
+    double pollIdleRatio = 0.1;
+
+    // Use high lag that exceeds both default and custom thresholds
+    // Default thresholds: extra=25000, aggressive=50000
+    // Custom thresholds: extra=10000, aggressive=20000 (more sensitive)
+    CostMetrics metrics = createMetrics(15_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+
+    CostBasedAutoScalerConfig defaultConfig = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(100)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .defaultProcessingRate(1000.0)
+                                                                        .build();
+
+    CostBasedAutoScalerConfig sensitiveConfig = CostBasedAutoScalerConfig.builder()
+                                                                          .taskCountMax(100)
+                                                                          .taskCountMin(1)
+                                                                          .enableTaskAutoScaler(true)
+                                                                          .defaultProcessingRate(1000.0)
+                                                                          .highLagThreshold(10000)
+                                                                          .aggressiveScalingLagPerPartitionThreshold(20000)
+                                                                          .build();
+
+    double defaultCost = costFunction.computeCost(metrics, proposedTaskCount, defaultConfig).totalCost();
+    double sensitiveCost = costFunction.computeCost(metrics, proposedTaskCount, sensitiveConfig).totalCost();
+
+    // With lower thresholds, the same lag triggers more aggressive scaling behavior
+    // (higher lagBusyFactor), which results in lower predicted idle and thus lower idle cost
+    Assert.assertTrue(
+        "More sensitive thresholds should result in different (lower) cost",
+        sensitiveCost < defaultCost
+    );
+  }
+
+  @Test
+  public void testRampDenominatorCalculation()
+  {
+    // Test that ramp denominator is calculated correctly from config values
+    // by verifying behavior at boundary conditions
+    int currentTaskCount = 3;
+    int proposedTaskCount = 8;
+    int partitionCount = 30;
+    double pollIdleRatio = 0.1;
+
+    // Custom config with specific thresholds for predictable ramp calculation
+    // extra=10000, aggressive=20000
+    // lagAmplificationMaxLagPerPartition = 20000 * 5 = 100000
+    // rampDenominator = 100000 - 10000 = 90000
+    CostBasedAutoScalerConfig customConfig = CostBasedAutoScalerConfig.builder()
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .defaultProcessingRate(1000.0)
+                                                                       .highLagThreshold(10000)
+                                                                       .aggressiveScalingLagPerPartitionThreshold(20000)
+                                                                       .build();
+
+    // Lag exactly at extraThreshold (lagPerPartition = 10000)
+    // ramp = (10000 - 10000) / 90000 = 0
+    CostMetrics atExtraThreshold = createMetrics(10_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+
+    // Lag at maximum (lagPerPartition = 100000)
+    // ramp = (100000 - 10000) / 90000 = 1.0
+    CostMetrics atMaxLag = createMetrics(100_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+
+    double costAtExtra = costFunction.computeCost(atExtraThreshold, proposedTaskCount, customConfig).totalCost();
+    double costAtMax = costFunction.computeCost(atMaxLag, proposedTaskCount, customConfig).totalCost();
+
+    // At max lag, ramp=1.0 leads to maximum amplification, reducing idle cost more
+    Assert.assertTrue(
+        "Cost at max lag should be lower due to maximum lag amplification",
+        costAtMax < costAtExtra
+    );
+  }
+
   private CostMetrics createMetrics(
       double avgPartitionLag,
       int currentTaskCount,

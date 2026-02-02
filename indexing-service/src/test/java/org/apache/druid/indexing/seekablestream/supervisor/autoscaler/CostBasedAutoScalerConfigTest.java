@@ -21,15 +21,17 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_IDLE_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_PROCESSING_RATE;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_SCALE_DOWN_BARRIER;
 
 public class CostBasedAutoScalerConfigTest
 {
@@ -50,7 +52,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"lagWeight\": 0.6,\n"
                   + "  \"idleWeight\": 0.4,\n"
                   + "  \"defaultProcessingRate\": 2000.0,\n"
-                  + "  \"scaleDownBarrier\": 10,\n"
+                  + "  \"highLagThreshold\": 30000,\n"
+                  + "  \"minScaleDownDelay\": \"PT10M\",\n"
                   + "  \"scaleDownDuringTaskRolloverOnly\": true\n"
                   + "}";
 
@@ -66,8 +69,9 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
     Assert.assertEquals(2000.0, config.getDefaultProcessingRate(), 0.001);
-    Assert.assertEquals(10, config.getScaleDownBarrier());
+    Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertEquals(30000, config.getHighLagThreshold());
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);
@@ -98,10 +102,11 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
     Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
     Assert.assertEquals(DEFAULT_PROCESSING_RATE, config.getDefaultProcessingRate(), 0.001);
-    Assert.assertEquals(DEFAULT_SCALE_DOWN_BARRIER, config.getScaleDownBarrier());
+    Assert.assertEquals(DEFAULT_MIN_SCALE_DELAY, config.getMinScaleDownDelay());
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
+    Assert.assertEquals(EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, config.getHighLagThreshold());
   }
 
   @Test
@@ -184,8 +189,10 @@ public class CostBasedAutoScalerConfigTest
                                                                  .lagWeight(0.6)
                                                                  .idleWeight(0.4)
                                                                  .defaultProcessingRate(2000.0)
-                                                                 .scaleDownBarrier(10)
+                                                                 .scaleDownBarrier(Duration.standardMinutes(10))
                                                                  .scaleDownDuringTaskRolloverOnly(true)
+                                                                 .highLagThreshold(30000)
+                                                                 .aggressiveScalingLagPerPartitionThreshold(60000)
                                                                  .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
@@ -198,7 +205,8 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
     Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
     Assert.assertEquals(2000.0, config.getDefaultProcessingRate(), 0.001);
-    Assert.assertEquals(10, config.getScaleDownBarrier());
+    Assert.assertEquals(Duration.standardMinutes(10), config.getMinScaleDownDelay());
     Assert.assertTrue(config.isScaleDownOnTaskRolloverOnly());
+    Assert.assertEquals(30000, config.getHighLagThreshold());
   }
 }

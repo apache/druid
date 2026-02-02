@@ -41,6 +41,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -133,7 +134,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .lagWeight(0.9)
         .idleWeight(0.1)
         .scaleDownDuringTaskRolloverOnly(false)
-        .scaleDownBarrier(1)
+        .scaleDownBarrier(Duration.millis(1500))
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
@@ -229,7 +230,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .idleWeight(0.9)
         .scaleDownDuringTaskRolloverOnly(true)
         // Do not slow scale-downs
-        .scaleDownBarrier(0)
+        .scaleDownBarrier(Duration.ZERO)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);

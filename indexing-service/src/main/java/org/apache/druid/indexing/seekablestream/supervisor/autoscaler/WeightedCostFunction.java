@@ -37,17 +37,11 @@ public class WeightedCostFunction
    * cost-based auto-scaling decisions.
    */
   private static final double LAG_AMPLIFICATION_MAX_MULTIPLIER = 2.0;
-  private static final long LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION = 500_000L;
   /**
-   * It is used to calculate the denominator for the ramp formula in the cost
-   * computation logic. This value represents the difference between the maximum lag per
-   * partition (LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION) and the extra scaling activation
-   * lag threshold (CostBasedAutoScaler.EXTRA_SCALING_ACTIVATION_LAG_THRESHOLD).
-   * <p>
-   * It is impacting how the cost model evaluates scaling decisions during high-lag sceario.
+   * Multiplier for computing the maximum lag per partition used in lag amplification.
+   * The max lag is calculated as: aggressiveScalingLagPerPartitionThreshold * LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER.
    */
-  private static final double RAMP_DENOMINATOR =
-      LAG_AMPLIFICATION_MAX_LAG_PER_PARTITION - (double) CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
+  private static final int LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER = 5;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -86,7 +80,7 @@ public class WeightedCostFunction
       lagRecoveryTime = metrics.getAggregateLag() / (proposedTaskCount * avgProcessingRate);
     }
 
-    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount);
+    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount, config);
     final double idleCost = proposedTaskCount * metrics.getTaskDurationSeconds() * predictedIdleRatio;
     final double lagCost = config.getLagWeight() * lagRecoveryTime;
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
@@ -117,9 +111,11 @@ public class WeightedCostFunction
    *
    * @param metrics   current system metrics containing idle ratio and task count
    * @param taskCount target task count to estimate an idle ratio for
+   * @param config    auto-scaler configuration containing threshold values
    * @return estimated idle ratio in range [0.0, 1.0]
    */
-  private double estimateIdleRatio(CostMetrics metrics, int taskCount)
+  @SuppressWarnings("ExtractMethodRecommender")
+  private double estimateIdleRatio(CostMetrics metrics, int taskCount, CostBasedAutoScalerConfig config)
   {
     final double currentPollIdleRatio = metrics.getPollIdleRatio();
 
@@ -138,24 +134,20 @@ public class WeightedCostFunction
     final double taskRatio = (double) taskCount / currentTaskCount;
     final double linearPrediction = Math.max(0.0, Math.min(1.0, 1.0 - busyFraction / taskRatio));
 
-    // Lag-based adjustment: more work per task → less idle
-    final double lagPerTask = metrics.getAggregateLag() / taskCount;
-    double lagBusyFactor = 1.0 - Math.exp(-lagPerTask / CostBasedAutoScaler.AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD);
-    final int partitionCount = metrics.getPartitionCount();
+    final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
+    double lagBusyFactor = 0.;
 
-    if (partitionCount > 0) {
-      final double lagPerPartition = metrics.getAggregateLag() / partitionCount;
-      // Lag-amplified idle decay
-      if (lagPerPartition >= CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD) {
-        double ramp = Math.max(0.0,
-                               (lagPerPartition - CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD)
-                               / RAMP_DENOMINATOR
-        );
-        ramp = Math.min(1.0, ramp);
+    // Lag-amplified idle decay
+    final int extraThreshold = config.getHighLagThreshold();
+    if (lagPerPartition >= extraThreshold) {
+      final double lagPerTask = metrics.getAggregateLag() / taskCount;
+      lagBusyFactor = 1.0 - Math.exp(-lagPerTask / extraThreshold);
 
-        final double multiplier = 1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0);
-        lagBusyFactor = Math.min(1.0, lagBusyFactor * multiplier);
-      }
+      final long lagAmplificationMaxLagPerPartition = (long) extraThreshold * LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER;
+      final double rampDenominator = lagAmplificationMaxLagPerPartition - (double) extraThreshold;
+      final double ramp = Math.min(1.0, Math.max(0.0, (lagPerPartition - extraThreshold) / rampDenominator));
+
+      lagBusyFactor = Math.min(1.0, lagBusyFactor * (1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0)));
     }
 
     // Clamp to valid range [0, 1]
