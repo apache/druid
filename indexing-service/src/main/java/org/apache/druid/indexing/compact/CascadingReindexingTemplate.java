@@ -304,6 +304,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
+    // Adjust timeline interval by applying user defined skip offset (if any exists)
     Interval adjustedTimelineInterval = applySkipOffset(
         new Interval(timeline.first().getInterval().getStart(), timeline.last().getInterval().getEnd()),
         jobParams.getScheduleStartTime()
@@ -316,13 +317,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     for (Interval reindexingInterval : searchIntervals) {
 
       if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
+        // No underlying data exists to reindex for this interval
         LOG.debug("Search interval[%s] does not overlap with data range[%s], skipping", reindexingInterval, adjustedTimelineInterval);
         continue;
       }
 
       reindexingInterval = clampIntervalToBounds(reindexingInterval, adjustedTimelineInterval);
       if (reindexingInterval == null) {
-        LOG.warn("Clamped reindexing interval is empty after applying bounds, meaning no search interval exists. Skipping.");
+        LOG.warn("Clamped reindexing interval is invalid or empty after applying bounds, meaning no search interval exists. Skipping.");
         continue;
       }
 
@@ -332,7 +334,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       int ruleCount = configBuilder.applyTo(builder);
 
       if (ruleCount > 0) {
-        LOG.info("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
+        LOG.debug("Creating reindexing jobs for interval[%s] with [%d] rules selected", reindexingInterval, ruleCount);
         allJobs.addAll(
             createJobsForSearchInterval(
                 createJobTemplateForInterval(builder.build()),
@@ -342,7 +344,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
             )
         );
       } else {
-        LOG.info("No applicable reindexing rules found for interval[%s]", reindexingInterval);
+        LOG.debug("No applicable reindexing rules found for interval[%s]", reindexingInterval);
       }
     }
     return allJobs;
@@ -363,7 +365,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *
    * @param interval the interval to clamp
    * @param bounds the bounds to clamp to
-   * @return the clamped interval, or null if the result would be invalid
+   * @return the clamped interval, or null if the result would be invalid or empty
    */
   @Nullable
   private Interval clampIntervalToBounds(Interval interval, Interval bounds)
@@ -389,7 +391,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       end = bounds.getEnd();
     }
 
-    if (end.isBefore(start)) {
+    if (end.isBefore(start) || end.isEqual(start)) {
       return null;
     }
 
@@ -441,11 +443,15 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * <p>
    * Algorithm:
    * <ol>
-   *   <li>Generate base timeline from segment granularity rules</li>
-   *   <li>Collect thresholds from all non-segment-granularity rules</li>
-   *   <li>For each base interval, find thresholds that fall within it</li>
-   *   <li>Align those thresholds to the interval's segment granularity</li>
-   *   <li>Split intervals at aligned thresholds</li>
+   *   <li>Generate base timeline from segment granularity rules with interval boundaries aligned with segment granularity of the underlying rules</li>
+   *   <li>Collect olderThan application thresholds from all non-segment-granularity rules</li>
+   *   <li>For each interval in the base timeline:
+   *   <ul>
+   *     <li>find thresholds for non-segment granularity rules that fall within it</li>
+   *     <li>Align those thresholds to the interval's segment granularity</li>
+   *     <li>Split base intervals at aligned thresholds</li>
+   *   </ul>
+   *   <li>Return the timeline of non-overlapping intervals split for most precise possible rule application (due to segment gran alignment, sometimes rules will be applied later than their explicitly defined period)</li>
    * </ol>
    *
    * @param referenceTime the reference time for calculating period thresholds
@@ -454,19 +460,15 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    */
   List<Interval> generateAlignedSearchIntervals(DateTime referenceTime)
   {
-    // Step 1: Generate base timeline from segment granularity rules
     List<IntervalWithGranularity> baseTimeline = generateBaseSegmentGranularityAlignedTimeline(referenceTime);
 
-    // Step 2: Collect thresholds from non-segment-granularity rules
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
-    // Step 3: For each base interval, collect and apply split points
     List<Interval> finalIntervals = new ArrayList<>();
 
     for (IntervalWithGranularity baseInterval : baseTimeline) {
       List<DateTime> splitPoints = new ArrayList<>();
 
-      // Find thresholds that fall within this base interval
       for (DateTime threshold : nonSegmentGranThresholds) {
         if (threshold.isAfter(baseInterval.interval.getStart()) &&
             threshold.isBefore(baseInterval.interval.getEnd())) {
@@ -482,7 +484,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         }
       }
 
-      // Sort and deduplicate split points
       splitPoints = splitPoints.stream()
           .distinct()
           .sorted()
@@ -499,7 +500,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           finalIntervals.add(new Interval(start, splitPoint));
           start = splitPoint;
         }
-        // Add the final segment
         finalIntervals.add(new Interval(start, baseInterval.interval.getEnd()));
       }
     }
@@ -534,12 +534,11 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    */
   private List<IntervalWithGranularity> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
   {
-    // Collect all rules upfront for efficient reuse
     List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
     if (segmentGranRules.isEmpty()) {
-      // No segment granularity rules - use default granularity with smallest period from other rules
+      // No segment granularity rules - use default granularity with the smallest period from other rules
       if (nonSegmentGranThresholds.isEmpty()) {
         throw new IAE(
             "CascadingReindexingTemplate requires at least one reindexing rule "
@@ -570,7 +569,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     List<ReindexingSegmentGranularityRule> sortedRules = segmentGranRules.stream()
         .sorted(Comparator.comparingLong(rule -> {
           DateTime threshold = referenceTime.minus(rule.getOlderThan());
-          return threshold.getMillis(); // Ascending = oldest first
+          return threshold.getMillis();
         }))
         .collect(Collectors.toList());
 
@@ -607,7 +606,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).interval.getEnd();
 
       if (mostRecentNonSegmentGranThreshold.isAfter(mostRecentSegmentGranEnd)) {
-        // Need to prepend an interval for more recent non-segment-gran rules
         DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
 
         if (alignedEnd.isBefore(mostRecentSegmentGranEnd) || alignedEnd.isEqual(mostRecentSegmentGranEnd)) {
