@@ -396,6 +396,50 @@ The `filter` conditionally filters input rows during ingestion. Only rows that p
 ingested. Any of Druid's standard [query filters](../querying/filters.md) can be used. Note that within a
 `transformSpec`, the `transforms` are applied before the `filter`, so the filter can refer to a transform.
 
+### Projections
+
+Projections are ingestion/compaction time aggregations that Druid computes on a subset of dimensions and metrics of a segment. They are stored within a segment. The pre-aggregated data reduces the number of rows the query engine needs to process when you run a query. This can speed up queries for query shapes that match a projection.
+
+Define projections for a new data source in the `projectionsSpec` block during ingestion. To add projections to an existing data source, see [create them afterwards](../querying/projections.md#manually-add-a-projection).
+
+:::info
+Projections you define become a dimension for your datasource. To remove a projection from your datasource, you need to reingest the data with the projection removed. Alternatively, you can use a query context parameter to not use projections for a specific query.
+:::
+
+```json
+"projectionsSpec": {
+  "projections": [
+    {
+      "name": "daily_channel_summary",
+      "dimensions": [
+        "channel"
+        ],
+      "granularity": "DAY",
+      "metrics": [
+        { 
+          "type": "longSum", 
+          "name": "total_added", 
+          "fieldName": "added" 
+          },
+        { "type": "longSum", 
+        "name": "total_deleted", 
+        "fieldName": "deleted" 
+        },
+        { "type": "longSum", 
+        "name": "total_delta", 
+        "fieldName": "delta" 
+        },
+        { 
+          "type": "cardinality", 
+          "name": "distinct_users", 
+          "fieldName": "user" 
+          }
+      ]
+    }
+  ]
+}
+```
+
 ### Legacy `dataSchema` spec
 
 :::info
