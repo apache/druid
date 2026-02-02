@@ -193,7 +193,6 @@ public class CompactSegments implements CoordinatorCustomDuty
         compactionSnapshotBuilder,
         slotManager,
         iterator,
-        policy,
         defaultEngine
     );
 
@@ -229,7 +228,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       CompactionSnapshotBuilder snapshotBuilder,
       CompactionSlotManager slotManager,
       CompactionSegmentIterator iterator,
-      CompactionCandidateSearchPolicy policy,
       CompactionEngine defaultEngine
   )
   {

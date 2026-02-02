@@ -275,7 +275,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         null
     );
 
-    final CompactionCandidate candidate = createCandidateWithStats(1200L, 400L, 100);
+    final CompactionCandidate candidate = createCandidateWithStats(1200L, 10, 400L, 100);
 
     Assertions.assertEquals(
         CompactionCandidateSearchPolicy.Eligibility.incrementalCompaction(
@@ -296,7 +296,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         null
     );
 
-    final CompactionCandidate candidate = createCandidateWithStats(500L, 600L, 100);
+    final CompactionCandidate candidate = createCandidateWithStats(500L, 5, 600L, 100);
 
     Assertions.assertEquals(
         CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_ELIGIBLE,
@@ -317,7 +317,7 @@ public class MostFragmentedIntervalFirstPolicyTest
     );
 
     // With default threshold 0.0, any positive ratio >= 0.0, so always FULL_COMPACTION_ELIGIBLE
-    final CompactionCandidate candidate = createCandidateWithStats(1000L, 100L, 100);
+    final CompactionCandidate candidate = createCandidateWithStats(1000L, 10, 100L, 100);
 
     Assertions.assertEquals(
         CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_ELIGIBLE,
@@ -339,11 +339,12 @@ public class MostFragmentedIntervalFirstPolicyTest
 
   private CompactionCandidate createCandidateWithStats(
       long compactedBytes,
+      int compactedSegments,
       long uncompactedBytes,
       int uncompactedSegments
   )
   {
-    final CompactionStatistics compactedStats = CompactionStatistics.create(compactedBytes, 1L, 1L);
+    final CompactionStatistics compactedStats = CompactionStatistics.create(compactedBytes, compactedSegments, 1L);
     final CompactionStatistics uncompactedStats = CompactionStatistics.create(
         uncompactedBytes,
         uncompactedSegments,

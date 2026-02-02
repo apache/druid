@@ -237,6 +237,12 @@ public class CompactionCandidate
       case NOT_ELIGIBLE:
         return this.withPolicyEligibility(evaluated.lhs).withCurrentStatus(evaluated.rhs);
       case FULL_COMPACTION: // evaluator has decided compaction is needed, policy needs to further check
+        if (!evaluated.rhs.getState().equals(CompactionStatus.State.PENDING)) {
+          throw DruidException.defensive(
+              "Evaluated compaction status should be PENDING, got status[%s] instead.",
+              evaluated.rhs.getState()
+          );
+        }
         final CompactionCandidateSearchPolicy.Eligibility searchPolicyEligibility =
             searchPolicy.checkEligibilityForCompaction(this, null);
         switch (searchPolicyEligibility.getPolicyEligibility()) {
@@ -252,7 +258,7 @@ public class CompactionCandidate
           case
               INCREMENTAL_COMPACTION: // policy decided to perform an incremental compaction, the uncompactedSegments is a subset of the original segments.
             return new CompactionCandidate(
-                evaluator.uncompactedSegments,
+                evaluator.getUncompactedSegments(),
                 umbrellaInterval,
                 compactionInterval,
                 numIntervals,
@@ -273,8 +279,12 @@ public class CompactionCandidate
   {
     return "SegmentsToCompact{" +
            "datasource=" + dataSource +
+           ", umbrellaInterval=" + umbrellaInterval +
+           ", compactionInterval=" + compactionInterval +
+           ", numIntervals=" + numIntervals +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", totalSize=" + totalBytes +
+           ", policyEligiblity=" + policyEligiblity +
            ", currentStatus=" + currentStatus +
            '}';
   }

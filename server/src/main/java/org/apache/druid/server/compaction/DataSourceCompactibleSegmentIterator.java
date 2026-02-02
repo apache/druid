@@ -438,8 +438,8 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     if (configuredSegmentGranularity == null) {
       return new Interval(skipOffsetFromLatest, latestDataTimestamp);
     } else {
-      DateTime skipFromLastest = new DateTime(latestDataTimestamp, latestDataTimestamp.getZone()).minus(
-          skipOffsetFromLatest);
+      DateTime skipFromLastest =
+          new DateTime(latestDataTimestamp, latestDataTimestamp.getZone()).minus(skipOffsetFromLatest);
       DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
       return new Interval(skipOffsetBucketToSegmentGranularity, latestDataTimestamp);
     }

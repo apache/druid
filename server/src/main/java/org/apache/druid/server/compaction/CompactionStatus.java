@@ -344,7 +344,7 @@ public class CompactionStatus
 
     private final List<DataSegment> fingerprintedSegments = new ArrayList<>();
     private final List<DataSegment> compactedSegments = new ArrayList<>();
-    final List<DataSegment> uncompactedSegments = new ArrayList<>();
+    private final List<DataSegment> uncompactedSegments = new ArrayList<>();
     private final Map<CompactionState, List<DataSegment>> unknownStateToSegments = new HashMap<>();
 
     @Nullable
@@ -373,6 +373,22 @@ public class CompactionStatus
       }
     }
 
+    List<DataSegment> getUncompactedSegments()
+    {
+      return uncompactedSegments;
+    }
+
+    /**
+     * Evaluates the compaction status of candidate segments through a multi-step process:
+     * <ol>
+     *   <li>Validates input bytes are within limits</li>
+     *   <li>Categorizes segments by compaction state (fingerprinted, uncompacted, or unknown)</li>
+     *   <li>Performs fingerprint-based validation if available (fast path)</li>
+     *   <li>Runs detailed checks against unknown states via {@link #CHECKS}</li>
+     * </ol>
+     *
+     * @return Pair of eligibility status and compaction status with reason for first failed check
+     */
     Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluate()
     {
       final CompactionCandidateSearchPolicy.Eligibility inputBytesCheck = inputBytesAreWithinLimit();
@@ -421,7 +437,6 @@ public class CompactionStatus
       if (reasonsForCompaction.isEmpty()) {
         return Pair.of(
             CompactionCandidateSearchPolicy.Eligibility.NOT_APPLICABLE,
-            //fail("All checks are passed, no reason to compact"),
             CompactionStatus.COMPLETE
         );
       } else {
