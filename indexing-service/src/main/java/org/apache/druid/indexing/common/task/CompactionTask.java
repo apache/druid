@@ -252,7 +252,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       );
     }
     if (this.compactionRunner.forceDropExisting() && !this.ioConfig.isDropExisting()) {
-      throw new IAE("Invalid config: runner[%s] must run with dropExisting", this.compactionRunner.getClass());
+      throw new IAE("Invalid config: runner[%s] must run with dropExisting=true", this.compactionRunner.getClass());
     }
     this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
