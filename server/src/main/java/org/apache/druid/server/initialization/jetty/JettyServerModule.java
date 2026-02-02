@@ -314,7 +314,13 @@ public class JettyServerModule extends JerseyServletModule
       }
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
-      httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+
+      // see https://github.com/jetty/jetty.project/pull/5398
+      // This new strict enforcement can break some clients. Allow turning it off via config if necessary
+      final SecureRequestCustomizer secureRequestCustomizer = new SecureRequestCustomizer();
+      secureRequestCustomizer.setSniHostCheck(config.isEnforceStrictSNIHostChecking());
+
+      httpsConfiguration.addCustomizer(secureRequestCustomizer);
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(
