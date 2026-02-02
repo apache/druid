@@ -247,7 +247,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                             : compactionRunner;
     if (this.compactionRunner.requireAlignedInterval() && this.ioConfig.isAllowNonAlignedInterval()) {
       throw new IAE(
-          "Invalid config: allowNonAlignedInterval is not allowed by runner[%s]",
+          "Invalid config: allowNonAlignedInterval=true is not allowed by runner[%s]",
           this.compactionRunner.getClass()
       );
     }
