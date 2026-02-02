@@ -229,7 +229,7 @@ public class InlineReindexingRuleProviderTest
     T rule90d = ruleFactory.apply(ruleTypeName + "-90d", Period.days(90));
 
     InlineReindexingRuleProvider.Builder builder = InlineReindexingRuleProvider.builder();
-    builderSetter.apply(builder, ImmutableList.of(rule30d, rule60d, rule90d));
+    builder = builderSetter.apply(builder, ImmutableList.of(rule30d, rule60d, rule90d));
     InlineReindexingRuleProvider provider = builder.build();
 
     Assert.assertNull(
