@@ -1146,8 +1146,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );
-          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(schema.getGroupingColumns()
-                                                                                               .size());
+          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(
+              schema.getGroupingColumns().size()
+          );
           for (String groupingColumn : schema.getGroupingColumns()) {
             if (groupingColumn.equals(schema.getTimeColumnName())) {
               columnSchemas.add(
