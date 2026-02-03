@@ -38,7 +38,7 @@ public class QueryLaningTest extends QueryTestBase
   protected EmbeddedDruidCluster createCluster()
   {
     broker.addProperty("druid.query.scheduler.laning.strategy", "manual")
-          .addProperty("druid.query.scheduler.laning.lanes.lane1", LANE_1);
+          .addProperty("druid.query.scheduler.laning.lanes." + LANE_1, "1");
 
     return super.createCluster().useDefaultTimeoutForLatchableEmitter(100);
   }
