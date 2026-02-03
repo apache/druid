@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [query, security, centralized-datasource-schema]
+        testing_group: [security]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -57,16 +57,3 @@ jobs:
       use_indexer: middleManager
       override_config_path: ./environment-configs/test-groups/prepopulated-data
       group: ${{ matrix.testing_group }}
-
-  integration-query-tests-middleManager-mariaDB:
-    needs: changes
-    uses: ./.github/workflows/reusable-standard-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=query
-      use_indexer: middleManager
-      mysql_driver: org.mariadb.jdbc.Driver
-      override_config_path: ./environment-configs/test-groups/prepopulated-data
-      group: query

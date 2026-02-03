@@ -37,6 +37,7 @@ public class DataNodeServiceTest
     DruidService expected = new DataNodeService(
         "tier",
         100,
+        50L,
         ServerType.HISTORICAL,
         1
     );

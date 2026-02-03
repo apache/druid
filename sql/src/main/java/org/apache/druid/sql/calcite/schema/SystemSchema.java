@@ -188,6 +188,7 @@ public class SystemSchema extends AbstractSchema
       .add("tier", ColumnType.STRING)
       .add("curr_size", ColumnType.LONG)
       .add("max_size", ColumnType.LONG)
+      .add("storage_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
       .add("version", ColumnType.STRING)
@@ -692,6 +693,7 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
@@ -717,6 +719,7 @@ public class SystemSchema extends AbstractSchema
           (long) node.getTlsPort(),
           StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
           null,
+          UNKNOWN_SIZE,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
           isLeader ? 1L : 0L,
@@ -758,6 +761,7 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
+          druidServerToUse.getStorageSize(),
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
@@ -785,6 +789,7 @@ public class SystemSchema extends AbstractSchema
             druidNode.getHostAndPort(),
             druidNode.getHostAndTlsPort(),
             dataNodeService.getMaxSize(),
+            dataNodeService.getStorageSize(),
             dataNodeService.getServerType(),
             dataNodeService.getTier(),
             dataNodeService.getPriority()

@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -57,6 +58,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -550,5 +552,22 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(new Object[]{null, null, null})
     );
+  }
+
+  @Test
+  public void testSpectatorPercentileWithStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT SPECTATOR_PERCENTILE(histogram_metric, '99.99') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assert.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assert.assertTrue(e.getMessage().contains("must be a numeric literal"));
+    }
   }
 }

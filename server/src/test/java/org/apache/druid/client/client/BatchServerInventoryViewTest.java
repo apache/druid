@@ -124,6 +124,7 @@ public class BatchServerInventoryViewTest
         "host",
         null,
         Long.MAX_VALUE,
+        null,
         ServerType.HISTORICAL,
         "tier",
         0
@@ -454,6 +455,7 @@ public class BatchServerInventoryViewTest
                           "host",
                           null,
                           Long.MAX_VALUE,
+                          null,
                           ServerType.HISTORICAL,
                           "tier",
                           0

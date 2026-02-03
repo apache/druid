@@ -53,11 +53,11 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 1),
         client
     );
 
@@ -72,11 +72,11 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
 
@@ -91,11 +91,11 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
 
@@ -110,15 +110,15 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
         client
     );
     QueryableDruidServer mediumPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
 
@@ -143,15 +143,15 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
         client
     );
     QueryableDruidServer mediumPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
 
@@ -176,23 +176,23 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer p0 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
         client
     );
     QueryableDruidServer p1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
         client
     );
     QueryableDruidServer p2 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
         client
     );
     QueryableDruidServer p3 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 2),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 2),
         client
     );
     QueryableDruidServer p4 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 3),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 3),
         client
     );
     TierSelectorStrategy tierSelectorStrategy = new CustomTierSelectorStrategy(
@@ -255,7 +255,7 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer p0 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
         client
     );
     Set<QueryableDruidServer> servers = new HashSet<>();
@@ -352,21 +352,21 @@ public class TierSelectorStrategyTest
 
     // Two servers that have same tier and priority
     QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 0),
         client
     );
     QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 1),
         client
     );
 
     QueryableDruidServer preferredTierHighPriority2 = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 1),
         client
     );
 
     QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
-        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        new DruidServer("test4", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", 2),
         client
     );
 
@@ -460,15 +460,15 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 0),
         client
     );
     QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 1),
         client
     );
     QueryableDruidServer nonPreferredTierLowestPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", -1),
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", -1),
         client
     );
 
@@ -487,15 +487,15 @@ public class TierSelectorStrategyTest
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     // Create only non-preferred tier servers with different priorities
     QueryableDruidServer nonPreferredTierLowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", 0),
         client
     );
     QueryableDruidServer nonPreferredTierMediumPriority = new QueryableDruidServer(
-        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 1),
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", 1),
         client
     );
     QueryableDruidServer nonPreferredTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", 2),
         client
     );
 
@@ -515,19 +515,19 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 0),
         client
     );
     QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 1),
         client
     );
     QueryableDruidServer anotherTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "tier1", 3),
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, "tier1", 3),
         client
     );
     QueryableDruidServer yetAnotherTierMediumPriority = new QueryableDruidServer(
-        new DruidServer("test4", "localhost", null, 0, ServerType.HISTORICAL, "tier2", 2),
+        new DruidServer("test4", "localhost", null, 0, null, ServerType.HISTORICAL, "tier2", 2),
         client
     );
 
@@ -547,15 +547,15 @@ public class TierSelectorStrategyTest
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
 
     QueryableDruidServer preferredTierLowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 0),
+        new DruidServer("test1", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 0),
         client
     );
     QueryableDruidServer preferredTierHighPriority = new QueryableDruidServer(
-        new DruidServer("test2", "localhost", null, 0, ServerType.HISTORICAL, "preferred", 1),
+        new DruidServer("test2", "localhost", null, 0, null, ServerType.HISTORICAL, "preferred", 1),
         client
     );
     QueryableDruidServer nonPreferredTierHighestPriority = new QueryableDruidServer(
-        new DruidServer("test3", "localhost", null, 0, ServerType.HISTORICAL, "non-preferred", 2),
+        new DruidServer("test3", "localhost", null, 0, null, ServerType.HISTORICAL, "non-preferred", 2),
         client
     );
 

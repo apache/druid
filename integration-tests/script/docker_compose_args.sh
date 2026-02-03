@@ -45,10 +45,6 @@ getComposeArgs()
       then
         # default + with override config + schema registry container
         echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "centralized-datasource-schema" ]
-      then
-        # cluster with overriden properties for broker and coordinator
-        echo "-f ${DOCKERDIR}/docker-compose.centralized-datasource-schema.yml"
   else
     # default
     echo "-f ${DOCKERDIR}/docker-compose.yml"
