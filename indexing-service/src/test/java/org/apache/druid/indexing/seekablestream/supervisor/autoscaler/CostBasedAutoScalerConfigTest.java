@@ -189,10 +189,10 @@ public class CostBasedAutoScalerConfigTest
                                                                  .lagWeight(0.6)
                                                                  .idleWeight(0.4)
                                                                  .defaultProcessingRate(2000.0)
-                                                                 .scaleDownBarrier(Duration.standardMinutes(10))
+                                                                 .minScaleDownDelay(Duration.standardMinutes(10))
                                                                  .scaleDownDuringTaskRolloverOnly(true)
                                                                  .highLagThreshold(30000)
-                                                                 .aggressiveScalingLagPerPartitionThreshold(60000)
+                                                                 .aggressiveScalingLagPerPartitionThreshold()
                                                                  .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());

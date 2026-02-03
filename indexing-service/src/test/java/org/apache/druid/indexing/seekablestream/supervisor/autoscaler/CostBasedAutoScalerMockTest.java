@@ -82,7 +82,7 @@ public class CostBasedAutoScalerMockTest
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
                                                                         .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(Duration.standardHours(1))
+                                                                        .minScaleDownDelay(Duration.standardHours(1))
                                                                         .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
@@ -138,7 +138,7 @@ public class CostBasedAutoScalerMockTest
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
                                                                         .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(Duration.standardHours(1))
+                                                                        .minScaleDownDelay(Duration.standardHours(1))
                                                                         .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
@@ -300,7 +300,7 @@ public class CostBasedAutoScalerMockTest
                                                                             .taskCountMin(1)
                                                                             .enableTaskAutoScaler(true)
                                                                             .scaleDownDuringTaskRolloverOnly(true)
-                                                                            .scaleDownBarrier(Duration.ZERO)
+                                                                            .minScaleDownDelay(Duration.ZERO)
                                                                             .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
@@ -331,7 +331,7 @@ public class CostBasedAutoScalerMockTest
                                                                             .taskCountMin(1)
                                                                             .enableTaskAutoScaler(true)
                                                                             .scaleDownDuringTaskRolloverOnly(true)
-                                                                            .scaleDownBarrier(Duration.ZERO)
+                                                                            .minScaleDownDelay(Duration.ZERO)
                                                                             .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(

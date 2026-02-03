@@ -348,7 +348,7 @@ public class WeightedCostFunctionTest
                                                                           .enableTaskAutoScaler(true)
                                                                           .defaultProcessingRate(1000.0)
                                                                           .highLagThreshold(10000)
-                                                                          .aggressiveScalingLagPerPartitionThreshold(20000)
+                                                                          .aggressiveScalingLagPerPartitionThreshold()
                                                                           .build();
 
     double defaultCost = costFunction.computeCost(metrics, proposedTaskCount, defaultConfig).totalCost();
@@ -382,7 +382,7 @@ public class WeightedCostFunctionTest
                                                                        .enableTaskAutoScaler(true)
                                                                        .defaultProcessingRate(1000.0)
                                                                        .highLagThreshold(10000)
-                                                                       .aggressiveScalingLagPerPartitionThreshold(20000)
+                                                                       .aggressiveScalingLagPerPartitionThreshold()
                                                                        .build();
 
     // Lag exactly at extraThreshold (lagPerPartition = 10000)

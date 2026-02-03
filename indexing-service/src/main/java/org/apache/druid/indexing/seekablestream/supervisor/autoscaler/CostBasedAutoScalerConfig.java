@@ -305,7 +305,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", idleWeight=" + idleWeight +
            ", defaultProcessingRate=" + defaultProcessingRate +
            ", highLagThreshold=" + highLagThreshold +
-           ", scaleDownBarrier=" + minScaleDownDelay +
+           ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
            '}';
   }
@@ -326,9 +326,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Double lagWeight;
     private Double idleWeight;
     private Double defaultProcessingRate;
-    private Duration scaleDownBarrier;
-    private Boolean scaleDownDuringTaskRolloverOnly;
     private Integer highLagThreshold;
+    private Duration minScaleDownDelay;
+    private Boolean scaleDownDuringTaskRolloverOnly;
 
     private Builder()
     {
@@ -394,9 +394,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder scaleDownBarrier(Duration scaleDownBarrier)
+    public Builder minScaleDownDelay(Duration minScaleDownDelay)
     {
-      this.scaleDownBarrier = scaleDownBarrier;
+      this.minScaleDownDelay = minScaleDownDelay;
       return this;
     }
 
@@ -409,11 +409,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     public Builder highLagThreshold(int highLagThreshold)
     {
       this.highLagThreshold = highLagThreshold;
-      return this;
-    }
-
-    public Builder aggressiveScalingLagPerPartitionThreshold(int aggressiveScalingLagPerPartitionThreshold)
-    {
       return this;
     }
 
@@ -431,7 +426,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           idleWeight,
           defaultProcessingRate,
           highLagThreshold,
-          scaleDownBarrier,
+          minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly
       );
     }

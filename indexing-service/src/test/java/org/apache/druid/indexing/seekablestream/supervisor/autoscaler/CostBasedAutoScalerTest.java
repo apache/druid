@@ -390,7 +390,7 @@ public class CostBasedAutoScalerTest
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("stream");
 
-    // Test config defaults for scaleDownBarrier, defaultProcessingRate, scaleDownDuringTaskRolloverOnly
+    // Test config defaults for minScaleDownDelay, defaultProcessingRate, scaleDownDuringTaskRolloverOnly
     CostBasedAutoScalerConfig cfgWithDefaults = CostBasedAutoScalerConfig.builder()
                                                                           .taskCountMax(10)
                                                                           .taskCountMin(1)
@@ -408,7 +408,7 @@ public class CostBasedAutoScalerTest
                                                                         .taskCountMax(10)
                                                                         .taskCountMin(1)
                                                                         .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(Duration.standardMinutes(10))
+                                                                        .minScaleDownDelay(Duration.standardMinutes(10))
                                                                         .defaultProcessingRate(5000.0)
                                                                         .scaleDownDuringTaskRolloverOnly(true)
                                                                         .build();

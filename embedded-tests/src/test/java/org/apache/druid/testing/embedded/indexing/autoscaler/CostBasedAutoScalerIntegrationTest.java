@@ -134,7 +134,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .lagWeight(0.9)
         .idleWeight(0.1)
         .scaleDownDuringTaskRolloverOnly(false)
-        .scaleDownBarrier(Duration.millis(1500))
+        .minScaleDownDelay(Duration.millis(1500))
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
@@ -230,7 +230,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .idleWeight(0.9)
         .scaleDownDuringTaskRolloverOnly(true)
         // Do not slow scale-downs
-        .scaleDownBarrier(Duration.ZERO)
+        .minScaleDownDelay(Duration.ZERO)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
