@@ -103,38 +103,33 @@ public class BroadcastJoinQueryTest extends AbstractIndexerTest
 
     // Run some queries
     Assertions.assertEquals(
-        """
-            triplets,2,1810.0
-            speed,2,918.0
-            masterYi,2,246.0
-            nuclear,2,114.0
-            stringer,2,2.0""",
+        "triplets,2,1810.0\n" +
+        "speed,2,918.0\n" +
+        "masterYi,2,246.0\n" +
+        "nuclear,2,114.0\n" +
+        "stringer,2,2.0",
         cluster.runSql("SELECT \"user\", COUNT(*), SUM(\"added\") FROM %s GROUP BY 1 ORDER BY 3 DESC", joinDatasource)
     );
     Assertions.assertEquals(
-        """
-            triplets,2,1810.0
-            speed,2,918.0
-            masterYi,2,246.0
-            nuclear,2,114.0
-            stringer,2,2.0""",
+        "triplets,2,1810.0\n" +
+        "speed,2,918.0\n" +
+        "masterYi,2,246.0\n" +
+        "nuclear,2,114.0\n" +
+        "stringer,2,2.0",
         cluster.runSql("SELECT \"user\", COUNT(*), SUM(\"added\") FROM %s GROUP BY 1 ORDER BY 3 DESC", dataSource)
     );
 
     // Run join query, the sums have doubled due to the Cartesian product
     Assertions.assertEquals(
-        """
-            triplets,4,3620.0
-            speed,4,1836.0
-            masterYi,4,492.0
-            nuclear,4,228.0
-            stringer,4,4.0""",
+        "triplets,4,3620.0\n" +
+        "speed,4,1836.0\n" +
+        "masterYi,4,492.0\n" +
+        "nuclear,4,228.0\n" +
+        "stringer,4,4.0",
         cluster.runSql(
-            """
-                SELECT a."user", COUNT(*), SUM(a."added")
-                 FROM %s a INNER JOIN %s b ON a."user" = b."user"
-                 GROUP BY 1 ORDER BY 3 DESC
-                """,
+            "SELECT a.\"user\", COUNT(*), SUM(a.\"added\")" +
+            " FROM %s a INNER JOIN %s b ON a.\"user\" = b.\"user\"" +
+            " GROUP BY 1 ORDER BY 3 DESC",
             dataSource, joinDatasource
         )
     );
