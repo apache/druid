@@ -46,12 +46,9 @@ public interface CompactionRunner
    * Returns whether this runner requires aligned intervals for compaction.
    * When true, the compaction task will throw an error if the IOConfig has allowNonAlignedInterval enabled.
    *
-   * @return true if aligned intervals are required by this runner, false otherwise. Default is true.
+   * @return true if aligned intervals are required by this runner, false otherwise.
    */
-  default boolean requireAlignedInterval()
-  {
-    return true;
-  }
+  boolean requireAlignedInterval();
 
   /**
    * Creates and runs sub-tasks for the given CompactionTask, one interval at a time.
