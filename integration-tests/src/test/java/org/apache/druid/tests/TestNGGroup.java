@@ -26,11 +26,6 @@ package org.apache.druid.tests;
 public class TestNGGroup
 {
   /**
-   * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
-   */
-  public static final String QUERY = "query";
-
-  /**
    * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
    */
   public static final String SECURITY = "security";
@@ -104,6 +99,4 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
-
-  public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
 }
