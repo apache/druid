@@ -71,9 +71,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
   // Base PPT lag threshold allowing to activate a burst scaleup to eliminate high lag.
   static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
-  // Extra PPT lag threshold allowing activation of even more aggressive scaleup to eliminate high lag,
-  // also enabling lag-amplified idle calculation decay in the cost function (to reduce idle weight).
-  static final int AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD = 100_000;
 
   public static final String LAG_COST_METRIC = "task/autoScaler/costBased/lagCost";
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
