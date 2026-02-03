@@ -2212,6 +2212,12 @@ public class CompactionTaskTest
   private static class TestMSQCompactionRunner implements CompactionRunner
   {
     @Override
+    public boolean requireAlignedInterval()
+    {
+      return true;
+    }
+
+    @Override
     public TaskStatus runCompactionTasks(
         CompactionTask compactionTask,
         Map<Interval, DataSchema> intervalDataSchemaMap,
