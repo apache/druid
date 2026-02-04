@@ -116,12 +116,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-            <version>1</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-client</artifactId>
             <scope>provided</scope>
@@ -265,20 +259,6 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <configuration>
-             <!-- tool gets confused between these two items. -->
-             <usedDependencies>
-                <dependency>javax.inject:javax.inject</dependency>
-             </usedDependencies>
-             <ignoredUsedUndeclaredDependencies>
-                <ignoredUsedUndeclaredDependency>javax.inject:javax.inject</ignoredUsedUndeclaredDependency>
-                <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
-            </ignoredUsedUndeclaredDependencies>
-        </configuration>
       </plugin>
     </plugins>
   </build>
