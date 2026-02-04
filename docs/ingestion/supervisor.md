@@ -211,7 +211,7 @@ The following table outlines the configuration properties related to the `costBa
 |`useTaskCountBoundaries`|Enables the bounded partitions-per-task window when selecting task counts.|No|`false`|
 |`useBurstScaleOnHeavyLag`|Enables burst scale-up when per-partition lag is high.|No|`false`|
 |`highLagThreshold`|Per-partition lag threshold that triggers burst scale-up when `useBurstScaleOnHeavyLag` is enabled.|No|50000|
-|`minScaleDownDelay`| Minimum duration between successful scale actions, specified as an ISO-8601 duration string. | No | `PT50M` |
+|`minScaleDownDelay`| Minimum duration between successful scale actions, specified as an ISO-8601 duration string. | No | `PT30M` |
 |`scaleDownDuringTaskRolloverOnly`| Indicates whether task scaling down is limited to periods during task rollovers only. | No | False |
 
 The following example shows a supervisor spec with `lagBased` autoscaler:
