@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.io.NativeIO;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.utils.CompressionUtils;
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
+import javax.annotation.Nullable;
 import javax.tools.FileObject;
 import java.io.File;
 import java.io.IOException;
@@ -177,11 +180,21 @@ public class HdfsDataSegmentPuller implements URIDataPuller
 
   private static final Logger log = new Logger(HdfsDataSegmentPuller.class);
   protected final Configuration config;
+  private final ServiceEmitter emitter;
 
-  @Inject
   public HdfsDataSegmentPuller(@Hdfs final Configuration config)
   {
+    this(config, null);
+  }
+
+  @Inject
+  public HdfsDataSegmentPuller(
+      @Hdfs final Configuration config,
+      @Nullable final ServiceEmitter emitter
+  )
+  {
     this.config = config;
+    this.emitter = emitter;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(final Path path, final File outDir) throws SegmentLoadingException
@@ -239,18 +252,24 @@ public class HdfsDataSegmentPuller implements URIDataPuller
 
       // Try to detect format from file extension and decompress
       final CompressionUtils.Format format = CompressionUtils.Format.fromFileName(path.getName());
-      if (format != null && (format == CompressionUtils.Format.ZIP || format == CompressionUtils.Format.LZ4)) {
+      if ((format == CompressionUtils.Format.ZIP || format == CompressionUtils.Format.LZ4)) {
+        long startTime = System.currentTimeMillis();
+
         final FileUtils.FileCopyResult result = format.decompressDirectory(
             getInputStream(path),
             outDir
         );
 
+        long duration = System.currentTimeMillis() - startTime;
+        emitMetrics(result.size(), duration);
+
         log.info(
-            "Decompressed %d bytes from [%s] to [%s] using %s",
+            "Decompressed %d bytes from [%s] to [%s] using %s in [%d] millis",
             result.size(),
             path.toString(),
             outDir.getAbsolutePath(),
-            format.name()
+            format.name(),
+            duration
         );
 
         return result;
@@ -286,6 +305,17 @@ public class HdfsDataSegmentPuller implements URIDataPuller
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Error loading [%s]", path.toString());
     }
+  }
+
+  private void emitMetrics(long size, long duration)
+  {
+    if (emitter == null) {
+      return;
+    }
+    ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+
+    emitter.emit(metricBuilder.build("hdfs/pull/size", size));
+    emitter.emit(metricBuilder.build("hdfs/pull/duration", duration));
   }
 
   public InputStream getInputStream(Path path) throws IOException

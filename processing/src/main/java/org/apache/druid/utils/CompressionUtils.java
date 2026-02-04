@@ -378,9 +378,7 @@ public class CompressionUtils
       final File outFile = new File(outDir, fileName);
       validateZipOutputFile("", outFile, outDir);
 
-      try (OutputStream fileOut = java.nio.file.Files.newOutputStream(outFile.toPath())) {
-        ByteStreams.copy(ByteStreams.limit(dataIn, fileSize), fileOut);
-      }
+      NativeIO.chunkedCopy(ByteStreams.limit(dataIn, fileSize), outFile);
       result.addFile(outFile);
     }
 
