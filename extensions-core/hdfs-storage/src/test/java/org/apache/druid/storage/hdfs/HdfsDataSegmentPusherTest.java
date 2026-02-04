@@ -97,7 +97,7 @@ public class HdfsDataSegmentPusherTest
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
-    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
+    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true));
   }
 
   @Test
@@ -146,7 +146,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -187,7 +187,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -231,7 +231,7 @@ public class HdfsDataSegmentPusherTest
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     for (int i = 0; i < numberOfSegments; i++) {
       segments[i] = new DataSegment(
@@ -320,7 +320,7 @@ public class HdfsDataSegmentPusherTest
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",

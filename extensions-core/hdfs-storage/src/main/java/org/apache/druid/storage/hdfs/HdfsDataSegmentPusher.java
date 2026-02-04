@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -32,6 +31,8 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -56,20 +58,31 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
+  @Nullable
+  private final ServiceEmitter emitter;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
   // Please see https://github.com/apache/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig
+  )
+  {
+    this(config, hadoopConfig, null);
+  }
+
   @Inject
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       @Hdfs Configuration hadoopConfig,
-      ObjectMapper jsonMapper
+      @Nullable ServiceEmitter emitter
   )
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;
+    this.emitter = emitter;
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
         () -> {
@@ -143,17 +156,35 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     // Retry any HDFS errors that occur, up to 5 times.
     try {
-      return RetryUtils.retry(
+      final long startTime = System.currentTimeMillis();
+
+      final DataSegment result = RetryUtils.retry(
           () -> pushToFilePath(inDir, segment, outIndexFilePath),
           exception -> exception instanceof Exception,
           5
       );
+
+      emitMetrics(result.getSize(), System.currentTimeMillis() - startTime);
+
+      return result;
     }
     catch (Exception e) {
       Throwables.throwIfInstanceOf(e, IOException.class);
       Throwables.throwIfInstanceOf(e, RuntimeException.class);
       throw new RuntimeException(e);
     }
+  }
+
+  private void emitMetrics(long size, long duration)
+  {
+    if (emitter == null) {
+      return;
+    }
+
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    metricBuilder.setDimension("format", config.getCompressionFormat());
+    emitter.emit(metricBuilder.setMetric("hdfs/push/size", size));
+    emitter.emit(metricBuilder.setMetric("hdfs/push/duration", duration));
   }
 
   private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
@@ -190,6 +221,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());
       copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
+    }
+    catch (IOException e) {
+      log.error(e, "Failed to push segment[%s] to HDFS at location[%s]", segment.getId(), outIndexFilePath);
+      throw e;
     }
     finally {
       try {

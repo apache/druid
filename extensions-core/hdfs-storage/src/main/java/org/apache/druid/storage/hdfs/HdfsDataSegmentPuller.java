@@ -255,22 +255,9 @@ public class HdfsDataSegmentPuller implements URIDataPuller
       if ((format == CompressionUtils.Format.ZIP || format == CompressionUtils.Format.LZ4)) {
         long startTime = System.currentTimeMillis();
 
-        final FileUtils.FileCopyResult result = format.decompressToDirectory(
-            getInputStream(path),
-            outDir
-        );
+        final FileUtils.FileCopyResult result = format.decompressDirectory(getInputStream(path), outDir);
 
-        long duration = System.currentTimeMillis() - startTime;
-        emitMetrics(result.size(), duration);
-
-        log.info(
-            "Decompressed %d bytes from [%s] to [%s] using %s in [%d] millis",
-            result.size(),
-            path.toString(),
-            outDir.getAbsolutePath(),
-            format.name(),
-            duration
-        );
+        emitMetrics(format, result.size(), System.currentTimeMillis() - startTime);
 
         return result;
       } else if (CompressionUtils.isGz(path.getName())) {
@@ -307,15 +294,15 @@ public class HdfsDataSegmentPuller implements URIDataPuller
     }
   }
 
-  private void emitMetrics(long size, long duration)
+  private void emitMetrics(CompressionUtils.Format format, long size, long duration)
   {
     if (emitter == null) {
       return;
     }
     ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-
-    emitter.emit(metricBuilder.build("hdfs/pull/size", size));
-    emitter.emit(metricBuilder.build("hdfs/pull/duration", duration));
+    metricBuilder.setDimension("format", format);
+    emitter.emit(metricBuilder.setMetric("hdfs/pull/size", size));
+    emitter.emit(metricBuilder.setMetric("hdfs/pull/duration", duration));
   }
 
   public InputStream getInputStream(Path path) throws IOException
