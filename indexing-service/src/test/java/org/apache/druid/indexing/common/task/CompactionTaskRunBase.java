@@ -570,7 +570,7 @@ public abstract class CompactionTaskRunBase
         getDefaultCompactionState(
             Granularities.HOUR,
             DEFAULT_QUERY_GRAN,
-            List.of(interval)
+            List.of(Intervals.of("2014-01-01T00:00:00Z/2014-01-01T02:00:00Z"))
         ),
         segments.get(0).getLastCompactionState()
     );
