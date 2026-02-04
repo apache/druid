@@ -64,6 +64,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
@@ -89,9 +90,9 @@ public class CompressionUtils
       }
 
       @Override
-      public FileUtils.FileCopyResult decompressDirectory(InputStream in, File outDir) throws IOException
+      public FileUtils.FileCopyResult decompressToDirectory(InputStream in, File outDir) throws IOException
       {
-        return lz4DecompressDirectory(in, outDir);
+        return lz4DecompressToDirectory(in, outDir);
       }
     },
     SNAPPY(".sz", "sz"),
@@ -104,7 +105,7 @@ public class CompressionUtils
       }
 
       @Override
-      public FileUtils.FileCopyResult decompressDirectory(InputStream in, File outDir) throws IOException
+      public FileUtils.FileCopyResult decompressToDirectory(InputStream in, File outDir) throws IOException
       {
         return unzip(in, outDir);
       }
@@ -150,7 +151,7 @@ public class CompressionUtils
       if (Strings.isNullOrEmpty(name)) {
         return null;
       }
-      return valueOf(name.toUpperCase());
+      return valueOf(name.toUpperCase(Locale.ROOT));
     }
 
     @Nullable
@@ -188,7 +189,7 @@ public class CompressionUtils
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException if the format doesn't support directory decompression
      */
-    public FileUtils.FileCopyResult decompressDirectory(InputStream in, File outDir) throws IOException
+    public FileUtils.FileCopyResult decompressToDirectory(InputStream in, File outDir) throws IOException
     {
       throw new UnsupportedOperationException("Directory decompression not supported for " + this.name());
     }
@@ -200,7 +201,7 @@ public class CompressionUtils
   private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512
 
   /**
-   * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
+   * Zip the contents of directory into the file indicated by outputZipFile. Subdirectories are skipped
    *
    * @param directory     The directory whose contents should be added to the zip in the output stream.
    * @param outputZipFile The output file to write the zipped data to
@@ -208,7 +209,6 @@ public class CompressionUtils
    *
    * @return The number of bytes (uncompressed) read from the input directory.
    *
-   * @throws IOException
    */
   public static long zip(File directory, File outputZipFile, boolean fsync) throws IOException
   {
@@ -233,14 +233,13 @@ public class CompressionUtils
   }
 
   /**
-   * Zip the contents of directory into the file indicated by outputZipFile. Sub directories are skipped
+   * Zip the contents of directory into the file indicated by outputZipFile. Subdirectories are skipped
    *
    * @param directory     The directory whose contents should be added to the zip in the output stream.
    * @param outputZipFile The output file to write the zipped data to
    *
    * @return The number of bytes (uncompressed) read from the input directory.
    *
-   * @throws IOException
    */
   public static long zip(File directory, File outputZipFile) throws IOException
   {
@@ -248,14 +247,13 @@ public class CompressionUtils
   }
 
   /**
-   * Zips the contents of the input directory to the output stream. Sub directories are skipped
+   * Zips the contents of the input directory to the output stream. Subdirectories are skipped
    *
    * @param directory The directory whose contents should be added to the zip in the output stream.
    * @param out       The output stream to write the zip data to. Caller is responsible for closing this stream.
    *
    * @return The number of bytes (uncompressed) read from the input directory.
    *
-   * @throws IOException
    */
   public static long zip(File directory, OutputStream out) throws IOException
   {
@@ -354,7 +352,7 @@ public class CompressionUtils
   /**
    * Decompresses LZ4-compressed directory archive
    */
-  public static FileUtils.FileCopyResult lz4DecompressDirectory(InputStream in, File outDir) throws IOException
+  public static FileUtils.FileCopyResult lz4DecompressToDirectory(InputStream in, File outDir) throws IOException
   {
     if (!(outDir.exists() && outDir.isDirectory())) {
       throw new ISE("outDir[%s] must exist and be a directory", outDir);
@@ -399,7 +397,6 @@ public class CompressionUtils
    *
    * @return A FileCopyResult containing the result of writing the zip entries to disk
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult unzip(
       final ByteSource byteSource,
@@ -449,7 +446,6 @@ public class CompressionUtils
    *
    * @return a FileCopyResult of the files which were written to disk
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult unzip(final File pulledFile, final File outDir) throws IOException
   {
@@ -515,7 +511,6 @@ public class CompressionUtils
    *
    * @return The FileUtils.FileCopyResult containing information on all the files which were written
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult unzip(InputStream in, File outDir) throws IOException
   {
@@ -551,7 +546,6 @@ public class CompressionUtils
    *
    * @return The result of the file copy
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult gunzip(final File pulledFile, File outFile)
   {
@@ -564,7 +558,6 @@ public class CompressionUtils
    * @param in      The input stream to run through the gunzip filter. This stream is closed
    * @param outFile The file to output to
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult gunzip(InputStream in, File outFile) throws IOException
   {
@@ -609,7 +602,6 @@ public class CompressionUtils
    *
    * @return The number of bytes written to the output stream.
    *
-   * @throws IOException
    */
   public static long gunzip(InputStream in, OutputStream out) throws IOException
   {
@@ -676,7 +668,6 @@ public class CompressionUtils
    *
    * @return The size of the data copied
    *
-   * @throws IOException
    */
   public static long gzip(InputStream inputStream, OutputStream out) throws IOException
   {
@@ -699,7 +690,6 @@ public class CompressionUtils
    *
    * @return The result of the file copy
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult gzip(final File inFile, final File outFile, Predicate<Throwable> shouldRetry)
   {
@@ -733,7 +723,6 @@ public class CompressionUtils
    *
    * @return A FileCopyResult of the resulting file at outFile
    *
-   * @throws IOException
    */
   public static FileUtils.FileCopyResult gzip(final File inFile, final File outFile)
   {
@@ -768,21 +757,6 @@ public class CompressionUtils
       return false;
     }
     return fName.endsWith(Format.GZ.getSuffix()) && fName.length() > Format.GZ.getSuffix().length();
-  }
-
-  /**
-   * Checks to see if fName is a valid name for a "*.lz4" file
-   *
-   * @param fName The name of the file in question
-   *
-   * @return True if fName is a properly named .lz4 file, false otherwise
-   */
-  public static boolean isLz4(String fName)
-  {
-    if (Strings.isNullOrEmpty(fName)) {
-      return false;
-    }
-    return fName.endsWith(Format.LZ4.getSuffix());
   }
 
   /**

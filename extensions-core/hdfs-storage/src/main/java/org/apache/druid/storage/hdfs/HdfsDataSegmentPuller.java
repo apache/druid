@@ -255,7 +255,7 @@ public class HdfsDataSegmentPuller implements URIDataPuller
       if ((format == CompressionUtils.Format.ZIP || format == CompressionUtils.Format.LZ4)) {
         long startTime = System.currentTimeMillis();
 
-        final FileUtils.FileCopyResult result = format.decompressDirectory(
+        final FileUtils.FileCopyResult result = format.decompressToDirectory(
             getInputStream(path),
             outDir
         );
