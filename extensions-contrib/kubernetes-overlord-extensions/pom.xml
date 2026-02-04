@@ -138,6 +138,13 @@
       <version>6.7.2</version>
       <scope>runtime</scope>
     </dependency>
+    <!-- Vertx HTTP client for Kubernetes - non-blocking I/O (PR #18540 backport) -->
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-httpclient-vertx</artifactId>
+      <version>6.7.2</version>
+    </dependency>
+    <!-- Note: vertx-core is a transitive dependency of kubernetes-httpclient-vertx -->
     <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>jsr311-api</artifactId>

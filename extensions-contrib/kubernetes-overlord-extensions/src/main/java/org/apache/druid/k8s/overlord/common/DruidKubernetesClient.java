@@ -23,11 +23,12 @@ import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import org.apache.druid.java.util.common.logger.Logger;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
+  private static final Logger log = new Logger(DruidKubernetesClient.class);
 
-  private final Config config;
   private final KubernetesClient kubernetesClient;
 
   public DruidKubernetesClient()
@@ -35,10 +36,25 @@ public class DruidKubernetesClient implements KubernetesClientApi
     this(new ConfigBuilder().build());
   }
 
+  // Existing constructor - uses default HTTP client (OkHttp)
   public DruidKubernetesClient(Config config)
   {
-    this.config = config;
+    log.info("Creating Kubernetes client with default HTTP client (OkHttp)");
     this.kubernetesClient = new KubernetesClientBuilder().withConfig(config).build();
+  }
+
+  // NEW: Constructor with custom HTTP client factory (for Vertx support)
+  // Backported from Druid 35 PR #18540
+  public DruidKubernetesClient(DruidKubernetesHttpClientFactory httpClientFactory, Config config)
+  {
+    log.info(
+        "Creating Kubernetes client with custom HTTP client factory: %s",
+        httpClientFactory.getClass().getSimpleName()
+    );
+    this.kubernetesClient = new KubernetesClientBuilder()
+        .withHttpClientFactory(httpClientFactory)
+        .withConfig(config)
+        .build();
   }
 
   @Override

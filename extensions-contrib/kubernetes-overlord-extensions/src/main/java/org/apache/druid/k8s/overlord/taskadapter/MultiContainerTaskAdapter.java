@@ -93,7 +93,7 @@ public class MultiContainerTaskAdapter extends K8sTaskAdapter
     podTemplate.getSpec().getInitContainers().add(getInitContainer());
 
     // create the job
-    return buildJob(k8sTaskId, labels, annotations, podTemplate);
+    return buildJob(k8sTaskId, labels, annotations, podTemplate, task.getType());
   }
 
   @VisibleForTesting

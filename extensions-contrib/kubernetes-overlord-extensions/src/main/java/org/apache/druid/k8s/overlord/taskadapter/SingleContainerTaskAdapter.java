@@ -76,7 +76,7 @@ public class SingleContainerTaskAdapter extends K8sTaskAdapter
     podSpec.setContainers(Collections.singletonList(mainContainer));
 
     // create the job
-    return buildJob(k8sTaskId, labels, annotations, createTemplateFromSpec(k8sTaskId, podSpec, annotations, labels));
+    return buildJob(k8sTaskId, labels, annotations, createTemplateFromSpec(k8sTaskId, podSpec, annotations, labels), task.getType());
   }
 
 }

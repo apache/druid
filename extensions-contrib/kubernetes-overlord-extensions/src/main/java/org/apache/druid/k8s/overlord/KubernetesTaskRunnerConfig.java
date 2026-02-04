@@ -23,9 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.druid.k8s.overlord.common.HttpClientType;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -81,6 +84,11 @@ public class KubernetesTaskRunnerConfig
   private Period taskCleanupDelay = new Period("P2D");
 
   @JsonProperty
+  // how long to wait for MSQ jobs (query_controller, query_worker) to be cleaned up.
+  // If null, uses taskCleanupDelay for MSQ tasks as well.
+  private Period msqTaskCleanupDelay = null;
+
+  @JsonProperty
   @NotNull
   // interval for k8s job cleanup to run
   private Period taskCleanupInterval = new Period("PT10m");
@@ -119,6 +127,46 @@ public class KubernetesTaskRunnerConfig
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
+  /**
+   * Kubernetes API request timeout in milliseconds.
+   * This controls how long to wait for responses from the Kubernetes API server.
+   * Default is 30 seconds.
+   */
+  @JsonProperty
+  private Integer k8sApiRequestTimeoutMs = 30000;
+
+  /**
+   * Kubernetes API connection timeout in milliseconds.
+   * This controls how long to wait when establishing a connection to the Kubernetes API server.
+   * Default is 10 seconds.
+   */
+  @JsonProperty
+  private Integer k8sApiConnectionTimeoutMs = 10000;
+
+  /**
+   * Websocket ping interval in milliseconds for log streaming operations.
+   * Default is 30 seconds.
+   */
+  @JsonProperty
+  private Integer k8sWebsocketPingIntervalMs = 30000;
+
+  /**
+   * HTTP client type for Kubernetes API calls.
+   * Options: VERTX (non-blocking, default), OKHTTP (blocking).
+   * Default is VERTX to match Druid 35 behavior.
+   *
+   * Backported from Druid 35 PR #18540.
+   */
+  @JsonProperty
+  private HttpClientType httpClientType = HttpClientType.VERTX;
+
+  /**
+   * Configuration for Vertx HTTP client (only used when httpClientType=VERTX).
+   */
+  @JsonProperty
+  @Nullable
+  private DruidKubernetesVertxHttpClientConfig vertxHttpClientConfig;
+
   public KubernetesTaskRunnerConfig()
   {
   }
@@ -133,6 +181,7 @@ public class KubernetesTaskRunnerConfig
       boolean disableClientProxy,
       Period maxTaskDuration,
       Period taskCleanupDelay,
+      Period msqTaskCleanupDelay,
       Period taskCleanupInterval,
       Period k8sjobLaunchTimeout,
       List<String> peonMonitors,
@@ -173,6 +222,7 @@ public class KubernetesTaskRunnerConfig
         taskCleanupDelay,
         this.taskCleanupDelay
     );
+    this.msqTaskCleanupDelay = msqTaskCleanupDelay; // null is valid - means use taskCleanupDelay
     this.taskCleanupInterval = ObjectUtils.defaultIfNull(
         taskCleanupInterval,
         this.taskCleanupInterval
@@ -253,6 +303,25 @@ public class KubernetesTaskRunnerConfig
     return taskCleanupDelay;
   }
 
+  public Period getMsqTaskCleanupDelay()
+  {
+    return msqTaskCleanupDelay;
+  }
+
+  /**
+   * Returns the appropriate cleanup delay for the given task type.
+   * For MSQ tasks (query_controller, query_worker), returns msqTaskCleanupDelay if configured,
+   * otherwise falls back to taskCleanupDelay.
+   * For all other task types, returns taskCleanupDelay.
+   */
+  public Period getTaskCleanupDelayForType(String taskType)
+  {
+    if (("query_controller".equals(taskType) || "query_worker".equals(taskType)) && msqTaskCleanupDelay != null) {
+      return msqTaskCleanupDelay;
+    }
+    return taskCleanupDelay;
+  }
+
   public Period getTaskCleanupInterval()
   {
     return taskCleanupInterval;
@@ -293,6 +362,54 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
+  /**
+   * Returns the Kubernetes API request timeout in milliseconds.
+   * Default is 30000ms (30 seconds).
+   */
+  public Integer getK8sApiRequestTimeoutMs()
+  {
+    return k8sApiRequestTimeoutMs;
+  }
+
+  /**
+   * Returns the Kubernetes API connection timeout in milliseconds.
+   * Default is 10000ms (10 seconds).
+   */
+  public Integer getK8sApiConnectionTimeoutMs()
+  {
+    return k8sApiConnectionTimeoutMs;
+  }
+
+  /**
+   * Returns the websocket ping interval in milliseconds.
+   * Default is 30000ms (30 seconds).
+   */
+  public Integer getK8sWebsocketPingIntervalMs()
+  {
+    return k8sWebsocketPingIntervalMs;
+  }
+
+  /**
+   * Returns the HTTP client type for Kubernetes API calls.
+   * Default is VERTX (non-blocking).
+   */
+  public HttpClientType getHttpClientType()
+  {
+    return httpClientType;
+  }
+
+  /**
+   * Returns the Vertx HTTP client configuration.
+   * Returns default configuration if not specified.
+   */
+  public DruidKubernetesVertxHttpClientConfig getVertxHttpClientConfig()
+  {
+    // Return default config if not specified
+    return vertxHttpClientConfig != null
+        ? vertxHttpClientConfig
+        : new DruidKubernetesVertxHttpClientConfig();
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -309,6 +426,7 @@ public class KubernetesTaskRunnerConfig
     private boolean disableClientProxy;
     private Period maxTaskDuration;
     private Period taskCleanupDelay;
+    private Period msqTaskCleanupDelay;
     private Period taskCleanupInterval;
     private Period k8sjobLaunchTimeout;
     private List<String> peonMonitors;
@@ -376,6 +494,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withMsqTaskCleanupDelay(Period msqTaskCleanupDelay)
+    {
+      this.msqTaskCleanupDelay = msqTaskCleanupDelay;
+      return this;
+    }
+
     public Builder withTaskCleanupInterval(Period taskCleanupInterval)
     {
       this.taskCleanupInterval = taskCleanupInterval;
@@ -437,6 +561,7 @@ public class KubernetesTaskRunnerConfig
           this.disableClientProxy,
           this.maxTaskDuration,
           this.taskCleanupDelay,
+          this.msqTaskCleanupDelay,
           this.taskCleanupInterval,
           this.k8sjobLaunchTimeout,
           this.peonMonitors,

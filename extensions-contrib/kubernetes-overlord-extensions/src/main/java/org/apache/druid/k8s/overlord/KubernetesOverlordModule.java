@@ -51,6 +51,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.HttpClientType;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
@@ -109,25 +113,102 @@ public class KubernetesOverlordModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public DruidKubernetesClient makeKubernetesClient(KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig, Lifecycle lifecycle)
+  public DruidKubernetesClient makeKubernetesClient(
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      Lifecycle lifecycle
+  )
   {
     DruidKubernetesClient client;
-    if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
-      Config config = new ConfigBuilder().build();
-      config.setHttpsProxy(null);
-      config.setHttpProxy(null);
-      client = new DruidKubernetesClient(config);
-    } else {
-      client = new DruidKubernetesClient();
+
+    // Build the Kubernetes client configuration with timeout settings
+    // This addresses performance issues when running many tasks (PR #18540 backport)
+    ConfigBuilder configBuilder = new ConfigBuilder();
+
+    // Apply timeout settings from configuration
+    if (kubernetesTaskRunnerConfig.getK8sApiRequestTimeoutMs() != null) {
+      configBuilder.withRequestTimeout(kubernetesTaskRunnerConfig.getK8sApiRequestTimeoutMs());
+      log.info(
+          "Kubernetes API request timeout set to [%d] ms",
+          kubernetesTaskRunnerConfig.getK8sApiRequestTimeoutMs()
+      );
+    }
+    if (kubernetesTaskRunnerConfig.getK8sApiConnectionTimeoutMs() != null) {
+      configBuilder.withConnectionTimeout(kubernetesTaskRunnerConfig.getK8sApiConnectionTimeoutMs());
+      log.info(
+          "Kubernetes API connection timeout set to [%d] ms",
+          kubernetesTaskRunnerConfig.getK8sApiConnectionTimeoutMs()
+      );
+    }
+    if (kubernetesTaskRunnerConfig.getK8sWebsocketPingIntervalMs() != null) {
+      configBuilder.withWebsocketPingInterval(
+          kubernetesTaskRunnerConfig.getK8sWebsocketPingIntervalMs().longValue()
+      );
+      log.info(
+          "Kubernetes websocket ping interval set to [%d] ms",
+          kubernetesTaskRunnerConfig.getK8sWebsocketPingIntervalMs()
+      );
     }
 
+    Config config = configBuilder.build();
+
+    // Apply proxy settings if needed
+    if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
+      config.setHttpsProxy(null);
+      config.setHttpProxy(null);
+      log.info("Kubernetes client proxy disabled");
+    }
+
+    // Select HTTP client based on configuration (backport from PR #18540)
+    HttpClientType httpClientType = kubernetesTaskRunnerConfig.getHttpClientType();
+    log.info("Kubernetes HTTP client type configured: [%s]", httpClientType);
+
+    if (httpClientType == HttpClientType.VERTX || httpClientType == null) {
+      // Vertx is the default (matching Druid 35)
+      DruidKubernetesVertxHttpClientConfig vertxConfig =
+          kubernetesTaskRunnerConfig.getVertxHttpClientConfig();
+
+      log.info(
+          "Creating Kubernetes client with VERTX HTTP client - " +
+          "workerPoolSize=[%d], eventLoopPoolSize=[%d], internalBlockingPoolSize=[%d]",
+          vertxConfig.getWorkerPoolSize(),
+          vertxConfig.getEventLoopPoolSize(),
+          vertxConfig.getInternalBlockingPoolSize()
+      );
+
+      DruidKubernetesHttpClientFactory httpClientFactory =
+          new DruidKubernetesVertxHttpClientFactory(vertxConfig);
+
+      client = new DruidKubernetesClient(httpClientFactory, config);
+
+      // Register factory for cleanup
+      lifecycle.addHandler(
+          new Lifecycle.Handler()
+          {
+            @Override
+            public void start()
+            {
+            }
+
+            @Override
+            public void stop()
+            {
+              log.info("Stopping Vertx HTTP client factory");
+              httpClientFactory.close();
+            }
+          }
+      );
+    } else {
+      log.info("Creating Kubernetes client with OKHTTP HTTP client");
+      client = new DruidKubernetesClient(config);
+    }
+
+    // Register client for cleanup
     lifecycle.addHandler(
         new Lifecycle.Handler()
         {
           @Override
           public void start()
           {
-
           }
 
           @Override

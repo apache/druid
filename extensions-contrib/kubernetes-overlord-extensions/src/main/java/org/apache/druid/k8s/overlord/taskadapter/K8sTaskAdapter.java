@@ -183,7 +183,8 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       K8sTaskId k8sTaskId,
       Map<String, String> labels,
       Map<String, String> annotations,
-      PodTemplateSpec podTemplate
+      PodTemplateSpec podTemplate,
+      String taskType
   )
   {
     return new JobBuilder()
@@ -196,7 +197,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         .withTemplate(podTemplate)
         .withActiveDeadlineSeconds(taskRunnerConfig.getTaskTimeout().toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)
-        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay().toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelayForType(taskType).toStandardDuration().getStandardSeconds())
         .endSpec()
         .build();
   }
