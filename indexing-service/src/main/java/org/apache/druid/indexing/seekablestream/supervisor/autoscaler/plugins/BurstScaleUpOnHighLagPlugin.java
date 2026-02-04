@@ -23,9 +23,6 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins;
 public final class BurstScaleUpOnHighLagPlugin
 {
 
-  // Base PPT lag threshold allowing to activate a burst scaleup to eliminate high lag.
-  public static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
-
   /**
    * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
    * This controls how aggressive the scaling is relative to partition count.

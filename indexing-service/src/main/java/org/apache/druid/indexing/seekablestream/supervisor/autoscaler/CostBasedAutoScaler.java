@@ -104,7 +104,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       this.boundariesPlugin = new OptimalTaskCountBoundariesPlugin();
     }
 
-    if (config.shouldUseBurstScaleOnHeavyLag()) {
+    if (config.getHighLagThreshold() >= 0) {
       this.burstScaleUpPlugin = new BurstScaleUpOnHighLagPlugin(config.getHighLagThreshold());
     }
   }

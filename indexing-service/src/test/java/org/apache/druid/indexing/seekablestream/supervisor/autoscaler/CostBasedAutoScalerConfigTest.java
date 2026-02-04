@@ -108,7 +108,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
-    // When useBurstScaleOnHeavyLag is not set (default: false), highLagThreshold defaults to -1
+    // When highLagThreshold is not set, it defaults to -1 (burst scale-up disabled)
     Assert.assertEquals(-1, config.getHighLagThreshold());
   }
 

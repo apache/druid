@@ -76,7 +76,7 @@ public class CostBasedAutoScalerTest
   public void testComputeValidTaskCounts()
   {
     OptimalTaskCountBoundariesPlugin boundariesPlugin = new OptimalTaskCountBoundariesPlugin();
-    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(BurstScaleUpOnHighLagPlugin.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD);
+    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(50_000);
 
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
     int[] validTaskCounts = computeValidTaskCounts(100, 25, 0L, 1, 100, boundariesPlugin, highLagPlugin);

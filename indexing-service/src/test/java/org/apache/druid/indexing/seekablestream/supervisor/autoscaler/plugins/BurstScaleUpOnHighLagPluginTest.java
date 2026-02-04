@@ -31,7 +31,7 @@ import org.junit.Test;
  */
 public class BurstScaleUpOnHighLagPluginTest
 {
-  private static final int LAG_THRESHOLD = BurstScaleUpOnHighLagPlugin.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
+  private static final int LAG_THRESHOLD = 50_000;
   private static final int PARTITION_COUNT = 48;
   private static final int TASK_COUNT_MAX = 48;
 
