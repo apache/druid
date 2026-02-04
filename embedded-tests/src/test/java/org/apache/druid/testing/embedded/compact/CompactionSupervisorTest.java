@@ -430,59 +430,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifyNoRowsWithNestedValue("extraInfo", "fieldA", "valueA");
   }
 
-  private int getTotalRowCount()
-  {
-    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
-    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
-    List<Map<String, Object>> rows = JacksonUtils.readValue(
-        new DefaultObjectMapper(),
-        result.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>() {}
-    );
-    return ((Number) rows.get(0).get("cnt")).intValue();
-  }
-
-  private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
-  {
-    String sql = StringUtils.format(
-        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
-        dataSource,
-        nestedColumn,
-        field,
-        value
-    );
-    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
-    List<Map<String, Object>> rows = JacksonUtils.readValue(
-        new DefaultObjectMapper(),
-        result.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>() {}
-    );
-    Assertions.assertEquals(
-        0,
-        ((Number) rows.get(0).get("cnt")).intValue(),
-        StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
-    );
-  }
-
-
-  private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
-  {
-    List<String> events = new ArrayList<>();
-
-    for (int i = 1; i <= numEvents; i++) {
-      DateTime eventTime = interval.getStart().plus(spacingMillis * i);
-      if (eventTime.isAfter(interval.getEnd())) {
-        throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
-      }
-      String item = i % 2 == 0 ? "hat" : "shirt";
-      int metricValue = 100 + i * 5;
-      events.add(eventTime + "," + item + "," + metricValue);
-    }
-
-    return String.join("\n", events);
-  }
-
-
   /**
    * Tests that when a compaction task filters out all rows using a transform spec,
    * tombstones are created to properly drop the old segments. This test covers both
@@ -596,6 +543,58 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         finalSegmentCount,
         "2 of 3 segments should be dropped via tombstones when transform filters all rows where item = 'shirt'"
     );
+  }
+
+  private int getTotalRowCount()
+  {
+    String sql = StringUtils.format("SELECT COUNT(*) as cnt FROM \"%s\"", dataSource);
+    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
+    List<Map<String, Object>> rows = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        result.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    return ((Number) rows.get(0).get("cnt")).intValue();
+  }
+
+  private void verifyNoRowsWithNestedValue(String nestedColumn, String field, String value)
+  {
+    String sql = StringUtils.format(
+        "SELECT COUNT(*) as cnt FROM \"%s\" WHERE json_value(%s, '$.%s') = '%s'",
+        dataSource,
+        nestedColumn,
+        field,
+        value
+    );
+    String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(new ClientSqlQuery(sql, null, false, false, false, null, null)));
+    List<Map<String, Object>> rows = JacksonUtils.readValue(
+        new DefaultObjectMapper(),
+        result.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(
+        0,
+        ((Number) rows.get(0).get("cnt")).intValue(),
+        StringUtils.format("Expected no rows where %s.%s = '%s'", nestedColumn, field, value)
+    );
+  }
+
+
+  private String generateEventsInInterval(Interval interval, int numEvents, long spacingMillis)
+  {
+    List<String> events = new ArrayList<>();
+
+    for (int i = 1; i <= numEvents; i++) {
+      DateTime eventTime = interval.getStart().plus(spacingMillis * i);
+      if (eventTime.isAfter(interval.getEnd())) {
+        throw new IAE("Interval cannot fit [%d] events with spacing of [%d] millis", numEvents, spacingMillis);
+      }
+      String item = i % 2 == 0 ? "hat" : "shirt";
+      int metricValue = 100 + i * 5;
+      events.add(eventTime + "," + item + "," + metricValue);
+    }
+
+    return String.join("\n", events);
   }
 
   private void verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint()

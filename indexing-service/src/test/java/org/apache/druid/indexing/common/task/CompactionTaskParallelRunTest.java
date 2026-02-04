@@ -1029,7 +1029,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             true
         ))
         .transformSpec(new CompactionTransformSpec(
-            new SelectorDimFilter("dim", "nonexistent_value", null) // Filters out all rows
+            new SelectorDimFilter("dim", "nonexistent_value", null), // Filters out all rows
+            null
         ))
         .build();
 
@@ -1076,7 +1077,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             true
         ))
         .transformSpec(new CompactionTransformSpec(
-            new SelectorDimFilter("dim", "nonexistent_value", null) // Filters all rows
+            new SelectorDimFilter("dim", "nonexistent_value", null), // Filters all rows
+            null
         ))
         .build();
 
