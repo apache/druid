@@ -163,6 +163,25 @@ public class MultiStageQueryContext
 
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
+  /**
+   * Context parameter to control the low-frequency worker status polling interval in milliseconds.
+   * This is the polling interval used after workers have been running for more than 10 seconds.
+   * Default is 2000ms (0.5 polls/sec). Increase this value to reduce overlord load when running many MSQ tasks.
+   * 
+   * Performance optimization: With ~1000 concurrent query workers, the default 2000ms polling interval
+   * generates ~500 requests/sec to the overlord. Increasing this to 5000ms reduces load by 60%.
+   */
+  public static final String CTX_WORKER_STATUS_POLL_INTERVAL_MS = "workerStatusPollIntervalMs";
+  public static final long DEFAULT_WORKER_STATUS_POLL_INTERVAL_MS = 2000;
+
+  /**
+   * Context parameter to control the high-frequency worker status polling interval in milliseconds.
+   * This is the polling interval used during the first 10 seconds after any worker starts.
+   * Default is 100ms (10 polls/sec). Increase this value to reduce overlord load during startup.
+   */
+  public static final String CTX_WORKER_STATUS_POLL_INTERVAL_HIGH_MS = "workerStatusPollIntervalHighMs";
+  public static final long DEFAULT_WORKER_STATUS_POLL_INTERVAL_HIGH_MS = 100;
+
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
@@ -329,6 +348,26 @@ public class MultiStageQueryContext
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
   {
     return new HashSet<>(decodeList(CTX_SKIP_TYPE_VERIFICATION, queryContext.getString(CTX_SKIP_TYPE_VERIFICATION)));
+  }
+
+  /**
+   * Returns the low-frequency worker status polling interval in milliseconds.
+   * This interval is used after workers have been running for more than 10 seconds.
+   * Default is 2000ms. Increase to reduce overlord load when running many concurrent MSQ tasks.
+   */
+  public static long getWorkerStatusPollIntervalMs(final QueryContext queryContext)
+  {
+    return queryContext.getLong(CTX_WORKER_STATUS_POLL_INTERVAL_MS, DEFAULT_WORKER_STATUS_POLL_INTERVAL_MS);
+  }
+
+  /**
+   * Returns the high-frequency worker status polling interval in milliseconds.
+   * This interval is used during the first 10 seconds after any worker starts.
+   * Default is 100ms. Increase to reduce overlord load during task startup.
+   */
+  public static long getWorkerStatusPollIntervalHighMs(final QueryContext queryContext)
+  {
+    return queryContext.getLong(CTX_WORKER_STATUS_POLL_INTERVAL_HIGH_MS, DEFAULT_WORKER_STATUS_POLL_INTERVAL_HIGH_MS);
   }
 
   /**

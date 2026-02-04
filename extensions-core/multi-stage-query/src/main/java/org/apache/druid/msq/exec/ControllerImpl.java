@@ -726,6 +726,19 @@ public class ControllerImpl implements Controller
       taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
     }
 
+    // Get configurable polling intervals from query context (performance optimization)
+    final long highFrequencyPollIntervalMs = MultiStageQueryContext.getWorkerStatusPollIntervalHighMs(queryContext);
+    final long lowFrequencyPollIntervalMs = MultiStageQueryContext.getWorkerStatusPollIntervalMs(queryContext);
+
+    // Log the configured polling intervals for debugging and audit trail
+    log.info(
+        "Task[%s] configured worker polling intervals from context: "
+        + "highFrequencyPollIntervalMs=%d, lowFrequencyPollIntervalMs=%d",
+        id(),
+        highFrequencyPollIntervalMs,
+        lowFrequencyPollIntervalMs
+    );
+
     this.workerTaskLauncher = new MSQWorkerTaskLauncher(
         id(),
         task.getDataSource(),
@@ -741,7 +754,9 @@ public class ControllerImpl implements Controller
         },
         taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
-        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
+        TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
+        highFrequencyPollIntervalMs,
+        lowFrequencyPollIntervalMs
     );
 
     this.faultsExceededChecker = new FaultsExceededChecker(

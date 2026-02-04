@@ -71,10 +71,16 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MSQWorkerTaskLauncher
 {
   private static final Logger log = new Logger(MSQWorkerTaskLauncher.class);
-  private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
-  private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
+  
+  // Default polling intervals - can be overridden via constructor
+  private static final long DEFAULT_HIGH_FREQUENCY_CHECK_MILLIS = 100;
+  private static final long DEFAULT_LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
   private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
+
+  // Polling statistics logging interval (1 minute)
+  private static final long STATISTICS_LOG_INTERVAL_MS = 60000;
+
   private int currentRelaunchCount = 0;
 
   // States for "state" variable.
@@ -90,6 +96,19 @@ public class MSQWorkerTaskLauncher
   private final ControllerContext context;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
+  
+  // Configurable polling intervals - set via constructor for performance tuning
+  private final long highFrequencyCheckMillis;
+  private final long lowFrequencyCheckMillis;
+
+  // Polling statistics for debugging and monitoring Overlord load
+  // These are accessed only from the mainLoop thread, so no synchronization needed
+  private long totalPollCount = 0;
+  private long highFrequencyPollCount = 0;
+  private long lowFrequencyPollCount = 0;
+  private long lastStatisticsLogTime = 0;
+  private boolean hasLoggedHighFreqEntry = false;
+  private boolean hasLoggedLowFreqTransition = false;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
@@ -139,6 +158,10 @@ public class MSQWorkerTaskLauncher
 
   private final AtomicLong recentFullyStartedWorkerTimeInMillis = new AtomicLong(System.currentTimeMillis());
 
+  /**
+   * Constructor with default polling intervals.
+   * For performance tuning, use the overloaded constructor with configurable polling intervals.
+   */
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
       final String dataSource,
@@ -146,6 +169,38 @@ public class MSQWorkerTaskLauncher
       final RetryTask retryTask,
       final Map<String, Object> taskContextOverrides,
       final long maxTaskStartDelayMillis
+  )
+  {
+    this(
+        controllerTaskId,
+        dataSource,
+        context,
+        retryTask,
+        taskContextOverrides,
+        maxTaskStartDelayMillis,
+        DEFAULT_HIGH_FREQUENCY_CHECK_MILLIS,
+        DEFAULT_LOW_FREQUENCY_CHECK_MILLIS
+    );
+  }
+
+  /**
+   * Constructor with configurable polling intervals.
+   * 
+   * Performance optimization: When running many concurrent MSQ tasks (~1000+ query workers),
+   * increase the polling intervals to reduce overlord load.
+   * 
+   * @param highFrequencyCheckMillis Polling interval during first 10 seconds after worker starts (default: 100ms)
+   * @param lowFrequencyCheckMillis  Polling interval after workers have been running for 10+ seconds (default: 2000ms)
+   */
+  public MSQWorkerTaskLauncher(
+      final String controllerTaskId,
+      final String dataSource,
+      final ControllerContext context,
+      final RetryTask retryTask,
+      final Map<String, Object> taskContextOverrides,
+      final long maxTaskStartDelayMillis,
+      final long highFrequencyCheckMillis,
+      final long lowFrequencyCheckMillis
   )
   {
     this.controllerTaskId = controllerTaskId;
@@ -157,6 +212,21 @@ public class MSQWorkerTaskLauncher
     );
     this.retryTask = retryTask;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
+    this.highFrequencyCheckMillis = highFrequencyCheckMillis;
+    this.lowFrequencyCheckMillis = lowFrequencyCheckMillis;
+
+    // Always log the polling configuration for visibility and debugging
+    final boolean isCustomConfig = highFrequencyCheckMillis != DEFAULT_HIGH_FREQUENCY_CHECK_MILLIS
+                                   || lowFrequencyCheckMillis != DEFAULT_LOW_FREQUENCY_CHECK_MILLIS;
+    log.info(
+        "MSQ worker task launcher initialized for controller[%s]: "
+        + "highFrequencyPollMs=%d, lowFrequencyPollMs=%d, switchToLowFreqAfterMs=%d%s",
+        controllerTaskId,
+        highFrequencyCheckMillis,
+        lowFrequencyCheckMillis,
+        SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS,
+        isCustomConfig ? " (CUSTOM CONFIG)" : " (defaults)"
+    );
   }
 
   /**
@@ -401,6 +471,9 @@ public class MSQWorkerTaskLauncher
 
         // Sleep for a bit, maybe.
         sleep(computeSleepTime(System.currentTimeMillis() - loopStartTime), false);
+
+        // Log polling statistics periodically (at DEBUG level)
+        logPollingStatisticsIfNeeded();
       }
 
       // Only valid transition out of STARTED.
@@ -442,6 +515,17 @@ public class MSQWorkerTaskLauncher
         stopFuture.setException(e);
       }
     }
+
+    // Log final polling statistics on shutdown
+    log.info(
+        "Controller[%s] task launcher stopping. Final polling stats: "
+        + "totalPolls=%d, highFreqPolls=%d, lowFreqPolls=%d, trackedWorkers=%d",
+        controllerTaskId,
+        totalPollCount,
+        highFrequencyPollCount,
+        lowFrequencyPollCount,
+        taskTrackers.size()
+    );
 
     synchronized (taskIds) {
       // notify taskIds so launchWorkersIfNeeded can wake up, if it is sleeping, and notice stopFuture is done.
@@ -751,17 +835,93 @@ public class MSQWorkerTaskLauncher
 
   /**
    * Used by the main loop to decide how often to check task status.
+   * Uses configurable polling intervals for performance tuning.
+   * Also tracks polling statistics and logs mode transitions for debugging.
    */
   private long computeSleepTime(final long loopDurationMillis)
   {
     final OptionalLong maxTaskStartTime =
         taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMillis).max();
 
-    if (maxTaskStartTime.isPresent() &&
-        System.currentTimeMillis() - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS) {
-      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+    final long now = System.currentTimeMillis();
+    final boolean useHighFrequency = maxTaskStartTime.isPresent()
+                                     && now - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS;
+
+    // Track polling statistics
+    totalPollCount++;
+
+    if (useHighFrequency) {
+      highFrequencyPollCount++;
+      // Log first time entering high-frequency mode (once per launcher lifecycle)
+      if (!hasLoggedHighFreqEntry) {
+        hasLoggedHighFreqEntry = true;
+        log.info(
+            "Controller[%s] entering high-frequency polling mode: interval=%dms, "
+            + "duration=%dms, trackedWorkers=%d",
+            controllerTaskId,
+            highFrequencyCheckMillis,
+            SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS,
+            taskTrackers.size()
+        );
+      }
+      return highFrequencyCheckMillis - loopDurationMillis;
     } else {
-      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+      lowFrequencyPollCount++;
+      // Log first time switching from high to low frequency
+      if (!hasLoggedLowFreqTransition && highFrequencyPollCount > 0) {
+        hasLoggedLowFreqTransition = true;
+        log.info(
+            "Controller[%s] switching to low-frequency polling mode: interval=%dms, "
+            + "afterHighFreqPolls=%d, trackedWorkers=%d",
+            controllerTaskId,
+            lowFrequencyCheckMillis,
+            highFrequencyPollCount,
+            taskTrackers.size()
+        );
+      }
+      return lowFrequencyCheckMillis - loopDurationMillis;
+    }
+  }
+
+  /**
+   * Logs polling statistics periodically at INFO level.
+   * Helps understand polling behavior and diagnose Overlord load issues.
+   * Called from the main loop.
+   */
+  private void logPollingStatisticsIfNeeded()
+  {
+    final long now = System.currentTimeMillis();
+
+    // Initialize on first call
+    if (lastStatisticsLogTime == 0) {
+      lastStatisticsLogTime = now;
+      return;
+    }
+
+    // Log every STATISTICS_LOG_INTERVAL_MS (60 seconds)
+    if (now - lastStatisticsLogTime >= STATISTICS_LOG_INTERVAL_MS) {
+      final int activeWorkers;
+      final int pendingWorkers;
+
+      synchronized (taskIds) {
+        activeWorkers = fullyStartedTasks.size();
+        pendingWorkers = Math.max(0, desiredTaskCount - activeWorkers);
+      }
+
+      log.info(
+          "Controller[%s] polling stats: totalPolls=%d, highFreqPolls=%d, lowFreqPolls=%d, "
+          + "activeWorkers=%d, pendingWorkers=%d, configuredIntervals=[high=%dms, low=%dms]",
+          controllerTaskId,
+          totalPollCount,
+          highFrequencyPollCount,
+          lowFrequencyPollCount,
+          activeWorkers,
+          pendingWorkers,
+          highFrequencyCheckMillis,
+          lowFrequencyCheckMillis
+      );
+
+      lastStatisticsLogTime = now;
     }
   }
 
