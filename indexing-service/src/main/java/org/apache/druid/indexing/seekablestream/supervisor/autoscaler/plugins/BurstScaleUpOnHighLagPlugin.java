@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins;
 
+@SuppressWarnings("ClassCanBeRecord")
 public final class BurstScaleUpOnHighLagPlugin
 {
 
@@ -26,10 +27,11 @@ public final class BurstScaleUpOnHighLagPlugin
   public static final int EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD = 50_000;
 
   /**
-   * Controls how fast the additional tasks grow with the square root of current tasks.
-   * This allows bigger jumps when under-provisioned, but growth slows down as the task count increases.
+   * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
+   * This controls how aggressive the scaling is relative to partition count.
+   * That value was chosen by carefully analyzing the math model behind the implementation.
    */
-  private static final int SQRT_TASK_COUNT_SCALE_FACTOR = 3;
+  private static final double K_PARTITION_DIVISOR = 6.4;
 
   private final int lagThreshold;
 
@@ -47,13 +49,14 @@ public final class BurstScaleUpOnHighLagPlugin
    * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
    * is above the configured threshold.
    * <p>
-   * This uses a capped sqrt-based formula:
-   * {@code additionalTasks = min(MAX_JUMP, BASE + sqrt(currentTasks) * SQRT_COEFF) * lagFactor * headroom}
+   * This uses a logarithmic formula for consistent absolute growth:
+   * {@code deltaTasks = K * ln(lagSeverity)}
+   * where {@code K = (partitionCount / 6.4) / sqrt(currentTaskCount)}
    * <p>
    * This ensures:
-   * 1. Bigger jumps are allowed when under-provisioned.
-   * 2. Sqrt growth (additional tasks grow slower than task count).
-   * 3. Self-damping (headroomRatio reduces jumps near max capacity).
+   * 1. Partition-aware scaling: larger datasets get more aggressive scaling.
+   * 2. Small taskCount's get a massive relative boost, while large taskCount's receive more measured, stable increases.
+   * 3. Logarithmic lag response: diminishing returns at extreme lag values.
    */
   public int computeScaleUpBoost(
       double aggregateLag,
@@ -72,15 +75,13 @@ public final class BurstScaleUpOnHighLagPlugin
     }
 
     final double lagSeverity = lagPerPartition / lagThreshold;
-    final double lagFactor = lagSeverity / (lagSeverity + 1.0);
-    // Use quadratic headroom damping to maintain higher pressure near capacity
-    final double headroomRatio = Math.max(0.0, 1.0 - Math.pow((double) currentTaskCount / taskCountMax, 2));
 
-    // Compute target additional tasks (sqrt-based growth)
-    final double rawAdditional = 1.0 + Math.sqrt(currentTaskCount) * SQRT_TASK_COUNT_SCALE_FACTOR;
-    final double deltaTasks = rawAdditional * lagFactor * headroomRatio;
 
-    final double targetTaskCount = Math.min((double) taskCountMax, (double) currentTaskCount + deltaTasks);
+    // Logarithmic growth: ln(lagSeverity) is positive when lagSeverity > 1
+    // First multoplier decreases with sqrt(currentTaskCount): aggressive when small, conservative when large
+    final double deltaTasks = (partitionCount / K_PARTITION_DIVISOR) / Math.sqrt(currentTaskCount) * Math.log(lagSeverity);
+
+    final double targetTaskCount = Math.min(taskCountMax, (double) currentTaskCount + deltaTasks);
 
     // Compute precise PPT reduction to avoid early integer truncation artifacts
     final double currentPPT = (double) partitionCount / currentTaskCount;

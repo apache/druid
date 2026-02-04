@@ -30,11 +30,9 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,16 +94,18 @@ public class CostBasedAutoScalerTest
     Assert.assertTrue(contains(exceedsPartitions, 1));
     Assert.assertTrue(contains(exceedsPartitions, 2));
 
-    // Lag expansion: low lag should not include max, high lag should
+    // Lag expansion: low lag should not include max, high lag should allow aggressive scaling
     int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30, boundariesPlugin, highLagPlugin);
     Assert.assertFalse("Low lag should not include max task count", contains(lowLagCounts, 30));
     Assert.assertTrue("Low lag should cap scale up around 4 tasks", contains(lowLagCounts, 4));
 
+    // High lag uses logarithmic formula: K * ln(lagSeverity) where K = P/(6.4*sqrt(C))
+    // For P=30, C=3, lagPerPartition=500K, threshold=50K: lagSeverity=10, K=2.7, delta=6.2
+    // This allows controlled scaling to ~10-15 tasks (not all the way to max)
     long highAggregateLag = 30L * 500_000L;
     int[] highLagCounts = computeValidTaskCounts(30, 3, highAggregateLag, 1, 30, boundariesPlugin, highLagPlugin);
-    // With capped scaling (1->10 tasks jump max), we won't reach 30 immediately from 3.
-    // We expect it to reach 10.
     Assert.assertTrue("High lag should allow scaling to 10 tasks", contains(highLagCounts, 10));
+    Assert.assertTrue("High lag should allow scaling to 15 tasks", contains(highLagCounts, 15));
     Assert.assertFalse("Should not jump straight to 30 from 3", contains(highLagCounts, 30));
 
     // Respects taskCountMax
@@ -128,106 +128,6 @@ public class CostBasedAutoScalerTest
     Assert.assertFalse("Should not exceed taskCountMax", contains(bothBounds, 13));
     Assert.assertTrue("Should include values at taskCountMin", contains(bothBounds, 10));
     Assert.assertTrue("Should include values at taskCountMax", contains(bothBounds, 12));
-  }
-
-  @Test
-  @Ignore
-  public void testScalingExamplesTable()
-  {
-    int partitionCount = 30;
-    int taskCountMax = 30;
-    double pollIdleRatio = 0.1;
-    double avgProcessingRate = 10.0;
-
-    // Create a local autoScaler with taskCountMax matching the test parameters
-    SupervisorSpec mockSpec = Mockito.mock(SupervisorSpec.class);
-    SeekableStreamSupervisor mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    ServiceEmitter mockEmitter = Mockito.mock(ServiceEmitter.class);
-    SeekableStreamSupervisorIOConfig mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
-
-    when(mockSpec.getId()).thenReturn("test-supervisor");
-    when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
-    when(mockIoConfig.getStream()).thenReturn("test-stream");
-
-    CostBasedAutoScalerConfig localConfig = CostBasedAutoScalerConfig.builder()
-                                                                     .taskCountMax(taskCountMax)
-                                                                     .taskCountMin(1)
-                                                                     .enableTaskAutoScaler(true)
-                                                                     .lagWeight(0.6)
-                                                                     .idleWeight(0.4)
-                                                                     .build();
-
-    CostBasedAutoScaler localAutoScaler = new CostBasedAutoScaler(
-        mockSupervisor,
-        localConfig,
-        mockSpec,
-        mockEmitter
-    );
-
-    class Example
-    {
-      final int currentTasks;
-      final long lagPerPartition;
-      final int expectedTasks;
-
-      Example(int currentTasks, long lagPerPartition, int expectedTasks)
-      {
-        this.currentTasks = currentTasks;
-        this.lagPerPartition = lagPerPartition;
-        this.expectedTasks = expectedTasks;
-      }
-    }
-
-    // Updated expectations based on capped sqrt-based scaling
-    Example[] examples = new Example[]{
-        new Example(3, 50_000L, 6),
-        new Example(3, 300_000L, 10),
-        new Example(3, 500_000L, 10),
-        new Example(10, 100_000L, 30),
-        new Example(10, 300_000L, 30),
-        new Example(10, 500_000L, 30),
-        new Example(20, 500_000L, 30),
-        new Example(25, 500_000L, 30)
-    };
-
-    OptimalTaskCountBoundariesPlugin boundariesPlugin = new OptimalTaskCountBoundariesPlugin();
-    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(BurstScaleUpOnHighLagPlugin.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD);
-
-    for (Example example : examples) {
-      long aggregateLag = example.lagPerPartition * partitionCount;
-      int[] validCounts = computeValidTaskCounts(
-          partitionCount,
-          example.currentTasks,
-          aggregateLag,
-          1,
-          taskCountMax,
-          boundariesPlugin,
-          highLagPlugin
-      );
-      Assert.assertTrue(
-          "Should include expected task count for current=" + example.currentTasks + ", lag=" + example.lagPerPartition,
-          contains(validCounts, example.expectedTasks)
-      );
-
-      CostMetrics metrics = createMetricsWithRate(
-          example.lagPerPartition,
-          example.currentTasks,
-          partitionCount,
-          pollIdleRatio,
-          avgProcessingRate
-      );
-      int actualOptimal = localAutoScaler.computeOptimalTaskCount(metrics);
-      if (actualOptimal == -1) {
-        actualOptimal = example.currentTasks;
-      }
-      Assert.assertEquals(
-          "Optimal task count should match for current=" + example.currentTasks
-          + ", lag=" + example.lagPerPartition
-          + ", valid=" + Arrays.toString(validCounts),
-          example.expectedTasks,
-          actualOptimal
-      );
-    }
   }
 
   @Test
