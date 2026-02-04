@@ -53,7 +53,6 @@ public class Metric
   public static final String REFRESH_SKIPPED_TOMBSTONES = PREFIX + "refresh/tombstone/count";
   public static final String REFRESH_DURATION_MILLIS = PREFIX + "refresh/time";
   public static final String DATASOURCE_REMOVED = PREFIX + "dataSource/removed";
-  public static final String SCHEMA_ROW_SIGNATURE_INITIALIZED = PREFIX + "rowSignature/initialized";
   public static final String SCHEMA_ROW_SIGNATURE_CHANGED = PREFIX + "rowSignature/changed";
   public static final String SCHEMA_ROW_SIGNATURE_COLUMN_COUNT = PREFIX + "rowSignature/column/count";
 

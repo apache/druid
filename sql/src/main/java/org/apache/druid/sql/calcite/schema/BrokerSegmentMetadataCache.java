@@ -370,7 +370,6 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
           dataSource, newColumnCount, newRowSignature
       );
 
-      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, 1, builder);
       emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newColumnCount, builder);
       return;
     }

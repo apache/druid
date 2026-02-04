@@ -431,10 +431,6 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1L);
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1L);
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "some_datasource"), 1L);
-
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo2"), 3L);
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "some_datasource"), 9L);
@@ -833,7 +829,6 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
 
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1L);
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
 
     Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
@@ -1000,10 +995,6 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
     refreshLatch = new CountDownLatch(1);
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
-
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1L);
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1L);
-    emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_INITIALIZED, Map.of(DruidMetrics.DATASOURCE, "some_datasource"), 1L);
 
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo"), 6L);
     emitter.verifyValue(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, Map.of(DruidMetrics.DATASOURCE, "foo2"), 3L);
