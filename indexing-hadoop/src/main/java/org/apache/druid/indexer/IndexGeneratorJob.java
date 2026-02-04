@@ -602,7 +602,7 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+      return HadoopDruidIndexerConfig.INDEX_MERGER
           .persist(index, interval, file, config.getIndexSpecForIntermediatePersists(), progressIndicator, null);
     }
 
@@ -614,7 +614,7 @@ public class IndexGeneratorJob implements Jobby
     ) throws IOException
     {
       boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      return HadoopDruidIndexerConfig.INDEX_MERGER_V9
+      return HadoopDruidIndexerConfig.INDEX_MERGER
           .mergeQueryableIndex(
               indexes,
               rollup,

@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -69,8 +70,9 @@ import java.util.stream.Collectors;
 public class StringSqlAggregator implements SqlAggregator
 {
   private final SqlAggFunction function;
+  private static final String NAME = "STRING_AGG";
 
-  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction("STRING_AGG"));
+  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction(NAME));
   public static final StringSqlAggregator LISTAGG = new StringSqlAggregator(new StringAggFunction("LISTAGG"));
 
   public StringSqlAggregator(SqlAggFunction function)
@@ -130,7 +132,7 @@ public class StringSqlAggregator implements SqlAggregator
         // maxBytes must be a literal
         return null;
       }
-      maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
+      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), NAME, "maxBytes").intValue();
     }
 
     final DruidExpression arg = arguments.get(0);
@@ -214,7 +216,7 @@ public class StringSqlAggregator implements SqlAggregator
 
         throw SimpleSqlAggregator.badTypeException(
             columnName,
-            "STRING_AGG",
+            NAME,
             ((RowSignatures.ComplexSqlType) type).getColumnType()
         );
       }

@@ -41,6 +41,7 @@ public class DataServerRequestDescriptorTest
             "localhost:8081",
             null,
             1,
+            null,
             ServerType.INDEXER_EXECUTOR,
             "tier1", 2
         ),

@@ -3403,7 +3403,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
 
-
         boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           if (entry.getValue().equals(getEndOfPartitionMarker())) {
@@ -3453,17 +3452,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * This method is invoked to determine whether a task count adjustment is needed
    * during a task rollover based on the recommendations from the task auto-scaler.
  */
+
   @VisibleForTesting
   void maybeScaleDuringTaskRollover()
   {
     if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
       int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
-      if (rolloverTaskCount > 0) {
+      if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
         log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
         changeTaskCountInIOConfig(rolloverTaskCount);
         // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
         // This seems the best way to inject task amount recalculation during the rollover.
         clearAllocationInfo();
+
+        ServiceMetricEvent.Builder event = ServiceMetricEvent
+            .builder()
+            .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+            .setDimension(DruidMetrics.DATASOURCE, dataSource)
+            .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+
+        emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, rolloverTaskCount));
       }
     }
   }
@@ -4048,7 +4056,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           builder.put(partitionId, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
         }
       } else {
-        // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
+        // if we don't have a startingOffset (first run, or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,

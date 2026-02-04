@@ -860,7 +860,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.4.0
+version: 7.5.2
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -894,7 +894,7 @@ name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.14
+version: 4.5.24
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -5110,7 +5110,7 @@ name: Testcontainers
 license_category: binary
 module: extensions-core/druid-testcontainers
 license_name: MIT License
-version: 1.21.3
+version: 2.0.3
 libraries:
   - org.testcontainers: testcontainers
 

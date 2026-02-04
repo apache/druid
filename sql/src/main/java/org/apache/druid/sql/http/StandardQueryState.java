@@ -17,16 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.jackson;
+package org.apache.druid.sql.http;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
-
-public class StringObjectPairListTest
+/**
+ * Standard strings returned by {@link QueryInfo#state()}. Engines can add their own if they like.
+ */
+public class StandardQueryState
 {
-  @Test
-  public void testEquals()
+  public static final String ACCEPTED = "ACCEPTED";
+  public static final String RUNNING = "RUNNING";
+  public static final String SUCCESS = "SUCCESS";
+  public static final String FAILED = "FAILED";
+  public static final String CANCELED = "CANCELED";
+
+  private StandardQueryState()
   {
-    EqualsVerifier.forClass(StringObjectPairList.class).usingGetClass().withNonnullFields("pairs").verify();
+    // No instantiation.
   }
 }
