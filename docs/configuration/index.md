@@ -440,6 +440,7 @@ This deep storage is used to interface with HDFS. You must load the `druid-hdfs-
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
+|`druid.storage.compressionFormat`|The compression format applied to the segments uploaded to HDFS. Only `zip` and `lz4` are supported. |zip|
 
 #### Cassandra deep storage
 
