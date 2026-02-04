@@ -447,9 +447,9 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *   <li>Collect olderThan application thresholds from all non-segment-granularity rules</li>
    *   <li>For each interval in the base timeline:
    *   <ul>
-   *     <li>find thresholds for non-segment granularity rules that fall within it</li>
-   *     <li>Align those thresholds to the interval's segment granularity</li>
-   *     <li>Split base intervals at aligned thresholds</li>
+   *     <li>find olderThan thresholds for non-segment granularity rules that fall within it</li>
+   *     <li>Align those thresholds to the interval's targeted segment granularity using bucketStart on the threshold date</li>
+   *     <li>Split base intervals at the granularity aligned thresholds that were found inside of them</li>
    *   </ul>
    *   <li>Return the timeline of non-overlapping intervals split for most precise possible rule application (due to segment gran alignment, sometimes rules will be applied later than their explicitly defined period)</li>
    * </ol>
@@ -516,7 +516,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *   <li>If no segment granularity rules exist:
    *     <ol type="a">
    *       <li>Find the most recent threshold from non-segment-granularity rules</li>
-   *       <li>Use the default granularity to align an interval from [-inf, most recent threshold)</li>
+   *       <li>Use the default granularity to granularity align an interval from [-inf, most recent threshold)</li>
    *     </ol>
    *   </li>
    *   <li>If segment granularity rules exist:
@@ -525,7 +525,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *       <li>Create intervals for each rule, adjusting the interval end to be aligned to the rule's segment granularity</li>
    *       <li>If non-segment-granularity thresholds exist that are more recent than the most recent segment granularity rule's end:
    *         <ol type="i">
-   *           <li>Prepend an interval from [most recent segment granularity end, most recent non-segment-granularity threshold)</li>
+   *           <li>Prepend an interval from [most recent segment granularity rule interval end, most recent non-segment-granularity threshold)</li>
    *         </ol>
    *       </li>
    *     </ol>
@@ -611,7 +611,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         if (alignedEnd.isBefore(mostRecentSegmentGranEnd) || alignedEnd.isEqual(mostRecentSegmentGranEnd)) {
           LOG.debug(
               "Most recent non-segment-gran threshold [%s] aligns to [%s], which is not after "
-              + "most recent segment gran end [%s]. No prepended interval needed.",
+              + "most recent segment granularity rule interval end [%s]. No prepended interval needed.",
               mostRecentNonSegmentGranThreshold,
               alignedEnd,
               mostRecentSegmentGranEnd
