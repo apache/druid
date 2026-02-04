@@ -472,7 +472,7 @@ This value is for the ideal situation in which there is at most one set of tasks
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-## Multi-Supervisor Support (Experimental)
+## Multi-Supervisor Support
 Druid supports multiple stream supervisors ingesting into the same datasource. This means you can have any number of stream supervisors (Kafka, Kinesis, etc.) ingesting into the same datasource at the same time.
 In order to ensure proper synchronization between ingestion tasks with multiple supervisors, it's important to set `useConcurrentLocks=true` in the `context` field of the supervisor spec. Read more [here](concurrent-append-replace.md).
 

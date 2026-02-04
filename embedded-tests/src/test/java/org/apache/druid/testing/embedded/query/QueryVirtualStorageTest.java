@@ -66,6 +66,11 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 {
+  // size of wiki segments, adjust this if segment size changes for some reason
+  private static final long SIZE_BYTES = 3776682L;
+  private static final long CACHE_SIZE = HumanReadableBytes.parse("1MiB");
+  private static final long MAX_SIZE = HumanReadableBytes.parse("100MiB");
+
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -88,11 +93,11 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
                       StringUtils.format(
                           "[{\"path\":\"%s\",\"maxSize\":\"%s\"}]",
                           cluster.getTestFolder().newFolder().getAbsolutePath(),
-                          HumanReadableBytes.parse("1MiB")
+                          CACHE_SIZE
                       )
                   )
               )
-              .addProperty("druid.server.maxSize", String.valueOf(HumanReadableBytes.parse("100MiB")));
+              .addProperty("druid.server.maxSize", String.valueOf(MAX_SIZE));
 
     broker.setServerMemory(200_000_000)
           .addProperty("druid.msq.dart.controller.maxRetainedReportCount", "10")
@@ -236,12 +241,12 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
     Assertions.assertEquals(
-        HumanReadableBytes.parse("1MiB"),
+        CACHE_SIZE,
         coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
     );
     coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
     Assertions.assertEquals(
-        HumanReadableBytes.parse("100MiB"),
+        MAX_SIZE,
         coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
     );
   }
@@ -293,9 +298,19 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(segmentChannelCounters.getLoadFiles()[0] > 0 && segmentChannelCounters.getLoadFiles()[0] <= segmentChannelCounters.getFiles()[0]);
     // size of all segments at time of writing, possibly we have to load all of them, but possibly less depending on
     // test order
-    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= 3776682L);
+    Assertions.assertTrue(segmentChannelCounters.getLoadBytes()[0] > 0 && segmentChannelCounters.getLoadBytes()[0] <= SIZE_BYTES);
     Assertions.assertTrue(segmentChannelCounters.getLoadTime()[0] > 0);
     Assertions.assertTrue(segmentChannelCounters.getLoadWait()[0] > 0);
+  }
+
+  @Test
+  void testQuerySysTables()
+  {
+    String query = "SELECT curr_size, max_size, storage_size FROM sys.servers WHERE tier IS NOT NULL AND server_type = 'historical'";
+    Assertions.assertEquals(
+        StringUtils.format("%s,%s,%s", SIZE_BYTES, MAX_SIZE, CACHE_SIZE),
+        cluster.callApi().runSql(query)
+    );
   }
 
 
