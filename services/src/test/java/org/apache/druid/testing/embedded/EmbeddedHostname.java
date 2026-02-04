@@ -24,9 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.http.client.utils.URIBuilder;
 import org.testcontainers.DockerClientFactory;
 
-import java.net.InetAddress;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 
 /**
  * Hostname to be used by embedded services, both Druid and external.
@@ -38,7 +36,6 @@ import java.net.UnknownHostException;
  */
 public class EmbeddedHostname
 {
-  private static final String DOCKER_HOST_INTERNAL = "host.docker.internal";
   private static final EmbeddedHostname LOCALHOST = new EmbeddedHostname("localhost");
 
   private final String hostname;
@@ -54,28 +51,20 @@ public class EmbeddedHostname
   }
 
   /**
-   * Special hostname for the Docker host that is reachable from both Docker
-   * containers and the JVM running the tests.
+   * Returns an EmbeddedHostname that is reachable from both embedded services
+   * (running on the host JVM) and containerized services (running in Docker).
    * <p>
-   * Uses {@code host.docker.internal} which communication patterns where:
-   * <ul>
-   *   <li>Embedded JVM services can reach Docker containers via host port bindings</li>
-   *   <li>Docker containers can reach the host (and other containers via host ports)</li>
-   * </ul>
+   * On Linux, this returns the Docker bridge gateway IP (e.g., {@code 172.17.0.1})
+   * which is routable from both the host and containers.
+   * <p>
+   * Note: On Mac/Windows with Docker Desktop, this returns {@code localhost}
+   * which only works for embedded services. Tests mixing embedded and containerized
+   * services should run on Linux.
    */
   public static EmbeddedHostname containerFriendly()
   {
-    // Prefer host.docker.internal if available (Docker Desktop)
-    try {
-      InetAddress.getByName(DOCKER_HOST_INTERNAL);
-      return new EmbeddedHostname(DOCKER_HOST_INTERNAL);
-    }
-    catch (UnknownHostException e) {
-      // Fallback: use testcontainers' host IP detection
-      // Returns Docker bridge gateway on Linux (e.g., 172.17.0.1)
-      String hostIp = DockerClientFactory.instance().dockerHostIpAddress();
-      return new EmbeddedHostname(hostIp);
-    }
+    String dockerHostIp = DockerClientFactory.instance().dockerHostIpAddress();
+    return new EmbeddedHostname(dockerHostIp);
   }
 
   /**

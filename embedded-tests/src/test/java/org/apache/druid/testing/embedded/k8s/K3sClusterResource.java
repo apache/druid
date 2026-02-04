@@ -135,7 +135,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   protected K3sContainer createContainer()
   {
     Objects.requireNonNull(druidImageName, "No Druid image specified");
-    final K3sContainer container = new K3sContainer(DockerImageName.parse(K3S_IMAGE_NAME));
+    final K3sContainer container = new K3sContainer(DockerImageName.parse(K3S_IMAGE_NAME))
+        // Enable host.docker.internal on Linux (Docker Desktop provides this automatically)
+        .withExtraHost("host.docker.internal", "host-gateway");
 
     final List<String> portBindings = new ArrayList<>();
     for (K3sDruidService service : services) {

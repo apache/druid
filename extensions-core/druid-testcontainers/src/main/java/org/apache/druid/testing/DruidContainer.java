@@ -109,6 +109,9 @@ public class DruidContainer extends GenericContainer<DruidContainer>
         port -> port + ":" + port
     ).collect(Collectors.toList());
     setPortBindings(portBindings);
+
+    // Enable host.docker.internal on Linux (Docker Desktop provides this automatically)
+    withExtraHost("host.docker.internal", "host-gateway");
   }
 
   /**

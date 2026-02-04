@@ -65,22 +65,19 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
   @Override
   protected KafkaContainer createContainer()
   {
-    // The result of getBootstrapServers() is the first entry in KafkaContainer.advertisedListeners.
-    // Override getBootstrapServers() to ensure that both DruidContainers and
-    // EmbeddedDruidServers can connect to the Kafka brokers.
-    return new KafkaContainer(KAFKA_IMAGE) {
-      @Override
-      public String getBootstrapServers()
-      {
-        return cluster.getEmbeddedHostname().useInHostAndPort(super.getBootstrapServers());
-      }
-    };
+    return new KafkaContainer(KAFKA_IMAGE)
+        // Enable host.docker.internal on Linux (Docker Desktop provides this automatically)
+        .withExtraHost("host.docker.internal", "host-gateway");
   }
 
+  /**
+   * Returns the Kafka bootstrap server URL, transformed using the cluster's
+   * embedded hostname so it's reachable from both embedded and containerized services.
+   */
   public String getBootstrapServerUrl()
   {
     ensureRunning();
-    return getContainer().getBootstrapServers();
+    return cluster.getEmbeddedHostname().useInHostAndPort(getContainer().getBootstrapServers());
   }
 
   public Map<String, Object> consumerProperties()

@@ -50,7 +50,9 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<RedpandaC
   protected RedpandaContainer createContainer()
   {
     return new RedpandaContainer(SCHEMA_REGISTRY_IMAGE)
-        .dependsOn(kafkaResource.getContainer());
+        .dependsOn(kafkaResource.getContainer())
+        // Enable host.docker.internal on Linux (Docker Desktop provides this automatically)
+        .withExtraHost("host.docker.internal", "host-gateway");
   }
 
   @Override
