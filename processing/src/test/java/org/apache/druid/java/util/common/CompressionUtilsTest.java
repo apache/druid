@@ -423,7 +423,7 @@ public class CompressionUtilsTest
 
     final FileUtils.FileCopyResult result;
     try (final InputStream in = new FileInputStream(lz4File)) {
-      result = CompressionUtils.Format.LZ4.decompressToDirectory(in, newDir);
+      result = CompressionUtils.Format.LZ4.decompressDirectory(in, newDir);
     }
 
     verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
