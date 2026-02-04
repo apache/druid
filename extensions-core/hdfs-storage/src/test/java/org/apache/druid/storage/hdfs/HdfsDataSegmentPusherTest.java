@@ -45,6 +45,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -125,7 +126,8 @@ public class HdfsDataSegmentPusherTest
   @Test
   public void testPushWithMultipleSegments() throws Exception
   {
-    testUsingSchemeForMultipleSegments("file", 3);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.ZIP);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.LZ4);
   }
 
   @Test
@@ -209,7 +211,7 @@ public class HdfsDataSegmentPusherTest
     );
   }
 
-  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
+  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments, CompressionUtils.Format format) throws Exception
   {
     Configuration conf = new Configuration(true);
     DataSegment[] segments = new DataSegment[numberOfSegments];
@@ -225,11 +227,13 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
     final File storageDirectory = tempFolder.newFolder();
 
+    config.setCompressionFormat(format);
     config.setStorageDirectory(
         scheme != null
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
+
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     for (int i = 0; i < numberOfSegments; i++) {
@@ -250,10 +254,11 @@ public class HdfsDataSegmentPusherTest
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
       String indexUri = StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
           pusher.getStorageDir(segments[i], false),
-          segments[i].getShardSpec().getPartitionNum()
+          segments[i].getShardSpec().getPartitionNum(),
+          format.getExtension()
       );
 
       Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
@@ -268,10 +273,11 @@ public class HdfsDataSegmentPusherTest
       String segmentPath = pusher.getStorageDir(pushedSegment, false);
 
       File indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
       Assert.assertTrue(indexFile.exists());
 
@@ -279,10 +285,11 @@ public class HdfsDataSegmentPusherTest
       Assert.assertEquals(segments[i], pushedSegment);
 
       indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
       Assert.assertTrue(indexFile.exists());
 
