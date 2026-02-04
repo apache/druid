@@ -464,7 +464,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
     Preconditions.checkArgument(entry.getPolicyEligibility() != null, "Must have a policy eligibility");
-    switch (entry.getPolicyEligibility().getPolicyEligibility()) {
+    switch (entry.getPolicyEligibility().getState()) {
       case FULL_COMPACTION:
         clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
         break;

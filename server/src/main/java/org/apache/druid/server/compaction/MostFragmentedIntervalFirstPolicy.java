@@ -187,23 +187,23 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  public Eligibility checkEligibilityForCompaction(
+  public CompactionEligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
       CompactionTaskStatus latestTaskStatus
   )
   {
     final CompactionStatistics uncompacted = candidate.getUncompactedStats();
     if (uncompacted == null) {
-      return Eligibility.FULL_COMPACTION_ELIGIBLE;
+      return CompactionEligibility.FULL_COMPACTION_ELIGIBLE;
     } else if (uncompacted.getNumSegments() < 1) {
-      return Eligibility.fail("No uncompacted segments in interval");
+      return CompactionEligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
-      return Eligibility.fail(
+      return CompactionEligibility.fail(
           "Uncompacted segments[%,d] in interval must be at least [%,d]",
           uncompacted.getNumSegments(), minUncompactedCount
       );
     } else if (uncompacted.getTotalBytes() < minUncompactedBytes.getBytes()) {
-      return Eligibility.fail(
+      return CompactionEligibility.fail(
           "Uncompacted bytes[%,d] in interval must be at least [%,d]",
           uncompacted.getTotalBytes(), minUncompactedBytes.getBytes()
       );
@@ -211,7 +211,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
 
     final long avgSegmentSize = (uncompacted.getTotalBytes() / uncompacted.getNumSegments());
     if (avgSegmentSize > maxAverageUncompactedBytesPerSegment.getBytes()) {
-      return Eligibility.fail(
+      return CompactionEligibility.fail(
           "Average size[%,d] of uncompacted segments in interval must be at most [%,d]",
           avgSegmentSize, maxAverageUncompactedBytesPerSegment.getBytes()
       );
@@ -220,13 +220,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     final double uncompactedBytesRatio = (double) uncompacted.getTotalBytes() /
                                          (uncompacted.getTotalBytes() + candidate.getCompactedStats().getTotalBytes());
     if (uncompactedBytesRatio < incrementalCompactionUncompactedBytesRatioThreshold) {
-      return Eligibility.incrementalCompaction(
+      return CompactionEligibility.incrementalCompaction(
           "Uncompacted bytes ratio[%.2f] is below threshold[%.2f]",
           uncompactedBytesRatio,
           incrementalCompactionUncompactedBytesRatioThreshold
       );
     } else {
-      return Eligibility.FULL_COMPACTION_ELIGIBLE;
+      return CompactionEligibility.FULL_COMPACTION_ELIGIBLE;
     }
   }
 

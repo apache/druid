@@ -49,7 +49,7 @@ public class CompactionCandidate
   private final long totalBytes;
   private final int numIntervals;
 
-  private final CompactionCandidateSearchPolicy.Eligibility policyEligiblity;
+  private final CompactionEligibility policyEligiblity;
   private final CompactionStatus currentStatus;
 
   public static CompactionCandidate from(
@@ -84,7 +84,7 @@ public class CompactionCandidate
       Interval umbrellaInterval,
       Interval compactionInterval,
       int numDistinctSegmentIntervals,
-      CompactionCandidateSearchPolicy.Eligibility policyEligiblity,
+      CompactionEligibility policyEligiblity,
       @Nullable CompactionStatus currentStatus
   )
   {
@@ -170,7 +170,7 @@ public class CompactionCandidate
   }
 
   @Nullable
-  public CompactionCandidateSearchPolicy.Eligibility getPolicyEligibility()
+  public CompactionEligibility getPolicyEligibility()
   {
     return policyEligiblity;
   }
@@ -190,7 +190,7 @@ public class CompactionCandidate
     );
   }
 
-  public CompactionCandidate withPolicyEligibility(CompactionCandidateSearchPolicy.Eligibility eligibility)
+  public CompactionCandidate withPolicyEligibility(CompactionEligibility eligibility)
   {
     return new CompactionCandidate(
         segments,
@@ -231,8 +231,8 @@ public class CompactionCandidate
   )
   {
     CompactionStatus.Evaluator evaluator = new CompactionStatus.Evaluator(this, config, fingerprintMapper);
-    Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluated = evaluator.evaluate();
-    switch (Objects.requireNonNull(evaluated.lhs).getPolicyEligibility()) {
+    Pair<CompactionEligibility, CompactionStatus> evaluated = evaluator.evaluate();
+    switch (Objects.requireNonNull(evaluated.lhs).getState()) {
       case NOT_APPLICABLE:
       case NOT_ELIGIBLE:
         return this.withPolicyEligibility(evaluated.lhs).withCurrentStatus(evaluated.rhs);
@@ -243,9 +243,9 @@ public class CompactionCandidate
               evaluated.rhs.getState()
           );
         }
-        final CompactionCandidateSearchPolicy.Eligibility searchPolicyEligibility =
+        final CompactionEligibility searchPolicyEligibility =
             searchPolicy.checkEligibilityForCompaction(this, null);
-        switch (searchPolicyEligibility.getPolicyEligibility()) {
+        switch (searchPolicyEligibility.getState()) {
           case
               NOT_ELIGIBLE: // although evaluator thinks this interval qualifies for compaction, but policy decided not its turn yet.
             return this.withPolicyEligibility(searchPolicyEligibility)

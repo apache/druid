@@ -389,9 +389,9 @@ public class CompactionStatus
      *
      * @return Pair of eligibility status and compaction status with reason for first failed check
      */
-    Pair<CompactionCandidateSearchPolicy.Eligibility, CompactionStatus> evaluate()
+    Pair<CompactionEligibility, CompactionStatus> evaluate()
     {
-      final CompactionCandidateSearchPolicy.Eligibility inputBytesCheck = inputBytesAreWithinLimit();
+      final CompactionEligibility inputBytesCheck = inputBytesAreWithinLimit();
       if (inputBytesCheck != null) {
         return Pair.of(inputBytesCheck, CompactionStatus.skipped(inputBytesCheck.getReason()));
       }
@@ -436,12 +436,12 @@ public class CompactionStatus
 
       if (reasonsForCompaction.isEmpty()) {
         return Pair.of(
-            CompactionCandidateSearchPolicy.Eligibility.NOT_APPLICABLE,
+            CompactionEligibility.NOT_APPLICABLE,
             CompactionStatus.COMPLETE
         );
       } else {
         return Pair.of(
-            CompactionCandidateSearchPolicy.Eligibility.FULL_COMPACTION_ELIGIBLE,
+            CompactionEligibility.FULL_COMPACTION_ELIGIBLE,
             CompactionStatus.pending(
                 createStats(compactedSegments),
                 createStats(uncompactedSegments),
@@ -632,11 +632,11 @@ public class CompactionStatus
     }
 
     @Nullable
-    private CompactionCandidateSearchPolicy.Eligibility inputBytesAreWithinLimit()
+    private CompactionEligibility inputBytesAreWithinLimit()
     {
       final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
       if (candidateSegments.getTotalBytes() > inputSegmentSize) {
-        return CompactionCandidateSearchPolicy.Eligibility.fail(
+        return CompactionEligibility.fail(
             "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
             candidateSegments.getTotalBytes(), inputSegmentSize
         );
