@@ -133,9 +133,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
         config,
         timeline,
         Intervals.complementOf(searchInterval),
-        // This policy is used only while creating jobs
-        // The actual order of jobs is determined by the policy used in CompactionJobQueue
-        new NewestSegmentFirstPolicy(null),
+        params.getClusterCompactionConfig().getCompactionPolicy(),
         params.getFingerprintMapper()
     );
 
