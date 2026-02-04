@@ -25,7 +25,7 @@ import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.utils.RuntimeInfo;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 @Command(
     name = "version",

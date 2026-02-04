@@ -24,7 +24,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;

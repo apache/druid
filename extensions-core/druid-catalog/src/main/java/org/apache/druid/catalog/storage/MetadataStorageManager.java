@@ -27,7 +27,7 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 /**
  * Represents the metastore manager database and its implementation.

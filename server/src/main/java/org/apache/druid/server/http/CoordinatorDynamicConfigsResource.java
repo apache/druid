@@ -33,7 +33,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

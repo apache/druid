@@ -35,7 +35,7 @@ import org.apache.druid.catalog.sync.CatalogUpdateProvider;
 import org.apache.druid.guice.annotations.Json;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.List;
 
 /**

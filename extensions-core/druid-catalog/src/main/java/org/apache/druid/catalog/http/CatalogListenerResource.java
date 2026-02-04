@@ -25,7 +25,7 @@ import org.apache.druid.catalog.sync.CatalogUpdateListener;
 import org.apache.druid.catalog.sync.UpdateEvent;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;

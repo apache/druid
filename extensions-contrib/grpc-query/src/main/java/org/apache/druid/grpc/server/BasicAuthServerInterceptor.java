@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 /**
  * Authorizes a Basic Auth user name and password and sets the resulting

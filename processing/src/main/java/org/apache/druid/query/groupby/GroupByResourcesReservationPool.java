@@ -25,7 +25,7 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.query.QueryResourceId;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;

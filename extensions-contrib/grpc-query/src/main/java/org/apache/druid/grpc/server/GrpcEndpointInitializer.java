@@ -32,7 +32,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import java.io.IOException;
 

@@ -38,7 +38,7 @@ import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMeta
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;

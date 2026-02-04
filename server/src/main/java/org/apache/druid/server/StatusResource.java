@@ -33,7 +33,7 @@ import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;

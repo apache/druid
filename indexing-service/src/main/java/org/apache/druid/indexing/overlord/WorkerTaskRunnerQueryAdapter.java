@@ -34,7 +34,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 

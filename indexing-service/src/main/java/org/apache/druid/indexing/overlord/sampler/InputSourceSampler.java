@@ -54,7 +54,7 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

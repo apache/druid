@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.Expr;
@@ -37,7 +38,6 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataProcessor;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;

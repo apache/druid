@@ -26,7 +26,7 @@ import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;

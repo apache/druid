@@ -30,7 +30,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

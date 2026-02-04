@@ -126,7 +126,7 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

@@ -37,7 +37,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.function.Supplier;
 
 /**

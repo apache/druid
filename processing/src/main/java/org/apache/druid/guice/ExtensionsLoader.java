@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
