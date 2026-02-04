@@ -361,7 +361,14 @@ public class JoinFilterAnalyzer
     boolean retainRhs = false;
 
     for (Filter filter : orFilter.getFilters()) {
-      if (!joinFilterPreAnalysis.getJoinableClauses().areSomeColumnsFromJoin(filter.getRequiredColumns())) {
+      // The filter must not reference any column from the join, or any post-join virtual columns.
+      final boolean canUseFilter =
+          !joinFilterPreAnalysis.getJoinableClauses().areSomeColumnsFromJoin(filter.getRequiredColumns())
+          && !areSomeColumnsFromPostJoinVirtualColumns(
+              joinFilterPreAnalysis.getPostJoinVirtualColumns(),
+              filter.getRequiredColumns()
+          );
+      if (canUseFilter) {
         newFilters.add(filter);
         continue;
       }

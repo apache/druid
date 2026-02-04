@@ -22,6 +22,7 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -72,6 +73,9 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   @JsonProperty
   private final DateTime snapshotTime;
 
+  @JsonProperty
+  private final ResidualFilterMode residualFilterMode;
+
   private boolean isLoaded = false;
 
   private SplittableInputSource delegateInputSource;
@@ -83,7 +87,8 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
-      @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime
+      @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime,
+      @JsonProperty("residualFilterMode") @Nullable ResidualFilterMode residualFilterMode
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -92,6 +97,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     this.icebergFilter = icebergFilter;
     this.warehouseSource = Preconditions.checkNotNull(warehouseSource, "warehouseSource cannot be null");
     this.snapshotTime = snapshotTime;
+    this.residualFilterMode = Configs.valueOrDefault(residualFilterMode, ResidualFilterMode.IGNORE);
   }
 
   @Override
@@ -177,6 +183,12 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return snapshotTime;
   }
 
+  @JsonProperty
+  public ResidualFilterMode getResidualFilterMode()
+  {
+    return residualFilterMode;
+  }
+
   public SplittableInputSource getDelegateInputSource()
   {
     return delegateInputSource;
@@ -188,7 +200,8 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         getNamespace(),
         getTableName(),
         getIcebergFilter(),
-        getSnapshotTime()
+        getSnapshotTime(),
+        getResidualFilterMode()
     );
     if (snapshotDataFiles.isEmpty()) {
       delegateInputSource = new EmptyInputSource();

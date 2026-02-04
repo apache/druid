@@ -25,34 +25,32 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
-import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
+import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @JsonTypeName("limit")
-public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
+public class OffsetLimitStageProcessor extends BasicStageProcessor
 {
   private final long offset;
 
@@ -85,57 +83,63 @@ public class OffsetLimitStageProcessor extends BasicStandardStageProcessor
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable Object extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  ) throws IOException
+  public ListenableFuture<Long> execute(ExecutionContext context)
   {
-    if (workerNumber > 0) {
+    final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+
+    if (context.workOrder().getWorkerNumber() > 0) {
       // We use a simplistic limiting approach: funnel all data through a single worker, single processor, and
       // single output partition. So limiting stages must have a single worker.
       throw new ISE("%s must be configured with maxWorkerCount = 1", getClass().getSimpleName());
     }
 
     // Expect a single input slice.
-    final InputSlice slice = Iterables.getOnlyElement(inputSlices);
+    final StageInputSlice slice = (StageInputSlice) CollectionUtils.getOnlyElement(
+        context.workOrder().getInputs(),
+        xs -> DruidException.defensive("Expected only a single input slice, but got[%s]", xs)
+    );
 
-    if (inputSliceReader.numReadableInputs(slice) == 0) {
-      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
+    if (slice.getPartitions().isEmpty()) {
+      return stageRunner.run(
+          new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none())
+      );
     }
 
-    final OutputChannel outputChannel = outputChannelFactory.openChannel(0);
+    final OutputChannel outputChannel;
+    try {
+      outputChannel = stageRunner.workOutputChannelFactory().openChannel(0);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
 
     final Supplier<FrameProcessor<Object>> workerSupplier = () -> {
-      final ReadableInputs readableInputs = inputSliceReader.attach(0, slice, counters, warningPublisher);
-
-      if (!readableInputs.isChannelBased()) {
-        throw new ISE("Processor inputs must be channels");
-      }
+      final Iterable<ReadableInput> readableInputs = Iterables.transform(
+          slice.getPartitions(),
+          readablePartition -> QueryKitUtils.readPartition(context, readablePartition)
+      );
 
       // Note: OffsetLimitFrameProcessor does not use allocator from the outputChannel; it uses unlimited instead.
       // This ensures that a single, limited output frame can always be generated from an input frame.
       return new OffsetLimitFrameProcessor(
           ReadableConcatFrameChannel.open(Iterators.transform(readableInputs.iterator(), ReadableInput::getChannel)),
           outputChannel.getWritableChannel(),
-          readableInputs.frameReader(),
-          stageDefinition.createFrameWriterFactory(frameContext.frameWriterSpec(), HeapMemoryAllocator.unlimited()),
+          context.workOrder().getQueryDefinition().getStageDefinition(slice.getStageNumber()).getFrameReader(),
+          context.workOrder().getStageDefinition().createFrameWriterFactory(
+              context.frameContext().frameWriterSpec(),
+              HeapMemoryAllocator.unlimited()
+          ),
           offset,
           // Limit processor will add limit + offset at various points; must avoid overflow
           limit == null ? Long.MAX_VALUE - offset : limit
       );
     };
 
-    return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(workerSupplier),
-        OutputChannels.wrap(Collections.singletonList(outputChannel))
+    return stageRunner.run(
+        new ProcessorsAndChannels<>(
+            ProcessorManagers.of(workerSupplier),
+            OutputChannels.wrap(Collections.singletonList(outputChannel))
+        )
     );
   }
 

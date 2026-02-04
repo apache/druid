@@ -377,7 +377,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNotNull(actual);
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
     Assert.assertArrayEquals(new Object[]{1L, 2L, null, 3L}, (Object[]) actual.getRaw("dim"));
-    Assert.assertEquals(ImmutableList.of("1", "2", "null", "3"), actual.getDimension("dim"));
+    Assert.assertEquals(Arrays.asList("1", "2", null, "3"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
@@ -405,7 +405,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.00001);
     Assert.assertEquals(
-        ImmutableList.of("1.2000000476837158", "2.299999952316284", "null", "3.4000000953674316"),
+        Arrays.asList("1.2000000476837158", "2.299999952316284", null, "3.4000000953674316"),
         actual.getDimension("dim")
     );
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
@@ -433,7 +433,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(2.3, (Double) raw[1], 0.0);
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.0);
-    Assert.assertEquals(ImmutableList.of("1.2", "2.3", "null", "3.4"), actual.getDimension("dim"));
+    Assert.assertEquals(Arrays.asList("1.2", "2.3", null, "3.4"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 

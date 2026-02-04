@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,11 +38,17 @@ import java.util.Map;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.FIVE_MINUTE_NAME;
 import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters.ONE_MINUTE_NAME;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.computeExtraMaxPartitionsPerTaskIncrease;
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.computeValidTaskCounts;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("SameParameterValue")
 public class CostBasedAutoScalerTest
 {
   private CostBasedAutoScaler autoScaler;
+  private CostBasedAutoScalerConfig config;
 
   @Before
   public void setUp()
@@ -55,13 +62,13 @@ public class CostBasedAutoScalerTest
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
 
-    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
-                                                                .taskCountMax(100)
-                                                                .taskCountMin(1)
-                                                                .enableTaskAutoScaler(true)
-                                                                .lagWeight(0.6)
-                                                                .idleWeight(0.4)
-                                                                .build();
+    config = CostBasedAutoScalerConfig.builder()
+                                      .taskCountMax(100)
+                                      .taskCountMin(1)
+                                      .enableTaskAutoScaler(true)
+                                      .lagWeight(0.6)
+                                      .idleWeight(0.4)
+                                      .build();
 
     autoScaler = new CostBasedAutoScaler(mockSupervisor, config, mockSupervisorSpec, mockEmitter);
   }
@@ -70,38 +77,165 @@ public class CostBasedAutoScalerTest
   public void testComputeValidTaskCounts()
   {
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
-    int[] validTaskCounts = CostBasedAutoScaler.computeValidTaskCounts(100, 25);
+    int[] validTaskCounts = computeValidTaskCounts(100, 25, 0L, 1, 100);
     Assert.assertTrue("Should contain the current task count", contains(validTaskCounts, 25));
     Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
 
     // Edge cases
-    Assert.assertEquals("Zero partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(0, 10).length);
-    Assert.assertEquals("Negative partitions return empty array", 0, CostBasedAutoScaler.computeValidTaskCounts(-5, 10).length);
+    Assert.assertEquals(0, computeValidTaskCounts(0, 10, 0L, 1, 100).length);
+    Assert.assertEquals(0, computeValidTaskCounts(-5, 10, 0L, 1, 100).length);
 
     // Single partition
-    int[] singlePartition = CostBasedAutoScaler.computeValidTaskCounts(1, 1);
+    int[] singlePartition = computeValidTaskCounts(1, 1, 0L, 1, 100);
     Assert.assertTrue("Single partition should have at least one valid count", singlePartition.length > 0);
     Assert.assertTrue("Single partition should contain 1", contains(singlePartition, 1));
 
     // Current exceeds partitions - should still yield valid, deduplicated options
-    int[] exceedsPartitions = CostBasedAutoScaler.computeValidTaskCounts(2, 5);
+    int[] exceedsPartitions = computeValidTaskCounts(2, 5, 0L, 1, 100);
     Assert.assertEquals(2, exceedsPartitions.length);
     Assert.assertTrue(contains(exceedsPartitions, 1));
     Assert.assertTrue(contains(exceedsPartitions, 2));
+
+    // Lag expansion: low lag should not include max, high lag should
+    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30);
+    Assert.assertFalse("Low lag should not include max task count", contains(lowLagCounts, 30));
+    Assert.assertTrue("Low lag should cap scale up around 4 tasks", contains(lowLagCounts, 4));
+
+    long highAggregateLag = 30L * 500_000L;
+    int[] highLagCounts = computeValidTaskCounts(30, 3, highAggregateLag, 1, 30);
+    Assert.assertTrue("High lag should allow scaling to max tasks", contains(highLagCounts, 30));
+
+    // Respects taskCountMax
+    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 1, 3);
+    Assert.assertTrue("Should include taskCountMax when doable", contains(cappedCounts, 3));
+    Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
+
+    // Respects taskCountMin - filters out values below the minimum
+    // With partitionCount=100, currentTaskCount=10, the computed range includes values like 8, 9, 10, 12, 13
+    int[] minCappedCounts = computeValidTaskCounts(100, 10, 0L, 10, 100);
+    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 8));
+    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 9));
+    Assert.assertTrue("Should include values at taskCountMin", contains(minCappedCounts, 10));
+    Assert.assertTrue("Should include values above taskCountMin", contains(minCappedCounts, 12));
+
+    // Both bounds applied together
+    int[] bothBounds = computeValidTaskCounts(100, 10, 0L, 10, 12);
+    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 8));
+    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 9));
+    Assert.assertFalse("Should not exceed taskCountMax", contains(bothBounds, 13));
+    Assert.assertTrue("Should include values at taskCountMin", contains(bothBounds, 10));
+    Assert.assertTrue("Should include values at taskCountMax", contains(bothBounds, 12));
   }
 
   @Test
-  public void testComputeOptimalTaskCountInvalidInputs()
+  public void testScalingExamplesTable()
   {
+    int partitionCount = 30;
+    int taskCountMax = 30;
+    double pollIdleRatio = 0.1;
+    double avgProcessingRate = 10.0;
+
+    // Create a local autoScaler with taskCountMax matching the test parameters
+    SupervisorSpec mockSpec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter mockEmitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(mockSpec.getId()).thenReturn("test-supervisor");
+    when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
+    when(mockIoConfig.getStream()).thenReturn("test-stream");
+
+    CostBasedAutoScalerConfig localConfig = CostBasedAutoScalerConfig.builder()
+                                                                      .taskCountMax(taskCountMax)
+                                                                      .taskCountMin(1)
+                                                                      .enableTaskAutoScaler(true)
+                                                                      .lagWeight(0.6)
+                                                                      .idleWeight(0.4)
+                                                                      .build();
+
+    CostBasedAutoScaler localAutoScaler = new CostBasedAutoScaler(
+        mockSupervisor,
+        localConfig,
+        mockSpec,
+        mockEmitter
+    );
+
+    class Example
+    {
+      final int currentTasks;
+      final long lagPerPartition;
+      final int expectedTasks;
+
+      Example(int currentTasks, long lagPerPartition, int expectedTasks)
+      {
+        this.currentTasks = currentTasks;
+        this.lagPerPartition = lagPerPartition;
+        this.expectedTasks = expectedTasks;
+      }
+    }
+
+    Example[] examples = new Example[]{
+        new Example(3, EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, 8),
+        new Example(3, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 3, 15),
+        new Example(3, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 5, 30),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD - 1, 15),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 3, 30),
+        new Example(10, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
+        new Example(20, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30),
+        new Example(25, AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30)
+    };
+
+    for (Example example : examples) {
+      long aggregateLag = example.lagPerPartition * partitionCount;
+      int[] validCounts = computeValidTaskCounts(partitionCount, example.currentTasks, aggregateLag, 1, taskCountMax);
+      Assert.assertTrue(
+          "Should include expected task count for current=" + example.currentTasks + ", lag=" + example.lagPerPartition,
+          contains(validCounts, example.expectedTasks)
+      );
+
+      CostMetrics metrics = createMetricsWithRate(
+          example.lagPerPartition,
+          example.currentTasks,
+          partitionCount,
+          pollIdleRatio,
+          avgProcessingRate
+      );
+      int actualOptimal = localAutoScaler.computeOptimalTaskCount(metrics);
+      if (actualOptimal == -1) {
+        actualOptimal = example.currentTasks;
+      }
+      Assert.assertEquals(
+          "Optimal task count should match for current=" + example.currentTasks
+          + ", lag=" + example.lagPerPartition
+          + ", valid=" + Arrays.toString(validCounts),
+          example.expectedTasks,
+          actualOptimal
+      );
+    }
+  }
+
+  @Test
+  public void testComputeExtraPPTIncrease()
+  {
+    // No extra increase below the threshold
+    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD - 1, 30, 3, 30));
+    Assert.assertEquals(4, computeExtraMaxPartitionsPerTaskIncrease(30L * EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, 30, 3, 30));
+
+    // More aggressive increase when the lag is high
+    Assert.assertEquals(8, computeExtraMaxPartitionsPerTaskIncrease(30L * AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 5, 30, 3, 30));
+    // Zero when on max task count
+    Assert.assertEquals(0, computeExtraMaxPartitionsPerTaskIncrease(30L * AGGRESSIVE_SCALING_LAG_PER_PARTITION_THRESHOLD * 10, 30, 30, 30));
+  }
+
+  @Test
+  public void testComputeOptimalTaskCount()
+  {
+    // Invalid inputs return -1
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(null));
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(0.0, 10, 0, 0.0)));
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, 10, -5, 0.3)));
     Assert.assertEquals(-1, autoScaler.computeOptimalTaskCount(createMetrics(100.0, -1, 100, 0.3)));
-  }
 
-  @Test
-  public void testComputeOptimalTaskCountScaling()
-  {
     // High idle (underutilized) - should scale down
     int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
     Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
@@ -110,7 +244,7 @@ public class CostBasedAutoScalerTest
     int highIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(10.0, 50, 100, 0.9));
     Assert.assertTrue("Scale down scenario should return optimal <= current", highIdleResult <= 50);
 
-    // With low idle and balanced weights, algorithm should not scale up aggressively
+    // With low idle and balanced weights, the algorithm should not scale up aggressively
     int lowIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
     Assert.assertTrue("With low idle and balanced weights, should not scale up aggressively", lowIdleResult <= 25);
   }
@@ -134,31 +268,27 @@ public class CostBasedAutoScalerTest
     group.put("task-1", buildTaskStatsWithPollIdle(0.5));
     validStats.put("0", group);
     Assert.assertEquals(0.4, CostBasedAutoScaler.extractPollIdleRatio(validStats), 0.0001);
-  }
 
-  @Test
-  public void testExtractPollIdleRatioInvalidTypes()
-  {
-    // Non-map task metric
+    // Invalid types: non-map task metric
     Map<String, Map<String, Object>> nonMapTask = new HashMap<>();
     nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
     Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapTask), 0.0001);
 
-    // Empty autoscaler metrics
+    // Invalid types: empty autoscaler metrics
     Map<String, Map<String, Object>> emptyAutoscaler = new HashMap<>();
     Map<String, Object> taskStats1 = new HashMap<>();
     taskStats1.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, new HashMap<>());
     emptyAutoscaler.put("0", Collections.singletonMap("task-0", taskStats1));
     Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(emptyAutoscaler), 0.0001);
 
-    // Non-map autoscaler metrics
+    // Invalid types: non-map autoscaler metrics
     Map<String, Map<String, Object>> nonMapAutoscaler = new HashMap<>();
     Map<String, Object> taskStats2 = new HashMap<>();
     taskStats2.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, "not-a-map");
     nonMapAutoscaler.put("0", Collections.singletonMap("task-0", taskStats2));
     Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapAutoscaler), 0.0001);
 
-    // Non-number poll idle ratio
+    // Invalid types: non-number poll idle ratio
     Map<String, Map<String, Object>> nonNumberRatio = new HashMap<>();
     Map<String, Object> taskStats3 = new HashMap<>();
     Map<String, Object> autoscalerMetrics = new HashMap<>();
@@ -187,17 +317,13 @@ public class CostBasedAutoScalerTest
     group.put("task-1", buildTaskStatsWithMovingAverage(2000.0));
     validStats.put("0", group);
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(validStats), 0.0001);
-  }
 
-  @Test
-  public void testExtractMovingAverageIntervalFallback()
-  {
-    // 15-minute average is preferred
+    // Interval fallback: 15-minute preferred, then 5-minute, then 1-minute
     Map<String, Map<String, Object>> fifteenMin = new HashMap<>();
     fifteenMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)));
     Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(fifteenMin), 0.0001);
 
-    // 1-minute as final fallback
+    // 1-minute as a final fallback
     Map<String, Map<String, Object>> oneMin = new HashMap<>();
     oneMin.put("0", Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0)));
     Assert.assertEquals(500.0, CostBasedAutoScaler.extractMovingAverage(oneMin), 0.0001);
@@ -226,56 +352,21 @@ public class CostBasedAutoScalerTest
     nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
     Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapTask), 0.0001);
 
-    // Missing buildSegments
     Map<String, Map<String, Object>> missingBuild = new HashMap<>();
     Map<String, Object> taskStats1 = new HashMap<>();
     taskStats1.put("movingAverages", new HashMap<>());
     missingBuild.put("0", Collections.singletonMap("task-0", taskStats1));
     Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingBuild), 0.0001);
 
-    // Non-map movingAverages
     Map<String, Map<String, Object>> nonMapMA = new HashMap<>();
     Map<String, Object> taskStats2 = new HashMap<>();
     taskStats2.put("movingAverages", "not-a-map");
     nonMapMA.put("0", Collections.singletonMap("task-0", taskStats2));
     Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapMA), 0.0001);
-
-    // Non-map buildSegments
-    Map<String, Map<String, Object>> nonMapBS = new HashMap<>();
-    Map<String, Object> taskStats3 = new HashMap<>();
-    Map<String, Object> movingAverages3 = new HashMap<>();
-    movingAverages3.put(RowIngestionMeters.BUILD_SEGMENTS, "not-a-map");
-    taskStats3.put("movingAverages", movingAverages3);
-    nonMapBS.put("0", Collections.singletonMap("task-0", taskStats3));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapBS), 0.0001);
-
-    // Non-map interval data
-    Map<String, Map<String, Object>> nonMapInterval = new HashMap<>();
-    Map<String, Object> taskStats4 = new HashMap<>();
-    Map<String, Object> movingAverages4 = new HashMap<>();
-    Map<String, Object> buildSegments4 = new HashMap<>();
-    buildSegments4.put(FIFTEEN_MINUTE_NAME, "not-a-map");
-    movingAverages4.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments4);
-    taskStats4.put("movingAverages", movingAverages4);
-    nonMapInterval.put("0", Collections.singletonMap("task-0", taskStats4));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapInterval), 0.0001);
-
-    // Non-number processed rate
-    Map<String, Map<String, Object>> nonNumberRate = new HashMap<>();
-    Map<String, Object> taskStats5 = new HashMap<>();
-    Map<String, Object> movingAverages5 = new HashMap<>();
-    Map<String, Object> buildSegments5 = new HashMap<>();
-    Map<String, Object> fifteenMin = new HashMap<>();
-    fifteenMin.put(RowIngestionMeters.PROCESSED, "not-a-number");
-    buildSegments5.put(FIFTEEN_MINUTE_NAME, fifteenMin);
-    movingAverages5.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegments5);
-    taskStats5.put("movingAverages", movingAverages5);
-    nonNumberRate.put("0", Collections.singletonMap("task-0", taskStats5));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonNumberRate), 0.0001);
   }
 
   @Test
-  public void testComputeTaskCountForRolloverReturnsMinusOneWhenSuspended()
+  public void testComputeTaskCountForRolloverAndConfigProperties()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
     SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
@@ -283,73 +374,40 @@ public class CostBasedAutoScalerTest
     SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
 
     when(spec.getId()).thenReturn("s-up");
-    when(spec.isSuspended()).thenReturn(true);
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("stream");
 
-    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
-                                                             .taskCountMax(10)
-                                                             .taskCountMin(1)
-                                                             .enableTaskAutoScaler(true)
-                                                             .lagWeight(0.5)
-                                                             .idleWeight(0.5)
-                                                             .build();
+    // Test config defaults for scaleDownBarrier, defaultProcessingRate, scaleDownDuringTaskRolloverOnly
+    CostBasedAutoScalerConfig cfgWithDefaults = CostBasedAutoScalerConfig.builder()
+                                                                          .taskCountMax(10)
+                                                                          .taskCountMin(1)
+                                                                          .enableTaskAutoScaler(true)
+                                                                          .build();
+    Assert.assertEquals(5, cfgWithDefaults.getScaleDownBarrier());
+    Assert.assertEquals(1000.0, cfgWithDefaults.getDefaultProcessingRate(), 0.001);
+    Assert.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
 
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
-    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
-  }
+    // Test custom config values
+    CostBasedAutoScalerConfig cfgWithCustom = CostBasedAutoScalerConfig.builder()
+                                                                        .taskCountMax(10)
+                                                                        .taskCountMin(1)
+                                                                        .enableTaskAutoScaler(true)
+                                                                        .scaleDownBarrier(10)
+                                                                        .defaultProcessingRate(5000.0)
+                                                                        .scaleDownDuringTaskRolloverOnly(true)
+                                                                        .build();
+    Assert.assertEquals(10, cfgWithCustom.getScaleDownBarrier());
+    Assert.assertEquals(5000.0, cfgWithCustom.getDefaultProcessingRate(), 0.001);
+    Assert.assertTrue(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
 
-  @Test
-  public void testComputeTaskCountForRolloverReturnsMinusOneWhenLagStatsNull()
-  {
-    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
-    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
-
-    when(spec.getId()).thenReturn("s-up");
+    // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false (default)
     when(spec.isSuspended()).thenReturn(false);
-    when(supervisor.computeLagStats()).thenReturn(null);
-    when(supervisor.getIoConfig()).thenReturn(ioConfig);
-    when(ioConfig.getStream()).thenReturn("stream");
-
-    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
-                                                             .taskCountMax(10)
-                                                             .taskCountMin(1)
-                                                             .enableTaskAutoScaler(true)
-                                                             .lagWeight(0.5)
-                                                             .idleWeight(0.5)
-                                                             .build();
-
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfgWithDefaults, spec, emitter);
     Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
-  }
 
-  @Test
-  public void testComputeTaskCountForRolloverReturnsMinusOneWhenNoMetrics()
-  {
-    // Tests the case where lastKnownMetrics is null (no computeTaskCountForScaleAction called)
-    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
-    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
-    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
-
-    when(spec.getId()).thenReturn("s-up");
-    when(spec.isSuspended()).thenReturn(false);
-    when(supervisor.getIoConfig()).thenReturn(ioConfig);
-    when(ioConfig.getStream()).thenReturn("stream");
-
-    CostBasedAutoScalerConfig cfg = CostBasedAutoScalerConfig.builder()
-                                                             .taskCountMax(10)
-                                                             .taskCountMin(1)
-                                                             .enableTaskAutoScaler(true)
-                                                             .lagWeight(0.5)
-                                                             .idleWeight(0.5)
-                                                             .build();
-
-    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, cfg, spec, emitter);
-    // Should return -1 when lastKnownMetrics is null
-    Assert.assertEquals(-1, scaler.computeTaskCountForRollover());
+    // computeTaskCountForRollover returns -1 when lastKnownMetrics is null (even with scaleDownDuringTaskRolloverOnly=true)
+    CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
+    Assert.assertEquals(-1, scalerWithRolloverOnly.computeTaskCountForRollover());
   }
 
   private CostMetrics createMetrics(
@@ -366,6 +424,24 @@ public class CostBasedAutoScalerTest
         pollIdleRatio,
         3600,
         1000.0
+    );
+  }
+
+  private CostMetrics createMetricsWithRate(
+      double avgPartitionLag,
+      int currentTaskCount,
+      int partitionCount,
+      double pollIdleRatio,
+      double avgProcessingRate
+  )
+  {
+    return new CostMetrics(
+        avgPartitionLag,
+        currentTaskCount,
+        partitionCount,
+        pollIdleRatio,
+        3600,
+        avgProcessingRate
     );
   }
 
@@ -434,7 +510,11 @@ public class CostBasedAutoScalerTest
     return taskStats;
   }
 
-  private Map<String, Object> buildTaskStatsWithNullInterval(String nullInterval, String validInterval, double processedRate)
+  private Map<String, Object> buildTaskStatsWithNullInterval(
+      String nullInterval,
+      String validInterval,
+      double processedRate
+  )
   {
     Map<String, Object> buildSegments = new HashMap<>();
     buildSegments.put(nullInterval, null);

@@ -120,6 +120,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -636,7 +637,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
@@ -728,10 +730,11 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         new CacheConfig(),
         new CachePopulatorStats(),
         testUtils.getIndexMergerV9Factory(),
+        testUtils.getIndexMergerV10Factory(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1, null, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,

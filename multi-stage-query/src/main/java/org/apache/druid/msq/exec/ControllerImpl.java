@@ -41,8 +41,9 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.ReadableConcatFrameChannel;
+import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -73,6 +74,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -92,8 +94,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.indexing.InputChannelFactory;
-import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -142,14 +143,12 @@ import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpecSlicer;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpecSlicer;
-import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
@@ -173,6 +172,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -1699,6 +1699,8 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
+      final String indexingStateFingerprint = querySpec.getContext().getString(Tasks.INDEXING_STATE_FINGERPRINT_KEY);
+
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
         if (!destination.isReplaceTimeChunks()) {
@@ -1723,6 +1725,10 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         }
+      }
+      if (indexingStateFingerprint != null) {
+        compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(
+            AbstractBatchIndexTask.addIndexingStateFingerprintToSegments(indexingStateFingerprint));
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);
@@ -2783,33 +2789,36 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
+      final WireTransferableContext wireTransferableContext =
+          context.injector().getInstance(WireTransferableContext.class);
+
       if (queryKernelConfig.isDurableStorage()
           || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
             closer,
-            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())
+            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination()),
+            wireTransferableContext
         );
       } else {
-        inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
+        inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds, wireTransferableContext);
       }
 
       final FrameProcessorExecutor resultReaderExec = createResultReaderExec(queryId());
       resultReaderExec.registerCancellationId(RESULT_READER_CANCELLATION_ID);
 
-      ReadableConcatFrameChannel resultsChannel = null;
+      ReadableFrameChannel resultsChannel = null;
 
       try {
-        final InputChannels inputChannels = new InputChannelsImpl(
+        final StandardPartitionReader partitionReader = new StandardPartitionReader(
             queryDef,
-            queryKernel.getResultPartitionsForStage(finalStageId),
             inputChannelFactory,
             FrameWriterSpec.fromContext(querySpec.getContext()),
-            () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
             RESULT_READER_CANCELLATION_ID,
-            null
+            null,
+            new ArenaMemoryAllocatorFactory(MultiStageQueryContext.getFrameSize(querySpec.getContext()))
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(
@@ -2817,12 +2826,7 @@ public class ControllerImpl implements Controller
                          .map(
                              readablePartition -> {
                                try {
-                                 return inputChannels.openChannel(
-                                     new StagePartition(
-                                         queryKernel.getStageDefinition(finalStageId).getId(),
-                                         readablePartition.getPartitionNumber()
-                                     )
-                                 );
+                                 return partitionReader.openChannel(readablePartition);
                                }
                                catch (IOException e) {
                                  throw new RuntimeException(e);
@@ -2853,7 +2857,7 @@ public class ControllerImpl implements Controller
       }
       catch (Throwable e) {
         // There was some issue setting up the result reader. Shut down the results channel and stop the executor.
-        final ReadableConcatFrameChannel finalResultsChannel = resultsChannel;
+        final ReadableFrameChannel finalResultsChannel = resultsChannel;
         throw CloseableUtils.closeAndWrapInCatch(
             e,
             () -> CloseableUtils.closeAll(

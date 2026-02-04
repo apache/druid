@@ -52,7 +52,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
    * defaults to {@code apache/kafka}. Environments that cannot run that
    * image should set the system property to {@code apache/kafka-native}.
    */
-  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.0.0");
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.1.1");
 
   private EmbeddedDruidCluster cluster;
 

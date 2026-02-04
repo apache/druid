@@ -100,4 +100,10 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
         ) : null
     );
   }
+
+  @Override
+  protected String getName()
+  {
+    return NAME;
+  }
 }

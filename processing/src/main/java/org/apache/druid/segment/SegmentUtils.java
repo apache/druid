@@ -79,6 +79,14 @@ public class SegmentUtils
       return version;
     }
 
+    final File v10IndexFile = new File(inDir, IndexIO.V10_FILE_NAME);
+    if (v10IndexFile.exists()) {
+      try (InputStream in = new FileInputStream(v10IndexFile)) {
+        version = in.read();
+      }
+      return version;
+    }
+
     throw new IOE("Invalid segment dir [%s]. Can't find either of version.bin or index.drd.", inDir);
   }
 

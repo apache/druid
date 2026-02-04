@@ -255,7 +255,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(20, localStorageFolder, interval, segmentsToLoad);
@@ -281,7 +281,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentBulkFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(30, localStorageFolder, interval, segmentsToLoad);
@@ -489,7 +489,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
     assertNoLooseEnds();
   }
 
@@ -565,7 +567,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     // expect at least some empties from the segment not being cached
     Assertions.assertTrue(totalEmpty > 0);
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     assertNoLooseEnds();
   }
@@ -762,7 +766,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     // now ensure that we can successfully do stuff after all those interrupts
     int totalSuccess = 0;

@@ -50,6 +50,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -81,9 +82,9 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * This makes tests deterministic.
    */
   private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(
-      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2), // plaintext
-      new DruidServerMetadata("no", null, "localhost:1002", 1, ServerType.HISTORICAL, "__default", 1), // TLS
-      new DruidServerMetadata("no", "localhost:1003", null, 1, ServerType.REALTIME, "__default", 0)
+      new DruidServerMetadata("no", "localhost:1001", null, 1, null, ServerType.HISTORICAL, "__default", 2), // plaintext
+      new DruidServerMetadata("no", null, "localhost:1002", 1, null, ServerType.HISTORICAL, "__default", 1), // TLS
+      new DruidServerMetadata("no", "localhost:1003", null, 1, null, ServerType.REALTIME, "__default", 0)
   );
 
   /**
@@ -94,103 +95,68 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
              .map(server -> new WorkerId("http", server.getHost(), QUERY_ID).toString())
              .collect(Collectors.toList());
 
+  private static final DataSegment.Builder SEGMENT_BUILDER =
+      DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2000/2001"), "1", 0)).size(BYTES_PER_SEGMENT);
   /**
    * Segment that is one of two in a range-partitioned time chunk.
    */
-  private static final DataSegment SEGMENT1 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(ImmutableList.of(PARTITION_DIM), null, new StringTuple(new String[]{"foo"}), 0, 2),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT1 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2000/2001"))
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                             ImmutableList.of(PARTITION_DIM),
+                                                             null,
+                                                             new StringTuple(new String[]{"foo"}),
+                                                             0,
+                                                             2
+                                                         ))
+                                                         .build();
 
   /**
    * Segment that is one of two in a range-partitioned time chunk.
    */
-  private static final DataSegment SEGMENT2 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2000/2001"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new DimensionRangeShardSpec(ImmutableList.of("dim"), new StringTuple(new String[]{"foo"}), null, 1, 2),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT2 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .interval(Intervals.of("2000/2001"))
+                                                         .shardSpec(new DimensionRangeShardSpec(
+                                                             ImmutableList.of(PARTITION_DIM),
+                                                             new StringTuple(new String[]{"foo"}),
+                                                             null,
+                                                             1,
+                                                             2
+                                                         )).build();
 
   /**
    * Segment that is alone in a time chunk. It is not served by any server, and such segments are assigned to the
    * existing servers round-robin. Because this is the only "not served by any server" segment, it should
    * be assigned to the first server.
    */
-  private static final DataSegment SEGMENT3 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2001/2002"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT3 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .interval(Intervals.of("2001/2002"))
+                                                         .build();
 
   /**
    * Segment that should be ignored because it's a tombstone.
    */
-  private static final DataSegment SEGMENT4 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2002/2003"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      TombstoneShardSpec.INSTANCE,
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT4 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(TombstoneShardSpec.INSTANCE)
+                                                         .interval(Intervals.of("2002/2003"))
+                                                         .build();
 
   /**
    * Segment that's realtime-only.
    */
-  private static final DataSegment SEGMENT5 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2003/2004"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT5 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .interval(Intervals.of("2003/2004"))
+                                                         .build();
 
   /**
    * Segment that's realtime and located at the same host as segment 5
    */
-  private static final DataSegment SEGMENT6 = new DataSegment(
-      DATASOURCE,
-      Intervals.of("2004/2005"),
-      "1",
-      Collections.emptyMap(),
-      Collections.emptyList(),
-      Collections.emptyList(),
-      new NumberedShardSpec(0, 1),
-      null,
-      null,
-      BYTES_PER_SEGMENT
-  );
+  private static final DataSegment SEGMENT6 = DataSegment.builder(SEGMENT_BUILDER)
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .interval(Intervals.of("2004/2005"))
+                                                         .build();
 
   /**
    * Mapping of segment to servers (indexes in {@link #SERVERS}).
@@ -241,15 +207,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
       );
       for (int serverNumber : segmentServers) {
         final DruidServerMetadata serverMetadata = SERVERS.get(serverNumber);
-        final DruidServer server = new DruidServer(
-            serverMetadata.getName(),
-            serverMetadata.getHostAndPort(),
-            serverMetadata.getHostAndTlsPort(),
-            serverMetadata.getMaxSize(),
-            serverMetadata.getType(),
-            serverMetadata.getTier(),
-            serverMetadata.getPriority()
-        );
+        final DruidServer server = new DruidServer(serverMetadata);
         serverSelector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), dataSegment);
       }
       timeline.add(
@@ -277,7 +235,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // This slicer cannot sliceDynamic.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     Assertions.assertFalse(slicer.canSliceDynamic(inputSpec));
     Assertions.assertThrows(
         UnsupportedOperationException.class,
@@ -291,7 +249,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
     // When 1 slice is requested, all segments are assigned to one server, even if that server doesn't actually
     // currently serve those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 1);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -347,7 +305,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // When 2 slices are requested, we assign segments to the servers that have those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -409,7 +367,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   {
     // When 3 slices are requested, only 2 are returned, because we only have two workers.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 3);
     Assertions.assertEquals(
         ImmutableList.of(
@@ -470,7 +428,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
   @Test
   public void test_sliceStatic_nonexistentTable()
   {
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE_NONEXISTENT, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE_NONEXISTENT, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 1);
     Assertions.assertEquals(
         Collections.emptyList(),
@@ -485,6 +443,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
 
     final TableInputSpec inputSpec = new TableInputSpec(
         DATASOURCE,
+        null,
         null,
         new EqualityFilter(PARTITION_DIM, ColumnType.STRING, "abc", null),
         null
@@ -549,6 +508,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
         DATASOURCE,
         Collections.singletonList(Intervals.of("2000/P1Y")),
         null,
+        null,
         null
     );
 
@@ -593,7 +553,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
 
     // When 2 slices are requested, we assign segments to the servers that have those segments.
 
-    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null);
+    final TableInputSpec inputSpec = new TableInputSpec(DATASOURCE, null, null, null, null);
     final List<InputSlice> inputSlices = slicer.sliceStatic(inputSpec, 2);
     // Expect segment 2 and then the realtime segments 5 and 6 to be assigned round-robin.
     Assertions.assertEquals(

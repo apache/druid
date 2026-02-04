@@ -31,12 +31,13 @@ import {
   ActionCell,
   MoreButton,
   RefreshButton,
+  TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import { AsyncActionDialog } from '../../dialogs';
+import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
@@ -137,6 +138,9 @@ export interface ServicesViewState {
 
   middleManagerDisableWorkerHost?: string;
   middleManagerEnableWorkerHost?: string;
+
+  serviceTableActionDialogServer?: string;
+  serviceTableActionDialogActions: BasicAction[];
 
   visibleColumns: LocalStorageBackedVisibility;
 }
@@ -282,6 +286,8 @@ ORDER BY
     super(props);
     this.state = {
       servicesState: QueryState.INIT,
+
+      serviceTableActionDialogActions: [],
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
@@ -477,7 +483,34 @@ ORDER BY
           show: visibleColumns.shown('Service'),
           accessor: 'service',
           width: 300,
-          Cell: this.renderFilterableCell('service'),
+          Cell: ({ value, original, aggregated }) => {
+            if (aggregated) return '';
+
+            const { service_type } = original;
+            const workerInfo = workerInfoLookup[value];
+
+            // Make clickable if SQL is available to show properties
+            if (!capabilities.hasSql()) return value;
+
+            return (
+              <TableClickableCell
+                tooltip="Show properties"
+                onClick={() =>
+                  this.setState({
+                    serviceTableActionDialogServer: value,
+                    serviceTableActionDialogActions: this.getServiceActions(
+                      value,
+                      service_type,
+                      workerInfo,
+                    ),
+                  })
+                }
+                hoverIcon={IconNames.PROPERTIES}
+              >
+                {value}
+              </TableClickableCell>
+            );
+          },
           Aggregated: () => '',
         },
         {
@@ -794,22 +827,24 @@ ORDER BY
         },
         {
           Header: ACTION_COLUMN_LABEL,
-          show: capabilities.hasOverlordAccess(),
+          show: capabilities.hasSql(),
           id: ACTION_COLUMN_ID,
           width: ACTION_COLUMN_WIDTH,
           accessor: 'service',
           filterable: false,
           sortable: false,
-          Cell: ({ value, aggregated }) => {
+          Cell: ({ value, original, aggregated }) => {
             if (aggregated) return '';
 
+            const { service_type } = original;
             const workerInfo = workerInfoLookup[value];
-            if (!workerInfo) return null;
 
-            const { worker } = workerInfo;
-            const disabled = worker.version === '';
-            const workerActions = this.getWorkerActions(worker.host, disabled);
-            return <ActionCell actions={workerActions} menuTitle={worker.host} />;
+            // Get all applicable actions (worker actions + properties action)
+            const serviceActions = this.getServiceActions(value, service_type, workerInfo, true);
+            if (serviceActions.length === 0) return null;
+
+            const menuTitle = workerInfo ? workerInfo.worker.host : value;
+            return <ActionCell actions={serviceActions} menuTitle={menuTitle} />;
           },
           Aggregated: () => '',
         },
@@ -817,24 +852,53 @@ ORDER BY
     },
   );
 
-  private getWorkerActions(workerHost: string, disabled: boolean): BasicAction[] {
-    if (disabled) {
-      return [
-        {
+  private getServiceActions(
+    server: string,
+    serviceType: string,
+    workerInfo?: WorkerInfo,
+    fromTable?: boolean,
+  ): BasicAction[] {
+    const actions: BasicAction[] = [];
+
+    // Add worker-specific actions (enable/disable) if this is a worker
+    if (workerInfo) {
+      const { worker } = workerInfo;
+      const disabled = worker.version === '';
+
+      if (disabled) {
+        actions.push({
           icon: IconNames.TICK,
           title: 'Enable',
-          onAction: () => this.setState({ middleManagerEnableWorkerHost: workerHost }),
-        },
-      ];
-    } else {
-      return [
-        {
+          onAction: () => this.setState({ middleManagerEnableWorkerHost: worker.host }),
+        });
+      } else {
+        actions.push({
           icon: IconNames.DISABLE,
           title: 'Disable',
-          onAction: () => this.setState({ middleManagerDisableWorkerHost: workerHost }),
-        },
-      ];
+          onAction: () => this.setState({ middleManagerDisableWorkerHost: worker.host }),
+        });
+      }
     }
+
+    // Add properties action when called from table
+    if (fromTable) {
+      actions.push({
+        icon: IconNames.PROPERTIES,
+        title: 'View properties',
+        onAction: () => {
+          this.setState({
+            serviceTableActionDialogServer: server,
+            serviceTableActionDialogActions: this.getServiceActions(
+              server,
+              serviceType,
+              workerInfo,
+            ),
+          });
+        },
+      });
+    }
+
+    return actions;
   }
 
   renderDisableWorkerAction() {
@@ -969,7 +1033,21 @@ ORDER BY
         {this.renderServicesTable()}
         {this.renderDisableWorkerAction()}
         {this.renderEnableWorkerAction()}
+        {this.renderServiceTableActionDialog()}
       </div>
+    );
+  }
+
+  renderServiceTableActionDialog() {
+    const { serviceTableActionDialogServer, serviceTableActionDialogActions } = this.state;
+    if (!serviceTableActionDialogServer) return;
+
+    return (
+      <ServiceTableActionDialog
+        service={serviceTableActionDialogServer}
+        actions={serviceTableActionDialogActions}
+        onClose={() => this.setState({ serviceTableActionDialogServer: undefined })}
+      />
     );
   }
 }

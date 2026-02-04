@@ -82,8 +82,8 @@ public class SegmentLoaderConfig
    * waiting for space pressure to trigger eviction. This setting is not intended to be configured directly by
    * administrators. Instead, it is expected to be set when appropriate via {@link #setVirtualStorage}.
    */
-  @JsonProperty("virtualStorageFabricEvictImmediatelyOnHoldRelease")
-  private boolean virtualStorageFabricEvictImmediatelyOnHoldRelease = false;
+  @JsonProperty("virtualStorageIsEphemeral")
+  private boolean virtualStorageIsEphemeral = false;
 
   private long combinedMaxSize = 0;
 
@@ -162,30 +162,27 @@ public class SegmentLoaderConfig
     return virtualStorageLoadThreads;
   }
 
-  public boolean isVirtualStorageFabricEvictImmediatelyOnHoldRelease()
+  public boolean isVirtualStorageEphemeral()
   {
-    return virtualStorageFabricEvictImmediatelyOnHoldRelease;
+    return virtualStorageIsEphemeral;
   }
 
-  public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
+  public SegmentLoaderConfig setLocations(List<StorageLocationConfig> locations)
   {
-    SegmentLoaderConfig retVal = new SegmentLoaderConfig();
-    retVal.locations = Lists.newArrayList(locations);
-    retVal.deleteOnRemove = this.deleteOnRemove;
-    retVal.infoDir = this.infoDir;
-    return retVal;
+    this.locations = Lists.newArrayList(locations);
+    return this;
   }
 
   /**
-   * Sets {@link #virtualStorage} and {@link #virtualStorageFabricEvictImmediatelyOnHoldRelease}.
+   * Sets {@link #virtualStorage} and {@link #virtualStorageIsEphemeral}.
    */
   public SegmentLoaderConfig setVirtualStorage(
       boolean virtualStorage,
-      boolean virtualStorageFabricEvictImmediatelyOnHoldRelease
+      boolean virtualStorageFabricEphemeral
   )
   {
     this.virtualStorage = virtualStorage;
-    this.virtualStorageFabricEvictImmediatelyOnHoldRelease = virtualStorageFabricEvictImmediatelyOnHoldRelease;
+    this.virtualStorageIsEphemeral = virtualStorageFabricEphemeral;
     return this;
   }
 
@@ -219,9 +216,9 @@ public class SegmentLoaderConfig
            ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
            ", statusQueueMaxSize=" + statusQueueMaxSize +
-           ", useVirtualStorageFabric=" + virtualStorage +
-           ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
-           ", virtualStorageFabricEvictImmediatelyOnHoldRelease=" + virtualStorageFabricEvictImmediatelyOnHoldRelease +
+           ", virtualStorage=" + virtualStorage +
+           ", virtualStorageLoadThreads=" + virtualStorageLoadThreads +
+           ", virtualStorageIsEphemeral=" + virtualStorageIsEphemeral +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

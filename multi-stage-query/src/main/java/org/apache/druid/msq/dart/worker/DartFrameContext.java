@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
@@ -30,15 +31,16 @@ import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.server.SegmentManager;
 
 import java.io.File;
 
@@ -51,7 +53,8 @@ public class DartFrameContext implements FrameContext
   private final FrameWriterSpec frameWriterSpec;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  private final CoordinatorClient coordinatorClient;
   private final WorkerContext workerContext;
   private final ResourceHolder<ProcessingBuffers> processingBuffers;
   private final WorkerMemoryParameters memoryParameters;
@@ -64,8 +67,9 @@ public class DartFrameContext implements FrameContext
       final FrameWriterSpec frameWriterSpec,
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
-      final DataSegmentProvider dataSegmentProvider,
-      ResourceHolder<ProcessingBuffers> processingBuffers,
+      final SegmentManager segmentManager,
+      final CoordinatorClient coordinatorClient,
+      final ResourceHolder<ProcessingBuffers> processingBuffers,
       final WorkerMemoryParameters memoryParameters,
       final WorkerStorageParameters storageParameters,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
@@ -75,7 +79,8 @@ public class DartFrameContext implements FrameContext
     this.segmentWrangler = segmentWrangler;
     this.frameWriterSpec = frameWriterSpec;
     this.groupingEngine = groupingEngine;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
+    this.coordinatorClient = coordinatorClient;
     this.workerContext = workerContext;
     this.processingBuffers = processingBuffers;
     this.memoryParameters = memoryParameters;
@@ -108,9 +113,15 @@ public class DartFrameContext implements FrameContext
   }
 
   @Override
-  public DataSegmentProvider dataSegmentProvider()
+  public SegmentManager segmentManager()
   {
-    return dataSegmentProvider;
+    return segmentManager;
+  }
+
+  @Override
+  public CoordinatorClient coordinatorClient()
+  {
+    return coordinatorClient;
   }
 
   @Override
@@ -123,6 +134,12 @@ public class DartFrameContext implements FrameContext
   public ObjectMapper jsonMapper()
   {
     return workerContext.jsonMapper();
+  }
+
+  @Override
+  public WireTransferableContext wireTransferableContext()
+  {
+    return workerContext.injector().getInstance(WireTransferableContext.class);
   }
 
   @Override

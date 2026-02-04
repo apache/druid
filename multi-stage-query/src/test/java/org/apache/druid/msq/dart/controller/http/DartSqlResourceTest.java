@@ -91,6 +91,7 @@ import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SqlResourceQueryResultPusherFactory;
+import org.apache.druid.sql.http.StandardQueryState;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
@@ -244,7 +245,7 @@ public class DartSqlResourceTest extends MSQTestBase
             return super.queryKernelConfig(querySpec).toBuilder().workerIds(ImmutableList.of("some")).build();
           }
         },
-        controllerRegistry = new DartControllerRegistry()
+        controllerRegistry = new DartControllerRegistry(new DartControllerConfig())
         {
           @Override
           public void register(ControllerHolder holder)
@@ -298,7 +299,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     // Ensure that controllerRegistry has nothing in it at the conclusion of each test. Verifies that controllers
     // are fully cleaned up.
-    Assertions.assertEquals(0, controllerRegistry.getAllHolders().size(), "controllerRegistry.getAllHolders().size()");
+    Assertions.assertEquals(0, controllerRegistry.getAllControllers().size(), "controllerRegistry.getAllHolders().size()");
   }
 
   @Test
@@ -322,10 +323,10 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
-        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
+    controllerRegistry.deregister(holder, null);
   }
 
   /**
@@ -342,15 +343,15 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder holder2 = setUpMockRunningQuery(DIFFERENT_REGULAR_USER_NAME);
 
     // Regular users can see only their own queries, without authentication details.
-    Assertions.assertEquals(2, controllerRegistry.getAllHolders().size());
+    Assertions.assertEquals(2, controllerRegistry.getAllControllers().size());
     Assertions.assertEquals(
         new GetQueriesResponse(
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries("", httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries("", null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
-    controllerRegistry.deregister(holder2);
+    controllerRegistry.deregister(holder, null);
+    controllerRegistry.deregister(holder2, null);
   }
 
   /**
@@ -374,9 +375,9 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2001"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // With selfOnly = null, the endpoint returns both queries.
@@ -387,10 +388,10 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -407,17 +408,17 @@ public class DartSqlResourceTest extends MSQTestBase
     final ControllerHolder localHolder = setUpMockRunningQuery(REGULAR_USER_NAME);
 
     // Remote call fails.
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFailedFuture(new IOException("something went wrong")));
 
     // We only see local queries, because the remote call failed. (The entire call doesn't fail; we see what we
     // were able to fetch.)
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -442,19 +443,19 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(localHolder);
+    controllerRegistry.deregister(localHolder, null);
   }
 
   /**
@@ -479,18 +480,18 @@ public class DartSqlResourceTest extends MSQTestBase
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
-        ControllerHolder.State.RUNNING.toString()
+        StandardQueryState.RUNNING
     );
-    Mockito.when(dartSqlClient.getRunningQueries(true))
+    Mockito.when(dartSqlClient.getRunningQueries(true, false))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
 
     // The endpoint returns only the query issued by DIFFERENT_REGULAR_USER_NAME.
     Assertions.assertEquals(
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
-        sqlResource.doGetRunningQueries(null, httpServletRequest).getEntity()
+        sqlResource.doGetRunningQueries(null, null, httpServletRequest).getEntity()
     );
 
-    controllerRegistry.deregister(holder);
+    controllerRegistry.deregister(holder, null);
   }
 
   @Test

@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>36.0.0-SNAPSHOT</version>
+        <version>37.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -337,12 +337,12 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>nginx</artifactId>
+            <artifactId>testcontainers-nginx</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>

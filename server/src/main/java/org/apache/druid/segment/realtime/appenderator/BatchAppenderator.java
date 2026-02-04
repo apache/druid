@@ -797,6 +797,7 @@ public class BatchAppenderator implements Appenderator
       }
 
       final File mergedFile;
+      final DataSegment mergedSegment;
       final Stopwatch mergeStopwatch = Stopwatch.createStarted();
       final long mergeTimeMillis;
       final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
@@ -835,6 +836,14 @@ public class BatchAppenderator implements Appenderator
         metrics.setMergeTime(mergeTimeMillis);
 
         log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        QueryableIndex index = indexIO.loadIndex(mergedFile);
+        closer.register(index);
+        mergedSegment =
+            sink.getSegment()
+                .toBuilder()
+                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
+                .totalRows(index.getNumRows())
+                .build();
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -846,17 +855,7 @@ public class BatchAppenderator implements Appenderator
       final Stopwatch pushStopwatch = Stopwatch.createStarted();
 
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
-      final DataSegment segment = dataSegmentPusher.push(
-          mergedFile,
-          sink.getSegment()
-              .withDimensions(
-                  IndexMerger.getMergedDimensionsFromQueryableIndexes(
-                      indexes,
-                      schema.getDimensionsSpec()
-                  )
-              ),
-          false
-      );
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, mergedSegment, false);
 
       // Drop the queryable indexes behind the hydrants... they are not needed anymore and their
       // mapped file references
@@ -877,12 +876,13 @@ public class BatchAppenderator implements Appenderator
       metrics.incrementPushedRows(rowsinMergedSegment);
 
       log.info(
-          "Segment[%s] of %,d bytes "
+          "Segment[%s] of %,d bytes and %,d rows "
           + "built from %d incremental persist(s) in %,dms; "
           + "pushed to deep storage in %,dms. "
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
+          segment.getTotalRows(),
           indexes.size(),
           mergeTimeMillis,
           pushTimeMillis,

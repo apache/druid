@@ -426,7 +426,6 @@ public class RowBasedGrouperHelper
         adapter,
         supplier::get,
         decoratedSignature,
-        false,
         false
     );
   }
