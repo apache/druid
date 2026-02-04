@@ -79,11 +79,11 @@ public class CostBasedAutoScalerMockTest
   {
     // Use config with a long barrier to test cooldown behavior
     CostBasedAutoScalerConfig barrierConfig = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(100)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .minScaleDownDelay(Duration.standardHours(1))
-                                                                        .build();
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .minScaleDownDelay(Duration.standardHours(1))
+                                                                       .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
         mockSupervisor,
@@ -135,11 +135,11 @@ public class CostBasedAutoScalerMockTest
   {
     // Use config with a long barrier to test cooldown behavior
     CostBasedAutoScalerConfig barrierConfig = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(100)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .minScaleDownDelay(Duration.standardHours(1))
-                                                                        .build();
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .minScaleDownDelay(Duration.standardHours(1))
+                                                                       .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
         mockSupervisor,

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
 import org.apache.druid.java.util.common.logger.Logger;
 
 /**
@@ -58,7 +59,12 @@ public class WeightedCostFunction
    * @return CostResult containing totalCost, lagCost, and idleCost,
    * or result with {@link Double#POSITIVE_INFINITY} for invalid inputs
    */
-  public CostResult computeCost(CostMetrics metrics, int proposedTaskCount, CostBasedAutoScalerConfig config)
+  public CostResult computeCost(
+      CostMetrics metrics,
+      int proposedTaskCount,
+      CostBasedAutoScalerConfig config,
+      BurstScaleUpOnHighLagPlugin highLagPlugin
+  )
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
       return new CostResult(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
@@ -80,7 +86,7 @@ public class WeightedCostFunction
       lagRecoveryTime = metrics.getAggregateLag() / (proposedTaskCount * avgProcessingRate);
     }
 
-    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount, config);
+    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount, highLagPlugin);
     final double idleCost = proposedTaskCount * metrics.getTaskDurationSeconds() * predictedIdleRatio;
     final double lagCost = config.getLagWeight() * lagRecoveryTime;
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
@@ -111,11 +117,10 @@ public class WeightedCostFunction
    *
    * @param metrics   current system metrics containing idle ratio and task count
    * @param taskCount target task count to estimate an idle ratio for
-   * @param config    auto-scaler configuration containing threshold values
    * @return estimated idle ratio in range [0.0, 1.0]
    */
   @SuppressWarnings("ExtractMethodRecommender")
-  private double estimateIdleRatio(CostMetrics metrics, int taskCount, CostBasedAutoScalerConfig config)
+  private double estimateIdleRatio(CostMetrics metrics, int taskCount, BurstScaleUpOnHighLagPlugin highLagPlugin)
   {
     final double currentPollIdleRatio = metrics.getPollIdleRatio();
 
@@ -138,8 +143,8 @@ public class WeightedCostFunction
     double lagBusyFactor = 0.;
 
     // Lag-amplified idle decay
-    final int extraThreshold = config.getHighLagThreshold();
-    if (lagPerPartition >= extraThreshold) {
+    if (highLagPlugin != null && lagPerPartition >= highLagPlugin.lagThreshold()) {
+      int extraThreshold = highLagPlugin.lagThreshold();
       final double lagPerTask = metrics.getAggregateLag() / taskCount;
       lagBusyFactor = 1.0 - Math.exp(-lagPerTask / extraThreshold);
 

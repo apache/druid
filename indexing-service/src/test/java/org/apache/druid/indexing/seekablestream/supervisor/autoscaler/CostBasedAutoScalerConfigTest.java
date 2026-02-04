@@ -25,7 +25,6 @@ import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_IDLE_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_LAG_WEIGHT;
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY;
@@ -98,7 +97,10 @@ public class CostBasedAutoScalerConfigTest
 
     // Check defaults
     Assert.assertEquals(DEFAULT_SCALE_ACTION_PERIOD_MILLIS, config.getScaleActionPeriodMillis());
-    Assert.assertEquals(DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS, config.getMinTriggerScaleActionFrequencyMillis());
+    Assert.assertEquals(
+        DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS,
+        config.getMinTriggerScaleActionFrequencyMillis()
+    );
     Assert.assertEquals(DEFAULT_LAG_WEIGHT, config.getLagWeight(), 0.001);
     Assert.assertEquals(DEFAULT_IDLE_WEIGHT, config.getIdleWeight(), 0.001);
     Assert.assertEquals(DEFAULT_PROCESSING_RATE, config.getDefaultProcessingRate(), 0.001);
@@ -106,7 +108,8 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertFalse(config.isScaleDownOnTaskRolloverOnly());
     Assert.assertNull(config.getTaskCountStart());
     Assert.assertNull(config.getStopTaskCountRatio());
-    Assert.assertEquals(EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD, config.getHighLagThreshold());
+    // When useBurstScaleOnHeavyLag is not set (default: false), highLagThreshold defaults to -1
+    Assert.assertEquals(-1, config.getHighLagThreshold());
   }
 
   @Test
@@ -179,21 +182,20 @@ public class CostBasedAutoScalerConfigTest
   public void testBuilder()
   {
     CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
-                                                                 .taskCountMax(100)
-                                                                 .taskCountMin(5)
-                                                                 .taskCountStart(10)
-                                                                 .enableTaskAutoScaler(true)
-                                                                 .minTriggerScaleActionFrequencyMillis(600000L)
-                                                                 .stopTaskCountRatio(0.8)
-                                                                 .scaleActionPeriodMillis(60000L)
-                                                                 .lagWeight(0.6)
-                                                                 .idleWeight(0.4)
-                                                                 .defaultProcessingRate(2000.0)
-                                                                 .minScaleDownDelay(Duration.standardMinutes(10))
-                                                                 .scaleDownDuringTaskRolloverOnly(true)
-                                                                 .highLagThreshold(30000)
-                                                                 .aggressiveScalingLagPerPartitionThreshold()
-                                                                 .build();
+                                                                .taskCountMax(100)
+                                                                .taskCountMin(5)
+                                                                .taskCountStart(10)
+                                                                .enableTaskAutoScaler(true)
+                                                                .minTriggerScaleActionFrequencyMillis(600000L)
+                                                                .stopTaskCountRatio(0.8)
+                                                                .scaleActionPeriodMillis(60000L)
+                                                                .lagWeight(0.6)
+                                                                .idleWeight(0.4)
+                                                                .defaultProcessingRate(2000.0)
+                                                                .minScaleDownDelay(Duration.standardMinutes(10))
+                                                                .scaleDownDuringTaskRolloverOnly(true)
+                                                                .highLagThreshold(30000)
+                                                                .build();
 
     Assert.assertTrue(config.getEnableTaskAutoScaler());
     Assert.assertEquals(100, config.getTaskCountMax());

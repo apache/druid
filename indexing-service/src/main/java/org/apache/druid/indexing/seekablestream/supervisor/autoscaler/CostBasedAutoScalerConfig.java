@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.joda.time.Duration;
 
@@ -63,6 +64,16 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final double idleWeight;
   private final double defaultProcessingRate;
   /**
+   * Enables or disables {@code OptimalTaskCountBoundariesPlugin} which allows
+   * considering only task counts within a certain PPT-based window around the current PPT.
+   */
+  private final boolean useTaskCountBoundaries;
+  /**
+   * Enables or disables {@code BurstScaleUpOnHighLagPlugin} which allows
+   * applying burst scale-up when high lag is detected.
+   */
+  private final boolean useBurstScaleOnHeavyLag;
+  /**
    * Per-partition lag threshold allowing to activate a burst scaleup to eliminate high lag.
    */
   private final int highLagThreshold;
@@ -90,6 +101,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
       @Nullable @JsonProperty("defaultProcessingRate") Double defaultProcessingRate,
+      @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
+      @Nullable @JsonProperty("useBurstScaleOnHeavyLag") Boolean useBurstScaleOnHeavyLag,
       @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
       @Nullable @JsonProperty("scaleDownDuringTaskRolloverOnly") Boolean scaleDownDuringTaskRolloverOnly
@@ -110,9 +123,11 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
     this.defaultProcessingRate = Configs.valueOrDefault(defaultProcessingRate, DEFAULT_PROCESSING_RATE);
+    this.useTaskCountBoundaries = Configs.valueOrDefault(useTaskCountBoundaries, false);
+    this.useBurstScaleOnHeavyLag = Configs.valueOrDefault(useBurstScaleOnHeavyLag, false);
     this.highLagThreshold = Configs.valueOrDefault(
         highLagThreshold,
-        CostBasedAutoScaler.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD
+        this.useBurstScaleOnHeavyLag ? BurstScaleUpOnHighLagPlugin.EXTRA_SCALING_LAG_PER_PARTITION_THRESHOLD : -1
     );
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
     this.scaleDownDuringTaskRolloverOnly = Configs.valueOrDefault(scaleDownDuringTaskRolloverOnly, false);
@@ -221,6 +236,24 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return defaultProcessingRate;
   }
 
+  @JsonProperty("useTaskCountBoundaries")
+  public boolean shouldUseTaskCountBoundaries()
+  {
+    return useTaskCountBoundaries;
+  }
+
+  @JsonProperty("useBurstScaleOnHeavyLag")
+  public boolean shouldUseBurstScaleOnHeavyLag()
+  {
+    return useBurstScaleOnHeavyLag;
+  }
+
+  @JsonProperty("highLagThreshold")
+  public int getHighLagThreshold()
+  {
+    return highLagThreshold;
+  }
+
   @JsonProperty
   public Duration getMinScaleDownDelay()
   {
@@ -231,12 +264,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   public boolean isScaleDownOnTaskRolloverOnly()
   {
     return scaleDownDuringTaskRolloverOnly;
-  }
-
-  @JsonProperty("highLagThreshold")
-  public int getHighLagThreshold()
-  {
-    return highLagThreshold;
   }
 
   @Override
@@ -265,6 +292,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
            && Double.compare(that.defaultProcessingRate, defaultProcessingRate) == 0
+           && useTaskCountBoundaries == that.useTaskCountBoundaries
+           && useBurstScaleOnHeavyLag == that.useBurstScaleOnHeavyLag
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
            && Objects.equals(taskCountStart, that.taskCountStart)
@@ -285,6 +314,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         lagWeight,
         idleWeight,
         defaultProcessingRate,
+        useTaskCountBoundaries,
+        useBurstScaleOnHeavyLag,
         minScaleDownDelay,
         scaleDownDuringTaskRolloverOnly
     );
@@ -304,6 +335,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
            ", defaultProcessingRate=" + defaultProcessingRate +
+           ", useTaskCountBoundaries=" + useTaskCountBoundaries +
+           ", useBurstScaleOnHeavyLag=" + useBurstScaleOnHeavyLag +
            ", highLagThreshold=" + highLagThreshold +
            ", minScaleDownDelay=" + minScaleDownDelay +
            ", scaleDownDuringTaskRolloverOnly=" + scaleDownDuringTaskRolloverOnly +
@@ -326,6 +359,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Double lagWeight;
     private Double idleWeight;
     private Double defaultProcessingRate;
+    private Boolean useTaskCountBoundaries;
+    private Boolean useBurstScaleOnHeavyLag;
     private Integer highLagThreshold;
     private Duration minScaleDownDelay;
     private Boolean scaleDownDuringTaskRolloverOnly;
@@ -406,6 +441,18 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
+    public Builder useTaskCountBoundaries(boolean useTaskCountBoundaries)
+    {
+      this.useTaskCountBoundaries = useTaskCountBoundaries;
+      return this;
+    }
+
+    public Builder useBurstScaleOnHeavyLag(boolean useBurstScaleOnHeavyLag)
+    {
+      this.useBurstScaleOnHeavyLag = useBurstScaleOnHeavyLag;
+      return this;
+    }
+
     public Builder highLagThreshold(int highLagThreshold)
     {
       this.highLagThreshold = highLagThreshold;
@@ -425,6 +472,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           lagWeight,
           idleWeight,
           defaultProcessingRate,
+          useTaskCountBoundaries,
+          useBurstScaleOnHeavyLag,
           highLagThreshold,
           minScaleDownDelay,
           scaleDownDuringTaskRolloverOnly
