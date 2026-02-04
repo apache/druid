@@ -36,7 +36,6 @@ import org.apache.druid.indexer.Bucket;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.JobHelper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.GranularityModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
