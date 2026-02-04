@@ -281,6 +281,13 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   }
 
   @Override
+  @Ignore("allowNonAlignedInterval is not supported in MSQ")
+  @Test
+  public void testWithSegmentGranularityMisalignedIntervalAllowed2()
+  {
+  }
+
+  @Override
   @Test
   public void testCompactionWithNewMetricInMetricsSpec() throws Exception
   {
