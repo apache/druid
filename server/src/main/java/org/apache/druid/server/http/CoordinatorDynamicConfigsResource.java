@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.sun.jersey.spi.container.ResourceFilters;
-import jakarta.inject.Inject;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.java.util.common.Intervals;
@@ -34,6 +33,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

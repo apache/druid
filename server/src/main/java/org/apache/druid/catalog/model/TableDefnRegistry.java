@@ -22,7 +22,6 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import jakarta.inject.Inject;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.HttpInputSourceDefn;
@@ -35,6 +34,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

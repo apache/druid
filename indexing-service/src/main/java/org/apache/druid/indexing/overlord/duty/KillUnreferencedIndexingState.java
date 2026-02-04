@@ -19,12 +19,12 @@
 
 package org.apache.druid.indexing.overlord.duty;
 
-import jakarta.inject.Inject;
 import org.apache.druid.indexing.overlord.config.IndexingStateCleanupConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.joda.time.DateTime;
 
+import javax.inject.Inject;
 import java.util.List;
 
 /**

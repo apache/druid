@@ -643,6 +643,12 @@
                 <version>2.0.1</version>
             </dependency>
             <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>1</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>javax.el</groupId>
                 <artifactId>javax.el-api</artifactId>
                 <version>3.0.0</version>

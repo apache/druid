@@ -20,7 +20,6 @@
 package org.apache.druid.catalog.sql;
 
 import com.google.common.collect.ImmutableSet;
-import jakarta.inject.Inject;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
@@ -39,6 +38,7 @@ import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMeta
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;

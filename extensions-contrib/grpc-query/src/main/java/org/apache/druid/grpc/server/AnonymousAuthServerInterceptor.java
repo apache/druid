@@ -27,8 +27,9 @@ import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-import jakarta.inject.Inject;
 import org.apache.druid.server.security.Authenticator;
+
+import javax.inject.Inject;
 
 /**
  * "Authorizes" an anonymous request, which just means adding an "allow all"

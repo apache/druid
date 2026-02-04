@@ -20,7 +20,6 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.inject.Inject;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
@@ -30,6 +29,8 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
+
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

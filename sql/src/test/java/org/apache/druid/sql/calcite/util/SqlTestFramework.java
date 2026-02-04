@@ -28,7 +28,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import jakarta.inject.Named;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
@@ -127,6 +126,7 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.inject.Named;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import jakarta.inject.Inject;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
@@ -55,7 +54,7 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import javax.annotation.Nullable;
-
+import javax.inject.Inject;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

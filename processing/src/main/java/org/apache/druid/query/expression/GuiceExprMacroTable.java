@@ -20,9 +20,9 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
-import jakarta.inject.Inject;
 import org.apache.druid.math.expr.ExprMacroTable;
 
+import javax.inject.Inject;
 import java.util.Set;
 
 public class GuiceExprMacroTable extends ExprMacroTable

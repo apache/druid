@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import jakarta.inject.Inject;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.LoadScope;
@@ -37,6 +36,8 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Test;
+
+import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;

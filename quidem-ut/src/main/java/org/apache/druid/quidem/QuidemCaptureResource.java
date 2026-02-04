@@ -20,11 +20,11 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Inject;
-import jakarta.inject.Named;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 
+import javax.inject.Named;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;

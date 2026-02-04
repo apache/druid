@@ -21,12 +21,13 @@ package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import jakarta.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+
+import javax.inject.Inject;
 
 /**
  * Represents the metastore manager database and its implementation.

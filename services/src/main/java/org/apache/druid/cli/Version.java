@@ -21,10 +21,11 @@ package org.apache.druid.cli;
 
 import com.github.rvesse.airline.annotations.Command;
 import io.netty.util.SuppressForbidden;
-import jakarta.inject.Inject;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.utils.RuntimeInfo;
+
+import javax.inject.Inject;
 
 @Command(
     name = "version",

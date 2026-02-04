@@ -200,6 +200,12 @@
       <artifactId>calcite-core</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>javax.inject</artifactId>
+      <version>1</version>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Tests -->
     <dependency>

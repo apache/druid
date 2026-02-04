@@ -21,7 +21,8 @@ package org.apache.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import jakarta.inject.Inject;
+
+import javax.inject.Inject;
 
 /**
  * Module for the extensions loader. Add to the startup injector

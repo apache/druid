@@ -20,7 +20,6 @@
 package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.inject.Inject;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
@@ -36,6 +35,7 @@ import org.apache.druid.catalog.sync.CatalogUpdateProvider;
 import org.apache.druid.guice.annotations.Json;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import java.util.List;
 
 /**

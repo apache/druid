@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.avatica;
 
-import jakarta.inject.Inject;
 import org.apache.calcite.avatica.AvaticaUtils;
 import org.apache.calcite.avatica.metrics.Timer;
 import org.apache.calcite.avatica.remote.JsonHandler;
@@ -35,6 +34,7 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
 
+import javax.inject.Inject;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
