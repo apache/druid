@@ -95,4 +95,5 @@ com.google.common.io.BaseEncoding#base64()
 javax.annotation.concurrent.GuardedBy
 com.amazonaws.annotation.GuardedBy
 
+javax.inject.Inject @ jakarta.inject.Inject
 org.powermock.** @ Use Mockito instead of Powermock for compatibility with newer Java versions
