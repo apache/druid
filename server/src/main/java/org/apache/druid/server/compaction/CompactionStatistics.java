@@ -21,12 +21,23 @@ package org.apache.druid.server.compaction;
 
 /**
  * Used to track statistics for segments in different states of compaction.
+ *
+ * segments/bytes can be compacted or uncompacted
+ * interval is compacted means fully compacted
  */
 public class CompactionStatistics
 {
+  public static final CompactionStatistics EMPTY = CompactionStatistics.create(0, 0, 0);
+
   private long totalBytes;
   private long numSegments;
   private long numIntervals;
+
+  private long compactedBytes;
+  private long uncompactedBytes;
+
+  private long compactedSegments;
+  private long uncompactedSegments;
 
   public static CompactionStatistics create(long bytes, long numSegments, long numIntervals)
   {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -68,7 +69,7 @@ public class CompactionCandidate
         umbrellaInterval,
         compactionInterval,
         segmentIntervals.size(),
-        null
+        CompactionStatus.pending(CompactionStatistics.EMPTY, CompactionStatistics.EMPTY, "Unknown")
     );
   }
 
@@ -77,7 +78,7 @@ public class CompactionCandidate
       Interval umbrellaInterval,
       Interval compactionInterval,
       int numDistinctSegmentIntervals,
-      @Nullable CompactionStatus currentStatus
+      CompactionStatus currentStatus
   )
   {
     this.segments = segments;
@@ -88,7 +89,7 @@ public class CompactionCandidate
 
     this.numIntervals = numDistinctSegmentIntervals;
     this.dataSource = segments.get(0).getDataSource();
-    this.currentStatus = currentStatus;
+    this.currentStatus = Preconditions.checkNotNull(currentStatus, "'currentStatus' must be specified");
   }
 
   /**
@@ -137,24 +138,19 @@ public class CompactionCandidate
     return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
-  @Nullable
   public CompactionStatistics getCompactedStats()
   {
-    return (currentStatus == null || currentStatus.getCompactedStats() == null)
-           ? null : currentStatus.getCompactedStats();
+    return currentStatus.isComplete() ? getStats() : currentStatus.getCompactedStats();
   }
 
-  @Nullable
   public CompactionStatistics getUncompactedStats()
   {
-    return (currentStatus == null || currentStatus.getUncompactedStats() == null)
-           ? null : currentStatus.getUncompactedStats();
+    return currentStatus.isComplete() ? CompactionStatistics.EMPTY : currentStatus.getUncompactedStats();
   }
 
   /**
    * Current compaction status of the time chunk corresponding to this candidate.
    */
-  @Nullable
   public CompactionStatus getCurrentStatus()
   {
     return currentStatus;

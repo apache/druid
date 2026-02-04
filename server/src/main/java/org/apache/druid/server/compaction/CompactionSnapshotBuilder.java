@@ -64,33 +64,33 @@ public class CompactionSnapshotBuilder
   public void addToPending(CompactionCandidate candidate)
   {
     final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
-    builder.stats.incrementWaitingStats(getUncompactedStats(candidate));
-
-    final CompactionStatistics compactedStats = candidate.getCompactedStats();
-    if (compactedStats != null) {
-      builder.stats.incrementCompactedStats(compactedStats);
-    }
+    builder.stats.incrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getCompactedStats());
   }
 
   public void addToSkipped(CompactionCandidate candidate)
   {
     final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
-    builder.stats.incrementSkippedStats(getUncompactedStats(candidate));
+    builder.stats.incrementSkippedStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getCompactedStats());
     builder.skipped.add(candidate);
   }
 
   public void moveFromPendingToSkipped(CompactionCandidate candidate)
   {
     final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
-    builder.stats.decrementWaitingStats(getUncompactedStats(candidate));
-    addToSkipped(candidate);
+    builder.stats.decrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementSkippedStats(candidate.getUncompactedStats());
+    builder.skipped.add(candidate);
   }
 
   public void moveFromPendingToCompleted(CompactionCandidate candidate)
   {
     final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
-    builder.stats.decrementWaitingStats(getUncompactedStats(candidate));
-    addToComplete(candidate);
+    builder.stats.decrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getUncompactedStats());
+    // these stats might be incorrect since the number of segments and bytes would have changed
+    builder.completed.add(candidate);
   }
 
   public Map<String, AutoCompactionSnapshot> build()
@@ -103,17 +103,6 @@ public class CompactionSnapshotBuilder
     });
 
     return datasourceToSnapshot;
-  }
-
-  /**
-   * Gets the stats for uncompacted segments in the given candidate.
-   * If details of uncompacted segments is not available, all segments within the
-   * candidate are considered to be uncompacted.
-   */
-  private CompactionStatistics getUncompactedStats(CompactionCandidate candidate)
-  {
-    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
-    return uncompacted == null ? candidate.getStats() : uncompacted;
   }
 
   private DatasourceSnapshotBuilder getBuilderForDatasource(String dataSource)

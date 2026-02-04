@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
@@ -94,8 +95,8 @@ public class CompactionStatus
   {
     this.state = state;
     this.reason = reason;
-    this.compactedStats = compactedStats;
-    this.uncompactedStats = uncompactedStats;
+    this.compactedStats = Preconditions.checkNotNull(compactedStats);
+    this.uncompactedStats = Preconditions.checkNotNull(uncompactedStats);
   }
 
   public boolean isComplete()
@@ -139,9 +140,9 @@ public class CompactionStatus
            '}';
   }
 
-  public static CompactionStatus pending(String reasonFormat, Object... args)
+  private static CompactionStatus pending(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null);
+    return pending(CompactionStatistics.EMPTY, CompactionStatistics.EMPTY, reasonFormat, args);
   }
 
   public static CompactionStatus pending(
@@ -231,14 +232,24 @@ public class CompactionStatus
     }
   }
 
-  public static CompactionStatus skipped(String reasonFormat, Object... args)
+  public CompactionStatus withStateAndMessage(State state, String messageFormat, Object... args)
   {
-    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null);
+    return new CompactionStatus(
+        state,
+        StringUtils.format(messageFormat, args),
+        compactedStats,
+        uncompactedStats
+    );
   }
 
-  public static CompactionStatus running(String message)
+  public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.RUNNING, message, null, null);
+    return new CompactionStatus(
+        State.SKIPPED,
+        StringUtils.format(reasonFormat, args),
+        CompactionStatistics.EMPTY,
+        CompactionStatistics.EMPTY
+    );
   }
 
   /**

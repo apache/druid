@@ -154,6 +154,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     runCompactionWithSpec(compactionConfig);
     waitForAllCompactionTasksToFinish();
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("stuff"));
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));

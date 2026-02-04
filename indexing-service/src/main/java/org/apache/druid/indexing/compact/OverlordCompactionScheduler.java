@@ -333,7 +333,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       final CompactionStatus currentStatus =
           statusTracker.computeCompactionStatus(candidate, searchPolicy.get());
       jobsByStatus.computeIfAbsent(currentStatus.getState(), s -> new ArrayList<>())
-                  .add(new CompactionJobStatus(dummyJob, currentStatus, jobPositionInQueue));
+                  .add(new CompactionJobStatus(dummyJob, currentStatus, -1));
     }
 
     // Add recently completed jobs
@@ -342,9 +342,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       final String taskId = taskStatus == null ? "" : taskStatus.getTaskId();
       final CompactionJob dummyJob = new CompactionJob(createDummyTask(taskId, candidate), candidate, -1);
 
-      final CompactionStatus currentStatus = CompactionStatus.COMPLETE;
+      final CompactionStatus currentStatus = candidate.getCurrentStatus();
       jobsByStatus.computeIfAbsent(currentStatus.getState(), s -> new ArrayList<>())
-                  .add(new CompactionJobStatus(dummyJob, currentStatus, jobPositionInQueue));
+                  .add(new CompactionJobStatus(dummyJob, currentStatus, -1));
     }
 
     return jobsByStatus;

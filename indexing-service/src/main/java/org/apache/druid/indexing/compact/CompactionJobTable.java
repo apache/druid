@@ -49,17 +49,13 @@ public class CompactionJobTable extends Table
   {
     final CompactionJob job = jobStatus.getJob();
     final CompactionCandidate candidate = jobStatus.getJob().getCandidate();
-    final CompactionStatistics compactedStats = candidate.getCompactedStats();
+    final CompactionStatistics compacted = candidate.getCompactedStats();
 
     final List<Object> values = List.of(
         candidate.getCompactionInterval(),
         job.isMsq() ? "" : job.getNonNullTask().getId(),
-        compactedStats == null
-        ? ""
-        : StringUtils.format("%d/%d", compactedStats.getNumSegments(), candidate.numSegments()),
-        compactedStats == null
-        ? ""
-        : StringUtils.format("%d/%d", compactedStats.getTotalBytes(), candidate.getTotalBytes()),
+        StringUtils.format("%d/%d", compacted.getNumSegments(), candidate.numSegments()),
+        StringUtils.format("%d/%d", compacted.getTotalBytes(), candidate.getTotalBytes()),
         jobStatus.getPositionInQueue()
     );
 
