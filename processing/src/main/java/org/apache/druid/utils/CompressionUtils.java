@@ -772,21 +772,6 @@ public class CompressionUtils
   }
 
   /**
-   * Checks to see if fName is a valid name for a "*.lz4" file
-   *
-   * @param fName The name of the file in question
-   *
-   * @return True if fName is a properly named .lz4 file, false otherwise
-   */
-  public static boolean isLz4(String fName)
-  {
-    if (Strings.isNullOrEmpty(fName)) {
-      return false;
-    }
-    return fName.endsWith(Format.LZ4.getSuffix());
-  }
-
-  /**
    * Get the file name without the .gz extension
    *
    * @param fname The name of the gzip file
