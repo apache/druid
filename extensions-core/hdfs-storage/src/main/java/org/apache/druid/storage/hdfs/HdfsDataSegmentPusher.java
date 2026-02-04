@@ -77,7 +77,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   public HdfsDataSegmentPusher(
       HdfsDataSegmentPusherConfig config,
       @Hdfs Configuration hadoopConfig,
-      @Nullable ServiceEmitter emitter
+      ServiceEmitter emitter
   )
   {
     this.config = config;
