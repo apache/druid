@@ -446,7 +446,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return determineLockGranularityAndTryLock(taskActionClient, List.of(segmentProvider.interval));
+    return determineLockGranularityAndTryLock(
+        taskActionClient,
+        List.of(retrieveRelevantTimelineHolder(taskActionClient, segmentProvider, null).lhs)
+    );
   }
 
   @Override
@@ -568,7 +571,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   ) throws IOException
   {
     final Pair<Interval, Iterable<DataSegment>> holder = retrieveRelevantTimelineHolder(
-        toolbox,
+        toolbox.getTaskActionClient(),
         segmentProvider,
         lockGranularityInUse
     );
@@ -664,14 +667,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * @return a pair of umbrella interval and data segments
    */
   private static Pair<Interval, Iterable<DataSegment>> retrieveRelevantTimelineHolder(
-      TaskToolbox toolbox,
+      TaskActionClient actionClient,
       SegmentProvider segmentProvider,
-      LockGranularity lockGranularityInUse
+      @Nullable LockGranularity lockGranularityInUse
   ) throws IOException
   {
-    final List<DataSegment> usedSegments =
-        segmentProvider.findSegments(toolbox.getTaskActionClient());
-    segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
+    final List<DataSegment> usedSegments = segmentProvider.findSegments(actionClient);
+    if (lockGranularityInUse != null) {
+      segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
+    }
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
