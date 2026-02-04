@@ -19,13 +19,13 @@
 
 package org.apache.druid.query.groupby;
 
+import jakarta.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.query.QueryResourceId;
 
 import javax.annotation.Nullable;
-import jakarta.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;

@@ -21,6 +21,7 @@ package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import jakarta.inject.Inject;
 import org.apache.druid.catalog.http.CatalogListenerResource;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.sync.RestUpdateSender.RestSender;
@@ -36,8 +37,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
-
-import jakarta.inject.Inject;
 import java.util.function.Supplier;
 
 /**

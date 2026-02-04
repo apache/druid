@@ -22,6 +22,7 @@ package org.apache.druid.catalog.http;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import jakarta.inject.Inject;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
@@ -43,7 +44,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
-import jakarta.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;

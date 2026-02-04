@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import io.netty.handler.timeout.TimeoutException;
+import jakarta.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.java.util.common.RE;
@@ -33,8 +34,6 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
-import jakarta.inject.Inject;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 

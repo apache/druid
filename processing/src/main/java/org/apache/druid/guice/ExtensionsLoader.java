@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
+import jakarta.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
@@ -32,8 +33,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-
-import jakarta.inject.Inject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;

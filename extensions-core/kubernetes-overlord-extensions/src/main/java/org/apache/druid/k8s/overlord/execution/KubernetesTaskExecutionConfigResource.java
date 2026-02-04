@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.execution;
 
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
+import jakarta.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
@@ -31,7 +32,6 @@ import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
-import jakarta.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

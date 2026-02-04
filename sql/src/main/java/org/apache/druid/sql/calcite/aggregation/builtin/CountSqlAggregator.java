@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import jakarta.inject.Inject;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -43,7 +44,6 @@ import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import jakarta.inject.Inject;
 import java.util.List;
 
 public class CountSqlAggregator implements SqlAggregator

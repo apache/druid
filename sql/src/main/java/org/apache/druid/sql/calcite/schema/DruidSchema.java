@@ -19,12 +19,11 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import jakarta.inject.Inject;
 import org.apache.calcite.schema.Table;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
-
-import jakarta.inject.Inject;
 
 import java.util.Set;
 

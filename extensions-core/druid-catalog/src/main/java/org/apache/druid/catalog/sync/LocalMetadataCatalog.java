@@ -19,14 +19,13 @@
 
 package org.apache.druid.catalog.sync;
 
+import jakarta.inject.Inject;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
-
-import jakarta.inject.Inject;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;

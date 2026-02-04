@@ -29,12 +29,11 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import jakarta.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
-
-import jakarta.inject.Inject;
 
 /**
  * Authorizes a Basic Auth user name and password and sets the resulting

@@ -22,6 +22,7 @@ package org.apache.druid.catalog.sync;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import jakarta.inject.Inject;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
@@ -45,7 +46,6 @@ import org.apache.druid.server.http.ServletResourceUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
-import jakarta.inject.Inject;
 import java.util.Collections;
 import java.util.List;
 

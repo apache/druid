@@ -20,6 +20,7 @@
 package org.apache.druid.grpc.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.inject.Inject;
 import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.NativeQuery;
@@ -31,8 +32,6 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
-
-import jakarta.inject.Inject;
 
 import java.io.IOException;
 

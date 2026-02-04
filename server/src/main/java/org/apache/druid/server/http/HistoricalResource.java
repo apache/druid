@@ -21,10 +21,10 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
+import jakarta.inject.Inject;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
-import jakarta.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;

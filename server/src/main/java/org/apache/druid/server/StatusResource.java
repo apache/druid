@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ResourceFilters;
+import jakarta.inject.Inject;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.guice.ExtensionsLoader;
@@ -33,7 +34,6 @@ import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
-import jakarta.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
