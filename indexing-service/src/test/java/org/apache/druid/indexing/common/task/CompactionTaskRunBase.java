@@ -47,6 +47,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
@@ -538,6 +539,39 @@ public abstract class CompactionTaskRunBase
             Granularities.WEEK,
             DEFAULT_QUERY_GRAN,
             List.of(inputInterval)
+        ),
+        segments.get(0).getLastCompactionState()
+    );
+  }
+
+  @Test
+  public void testWithSegmentGranularityMisalignedIntervalAllowed2() throws Exception
+  {
+    Assume.assumeTrue(
+        "test with defined segment granularity and interval in this test",
+        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        && lockGranularity != LockGranularity.SEGMENT
+    );
+    verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
+    // Test when inputInterval doesn't align with segment granularity
+    final Interval interval = Intervals.of("2014-01-01T00:30:00Z/2014-01-01T01:30:00Z");
+    final CompactionTask compactionTask1 =
+        compactionTaskBuilder(Granularities.HOUR)
+            .ioConfig(new CompactionIOConfig(new CompactionIntervalSpec(interval, null), true, null))
+            .build();
+
+    Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask1);
+    verifyTaskSuccessRowsAndSchemaMatch(resultPair, 3);
+
+    List<DataSegment> segments = new ArrayList<>(resultPair.rhs.getSegments());
+    Assert.assertEquals(1, segments.size());
+    Assert.assertEquals(Intervals.of("2014-01-01T01:00:00Z/2014-01-01T02:00:00Z"), segments.get(0).getInterval());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
+    Assert.assertEquals(
+        getDefaultCompactionState(
+            Granularities.HOUR,
+            DEFAULT_QUERY_GRAN,
+            List.of(interval)
         ),
         segments.get(0).getLastCompactionState()
     );
