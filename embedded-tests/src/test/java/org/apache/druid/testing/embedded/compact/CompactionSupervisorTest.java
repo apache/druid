@@ -245,13 +245,18 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     verifySegmentsHaveNullLastCompactionStateAndNonNullFingerprint();
   }
 
-  @Test
-  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules()
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_cascadingCompactionTemplate_multiplePeriodsApplyDifferentCompactionRules(CompactionEngine compactionEngine)
   {
-    // We eventually want to run with parameterized test for both engines but right now using RANGE partitioning and filtering
-    // out all rows with native engine cant handle right now.
-    CompactionEngine compactionEngine = CompactionEngine.MSQ;
-    configureCompaction(compactionEngine);
+    // Configure cluster with storeCompactionStatePerSegment=false
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(
+            new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, false)
+        )
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
 
     DateTime now = DateTimes.nowUtc();
 
@@ -337,7 +342,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
     Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
-    Assertions.assertEquals(7, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(4, getNumSegmentsWith(Granularities.DAY));
     verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
   }
 
@@ -516,7 +521,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .withTransformSpec(
             // This filter drops all rows: expression "false" always evaluates to false
             new CompactionTransformSpec(
-                new NotDimFilter(new SelectorDimFilter("item", "shirt", null))
+                new NotDimFilter(new SelectorDimFilter("item", "shirt", null)),
+                null
             )
         );
 
