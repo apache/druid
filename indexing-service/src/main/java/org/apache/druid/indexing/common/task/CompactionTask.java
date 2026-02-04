@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -566,11 +567,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       boolean needMultiValuedColumns
   ) throws IOException
   {
-    final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
+    final Pair<Interval, Iterable<DataSegment>> holder = retrieveRelevantTimelineHolder(
         toolbox,
         segmentProvider,
         lockGranularityInUse
     );
+    final Iterable<DataSegment> timelineSegments = holder.rhs;
 
     if (!timelineSegments.iterator().hasNext()) {
       return Collections.emptyMap();
@@ -640,7 +642,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          segmentProvider.interval,
+          holder.lhs,
           lazyFetchSegments(
               timelineSegments,
               toolbox.getSegmentCacheManager()
@@ -656,7 +658,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
-  private static Iterable<DataSegment> retrieveRelevantTimelineHolders(
+  /**
+   * Retrieves data segments and their umbrella interval from the timeline for the given segment provider.
+   *
+   * @return a pair of umbrella interval and data segments
+   */
+  private static Pair<Interval, Iterable<DataSegment>> retrieveRelevantTimelineHolder(
       TaskToolbox toolbox,
       SegmentProvider segmentProvider,
       LockGranularity lockGranularityInUse
@@ -668,7 +675,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
-    return VersionedIntervalTimeline.getAllObjects(timelineSegments);
+    Iterable<DataSegment> segments = VersionedIntervalTimeline.getAllObjects(timelineSegments);
+    Interval interval =
+        JodaUtils.umbrellaInterval(
+            List.of(
+                JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval)),
+                segmentProvider.interval
+            ));
+    return Pair.of(interval, segments);
   }
 
   private static DataSchema createDataSchema(
