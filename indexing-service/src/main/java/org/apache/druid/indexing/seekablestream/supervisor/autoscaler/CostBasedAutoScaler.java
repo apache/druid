@@ -225,7 +225,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config, burstScaleUpPlugin);
       double cost = costResult.totalCost();
       log.info(
-          "Proposed task count: %d, Cost: %.4f (lag: %.4f, idle: %.4f)",
+          "Proposed task count[%d] has total Cost[%.4f] = lagCost[%.4f] + idleCost[%.4f]",
           taskCount,
           cost,
           costResult.lagCost(),
