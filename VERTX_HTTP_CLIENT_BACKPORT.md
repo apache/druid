@@ -8,6 +8,8 @@ This document describes the backport of Vertx HTTP client support from Druid 35 
 
 **Risk Level:** Medium - we're adding a new HTTP client option while keeping OkHttp available as fallback.
 
+**Upstream Alignment:** This implementation was verified against the actual Druid 35 PR #18540 source code (commit `cabada6209`). The core Vertx integration matches upstream exactly, with additional logging added for debugging.
+
 ---
 
 ## Problem Statement
@@ -321,6 +323,38 @@ When upgrading to Druid 35:
    # Druid 35 native:
    druid.indexer.runner.k8sAndWorker.http.httpClientType=vertx
    ```
+
+---
+
+## Comparison with Upstream Druid 35
+
+This implementation was verified against Druid 35 PR #18540 (commit `cabada6209`).
+
+### What Matches Upstream Exactly
+
+| Component | Details |
+|-----------|---------|
+| `DruidKubernetesVertxHttpClientConfig` | Uses `VertxOptions.DEFAULT_*` constants for defaults |
+| `DruidKubernetesVertxHttpClientFactory.createVertxInstance()` | Identical Vertx initialization logic |
+| `DruidKubernetesHttpClientFactory` | Same interface extending `HttpClient.Factory` |
+| VertxOptions settings | Same: daemon threads, disabled file caching, disabled classpath resolving |
+
+### Differences from Upstream (Intentional)
+
+| Aspect | Upstream Druid 35 | Our Backport | Reason |
+|--------|-------------------|--------------|--------|
+| Logging | None | Extensive | Helps debug and verify Vertx is working |
+| `close()` method | None | Added | Ensures clean Vertx shutdown on lifecycle stop |
+| Client selection | PolyBind | if/else | Simpler for backport with only 2 options |
+| Config paths | `k8sAndWorker.http.*` | `indexer.runner.*` | Match existing Druid 30 patterns |
+| JDK client option | Yes | No | Not needed for our use case |
+
+### Upstream Files Reference
+
+The upstream implementation in Druid 35 is located at:
+- `extensions-core/kubernetes-overlord-extensions/src/main/java/org/apache/druid/k8s/overlord/common/httpclient/`
+
+Note: In Druid 35, the kubernetes extension moved from `extensions-contrib` to `extensions-core`.
 
 ---
 

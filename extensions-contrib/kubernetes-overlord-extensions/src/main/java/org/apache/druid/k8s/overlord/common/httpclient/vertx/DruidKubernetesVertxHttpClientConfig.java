@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vertx.core.VertxOptions;
 
 /**
  * Configuration for the Vertx HTTP client used by Kubernetes client.
@@ -31,23 +32,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class DruidKubernetesVertxHttpClientConfig
 {
-  // Defaults match VertxOptions.DEFAULT_WORKER_POOL_SIZE
-  public static final int DEFAULT_WORKER_POOL_SIZE = 20;
-
-  // Default event loop = 2 * number of CPU cores (0 means use Vertx default)
-  public static final int DEFAULT_EVENT_LOOP_POOL_SIZE = 0;
-
-  // Defaults match VertxOptions.DEFAULT_INTERNAL_BLOCKING_POOL_SIZE
-  public static final int DEFAULT_INTERNAL_BLOCKING_POOL_SIZE = 20;
+  @JsonProperty
+  private int workerPoolSize = VertxOptions.DEFAULT_WORKER_POOL_SIZE;
 
   @JsonProperty
-  private int workerPoolSize = DEFAULT_WORKER_POOL_SIZE;
+  private int eventLoopPoolSize = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
 
   @JsonProperty
-  private int eventLoopPoolSize = DEFAULT_EVENT_LOOP_POOL_SIZE;
-
-  @JsonProperty
-  private int internalBlockingPoolSize = DEFAULT_INTERNAL_BLOCKING_POOL_SIZE;
+  private int internalBlockingPoolSize = VertxOptions.DEFAULT_INTERNAL_BLOCKING_POOL_SIZE;
 
   public int getWorkerPoolSize()
   {
@@ -62,15 +54,5 @@ public class DruidKubernetesVertxHttpClientConfig
   public int getInternalBlockingPoolSize()
   {
     return internalBlockingPoolSize;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DruidKubernetesVertxHttpClientConfig{" +
-           "workerPoolSize=" + workerPoolSize +
-           ", eventLoopPoolSize=" + eventLoopPoolSize +
-           ", internalBlockingPoolSize=" + internalBlockingPoolSize +
-           '}';
   }
 }

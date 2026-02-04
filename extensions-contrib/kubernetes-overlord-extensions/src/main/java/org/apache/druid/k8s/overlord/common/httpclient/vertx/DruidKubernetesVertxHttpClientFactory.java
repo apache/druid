@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
 import io.fabric8.kubernetes.client.vertx.VertxHttpClientBuilder;
+import io.fabric8.kubernetes.client.vertx.VertxHttpClientFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
@@ -28,76 +29,59 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientFactory;
 
 /**
- * Creates a Vertx-backed HTTP client for the Kubernetes client.
+ * Similar to {@link VertxHttpClientFactory} but allows us to override thread pool configurations.
  *
- * Vertx uses non-blocking I/O with event loops, which is more efficient than
- * thread-per-request models (OkHttp) when handling many concurrent K8s API calls.
- *
- * Backported from Druid 35 PR #18540 with enhanced logging.
+ * Backported from Druid 35 PR #18540 with enhanced logging for debugging.
  */
 public class DruidKubernetesVertxHttpClientFactory implements DruidKubernetesHttpClientFactory
 {
   private static final Logger log = new Logger(DruidKubernetesVertxHttpClientFactory.class);
 
+  public static final String TYPE_NAME = "vertx";
+
   private final Vertx vertx;
-  private final DruidKubernetesVertxHttpClientConfig config;
 
   public DruidKubernetesVertxHttpClientFactory(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
-    this.config = httpClientConfig;
-    log.info("Initializing Vertx HTTP client factory with config: %s", httpClientConfig);
-    this.vertx = createVertxInstance(httpClientConfig);
-
-    // Log actual pool sizes after initialization
     log.info(
-        "Vertx HTTP client initialized - workerPoolSize=[%d], eventLoopPoolSize=[%d], internalBlockingPoolSize=[%d]",
+        "Initializing Vertx HTTP client factory - workerPoolSize=[%d], eventLoopPoolSize=[%d], internalBlockingPoolSize=[%d]",
         httpClientConfig.getWorkerPoolSize(),
-        httpClientConfig.getEventLoopPoolSize() > 0
-            ? httpClientConfig.getEventLoopPoolSize()
-            : Runtime.getRuntime().availableProcessors() * 2,
+        httpClientConfig.getEventLoopPoolSize(),
         httpClientConfig.getInternalBlockingPoolSize()
     );
+    this.vertx = createVertxInstance(httpClientConfig);
+    log.info("Vertx HTTP client factory initialized successfully");
   }
 
   @Override
   public VertxHttpClientBuilder<DruidKubernetesVertxHttpClientFactory> newBuilder()
   {
-    log.debug("Creating new Vertx HTTP client builder");
     return new VertxHttpClientBuilder<>(this, vertx);
   }
 
   /**
-   * Creates a Vertx instance with custom thread pool configuration.
-   * Adapted from fabric8 kubernetes-client.
+   * Adapted from fabric8 kubernetes-client. We bring this here so we can customize thread pool sizes
+   * and force usage of daemon threads.
    */
   private static Vertx createVertxInstance(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
-    // Fabric8 disables the async DNS resolver while creating Vertx.
-    // Keeping this behavior to align with upstream.
+    // fabric8 disables the async DNS resolver while creating Vertx.
+    // I'm not sure if we really need to do this, but I'm keeping it to align behavior with upstream.
     final String originalDnsResolverProperty = System.getProperty(ResolverProvider.DISABLE_DNS_RESOLVER_PROP_NAME);
-
     Vertx vertx;
     try {
       System.setProperty(ResolverProvider.DISABLE_DNS_RESOLVER_PROP_NAME, "true");
-
-      VertxOptions options = new VertxOptions()
-          .setFileSystemOptions(
-              new FileSystemOptions()
-                  .setFileCachingEnabled(false)
-                  .setClassPathResolvingEnabled(false)
-          )
-          .setWorkerPoolSize(httpClientConfig.getWorkerPoolSize())
-          .setInternalBlockingPoolSize(httpClientConfig.getInternalBlockingPoolSize())
-          .setUseDaemonThread(true);  // Don't prevent JVM shutdown
-
-      // Only set event loop pool size if explicitly configured (0 = use Vertx default)
-      if (httpClientConfig.getEventLoopPoolSize() > 0) {
-        options.setEventLoopPoolSize(httpClientConfig.getEventLoopPoolSize());
-      }
-
-      vertx = Vertx.vertx(options);
-
-      log.info("Vertx instance created successfully with daemon threads");
+      vertx = Vertx.vertx(
+          new VertxOptions()
+              .setFileSystemOptions(
+                  new FileSystemOptions().setFileCachingEnabled(false)
+                                         .setClassPathResolvingEnabled(false)
+              )
+              .setWorkerPoolSize(httpClientConfig.getWorkerPoolSize())
+              .setEventLoopPoolSize(httpClientConfig.getEventLoopPoolSize())
+              .setInternalBlockingPoolSize(httpClientConfig.getInternalBlockingPoolSize())
+              .setUseDaemonThread(true)
+      );
     }
     finally {
       if (originalDnsResolverProperty == null) {
@@ -110,6 +94,11 @@ public class DruidKubernetesVertxHttpClientFactory implements DruidKubernetesHtt
     return vertx;
   }
 
+  /**
+   * Closes the Vertx instance. This is called during lifecycle shutdown.
+   * Note: Upstream Druid 35 does not have this method, but we add it to ensure clean shutdown.
+   */
+  @Override
   public void close()
   {
     log.info("Closing Vertx HTTP client factory");
