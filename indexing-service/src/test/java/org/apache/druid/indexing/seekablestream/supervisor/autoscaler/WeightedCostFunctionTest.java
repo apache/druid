@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,13 +47,13 @@ public class WeightedCostFunctionTest
   {
     CostMetrics validMetrics = createMetrics(100000.0, 10, 100, 0.3);
 
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(null, 10, config, null).totalCost(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 10, null, null).totalCost(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 0, config, null).totalCost(), 0.0);
-    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, -5, config, null).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(null, 10, config).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 10, null).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, 0, config).totalCost(), 0.0);
+    Assert.assertEquals(Double.POSITIVE_INFINITY, costFunction.computeCost(validMetrics, -5, config).totalCost(), 0.0);
     Assert.assertEquals(
         Double.POSITIVE_INFINITY,
-        costFunction.computeCost(createMetrics(0.0, 10, 0, 0.3), 10, config, null).totalCost(),
+        costFunction.computeCost(createMetrics(0.0, 10, 0, 0.3), 10, config).totalCost(),
         0.0
     );
   }
@@ -73,8 +72,8 @@ public class WeightedCostFunctionTest
 
     CostMetrics metrics = createMetrics(200000.0, 10, 200, 0.3);
 
-    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig, null).totalCost();
-    double costScaleDown = costFunction.computeCost(metrics, 5, lagOnlyConfig, null).totalCost();
+    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
+    double costScaleDown = costFunction.computeCost(metrics, 5, lagOnlyConfig).totalCost();
 
     // Scale down uses absolute model: lag / (5 * rate) = higher recovery time
     // Current uses absolute model: lag / (10 * rate) = lower recovery time
@@ -102,15 +101,15 @@ public class WeightedCostFunctionTest
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.3);
 
     // Current (10 tasks): uses absolute model = 10M / (10 * 1000) = 1000s
-    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig, null).totalCost();
-    Assert.assertEquals("Cost at current tasks", 1000., costCurrent, 0.1);
+    double costCurrent = costFunction.computeCost(metrics, 10, lagOnlyConfig).totalCost();
+    Assert.assertEquals("Cost of current tasks", 1000., costCurrent, 0.1);
 
     // Scale up by 5 (to 15): marginal model = 10M / (15 * 1000) = 666
-    double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig, null).totalCost();
+    double costUp5 = costFunction.computeCost(metrics, 15, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost when scaling up by 5", 666.7, costUp5, 0.1);
 
     // Scale up by 10 (to 20): marginal model = 10M / (20 * 1000) = 500s
-    double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig, null).totalCost();
+    double costUp10 = costFunction.computeCost(metrics, 20, lagOnlyConfig).totalCost();
     Assert.assertEquals("Cost when scaling up by 10", 500.0, costUp10, 0.01);
 
     // Adding more tasks reduces lag recovery time
@@ -122,8 +121,8 @@ public class WeightedCostFunctionTest
   {
     // Validate idle ratio estimation and ensure balanced weights still favor stability.
     CostMetrics metrics = createMetrics(100.0, 10, 100, 0.3);
-    double costCurrent = costFunction.computeCost(metrics, 10, config, null).totalCost();
-    double costScaleUp = costFunction.computeCost(metrics, 20, config, null).totalCost();
+    double costCurrent = costFunction.computeCost(metrics, 10, config).totalCost();
+    double costScaleUp = costFunction.computeCost(metrics, 20, config).totalCost();
 
     Assert.assertTrue(
         "With balanced weights, staying at current count is cheaper than scale-up",
@@ -154,8 +153,8 @@ public class WeightedCostFunctionTest
 
     CostMetrics metrics = createMetrics(100000.0, 10, 100, 0.1);
 
-    double costLag = costFunction.computeCost(metrics, 10, lagOnly, null).totalCost();
-    double costIdle = costFunction.computeCost(metrics, 10, idleOnly, null).totalCost();
+    double costLag = costFunction.computeCost(metrics, 10, lagOnly).totalCost();
+    double costIdle = costFunction.computeCost(metrics, 10, idleOnly).totalCost();
 
     Assert.assertNotEquals("Different weights should produce different costs", costLag, costIdle, 0.0001);
     Assert.assertTrue("Lag-only cost should be positive", costLag > 0.0);
@@ -170,9 +169,9 @@ public class WeightedCostFunctionTest
     int currentTaskCount = 10;
     CostMetrics metricsNoRate = createMetricsWithRate(50000.0, currentTaskCount, 100, 0.3, 0.0);
 
-    double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config, null).totalCost();
-    double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config, null).totalCost();
-    double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config, null).totalCost();
+    double costAtCurrent = costFunction.computeCost(metricsNoRate, currentTaskCount, config).totalCost();
+    double costScaleUp = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, config).totalCost();
+    double costScaleDown = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, config).totalCost();
 
     Assert.assertTrue(
         "Cost at current should be less than cost for scale up",
@@ -201,8 +200,8 @@ public class WeightedCostFunctionTest
                                                                        .defaultProcessingRate(1000.0)
                                                                        .build();
 
-    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig, null).totalCost();
-    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig, null).totalCost();
+    double costUp5 = costFunction.computeCost(metricsNoRate, currentTaskCount + 5, lagOnlyConfig).totalCost();
+    double costDown5 = costFunction.computeCost(metricsNoRate, currentTaskCount - 5, lagOnlyConfig).totalCost();
 
     Assert.assertEquals(
         "Lag cost for +5 and -5 deviation should be equal",
@@ -229,10 +228,10 @@ public class WeightedCostFunctionTest
     // Current: 10 tasks with 40% idle (60% busy)
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
 
-    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig, null).totalCost();
-    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig, null).totalCost();
-    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig, null).totalCost();
-    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig, null).totalCost();
+    double costAt5 = costFunction.computeCost(metrics, 5, idleOnlyConfig).totalCost();
+    double costAt10 = costFunction.computeCost(metrics, 10, idleOnlyConfig).totalCost();
+    double costAt15 = costFunction.computeCost(metrics, 15, idleOnlyConfig).totalCost();
+    double costAt20 = costFunction.computeCost(metrics, 20, idleOnlyConfig).totalCost();
 
     // Monotonically increasing idle cost as tasks increase
     Assert.assertTrue("cost(5) < cost(10)", costAt5 < costAt10);
@@ -256,7 +255,7 @@ public class WeightedCostFunctionTest
     // busyFraction = 0.6, taskRatio = 0.2
     // predictedIdle = 1 - 0.6/0.2 = 1 - 3 = -2 → clamped to 0
     CostMetrics metrics = createMetrics(0.0, 10, 100, 0.4);
-    double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig, null).totalCost();
+    double costAt2 = costFunction.computeCost(metrics, 2, idleOnlyConfig).totalCost();
 
     // idlenessCost = taskCount * taskDuration * 0.0 (clamped) = 0
     Assert.assertEquals("Idle cost should be 0 when predicted idle is clamped to 0", 0.0, costAt2, 0.0001);
@@ -266,7 +265,7 @@ public class WeightedCostFunctionTest
     // busyFraction = 0.9, taskRatio = 10
     // predictedIdle = 1 - 0.9/10 = 1 - 0.09 = 0.91 (within bounds)
     CostMetrics lowIdle = createMetrics(0.0, 10, 100, 0.1);
-    double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig, null).totalCost();
+    double costAt100 = costFunction.computeCost(lowIdle, 100, idleOnlyConfig).totalCost();
     // idlenessCost = 100 * 3600 * 0.91 = 327600
     Assert.assertTrue("Cost should be finite and positive", Double.isFinite(costAt100) && costAt100 > 0);
   }
@@ -286,8 +285,8 @@ public class WeightedCostFunctionTest
     // Negative idle ratio indicates missing data → should default to 0.5
     CostMetrics missingIdleData = createMetrics(0.0, 10, 100, -1.0);
 
-    double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig, null).totalCost();
-    double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig, null).totalCost();
+    double cost10 = costFunction.computeCost(missingIdleData, 10, idleOnlyConfig).totalCost();
+    double cost20 = costFunction.computeCost(missingIdleData, 20, idleOnlyConfig).totalCost();
 
     // With missing data, predicted idle = 0.5 for all task counts
     // idlenessCost at 10 = 10 * 3600 * 0.5 = 18000
@@ -299,11 +298,12 @@ public class WeightedCostFunctionTest
   @Test
   public void testLagAmplificationReducesIdleUnderHighLag()
   {
-    CostBasedAutoScalerConfig idleOnlyConfig = CostBasedAutoScalerConfig.builder()
+    CostBasedAutoScalerConfig configWithThreshold = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
                                                                         .enableTaskAutoScaler(true)
                                                                         .defaultProcessingRate(1000.0)
+                                                                        .highLagThreshold(10_000)
                                                                         .build();
 
     int currentTaskCount = 3;
@@ -311,14 +311,12 @@ public class WeightedCostFunctionTest
     int partitionCount = 30;
     double pollIdleRatio = 0.1;
 
-    // Plugin with threshold between lowLag (5000) and highLag (500000)
-    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(10_000);
-
+    // lowLag (5000) is below threshold, highLag (500000) is well above
     CostMetrics lowLag = createMetrics(5_000.0, currentTaskCount, partitionCount, pollIdleRatio);
     CostMetrics highLag = createMetrics(500_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
-    double lowLagCost = costFunction.computeCost(lowLag, proposedTaskCount, idleOnlyConfig, highLagPlugin).totalCost();
-    double highLagCost = costFunction.computeCost(highLag, proposedTaskCount, idleOnlyConfig, highLagPlugin).totalCost();
+    double lowLagCost = costFunction.computeCost(lowLag, proposedTaskCount, configWithThreshold).totalCost();
+    double highLagCost = costFunction.computeCost(highLag, proposedTaskCount, configWithThreshold).totalCost();
     Assert.assertTrue(
         "Higher lag should reduce predicted idle more aggressively",
         lowLagCost > highLagCost
@@ -334,9 +332,10 @@ public class WeightedCostFunctionTest
     int partitionCount = 30;
     double pollIdleRatio = 0.1;
 
-    // Use lag that exceeds sensitive threshold (10000) but not default threshold (50000)
+    // Use lag that exceeds sensitive threshold (10000) but not default (-1, disabled)
     CostMetrics metrics = createMetrics(15_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
+    // Default config: highLagThreshold=-1 (disabled), no lag amplification
     CostBasedAutoScalerConfig defaultConfig = CostBasedAutoScalerConfig.builder()
                                                                         .taskCountMax(100)
                                                                         .taskCountMin(1)
@@ -344,6 +343,7 @@ public class WeightedCostFunctionTest
                                                                         .defaultProcessingRate(1000.0)
                                                                         .build();
 
+    // Sensitive config: threshold 10000, lag 15000 > 10000, amplification happens
     CostBasedAutoScalerConfig sensitiveConfig = CostBasedAutoScalerConfig.builder()
                                                                           .taskCountMax(100)
                                                                           .taskCountMin(1)
@@ -352,13 +352,8 @@ public class WeightedCostFunctionTest
                                                                           .highLagThreshold(10000)
                                                                           .build();
 
-    // Default plugin: threshold 50000, lag 15000 < 50000, no amplification
-    BurstScaleUpOnHighLagPlugin defaultPlugin = new BurstScaleUpOnHighLagPlugin(50000);
-    // Sensitive plugin: threshold 10000, lag 15000 > 10000, amplification happens
-    BurstScaleUpOnHighLagPlugin sensitivePlugin = new BurstScaleUpOnHighLagPlugin(10000);
-
-    double defaultCost = costFunction.computeCost(metrics, proposedTaskCount, defaultConfig, defaultPlugin).totalCost();
-    double sensitiveCost = costFunction.computeCost(metrics, proposedTaskCount, sensitiveConfig, sensitivePlugin).totalCost();
+    double defaultCost = costFunction.computeCost(metrics, proposedTaskCount, defaultConfig).totalCost();
+    double sensitiveCost = costFunction.computeCost(metrics, proposedTaskCount, sensitiveConfig).totalCost();
 
     // With lower thresholds, the same lag triggers more aggressive scaling behavior
     // (higher lagBusyFactor), which results in lower predicted idle and thus lower idle cost
@@ -369,19 +364,17 @@ public class WeightedCostFunctionTest
   }
 
   @Test
-  public void testRampDenominatorCalculation()
+  public void testLnSeverityScalesWithLag()
   {
-    // Test that ramp denominator is calculated correctly from config values
-    // by verifying behavior at boundary conditions
+    // Test that ln_severity lagBusyFactor increases with lag severity,
+    // producing lower idle cost at higher lag.
+    // lagSeverity = lagPerPartition / threshold
+    // lagBusyFactor = min(1.0, ln(lagSeverity) / ln(5))
     int currentTaskCount = 3;
     int proposedTaskCount = 8;
     int partitionCount = 30;
     double pollIdleRatio = 0.1;
 
-    // Custom config with specific thresholds for predictable ramp calculation
-    // extra=10000, aggressive=20000
-    // lagAmplificationMaxLagPerPartition = 20000 * 5 = 100000
-    // rampDenominator = 100000 - 10000 = 90000
     CostBasedAutoScalerConfig customConfig = CostBasedAutoScalerConfig.builder()
                                                                        .taskCountMax(100)
                                                                        .taskCountMin(1)
@@ -390,24 +383,21 @@ public class WeightedCostFunctionTest
                                                                        .highLagThreshold(10000)
                                                                        .build();
 
-    // Plugin with threshold 10000
-    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(10000);
+    // Lag exactly at threshold (lagPerPartition = 10000, severity=1.0)
+    // lagBusyFactor = ln(1) / ln(5) = 0
+    CostMetrics atThreshold = createMetrics(10_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
-    // Lag exactly at extraThreshold (lagPerPartition = 10000)
-    // ramp = (10000 - 10000) / 90000 = 0
-    CostMetrics atExtraThreshold = createMetrics(10_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+    // Lag at 5x threshold (lagPerPartition = 50000, severity=5.0)
+    // lagBusyFactor = ln(5) / ln(5) = 1.0
+    CostMetrics atMaxSeverity = createMetrics(50_000.0, currentTaskCount, partitionCount, pollIdleRatio);
 
-    // Lag at maximum (lagPerPartition = 100000)
-    // ramp = (100000 - 10000) / 90000 = 1.0
-    CostMetrics atMaxLag = createMetrics(100_000.0, currentTaskCount, partitionCount, pollIdleRatio);
+    double costAtThreshold = costFunction.computeCost(atThreshold, proposedTaskCount, customConfig).totalCost();
+    double costAtMax = costFunction.computeCost(atMaxSeverity, proposedTaskCount, customConfig).totalCost();
 
-    double costAtExtra = costFunction.computeCost(atExtraThreshold, proposedTaskCount, customConfig, highLagPlugin).totalCost();
-    double costAtMax = costFunction.computeCost(atMaxLag, proposedTaskCount, customConfig, highLagPlugin).totalCost();
-
-    // At max lag, ramp=1.0 leads to maximum amplification, reducing idle cost more
+    // At max severity, lagBusyFactor=1.0, idle is fully suppressed → lower cost
     Assert.assertTrue(
-        "Cost at max lag should be lower due to maximum lag amplification",
-        costAtMax < costAtExtra
+        "Cost at max severity should be lower due to full idle suppression",
+        costAtMax < costAtThreshold
     );
   }
 

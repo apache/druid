@@ -27,8 +27,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.OptimalTaskCountBoundariesPlugin;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -38,7 +36,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +60,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String IDLE_COST_METRIC = "task/autoScaler/costBased/idleCost";
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
+  static final int MAX_INCREASE_IN_PARTITIONS_PER_TASK = 2;
+  static final int MAX_DECREASE_IN_PARTITIONS_PER_TASK = MAX_INCREASE_IN_PARTITIONS_PER_TASK * 2;
+
+  /**
+   * Divisor for partition count in the K formula: K = (partitionCount / K_PARTITION_DIVISOR) / sqrt(currentTaskCount).
+   * This controls how aggressive the scaling is relative to partition count.
+   * That value was chosen by carefully analyzing the math model behind the implementation.
+   */
+  static final double K_PARTITION_DIVISOR = 6.4;
+
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -71,8 +78,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ScheduledExecutorService autoscalerExecutor;
   private final WeightedCostFunction costFunction;
-  private OptimalTaskCountBoundariesPlugin boundariesPlugin = null;
-  private BurstScaleUpOnHighLagPlugin burstScaleUpPlugin = null;
   private volatile CostMetrics lastKnownMetrics;
 
   private volatile long lastScaleActionTimeMillis = -1;
@@ -99,16 +104,9 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                                                DruidMetrics.STREAM,
                                                this.supervisor.getIoConfig().getStream()
                                            );
-    if (config.shouldUseTaskCountBoundaries()) {
-      //noinspection InstantiationOfUtilityClass
-      this.boundariesPlugin = new OptimalTaskCountBoundariesPlugin();
-    }
-
-    if (config.getHighLagThreshold() >= 0) {
-      this.burstScaleUpPlugin = new BurstScaleUpOnHighLagPlugin(config.getHighLagThreshold());
-    }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void start()
   {
@@ -209,8 +207,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         (long) metrics.getAggregateLag(),
         config.getTaskCountMin(),
         config.getTaskCountMax(),
-        boundariesPlugin,
-        burstScaleUpPlugin
+        config.shouldUseTaskCountBoundaries(),
+        config.getHighLagThreshold()
     );
 
     if (validTaskCounts.length == 0) {
@@ -222,14 +220,19 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = new CostResult();
 
     for (int taskCount : validTaskCounts) {
-      CostResult costResult = costFunction.computeCost(metrics, taskCount, config, burstScaleUpPlugin);
+      CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
       log.info(
-          "Proposed task count[%d] has total Cost[%.4f] = lagCost[%.4f] + idleCost[%.4f]",
+          "Proposed task count[%d] has total cost[%.4f] = lagCost[%.4f] + idleCost[%.4f]."
+          + " Stats: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
           taskCount,
           cost,
           costResult.lagCost(),
-          costResult.idleCost()
+          costResult.idleCost(),
+          metrics.getAggregateLag(),
+          metrics.getPollIdleRatio(),
+          config.getLagWeight(),
+          config.getIdleWeight()
       );
       if (cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
@@ -265,15 +268,15 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return sorted list of valid task counts within bounds
    */
-  @SuppressWarnings({"VariableNotUsedInsideIf", "ReassignedVariable"})
+  @SuppressWarnings({"ReassignedVariable"})
   static int[] computeValidTaskCounts(
       int partitionCount,
       int currentTaskCount,
       double aggregateLag,
       int taskCountMin,
       int taskCountMax,
-      @Nullable OptimalTaskCountBoundariesPlugin taskCountBoundariesPlugin,
-      @Nullable BurstScaleUpOnHighLagPlugin highLagPlugin
+      boolean isTaskCountBoundariesEnabled,
+      int highLagThreshold
   )
   {
     if (partitionCount <= 0 || currentTaskCount <= 0) {
@@ -287,27 +290,78 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int minPartitionsPerTask = partitionCount / taskCountMax;
     int maxPartitionsPerTask = partitionCount / taskCountMin;
 
-    if (taskCountBoundariesPlugin != null) {
+    if (isTaskCountBoundariesEnabled) {
       maxPartitionsPerTask = Math.min(
           partitionCount,
-          currentPartitionsPerTask + OptimalTaskCountBoundariesPlugin.MAX_DECREASE_IN_PARTITIONS_PER_TASK
+          currentPartitionsPerTask + MAX_DECREASE_IN_PARTITIONS_PER_TASK
       );
 
       int extraIncrease = 0;
-      if (highLagPlugin != null && highLagPlugin.lagThreshold() > 0) {
-        extraIncrease = highLagPlugin.computeScaleUpBoost(aggregateLag, partitionCount, currentTaskCount, taskCountMax);
+      if (highLagThreshold > 0) {
+        extraIncrease = computeExtraPPTIncrease(
+            highLagThreshold,
+            aggregateLag,
+            partitionCount,
+            currentTaskCount,
+            taskCountMax
+        );
       }
-      int effectiveMaxIncrease = OptimalTaskCountBoundariesPlugin.MAX_INCREASE_IN_PARTITIONS_PER_TASK + extraIncrease;
+      int effectiveMaxIncrease = MAX_INCREASE_IN_PARTITIONS_PER_TASK + extraIncrease;
       minPartitionsPerTask = Math.max(minPartitionsPerTask, currentPartitionsPerTask - effectiveMaxIncrease);
     }
 
-    for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask && partitionsPerTask != 0; partitionsPerTask--) {
+    for (int partitionsPerTask = maxPartitionsPerTask; partitionsPerTask >= minPartitionsPerTask
+                                                       && partitionsPerTask != 0; partitionsPerTask--) {
       final int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
       if (taskCount >= taskCountMin && taskCount <= taskCountMax) {
         result.add(taskCount);
       }
     }
     return result.toIntArray();
+  }
+
+  /**
+   * Computes extra allowed increase in partitions-per-task in scenarios when the average per-partition lag
+   * is above the configured threshold.
+   * <p>
+   * This uses a logarithmic formula for consistent absolute growth:
+   * {@code deltaTasks = K * ln(lagSeverity)}
+   * where {@code K = (partitionCount / 6.4) / sqrt(currentTaskCount)}
+   * <p>
+   * This ensures that small taskCount's get a massive relative boost,
+   * while large taskCount's receive more measured, stable increases.
+   */
+  static int computeExtraPPTIncrease(
+      double lagThreshold,
+      double aggregateLag,
+      int partitionCount,
+      int currentTaskCount,
+      int taskCountMax
+  )
+  {
+    if (partitionCount <= 0 || taskCountMax <= 0 || currentTaskCount <= 0) {
+      return 0;
+    }
+
+    final double lagPerPartition = aggregateLag / partitionCount;
+    if (lagPerPartition < lagThreshold) {
+      return 0;
+    }
+
+    final double lagSeverity = lagPerPartition / lagThreshold;
+
+    // Logarithmic growth: ln(lagSeverity) is positive when lagSeverity > 1
+    // First multoplier decreases with sqrt(currentTaskCount): aggressive when small, conservative when large
+    final double deltaTasks = (partitionCount / K_PARTITION_DIVISOR) / Math.sqrt(currentTaskCount) * Math.log(
+        lagSeverity);
+
+    final double targetTaskCount = Math.min(taskCountMax, (double) currentTaskCount + deltaTasks);
+
+    // Compute precise PPT reduction to avoid early integer truncation artifacts
+    final double currentPPT = (double) partitionCount / currentTaskCount;
+    final double targetPPT = (double) partitionCount / targetTaskCount;
+
+    return Math.max(0, (int) Math.floor(currentPPT - targetPPT));
   }
 
   /**

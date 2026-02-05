@@ -23,8 +23,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.OptimalTaskCountBoundariesPlugin;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.joda.time.Duration;
@@ -75,59 +73,91 @@ public class CostBasedAutoScalerTest
   @Test
   public void testComputeValidTaskCounts()
   {
-    OptimalTaskCountBoundariesPlugin boundariesPlugin = new OptimalTaskCountBoundariesPlugin();
-    BurstScaleUpOnHighLagPlugin highLagPlugin = new BurstScaleUpOnHighLagPlugin(50_000);
+    boolean useTaskCountBoundaries = true;
+    int highLagThreshold = 50_000;
 
     // For 100 partitions at 25 tasks (4 partitions/task), valid counts include 25 and 34
-    int[] validTaskCounts = computeValidTaskCounts(100, 25, 0L, 1, 100, boundariesPlugin, highLagPlugin);
-    Assert.assertTrue("Should contain the current task count", contains(validTaskCounts, 25));
-    Assert.assertTrue("Should contain the next scale-up option", contains(validTaskCounts, 34));
+    int[] validTaskCounts = computeValidTaskCounts(
+        100,
+        25,
+        0L,
+        1,
+        100,
+        useTaskCountBoundaries,
+        highLagThreshold
+    );
+    Assert.assertTrue("Expected current task count to be included", contains(validTaskCounts, 25));
+    Assert.assertTrue("Expected next scale-up option (34) to be included", contains(validTaskCounts, 34));
 
     // Single partition
-    int[] singlePartition = computeValidTaskCounts(1, 1, 0L, 1, 100, boundariesPlugin, highLagPlugin);
-    Assert.assertTrue("Single partition should have at least one valid count", singlePartition.length > 0);
-    Assert.assertTrue("Single partition should contain 1", contains(singlePartition, 1));
+    int[] singlePartition = computeValidTaskCounts(
+        1,
+        1,
+        0L,
+        1,
+        100,
+        useTaskCountBoundaries,
+        highLagThreshold
+    );
+    Assert.assertTrue("Single partition should yield at least one valid count", singlePartition.length > 0);
+    Assert.assertTrue("Single partition should include task count 1", contains(singlePartition, 1));
 
     // Current exceeds partitions - should still yield valid, deduplicated options
-    int[] exceedsPartitions = computeValidTaskCounts(2, 5, 0L, 1, 100, boundariesPlugin, highLagPlugin);
+    int[] exceedsPartitions = computeValidTaskCounts(
+        2,
+        5,
+        0L,
+        1,
+        100,
+        useTaskCountBoundaries,
+        highLagThreshold
+    );
     Assert.assertEquals(2, exceedsPartitions.length);
     Assert.assertTrue(contains(exceedsPartitions, 1));
     Assert.assertTrue(contains(exceedsPartitions, 2));
 
     // Lag expansion: low lag should not include max, high lag should allow aggressive scaling
-    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30, boundariesPlugin, highLagPlugin);
+    int[] lowLagCounts = computeValidTaskCounts(30, 3, 0L, 1, 30, useTaskCountBoundaries, highLagThreshold);
     Assert.assertFalse("Low lag should not include max task count", contains(lowLagCounts, 30));
-    Assert.assertTrue("Low lag should cap scale up around 4 tasks", contains(lowLagCounts, 4));
+    Assert.assertTrue("Low lag should cap scale-up around 4 tasks", contains(lowLagCounts, 4));
 
     // High lag uses logarithmic formula: K * ln(lagSeverity) where K = P/(6.4*sqrt(C))
     // For P=30, C=3, lagPerPartition=500K, threshold=50K: lagSeverity=10, K=2.7, delta=6.2
     // This allows controlled scaling to ~10-15 tasks (not all the way to max)
     long highAggregateLag = 30L * 500_000L;
-    int[] highLagCounts = computeValidTaskCounts(30, 3, highAggregateLag, 1, 30, boundariesPlugin, highLagPlugin);
+    int[] highLagCounts = computeValidTaskCounts(
+        30,
+        3,
+        highAggregateLag,
+        1,
+        30,
+        useTaskCountBoundaries,
+        highLagThreshold
+    );
     Assert.assertTrue("High lag should allow scaling to 10 tasks", contains(highLagCounts, 10));
     Assert.assertTrue("High lag should allow scaling to 15 tasks", contains(highLagCounts, 15));
-    Assert.assertFalse("Should not jump straight to 30 from 3", contains(highLagCounts, 30));
+    Assert.assertFalse("High lag should not jump straight to max (30) from 3", contains(highLagCounts, 30));
 
     // Respects taskCountMax
-    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 1, 3, boundariesPlugin, highLagPlugin);
-    Assert.assertTrue("Should include taskCountMax when doable", contains(cappedCounts, 3));
+    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 1, 3, useTaskCountBoundaries, highLagThreshold);
+    Assert.assertTrue("Should include taskCountMax when within bounds", contains(cappedCounts, 3));
     Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
 
     // Respects taskCountMin - filters out values below the minimum
     // With partitionCount=100, currentTaskCount=10, the computed range includes values like 8, 9, 10, 12, 13
-    int[] minCappedCounts = computeValidTaskCounts(100, 10, 0L, 10, 100, boundariesPlugin, highLagPlugin);
-    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 8));
-    Assert.assertFalse("Should not go below taskCountMin", contains(minCappedCounts, 9));
-    Assert.assertTrue("Should include values at taskCountMin", contains(minCappedCounts, 10));
-    Assert.assertTrue("Should include values above taskCountMin", contains(minCappedCounts, 12));
+    int[] minCappedCounts = computeValidTaskCounts(100, 10, 0L, 10, 100, useTaskCountBoundaries, highLagThreshold);
+    Assert.assertFalse("Should not include values below taskCountMin (8)", contains(minCappedCounts, 8));
+    Assert.assertFalse("Should not include values below taskCountMin (9)", contains(minCappedCounts, 9));
+    Assert.assertTrue("Should include values at taskCountMin (10)", contains(minCappedCounts, 10));
+    Assert.assertTrue("Should include values above taskCountMin (12)", contains(minCappedCounts, 12));
 
     // Both bounds applied together
-    int[] bothBounds = computeValidTaskCounts(100, 10, 0L, 10, 12, boundariesPlugin, highLagPlugin);
-    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 8));
-    Assert.assertFalse("Should not go below taskCountMin", contains(bothBounds, 9));
-    Assert.assertFalse("Should not exceed taskCountMax", contains(bothBounds, 13));
-    Assert.assertTrue("Should include values at taskCountMin", contains(bothBounds, 10));
-    Assert.assertTrue("Should include values at taskCountMax", contains(bothBounds, 12));
+    int[] bothBounds = computeValidTaskCounts(100, 10, 0L, 10, 12, useTaskCountBoundaries, highLagThreshold);
+    Assert.assertFalse("Should not include values below taskCountMin (8)", contains(bothBounds, 8));
+    Assert.assertFalse("Should not include values below taskCountMin (9)", contains(bothBounds, 9));
+    Assert.assertFalse("Should not include values above taskCountMax (13)", contains(bothBounds, 13));
+    Assert.assertTrue("Should include values at taskCountMin (10)", contains(bothBounds, 10));
+    Assert.assertTrue("Should include values at taskCountMax (12)", contains(bothBounds, 12));
   }
 
   @Test
@@ -141,28 +171,38 @@ public class CostBasedAutoScalerTest
 
     // High idle (underutilized) - should scale down
     int scaleDownResult = autoScaler.computeOptimalTaskCount(createMetrics(100.0, 25, 100, 0.8));
-    Assert.assertTrue("Should scale down when idle > 0.6", scaleDownResult < 25);
+    Assert.assertTrue("Expected scale-down when idle ratio is high (>0.6)", scaleDownResult < 25);
 
     // Very high idle with high task count - should scale down
     int highIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(10.0, 50, 100, 0.9));
-    Assert.assertTrue("Scale down scenario should return optimal <= current", highIdleResult <= 50);
+    Assert.assertTrue("High idle should not suggest scale-up", highIdleResult <= 50);
 
     // With low idle and balanced weights, the algorithm should not scale up aggressively
     int lowIdleResult = autoScaler.computeOptimalTaskCount(createMetrics(1000.0, 25, 100, 0.1));
-    Assert.assertTrue("With low idle and balanced weights, should not scale up aggressively", lowIdleResult <= 25);
+    Assert.assertTrue("With low idle and balanced weights, avoid aggressive scale-up", lowIdleResult <= 25);
   }
 
   @Test
   public void testExtractPollIdleRatio()
   {
     // Null and empty return 0
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(null), 0.0001);
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(Collections.emptyMap()), 0.0001);
+    Assert.assertEquals("Null stats should yield 0 idle ratio", 0., CostBasedAutoScaler.extractPollIdleRatio(null), 0.0001);
+    Assert.assertEquals(
+        "Empty stats should yield 0 idle ratio",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(Collections.emptyMap()),
+        0.0001
+    );
 
     // Missing metrics return 0
     Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
     missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(missingMetrics), 0.0001);
+    Assert.assertEquals(
+        "Missing autoscaler metrics should yield 0 idle ratio",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(missingMetrics),
+        0.0001
+    );
 
     // Valid stats return average
     Map<String, Map<String, Object>> validStats = new HashMap<>();
@@ -170,26 +210,46 @@ public class CostBasedAutoScalerTest
     group.put("task-0", buildTaskStatsWithPollIdle(0.3));
     group.put("task-1", buildTaskStatsWithPollIdle(0.5));
     validStats.put("0", group);
-    Assert.assertEquals(0.4, CostBasedAutoScaler.extractPollIdleRatio(validStats), 0.0001);
+    Assert.assertEquals(
+        "Average poll idle ratio should be computed across tasks",
+        0.4,
+        CostBasedAutoScaler.extractPollIdleRatio(validStats),
+        0.0001
+    );
 
     // Invalid types: non-map task metric
     Map<String, Map<String, Object>> nonMapTask = new HashMap<>();
     nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapTask), 0.0001);
+    Assert.assertEquals(
+        "Non-map task stats should be ignored",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(nonMapTask),
+        0.0001
+    );
 
     // Invalid types: empty autoscaler metrics
     Map<String, Map<String, Object>> emptyAutoscaler = new HashMap<>();
     Map<String, Object> taskStats1 = new HashMap<>();
     taskStats1.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, new HashMap<>());
     emptyAutoscaler.put("0", Collections.singletonMap("task-0", taskStats1));
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(emptyAutoscaler), 0.0001);
+    Assert.assertEquals(
+        "Empty autoscaler metrics should yield 0 idle ratio",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(emptyAutoscaler),
+        0.0001
+    );
 
     // Invalid types: non-map autoscaler metrics
     Map<String, Map<String, Object>> nonMapAutoscaler = new HashMap<>();
     Map<String, Object> taskStats2 = new HashMap<>();
     taskStats2.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, "not-a-map");
     nonMapAutoscaler.put("0", Collections.singletonMap("task-0", taskStats2));
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonMapAutoscaler), 0.0001);
+    Assert.assertEquals(
+        "Non-map autoscaler metrics should be ignored",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(nonMapAutoscaler),
+        0.0001
+    );
 
     // Invalid types: non-number poll idle ratio
     Map<String, Map<String, Object>> nonNumberRatio = new HashMap<>();
@@ -198,20 +258,35 @@ public class CostBasedAutoScalerTest
     autoscalerMetrics.put(SeekableStreamIndexTaskRunner.POLL_IDLE_RATIO_KEY, "not-a-number");
     taskStats3.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, autoscalerMetrics);
     nonNumberRatio.put("0", Collections.singletonMap("task-0", taskStats3));
-    Assert.assertEquals(0., CostBasedAutoScaler.extractPollIdleRatio(nonNumberRatio), 0.0001);
+    Assert.assertEquals(
+        "Non-numeric poll idle ratio should be ignored",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(nonNumberRatio),
+        0.0001
+    );
   }
 
   @Test
   public void testExtractMovingAverage()
   {
     // Null and empty return -1
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(null), 0.0001);
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(Collections.emptyMap()), 0.0001);
+    Assert.assertEquals("Null stats should yield -1 moving average", -1., CostBasedAutoScaler.extractMovingAverage(null), 0.0001);
+    Assert.assertEquals(
+        "Empty stats should yield -1 moving average",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(Collections.emptyMap()),
+        0.0001
+    );
 
     // Missing metrics return -1
     Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
     missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingMetrics), 0.0001);
+    Assert.assertEquals(
+        "Missing moving averages should yield -1",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(missingMetrics),
+        0.0001
+    );
 
     // Valid stats return average (using 5-minute)
     Map<String, Map<String, Object>> validStats = new HashMap<>();
@@ -219,7 +294,12 @@ public class CostBasedAutoScalerTest
     group.put("task-0", buildTaskStatsWithMovingAverage(1000.0));
     group.put("task-1", buildTaskStatsWithMovingAverage(2000.0));
     validStats.put("0", group);
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(validStats), 0.0001);
+    Assert.assertEquals(
+        "Average 5-minute processing rate should be computed across tasks",
+        1500.0,
+        CostBasedAutoScaler.extractMovingAverage(validStats),
+        0.0001
+    );
 
     // Interval fallback: 15-minute preferred, then 5-minute, then 1-minute
     Map<String, Map<String, Object>> fifteenMin = new HashMap<>();
@@ -230,7 +310,12 @@ public class CostBasedAutoScalerTest
             buildTaskStatsWithMovingAverageForInterval(FIFTEEN_MINUTE_NAME, 1500.0)
         )
     );
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(fifteenMin), 0.0001);
+    Assert.assertEquals(
+        "15-minute interval should be preferred when available",
+        1500.0,
+        CostBasedAutoScaler.extractMovingAverage(fifteenMin),
+        0.0001
+    );
 
     // 1-minute as a final fallback
     Map<String, Map<String, Object>> oneMin = new HashMap<>();
@@ -238,7 +323,12 @@ public class CostBasedAutoScalerTest
         "0",
         Collections.singletonMap("task-0", buildTaskStatsWithMovingAverageForInterval(ONE_MINUTE_NAME, 500.0))
     );
-    Assert.assertEquals(500.0, CostBasedAutoScaler.extractMovingAverage(oneMin), 0.0001);
+    Assert.assertEquals(
+        "1-minute interval should be used as a final fallback",
+        500.0,
+        CostBasedAutoScaler.extractMovingAverage(oneMin),
+        0.0001
+    );
 
     // 15-minute preferred over 5-minute when both available
     Map<String, Map<String, Object>> allIntervals = new HashMap<>();
@@ -246,7 +336,12 @@ public class CostBasedAutoScalerTest
         "0",
         Collections.singletonMap("task-0", buildTaskStatsWithMultipleMovingAverages(1500.0, 1000.0, 500.0))
     );
-    Assert.assertEquals(1500.0, CostBasedAutoScaler.extractMovingAverage(allIntervals), 0.0001);
+    Assert.assertEquals(
+        "15-minute interval should win when multiple intervals are present",
+        1500.0,
+        CostBasedAutoScaler.extractMovingAverage(allIntervals),
+        0.0001
+    );
 
     // Falls back to 5-minute when 15-minute is null
     Map<String, Map<String, Object>> nullFifteen = new HashMap<>();
@@ -257,12 +352,22 @@ public class CostBasedAutoScalerTest
             buildTaskStatsWithNullInterval(FIFTEEN_MINUTE_NAME, FIVE_MINUTE_NAME, 750.0)
         )
     );
-    Assert.assertEquals(750.0, CostBasedAutoScaler.extractMovingAverage(nullFifteen), 0.0001);
+    Assert.assertEquals(
+        "Should fall back to 5-minute when 15-minute is null",
+        750.0,
+        CostBasedAutoScaler.extractMovingAverage(nullFifteen),
+        0.0001
+    );
 
     // Falls back to 1-minute when both 15 and 5 are null
     Map<String, Map<String, Object>> bothNull = new HashMap<>();
     bothNull.put("0", Collections.singletonMap("task-0", buildTaskStatsWithTwoNullIntervals(250.0)));
-    Assert.assertEquals(250.0, CostBasedAutoScaler.extractMovingAverage(bothNull), 0.0001);
+    Assert.assertEquals(
+        "Should fall back to 1-minute when 15 and 5 are null",
+        250.0,
+        CostBasedAutoScaler.extractMovingAverage(bothNull),
+        0.0001
+    );
   }
 
   @Test
@@ -271,19 +376,34 @@ public class CostBasedAutoScalerTest
     // Non-map task metric
     Map<String, Map<String, Object>> nonMapTask = new HashMap<>();
     nonMapTask.put("0", Collections.singletonMap("task-0", "not-a-map"));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapTask), 0.0001);
+    Assert.assertEquals(
+        "Non-map task stats should be ignored",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(nonMapTask),
+        0.0001
+    );
 
     Map<String, Map<String, Object>> missingBuild = new HashMap<>();
     Map<String, Object> taskStats1 = new HashMap<>();
     taskStats1.put("movingAverages", new HashMap<>());
     missingBuild.put("0", Collections.singletonMap("task-0", taskStats1));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(missingBuild), 0.0001);
+    Assert.assertEquals(
+        "Missing buildSegments moving average should yield -1",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(missingBuild),
+        0.0001
+    );
 
     Map<String, Map<String, Object>> nonMapMA = new HashMap<>();
     Map<String, Object> taskStats2 = new HashMap<>();
     taskStats2.put("movingAverages", "not-a-map");
     nonMapMA.put("0", Collections.singletonMap("task-0", taskStats2));
-    Assert.assertEquals(-1., CostBasedAutoScaler.extractMovingAverage(nonMapMA), 0.0001);
+    Assert.assertEquals(
+        "Non-map movingAverages should be ignored",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(nonMapMA),
+        0.0001
+    );
   }
 
   @Test

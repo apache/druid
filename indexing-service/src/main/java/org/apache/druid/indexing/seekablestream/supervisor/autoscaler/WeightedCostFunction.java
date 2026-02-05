@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.plugins.BurstScaleUpOnHighLagPlugin;
 import org.apache.druid.java.util.common.logger.Logger;
 
 /**
@@ -31,18 +30,11 @@ public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
   /**
-   * Represents the maximum multiplier factor applied to amplify lag-based costs in the cost computation process.
-   * This value is used to cap the lag amplification effect to prevent excessively high cost inflation
-   * caused by significant partition lag.
-   * It ensures that lag-related adjustments remain bounded within a reasonable range for stability of
-   * cost-based auto-scaling decisions.
+   * The lag severity at which lagBusyFactor reaches 1.0 (full idle suppression).
+   * lagSeverity is defined as lagPerPartition / highLagThreshold.
+   * At severity=1 (threshold), lagBusyFactor=0. At severity=MAX, lagBusyFactor=1.0.
    */
-  private static final double LAG_AMPLIFICATION_MAX_MULTIPLIER = 2.0;
-  /**
-   * Multiplier for computing the maximum lag per partition used in lag amplification.
-   * The max lag is calculated as: aggressiveScalingLagPerPartitionThreshold * LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER.
-   */
-  private static final int LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER = 5;
+  private static final int LAG_AMPLIFICATION_MAX_SEVERITY = 5;
 
   /**
    * Computes cost for a given task count using compute time metrics.
@@ -62,8 +54,7 @@ public class WeightedCostFunction
   public CostResult computeCost(
       CostMetrics metrics,
       int proposedTaskCount,
-      CostBasedAutoScalerConfig config,
-      BurstScaleUpOnHighLagPlugin highLagPlugin
+      CostBasedAutoScalerConfig config
   )
   {
     if (metrics == null || config == null || proposedTaskCount <= 0 || metrics.getPartitionCount() <= 0) {
@@ -86,7 +77,7 @@ public class WeightedCostFunction
       lagRecoveryTime = metrics.getAggregateLag() / (proposedTaskCount * avgProcessingRate);
     }
 
-    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount, highLagPlugin);
+    final double predictedIdleRatio = estimateIdleRatio(metrics, proposedTaskCount, config.getHighLagThreshold());
     final double idleCost = proposedTaskCount * metrics.getTaskDurationSeconds() * predictedIdleRatio;
     final double lagCost = config.getLagWeight() * lagRecoveryTime;
     final double weightedIdleCost = config.getIdleWeight() * idleCost;
@@ -107,20 +98,16 @@ public class WeightedCostFunction
 
   /**
    * Estimates the idle ratio for a proposed task count.
-   * Includes lag-based adjustment to eliminate high lag and
-   * reduce predicted idle when work exists.
-   * <p>
-   * Formulas:
-   * {@code linearPrediction = max(0, 1 - busyFraction / taskRatio)}
-   * {@code lagBusyFactor = 1 - exp(-lagPerTask / LAG_SCALE_FACTOR)}
-   * {@code adjustedPrediction = linearPrediction × (1 - lagBusyFactor)}
+   * Includes lag-based adjustment to suppress predicted idle when lag exceeds the threshold,
+   * encouraging scale-up when there is real work to do.
+   * The algorithm is adjusted with {@code computeExtraPPTIncrease}, so they may work in tandem, when enabled.
    *
    * @param metrics   current system metrics containing idle ratio and task count
    * @param taskCount target task count to estimate an idle ratio for
    * @return estimated idle ratio in range [0.0, 1.0]
    */
   @SuppressWarnings("ExtractMethodRecommender")
-  private double estimateIdleRatio(CostMetrics metrics, int taskCount, BurstScaleUpOnHighLagPlugin highLagPlugin)
+  private double estimateIdleRatio(CostMetrics metrics, int taskCount, int highLagThreshold)
   {
     final double currentPollIdleRatio = metrics.getPollIdleRatio();
 
@@ -142,17 +129,10 @@ public class WeightedCostFunction
     final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
     double lagBusyFactor = 0.;
 
-    // Lag-amplified idle decay
-    if (highLagPlugin != null && lagPerPartition >= highLagPlugin.lagThreshold()) {
-      int extraThreshold = highLagPlugin.lagThreshold();
-      final double lagPerTask = metrics.getAggregateLag() / taskCount;
-      lagBusyFactor = 1.0 - Math.exp(-lagPerTask / extraThreshold);
-
-      final long lagAmplificationMaxLagPerPartition = (long) extraThreshold * LAG_AMPLIFICATION_MAX_LAG_MULTIPLIER;
-      final double rampDenominator = lagAmplificationMaxLagPerPartition - (double) extraThreshold;
-      final double ramp = Math.min(1.0, Math.max(0.0, (lagPerPartition - extraThreshold) / rampDenominator));
-
-      lagBusyFactor = Math.min(1.0, lagBusyFactor * (1.0 + ramp * (LAG_AMPLIFICATION_MAX_MULTIPLIER - 1.0)));
+    // Lag-amplified idle decay using ln(lagSeverity) / ln(maxSeverity).
+    if (highLagThreshold > 0 && lagPerPartition >= highLagThreshold) {
+      final double lagSeverity = lagPerPartition / highLagThreshold;
+      lagBusyFactor = Math.min(1.0, Math.log(lagSeverity) / Math.log(LAG_AMPLIFICATION_MAX_SEVERITY));
     }
 
     // Clamp to valid range [0, 1]
