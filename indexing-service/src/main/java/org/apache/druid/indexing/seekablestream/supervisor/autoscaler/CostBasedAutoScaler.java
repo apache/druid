@@ -219,20 +219,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int optimalTaskCount = -1;
     CostResult optimalCost = new CostResult();
 
+    log.info(
+        "Current metrics: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+        metrics.getAggregateLag(),
+        metrics.getPollIdleRatio(),
+        config.getLagWeight(),
+        config.getIdleWeight()
+    );
+
     for (int taskCount : validTaskCounts) {
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
+
       log.info(
-          "Proposed task count[%d] has total cost[%.4f] = lagCost[%.4f] + idleCost[%.4f]."
-          + " Stats: avgPartitionLag[%.1f], pollIdleRatio[%.1f], lagWeight[%.1f], idleWeight[%.1f]",
+          "Proposed task count[%d] has total cost[%.4f] = lagCost[%.4f] + idleCost[%.4f].",
           taskCount,
           cost,
           costResult.lagCost(),
-          costResult.idleCost(),
-          metrics.getAggregateLag(),
-          metrics.getPollIdleRatio(),
-          config.getLagWeight(),
-          config.getIdleWeight()
+          costResult.idleCost()
       );
       if (cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
@@ -287,8 +291,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final int currentPartitionsPerTask = partitionCount / currentTaskCount;
 
     // Minimum partitions per task correspond to the maximum number of tasks (scale up) and vice versa.
-    int minPartitionsPerTask = partitionCount / taskCountMax;
-    int maxPartitionsPerTask = partitionCount / taskCountMin;
+    int minPartitionsPerTask = Math.min(1, partitionCount / taskCountMax);
+    int maxPartitionsPerTask = Math.max(partitionCount, partitionCount / taskCountMin);
 
     if (isTaskCountBoundariesEnabled) {
       maxPartitionsPerTask = Math.min(

@@ -62,25 +62,9 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final double lagWeight;
   private final double idleWeight;
   private final double defaultProcessingRate;
-  /**
-   * Enables or disables {@code OptimalTaskCountBoundariesPlugin} which allows
-   * considering only task counts within a certain PPT-based window around the current PPT.
-   */
   private final boolean useTaskCountBoundaries;
-  /**
-   * Per-partition lag threshold allowing to activate a burst scaleup to eliminate high lag.
-   */
   private final int highLagThreshold;
-  /**
-   * Represents the minimum duration between successful scale actions.
-   * A higher value implies a more conservative scaling behavior, ensuring that tasks
-   * are not scaled too frequently during workload fluctuations.
-   */
   private final Duration minScaleDownDelay;
-  /**
-   * Indicates whether task scaling down is limited to periods during task rollovers only.
-   * If set to {@code false}, allows scaling down during normal task run time.
-   */
   private final boolean scaleDownDuringTaskRolloverOnly;
 
   @JsonCreator
@@ -225,24 +209,39 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return defaultProcessingRate;
   }
 
+  /**
+   * Enables or disables the use of task count boundaries derived from the current partitions-per-task (PPT) ratio.
+   */
   @JsonProperty("useTaskCountBoundaries")
   public boolean shouldUseTaskCountBoundaries()
   {
     return useTaskCountBoundaries;
   }
 
+  /**
+   * Per-partition lag threshold allowing to activate a burst scaleup to eliminate high lag.
+   */
   @JsonProperty("highLagThreshold")
   public int getHighLagThreshold()
   {
     return highLagThreshold;
   }
 
+  /**
+   * Represents the minimum duration between successful scale actions.
+   * A higher value implies a more conservative scaling behavior, ensuring that tasks
+   * are not scaled too frequently during workload fluctuations.
+   */
   @JsonProperty
   public Duration getMinScaleDownDelay()
   {
     return minScaleDownDelay;
   }
 
+  /**
+   * Indicates whether task scaling down is limited to periods during task rollovers only.
+   * If set to {@code false}, allows scaling down during normal task run time.
+   */
   @JsonProperty("scaleDownDuringTaskRolloverOnly")
   public boolean isScaleDownOnTaskRolloverOnly()
   {
