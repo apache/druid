@@ -24,35 +24,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Consumer;
 
 @JsonTypeName("groupByPostShuffle")
-public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcessor
+public class GroupByPostShuffleStageProcessor extends BasicStageProcessor
 {
   private final GroupByQuery query;
 
@@ -71,22 +67,14 @@ public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcesso
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable Object extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  )
+  public ListenableFuture<Long> execute(ExecutionContext context)
   {
+    final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+
     // Expecting a single input slice from some prior stage.
+    final List<InputSlice> inputSlices = context.workOrder().getInputs();
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
-    final GroupingEngine engine = frameContext.groupingEngine();
+    final GroupingEngine engine = context.frameContext().groupingEngine();
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
     for (final ReadablePartition partition : slice.getPartitions()) {
@@ -94,7 +82,7 @@ public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcesso
           partition.getPartitionNumber(),
           i -> {
             try {
-              return outputChannelFactory.openChannel(i);
+              return stageRunner.workOutputChannelFactory().openChannel(i);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -103,9 +91,7 @@ public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcesso
       );
     }
 
-    final Sequence<ReadableInput> readableInputs =
-        Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
-
+    final Sequence<ReadableInput> readableInputs = QueryKitUtils.readPartitions(context, slice.getPartitions());
     final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
@@ -116,19 +102,21 @@ public class GroupByPostShuffleStageProcessor extends BasicStandardStageProcesso
               engine,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(
-                  frameContext.frameWriterSpec(),
+              context.workOrder().getStageDefinition().createFrameWriterFactory(
+                  context.frameContext().frameWriterSpec(),
                   outputChannel.getFrameMemoryAllocator()
               ),
               readableInput.getChannelFrameReader(),
-              frameContext.jsonMapper()
+              context.frameContext().jsonMapper()
           );
         }
     );
 
-    return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(processors),
-        OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+    return stageRunner.run(
+        new ProcessorsAndChannels<>(
+            ProcessorManagers.of(processors),
+            OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+        )
     );
   }
 

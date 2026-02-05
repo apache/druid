@@ -418,9 +418,9 @@ public class OnheapIncrementalIndexTest
                                )
                                .build();
 
-    final DateTime minTimestamp = DateTimes.nowUtc();
-    final DateTime outOfRangeTimestamp = DateTimes.nowUtc().minusDays(1);
-    final DateTime outOfRangeProjectionTimestamp = Granularities.YEAR.bucketStart(outOfRangeTimestamp);
+    final DateTime minTimestamp = DateTimes.of("2001-01-01T01:00:00");
+    final DateTime minTimestampProjectionTimestamp = Granularities.YEAR.bucketStart(minTimestamp);
+    final DateTime outOfRangeTimestamp = minTimestamp.minusDays(1);
 
     final IncrementalIndex index = IndexBuilder.create()
                                                .schema(IncrementalIndexSchema.builder()
@@ -502,7 +502,7 @@ public class OnheapIncrementalIndexTest
         "Cannot add row[{timestamp="
         + minTimestamp
         + ", event={string=hello, long=10}, dimensions=[string, long]}] to projection[proj] because projection effective timestamp["
-        + outOfRangeProjectionTimestamp
+        + minTimestampProjectionTimestamp
         + "] is below the minTimestamp["
         + minTimestamp + "]",
         t.getMessage()

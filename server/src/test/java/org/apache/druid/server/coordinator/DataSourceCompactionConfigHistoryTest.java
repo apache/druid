@@ -177,7 +177,7 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(originalConfig, auditInfo, DateTimes.nowUtc());
 
     final DruidCompactionConfig updatedConfig = originalConfig.withClusterConfig(
-        new ClusterCompactionConfig(0.2, null, null, null, null)
+        new ClusterCompactionConfig(0.2, null, null, null, null, null)
     );
     wikiAuditHistory.add(updatedConfig, auditInfo, DateTimes.nowUtc());
 

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import org.apache.druid.segment.indexing.DataSchema;
 
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -33,6 +34,7 @@ public class KafkaSupervisorSpecBuilder
   private final DataSchema.Builder dataSchema = new DataSchema.Builder();
   private final KafkaIOConfigBuilder ioConfig = new KafkaIOConfigBuilder();
   private final KafkaTuningConfigBuilder tuningConfig = new KafkaTuningConfigBuilder();
+  private Map<String, Object> context;
 
   public KafkaSupervisorSpecBuilder withDataSchema(Consumer<DataSchema.Builder> updateDataSchema)
   {
@@ -49,6 +51,12 @@ public class KafkaSupervisorSpecBuilder
   public KafkaSupervisorSpecBuilder withIoConfig(Consumer<KafkaIOConfigBuilder> updateIOConfig)
   {
     updateIOConfig.accept(this.ioConfig);
+    return this;
+  }
+
+  public KafkaSupervisorSpecBuilder withContext(Map<String, Object> context)
+  {
+    this.context = context;
     return this;
   }
 
@@ -87,7 +95,7 @@ public class KafkaSupervisorSpecBuilder
         dataSchema.build(),
         tuningConfig.build(),
         ioConfig.build(),
-        null,
+        context,
         false,
         // Jackson injected params, not needed while posting a supervisor to the Overlord
         null, null, null, null, null, null, null, null, null

@@ -70,6 +70,36 @@ public class PostgreSQLConnectorTest
   }
 
   @Test
+  public void testIsUniqueConstraintViolation()
+  {
+    PostgreSQLConnector connector = new PostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
+        new PostgreSQLConnectorConfig(),
+        new PostgreSQLTablesConfig(),
+        centralizedDatasourceSchemaConfig
+    );
+
+    // PostgreSQL unique_violation SQL state (23505)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new SQLException("duplicate key value violates unique constraint", "23505")
+    ));
+
+    // Different SQL state should return false
+    Assert.assertFalse(connector.isUniqueConstraintViolation(
+        new SQLException("some other error", "42P01")
+    ));
+
+    // SQLException wrapped in another exception (tests cause chain traversal)
+    Assert.assertTrue(connector.isUniqueConstraintViolation(
+        new RuntimeException(new SQLException("duplicate key", "23505"))
+    ));
+
+    // Non-SQLException exception
+    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
+  }
+
+  @Test
   public void testLimitClause()
   {
     PostgreSQLConnector connector = new PostgreSQLConnector(

@@ -84,6 +84,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
       "hostName:9092",
       null,
       2,
+      null,
       ServerType.REALTIME,
       "tier1",
       2

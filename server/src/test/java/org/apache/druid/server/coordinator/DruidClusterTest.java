@@ -45,13 +45,13 @@ public class DruidClusterTest
       .eachOfSizeInMb(100);
 
   private static final ServerHolder NEW_REALTIME = new ServerHolder(
-      new DruidServer("name1", "host2", null, 100L, ServerType.REALTIME, "tier1", 0)
+      new DruidServer("name1", "host2", null, 100L, null, ServerType.REALTIME, "tier1", 0)
           .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
       new TestLoadQueuePeon()
   );
 
   private static final ServerHolder NEW_HISTORICAL = new ServerHolder(
-      new DruidServer("name1", "host2", null, 100L, ServerType.HISTORICAL, "tier1", 0)
+      new DruidServer("name1", "host2", null, 100L, null, ServerType.HISTORICAL, "tier1", 0)
           .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
       new TestLoadQueuePeon()
   );
@@ -65,14 +65,14 @@ public class DruidClusterTest
         .builder()
         .add(
             new ServerHolder(
-                new DruidServer("name1", "host1", null, 100L, ServerType.REALTIME, "tier1", 0)
+                new DruidServer("name1", "host1", null, 100L, null, ServerType.REALTIME, "tier1", 0)
                     .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
                 new TestLoadQueuePeon()
             )
         )
         .add(
             new ServerHolder(
-                new DruidServer("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0)
+                new DruidServer("name1", "host1", null, 100L, null, ServerType.HISTORICAL, "tier1", 0)
                     .addDataSegment(SEGMENTS.get(0)).toImmutableDruidServer(),
                 new TestLoadQueuePeon()
             )

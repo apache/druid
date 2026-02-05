@@ -47,6 +47,7 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
         {
           query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${L(datasourceId)}`,
+          context: { engine: 'native' },
         },
         signal,
       );

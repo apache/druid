@@ -88,6 +88,11 @@ class ControllerStageTracker
    */
   private final FrameType rowBasedFrameType;
 
+  /**
+   * Maximum number of partitions for this stage. See {@link MultiStageQueryContext#getMaxPartitions}.
+   */
+  private final int maxPartitions;
+
   // worker-> workerStagePhase
   // Controller keeps track of the stage with this map.
   // Currently, we rely on the serial nature of the state machine to keep things in sync between the controller and the worker.
@@ -136,7 +141,8 @@ class ControllerStageTracker
       final StageDefinition stageDef,
       final WorkerInputs workerInputs,
       final FrameType rowBasedFrameType,
-      final int maxRetainedPartitionSketchBytes
+      final int maxRetainedPartitionSketchBytes,
+      final int maxPartitions
   )
   {
     this.stageDef = stageDef;
@@ -144,6 +150,7 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
     this.rowBasedFrameType = rowBasedFrameType;
     this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
+    this.maxPartitions = maxPartitions;
 
     initializeWorkerState(workerInputs.workers());
 
@@ -178,7 +185,9 @@ class ControllerStageTracker
       final WorkerAssignmentStrategy assignmentStrategy,
       final FrameType rowBasedFrameType,
       final int maxRetainedPartitionSketchBytes,
-      final long maxInputBytesPerWorker
+      final int maxInputFilesPerWorker,
+      final long maxInputBytesPerWorker,
+      final int maxPartitions
   )
   {
     final WorkerInputs workerInputs = WorkerInputs.create(
@@ -186,6 +195,7 @@ class ControllerStageTracker
         stageWorkerCountMap,
         slicer,
         assignmentStrategy,
+        maxInputFilesPerWorker,
         maxInputBytesPerWorker
     );
 
@@ -193,7 +203,8 @@ class ControllerStageTracker
         stageDef,
         workerInputs,
         rowBasedFrameType,
-        maxRetainedPartitionSketchBytes
+        maxRetainedPartitionSketchBytes,
+        maxPartitions
     );
   }
 
@@ -589,10 +600,10 @@ class ControllerStageTracker
             );
             ClusterByStatisticsCollector collector = timeChunkToCollector.get(tc);
             Either<Long, ClusterByPartitions> countOrPartitions =
-                stageDef.generatePartitionBoundariesForShuffle(collector);
+                stageDef.generatePartitionBoundariesForShuffle(collector, maxPartitions);
             totalPartitionCount += getPartitionCountFromEither(countOrPartitions);
-            if (totalPartitionCount > stageDef.getMaxPartitionCount()) {
-              failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+            if (totalPartitionCount > maxPartitions) {
+              failForReason(new TooManyPartitionsFault(maxPartitions));
               return null;
             }
             timeChunkToBoundaries.put(tc, countOrPartitions.valueOrThrow());
@@ -726,10 +737,11 @@ class ControllerStageTracker
       }
       if (resultPartitions == null) {
         final ClusterByStatisticsCollector collector = timeChunkToCollector.get(STATIC_TIME_CHUNK_FOR_PARALLEL_MERGE);
-        Either<Long, ClusterByPartitions> countOrPartitions = stageDef.generatePartitionBoundariesForShuffle(collector);
+        Either<Long, ClusterByPartitions> countOrPartitions =
+            stageDef.generatePartitionBoundariesForShuffle(collector, maxPartitions);
         totalPartitionCount += getPartitionCountFromEither(countOrPartitions);
-        if (totalPartitionCount > stageDef.getMaxPartitionCount()) {
-          failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+        if (totalPartitionCount > maxPartitions) {
+          failForReason(new TooManyPartitionsFault(maxPartitions));
           return;
         }
         resultPartitionBoundaries = countOrPartitions.valueOrThrow();
@@ -954,10 +966,10 @@ class ControllerStageTracker
         }
 
         final Either<Long, ClusterByPartitions> maybeResultPartitionBoundaries =
-            stageDef.generatePartitionBoundariesForShuffle(null);
+            stageDef.generatePartitionBoundariesForShuffle(null, maxPartitions);
 
         if (maybeResultPartitionBoundaries.isError()) {
-          failForReason(new TooManyPartitionsFault(stageDef.getMaxPartitionCount()));
+          failForReason(new TooManyPartitionsFault(maxPartitions));
           return;
         }
 

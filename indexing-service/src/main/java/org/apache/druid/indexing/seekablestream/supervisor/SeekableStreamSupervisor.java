@@ -61,8 +61,10 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -885,7 +887,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Tag for identifying this supervisor in thread-names, listeners, etc. tag = (type + supervisorId).
-  */
+   */
   private final String supervisorTag;
   private final TaskInfoProvider taskInfoProvider;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -925,6 +927,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
+
+  /**
+   * Reference to the autoscaler, used for rollover-based scale-down decisions.
+   * Wired by {@link SupervisorManager} after supervisor creation.
+   */
+  private volatile SupervisorTaskAutoScaler taskAutoScaler;
 
   // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
@@ -1306,7 +1314,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     if (log.isDebugEnabled()) {
                       log.debug(
                           "Handled notice[%s] from notices queue in [%d] ms, "
-                              + "current notices queue size [%d] for supervisor[%s] for datasource[%s].",
+                          + "current notices queue size [%d] for supervisor[%s] for datasource[%s].",
                           noticeType, noticeHandleTime.millisElapsed(), getNoticesQueueSize(), supervisorId, dataSource
                       );
                     }
@@ -1479,7 +1487,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public Map<String, Map<String, Object>> getStats()
   {
     try {
-      return getCurrentTotalStats();
+      return getCurrentStats();
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
@@ -1518,7 +1526,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private Map<String, Map<String, Object>> getCurrentTotalStats()
+  private Map<String, Map<String, Object>> getCurrentStats()
       throws InterruptedException, ExecutionException
   {
     Map<String, Map<String, Object>> allStats = new HashMap<>();
@@ -1675,6 +1683,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     return limitedParseErrors;
+  }
+
+  @Override
+  public SupervisorTaskAutoScaler createAutoscaler(SupervisorSpec spec)
+  {
+    this.taskAutoScaler = spec.createAutoscaler(this);
+    return this.taskAutoScaler;
   }
 
   @VisibleForTesting
@@ -3388,7 +3403,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         group.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
 
-
         boolean endOffsetsAreInvalid = false;
         for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           if (entry.getValue().equals(getEndOfPartitionMarker())) {
@@ -3427,6 +3441,38 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       // remove this task group from the list of current task groups now that it has been handled
       activelyReadingTaskGroups.remove(groupId);
+    }
+
+    maybeScaleDuringTaskRollover();
+  }
+
+  /**
+   * Scales up or down the number of tasks during a task rollover, if applicable.
+   * <p>
+   * This method is invoked to determine whether a task count adjustment is needed
+   * during a task rollover based on the recommendations from the task auto-scaler.
+ */
+
+  @VisibleForTesting
+  void maybeScaleDuringTaskRollover()
+  {
+    if (taskAutoScaler != null && activelyReadingTaskGroups.isEmpty()) {
+      int rolloverTaskCount = taskAutoScaler.computeTaskCountForRollover();
+      if (rolloverTaskCount > 0 && rolloverTaskCount != getIoConfig().getTaskCount()) {
+        log.info("Autoscaler recommends scaling down to [%d] tasks during rollover", rolloverTaskCount);
+        changeTaskCountInIOConfig(rolloverTaskCount);
+        // Here force reset the supervisor state to be re-calculated on the next iteration of runInternal() call.
+        // This seems the best way to inject task amount recalculation during the rollover.
+        clearAllocationInfo();
+
+        ServiceMetricEvent.Builder event = ServiceMetricEvent
+            .builder()
+            .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+            .setDimension(DruidMetrics.DATASOURCE, dataSource)
+            .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
+
+        emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, rolloverTaskCount));
+      }
     }
   }
 
@@ -4010,7 +4056,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           builder.put(partitionId, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
         }
       } else {
-        // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
+        // if we don't have a startingOffset (first run, or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
         OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(
             partitionId,
@@ -4688,9 +4734,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // Try emitting lag even with stale metrics provided that none of the partitions has negative lag
         final long staleMillis = sequenceLastUpdated == null
-            ? 0
-            : DateTimes.nowUtc().getMillis()
-              - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
+                                 ? 0
+                                 : DateTimes.nowUtc().getMillis()
+                                   - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
         if (staleMillis > 0 && partitionLags.values().stream().anyMatch(x -> x < 0)) {
           // Log at most once every twenty supervisor runs to reduce noise in the logs
           if ((staleMillis / getIoConfig().getPeriod().getMillis()) % 20 == 0) {

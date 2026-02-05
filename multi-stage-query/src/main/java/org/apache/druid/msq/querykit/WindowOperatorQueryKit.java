@@ -20,9 +20,11 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -56,12 +58,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
   private static final Logger log = new Logger(WindowOperatorQueryKit.class);
   private final ObjectMapper jsonMapper;
-  private final boolean isOperatorTransformationEnabled;
 
-  public WindowOperatorQueryKit(ObjectMapper jsonMapper, boolean isOperatorTransformationEnabled)
+  @Inject
+  public WindowOperatorQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
-    this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
   }
 
   @Override
@@ -87,6 +88,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                                           .build()
                                                           .getFinalStageDefinition()
                                                           .getSignature();
+
+    final boolean isOperatorTransformationEnabled =
+        MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(originalQuery.context());
 
     final WindowStages windowStages = new WindowStages(
         originalQuery,

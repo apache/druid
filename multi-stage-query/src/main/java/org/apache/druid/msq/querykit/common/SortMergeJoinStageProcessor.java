@@ -26,47 +26,53 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.InputSlices;
-import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.NilInputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * Factory for {@link SortMergeJoinFrameProcessor}, which does a sort-merge join of two inputs.
  */
 @JsonTypeName("sortMergeJoin")
-public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
+public class SortMergeJoinStageProcessor extends BasicStageProcessor
 {
   private static final int LEFT = 0;
   private static final int RIGHT = 1;
@@ -124,19 +130,11 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable Object extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  ) throws IOException
+  public ListenableFuture<Long> execute(ExecutionContext context)
   {
+    final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+
+    final List<InputSlice> inputSlices = context.workOrder().getInputs();
     if (inputSlices.size() != 2 || !inputSlices.stream().allMatch(slice -> slice instanceof StageInputSlice)) {
       // Can't hit this unless there was some bug in QueryKit.
       throw new ISE("Expected two stage inputs");
@@ -149,23 +147,25 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
     // Stitch up the inputs and validate each input channel signature.
     // If validateInputFrameSignatures fails, it's a precondition violation: this class somehow got bad inputs.
     final Int2ObjectMap<List<ReadableInput>> inputsByPartition = validateInputFrameSignatures(
-        InputSlices.attachAndCollectPartitions(
-            inputSlices,
-            inputSliceReader,
-            counters,
-            warningPublisher
-        ),
+        collectAndReadPartitions(context),
         keyColumns
     );
 
     if (inputsByPartition.isEmpty()) {
-      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
+      return stageRunner.run(
+          new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none())
+      );
     }
 
     // Create output channels.
     final Int2ObjectMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
     for (int partitionNumber : inputsByPartition.keySet()) {
-      outputChannels.put(partitionNumber, outputChannelFactory.openChannel(partitionNumber));
+      try {
+        outputChannels.put(partitionNumber, stageRunner.workOutputChannelFactory().openChannel(partitionNumber));
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
 
     // Create processors.
@@ -180,22 +180,24 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
               readableInputs.get(LEFT),
               readableInputs.get(RIGHT),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(
-                  frameContext.frameWriterSpec(),
+              context.workOrder().getStageDefinition().createFrameWriterFactory(
+                  context.frameContext().frameWriterSpec(),
                   outputChannel.getFrameMemoryAllocator()
               ),
               rightPrefix,
               keyColumns,
               requiredNonNullKeyParts,
               joinType,
-              frameContext.memoryParameters().getSortMergeJoinMemory()
+              context.frameContext().memoryParameters().getSortMergeJoinMemory()
           );
         }
     );
 
-    return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(processors),
-        OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+    return stageRunner.run(
+        new ProcessorsAndChannels<>(
+            ProcessorManagers.of(processors),
+            OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+        )
     );
   }
 
@@ -280,7 +282,7 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
   }
 
   /**
-   * Validates that all signatures from {@link InputSlices#attachAndCollectPartitions} are prefixed by the
+   * Validates that all signatures from {@link #collectAndReadPartitions(ExecutionContext)} are prefixed by the
    * provided {@code keyColumns}.
    */
   private static Int2ObjectMap<List<ReadableInput>> validateInputFrameSignatures(
@@ -308,5 +310,71 @@ public class SortMergeJoinStageProcessor extends BasicStandardStageProcessor
     }
 
     return inputsByPartition;
+  }
+
+  /**
+   * Calls {@link InputSliceReader#attach} on all input slices, which must all be {@link NilInputSlice} or
+   * {@link StageInputSlice}, and collects like-numbered partitions.
+   *
+   * The returned map is keyed by partition number. Each value is a list of inputs of the
+   * same length as "slices", and in the same order. i.e., the first ReadableInput in each list corresponds to the
+   * first provided {@link InputSlice}.
+   *
+   * "Missing" partitions -- which occur when one slice has no data for a given partition -- are replaced with
+   * {@link ReadableInput} based on {@link ReadableNilFrameChannel}, with no {@link StagePartition}.
+   *
+   * @throws IllegalStateException if any slices are not {@link StageInputSlice} or {@link NilInputSlice}
+   */
+  private static Int2ObjectMap<List<ReadableInput>> collectAndReadPartitions(final ExecutionContext context)
+  {
+    final List<InputSlice> slices = context.workOrder().getInputs();
+
+    // Input number -> FrameReader.
+    final List<FrameReader> frameReadersByInputNumber = Arrays.asList(new FrameReader[slices.size()]);
+
+    // Partition number -> Input number -> Input channel
+    final Int2ObjectMap<List<ReadableInput>> retVal = new Int2ObjectRBTreeMap<>();
+
+    for (int inputNumber = 0; inputNumber < slices.size(); inputNumber++) {
+      final InputSlice slice = slices.get(inputNumber);
+
+      if (slice instanceof StageInputSlice) {
+        if (frameReadersByInputNumber.get(inputNumber) == null) {
+          frameReadersByInputNumber.set(
+              inputNumber,
+              context.workOrder()
+                     .getQueryDefinition()
+                     .getStageDefinition(((StageInputSlice) slice).getStageNumber())
+                     .getFrameReader()
+          );
+        }
+
+        final ReadablePartitions partitions = ((StageInputSlice) slice).getPartitions();
+        for (final ReadablePartition partition : partitions) {
+          retVal.computeIfAbsent(partition.getPartitionNumber(), ignored -> Arrays.asList(new ReadableInput[slices.size()]))
+                .set(inputNumber, QueryKitUtils.readPartition(context, partition));
+        }
+      } else if (!(slice instanceof NilInputSlice)) {
+        throw DruidException.defensive("Slice[%s] is not a 'stage' or 'nil' slice", slice);
+      }
+    }
+
+    // Fill in all nulls with NilInputSlice.
+    for (Int2ObjectMap.Entry<List<ReadableInput>> entry : retVal.int2ObjectEntrySet()) {
+      for (int inputNumber = 0; inputNumber < entry.getValue().size(); inputNumber++) {
+        if (entry.getValue().get(inputNumber) == null) {
+          entry.getValue().set(
+              inputNumber,
+              ReadableInput.channel(
+                  ReadableNilFrameChannel.INSTANCE,
+                  frameReadersByInputNumber.get(inputNumber),
+                  null
+              )
+          );
+        }
+      }
+    }
+
+    return retVal;
   }
 }
