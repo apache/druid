@@ -682,21 +682,21 @@ public class ControllerImpl implements Controller
         // Check that the export destination is empty as a sanity check. We want
         // to avoid modifying any other files with export.
         Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(context.taskTempDir())
-                                                              .listDir("");
+            .listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build(
-                                  "Found files at provided export destination[%s]. Export is only allowed to "
-                                  + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
-                                  exportStorageProvider.getBasePath()
-                              );
+              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+              .build(
+                  "Found files at provided export destination[%s]. Export is only allowed to "
+                      + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                  exportStorageProvider.getBasePath()
+              );
         }
       }
       catch (IOException e) {
         throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build(e, "Exception occurred while connecting to export destination.");
+            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+            .build(e, "Exception occurred while connecting to export destination.");
       }
     }
   }
@@ -1694,10 +1694,10 @@ public class ControllerImpl implements Controller
       Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
       boolean storeCompactionState = querySpec.getContext()
-                                              .getBoolean(
-                                                  Tasks.STORE_COMPACTION_STATE_KEY,
-                                                  Tasks.DEFAULT_STORE_COMPACTION_STATE
-                                              );
+          .getBoolean(
+              Tasks.STORE_COMPACTION_STATE_KEY,
+              Tasks.DEFAULT_STORE_COMPACTION_STATE
+          );
 
       final String indexingStateFingerprint = querySpec.getContext().getString(Tasks.INDEXING_STATE_FINGERPRINT_KEY);
 
@@ -1817,7 +1817,7 @@ public class ControllerImpl implements Controller
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
         querySpec.getContext()
-                 .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+                    .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
         // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
         ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
