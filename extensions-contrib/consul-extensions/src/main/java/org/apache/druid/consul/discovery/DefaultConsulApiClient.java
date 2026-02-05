@@ -50,9 +50,9 @@ public class DefaultConsulApiClient implements ConsulApiClient
 {
   private static final Logger LOGGER = new Logger(DefaultConsulApiClient.class);
 
-  // Consul service metadata has a limit of 512 characters per value
-  // Use a safe limit to avoid edge cases (450 chars leaves room for key name overhead)
-  private static final int MAX_METADATA_VALUE_SIZE = 450;
+  // Consul service metadata has a limit of 512 bytes per value
+  // Use a safe limit to avoid edge cases (450 bytes leaves room for key name overhead)
+  private static final int MAX_METADATA_VALUE_SIZE_BYTES = 450;
   private static final long MIN_SESSION_TTL_SECONDS = 30;
   private static final long MIN_HEALTH_CHECK_INTERVAL_SECONDS = 1;
 
@@ -105,10 +105,11 @@ public class DefaultConsulApiClient implements ConsulApiClient
     // Serialize the full DiscoveryDruidNode as metadata
     String nodeJson = jsonMapper.writeValueAsString(node);
 
-    // Consul service metadata has a 512 character limit per value
+    // Consul service metadata has a 512 byte limit per value
     // If the JSON is too large, store it in Consul KV and reference it from metadata
     Map<String, String> meta = new HashMap<>();
-    if (nodeJson.length() <= MAX_METADATA_VALUE_SIZE) {
+    int nodeJsonBytes = nodeJson.getBytes(StandardCharsets.UTF_8).length;
+    if (nodeJsonBytes <= MAX_METADATA_VALUE_SIZE_BYTES) {
       // Small enough - store directly in metadata
       meta.put("druid_node", nodeJson);
     } else {
@@ -118,9 +119,9 @@ public class DefaultConsulApiClient implements ConsulApiClient
       consulClient.setKVValue(kvKey, nodeJson, config.getAuth().getAclToken(), putParams, buildQueryParams());
       meta.put("druid_node_kv", kvKey);
       LOGGER.debug(
-          "Node metadata for [%s] is too large (%d chars), stored in KV at [%s]",
+          "Node metadata for [%s] is too large (%d bytes), stored in KV at [%s]",
           serviceId,
-          nodeJson.length(),
+          nodeJsonBytes,
           kvKey
       );
     }

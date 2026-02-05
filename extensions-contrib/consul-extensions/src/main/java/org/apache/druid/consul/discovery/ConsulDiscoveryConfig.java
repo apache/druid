@@ -78,8 +78,10 @@ public class ConsulDiscoveryConfig
   )
   {
     if (leader != null) {
-      // Compute default TTL based on health check interval when not explicitly set
-      if (leader.getLeaderSessionTtl() == null) {
+      // Recompute TTL based on service's healthCheckInterval if user didn't explicitly set one.
+      // This is needed because Jackson deserializes LeaderElectionConfig before we have access
+      // to the service config's healthCheckInterval.
+      if (!leader.isLeaderSessionTtlWasExplicitlySet()) {
         return new LeaderElectionConfig(
             leader.getCoordinatorLeaderLockPath(),
             leader.getOverlordLeaderLockPath(),
@@ -537,13 +539,15 @@ public class ConsulDiscoveryConfig
   public static class LeaderElectionConfig
   {
     private static final long DEFAULT_LEADER_RETRY_BACKOFF_MAX_MS = 300_000;
-    private static final long DEFAULT_LEADER_MAX_ERROR_RETRIES = 20;
 
     private final String coordinatorLeaderLockPath;
     private final String overlordLeaderLockPath;
     private final Duration leaderSessionTtl;
     private final long leaderMaxErrorRetries;
     private final Duration leaderRetryBackoffMax;
+    // Tracks whether user explicitly set leaderSessionTtl, used by computeLeaderElectionConfig
+    // to decide whether to recompute TTL based on healthCheckInterval from service config
+    private final boolean leaderSessionTtlWasExplicitlySet;
 
     @JsonCreator
     public LeaderElectionConfig(
@@ -561,9 +565,14 @@ public class ConsulDiscoveryConfig
       this.overlordLeaderLockPath = overlordLeaderLockPath != null
           ? overlordLeaderLockPath
           : "druid/leader/overlord";
+      this.leaderSessionTtlWasExplicitlySet = leaderSessionTtl != null;
       this.leaderSessionTtl = computeLeaderSessionTtl(leaderSessionTtl, healthCheckInterval);
+      // Treat null, 0, or negative as unlimited retries (Long.MAX_VALUE)
+      // This aligns with WatchConfig.maxWatchRetries behavior and makes sense for leader election
+      // since giving up on leader election breaks the cluster - transient Consul issues shouldn't
+      // permanently prevent leadership, and exponential backoff prevents overwhelming Consul
       this.leaderMaxErrorRetries = (leaderMaxErrorRetries == null || leaderMaxErrorRetries <= 0)
-          ? DEFAULT_LEADER_MAX_ERROR_RETRIES
+          ? Long.MAX_VALUE
           : leaderMaxErrorRetries;
       this.leaderRetryBackoffMax = validatePositive(
           leaderRetryBackoffMax,
@@ -592,6 +601,16 @@ public class ConsulDiscoveryConfig
         );
       }
       return ttl;
+    }
+
+    /**
+     * Returns true if the user explicitly provided a leaderSessionTtl value in their config.
+     * Used by {@link ConsulDiscoveryConfig#computeLeaderElectionConfig} to decide whether
+     * to recompute the TTL based on the healthCheckInterval from service config.
+     */
+    public boolean isLeaderSessionTtlWasExplicitlySet()
+    {
+      return leaderSessionTtlWasExplicitlySet;
     }
 
     @JsonProperty
@@ -683,6 +702,15 @@ public class ConsulDiscoveryConfig
     )
     {
       this.watchSeconds = validatePositive(watchSeconds, DEFAULT_WATCH_TIMEOUT_MS, "watchSeconds");
+      // Consul blocking queries use seconds; sub-second values truncate to 0 causing tight loops
+      if (this.watchSeconds.getStandardSeconds() < 1) {
+        throw new IAE(
+            StringUtils.format(
+                "watchSeconds [%s] must be at least 1 second to avoid non-blocking query loops",
+                this.watchSeconds
+            )
+        );
+      }
       this.maxWatchRetries = (maxWatchRetries == null || maxWatchRetries <= 0) ? Long.MAX_VALUE : maxWatchRetries;
       this.watchRetryDelay = validateNonNegative(watchRetryDelay, DEFAULT_WATCH_RETRY_DELAY_MS, "watchRetryDelay");
       this.circuitBreakerSleep = validatePositive(circuitBreakerSleep, DEFAULT_CIRCUIT_BREAKER_SLEEP_MS, "circuitBreakerSleep");

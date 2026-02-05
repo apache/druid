@@ -234,9 +234,15 @@ public class ConsulLeaderSelector implements DruidLeaderSelector
       try {
         if (sessionId == null) {
           sessionId = createSession();
+          if (sessionId == null) {
+            // Session creation failed; back off before retrying to avoid tight loop
+            LOGGER.warn("Session creation failed for [%s]; backing off before retry", lockKey);
+            Thread.sleep(config.getService().getHealthCheckInterval().getMillis());
+            continue;
+          }
         }
 
-        if (sessionId != null && !leader.get()) {
+        if (!leader.get()) {
           if (!isSessionValid(sessionId)) {
             LOGGER.info("Follower session [%s] expired or invalid, recreating", shortSessionId(sessionId));
             sessionId = null;
