@@ -136,12 +136,6 @@ public class MSQCompactionRunner implements CompactionRunner
     this.injector = injector;
   }
 
-  @Override
-  public boolean requireAlignedInterval()
-  {
-    return true;
-  }
-
   /**
    * Checks if the provided compaction config is supported by MSQ. The same validation is done at
    * {@link ClientCompactionRunnerInfo#compactionConfigSupportedByMSQEngine}

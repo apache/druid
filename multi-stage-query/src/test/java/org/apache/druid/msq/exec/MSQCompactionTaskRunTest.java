@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -135,9 +136,13 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
           for (boolean useConcurrentLocks : new boolean[]{false, true}) {
             for (Interval inputInterval : new Interval[]{TEST_INTERVAL}) {
               for (Granularity segmentGran : new Granularity[]{Granularities.THREE_HOUR}) {
-                String name =
-                    lockGranularity.name() + (useCentralizedDatasourceSchema ? "|centralizedSchema" : "")
-                    + (useSegmentMetadataCache ? "|segmentCache" : "") + (useConcurrentLocks ? "|concurrentLock" : "");
+                String name = StringUtils.format(
+                    "lockGranularity=%s, useCentralizedDatasourceSchema=%s,  useSegmentMetadataCache=%s, useConcurrentLocks=%s",
+                    lockGranularity,
+                    useCentralizedDatasourceSchema,
+                    useSegmentMetadataCache,
+                    useConcurrentLocks
+                );
                 constructors.add(new Object[]{
                     name,
                     lockGranularity,

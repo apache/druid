@@ -43,14 +43,6 @@ public interface CompactionRunner
   String TYPE_PROPERTY = "type";
 
   /**
-   * Returns whether this runner requires aligned intervals for compaction.
-   * When true, the compaction task will throw an error if the IOConfig has allowNonAlignedInterval enabled.
-   *
-   * @return true if aligned intervals are required by this runner, false otherwise.
-   */
-  boolean requireAlignedInterval();
-
-  /**
    * Creates and runs sub-tasks for the given CompactionTask, one interval at a time.
    */
   TaskStatus runCompactionTasks(

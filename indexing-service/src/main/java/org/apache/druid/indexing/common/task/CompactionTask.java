@@ -246,12 +246,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     this.compactionRunner = compactionRunner == null
                             ? new NativeCompactionRunner(segmentCacheManagerFactory)
                             : compactionRunner;
-    if (this.compactionRunner.requireAlignedInterval() && this.ioConfig.isAllowNonAlignedInterval()) {
-      throw new IAE(
-          "Invalid config: allowNonAlignedInterval=true is not allowed by runner[%s]",
-          this.compactionRunner.getClass()
-      );
-    }
     this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
     // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
@@ -446,10 +440,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return determineLockGranularityAndTryLock(
-        taskActionClient,
-        List.of(retrieveRelevantTimelineHolder(taskActionClient, segmentProvider, null).lhs)
-    );
+    final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
+    return determineLockGranularityAndTryLock(taskActionClient, List.of(umbrellaInterval(segments, segmentProvider)));
   }
 
   @Override
@@ -570,12 +562,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       boolean needMultiValuedColumns
   ) throws IOException
   {
-    final Pair<Interval, Iterable<DataSegment>> holder = retrieveRelevantTimelineHolder(
-        toolbox.getTaskActionClient(),
+    final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
+        toolbox,
         segmentProvider,
         lockGranularityInUse
     );
-    final Iterable<DataSegment> timelineSegments = holder.rhs;
 
     if (!timelineSegments.iterator().hasNext()) {
       return Collections.emptyMap();
@@ -645,7 +636,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          holder.lhs,
+          umbrellaInterval(timelineSegments, segmentProvider),
           lazyFetchSegments(
               timelineSegments,
               toolbox.getSegmentCacheManager()
@@ -661,32 +652,28 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
   }
 
-  /**
-   * Retrieves data segments and their umbrella interval from the timeline for the given segment provider.
-   *
-   * @return a pair of umbrella interval and data segments
-   */
-  private static Pair<Interval, Iterable<DataSegment>> retrieveRelevantTimelineHolder(
-      TaskActionClient actionClient,
+  private static Iterable<DataSegment> retrieveRelevantTimelineHolders(
+      TaskToolbox toolbox,
       SegmentProvider segmentProvider,
-      @Nullable LockGranularity lockGranularityInUse
+      LockGranularity lockGranularityInUse
   ) throws IOException
   {
-    final List<DataSegment> usedSegments = segmentProvider.findSegments(actionClient);
-    if (lockGranularityInUse != null) {
-      segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
-    }
+    final List<DataSegment> usedSegments =
+        segmentProvider.findSegments(toolbox.getTaskActionClient());
+    segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = SegmentTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
-    Iterable<DataSegment> segments = VersionedIntervalTimeline.getAllObjects(timelineSegments);
-    Interval interval =
-        JodaUtils.umbrellaInterval(
-            List.of(
-                JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval)),
-                segmentProvider.interval
-            ));
-    return Pair.of(interval, segments);
+    return VersionedIntervalTimeline.getAllObjects(timelineSegments);
+  }
+
+  private static Interval umbrellaInterval(Iterable<DataSegment> segments, SegmentProvider segmentProvider)
+  {
+    return JodaUtils.umbrellaInterval(
+        List.of(
+            JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval)),
+            segmentProvider.interval
+        ));
   }
 
   private static DataSchema createDataSchema(

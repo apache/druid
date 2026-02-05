@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Interval;
@@ -45,9 +46,13 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
           for (boolean useConcurrentLocks : new boolean[]{false, true}) {
             for (Interval inputInterval : new Interval[]{TEST_INTERVAL, TEST_INTERVAL_DAY}) {
               for (Granularity segmentGran : new Granularity[]{null, Granularities.HOUR, Granularities.THREE_HOUR}) {
-                String name =
-                    lockGranularity.name() + (useCentralizedDatasourceSchema ? "|centralizedSchema" : "")
-                    + (useSegmentMetadataCache ? "|segmentCache" : "") + (useConcurrentLocks ? "|concurrentLock" : "");
+                String name = StringUtils.format(
+                    "lockGranularity=%s, useCentralizedDatasourceSchema=%s,  useSegmentMetadataCache=%s, useConcurrentLocks=%s",
+                    lockGranularity,
+                    useCentralizedDatasourceSchema,
+                    useSegmentMetadataCache,
+                    useConcurrentLocks
+                );
                 constructors.add(new Object[]{
                     name,
                     lockGranularity,
