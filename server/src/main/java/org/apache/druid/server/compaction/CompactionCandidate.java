@@ -245,7 +245,7 @@ public class CompactionCandidate
         }
         final CompactionEligibility searchPolicyEligibility =
             searchPolicy.checkEligibilityForCompaction(this.withPolicyEligibility(evaluated.lhs)
-                                                           .withCurrentStatus(evaluated.rhs), null);
+                                                           .withCurrentStatus(evaluated.rhs));
         switch (searchPolicyEligibility.getState()) {
           case
               NOT_ELIGIBLE: // although evaluator thinks this interval qualifies for compaction, but policy decided not its turn yet.

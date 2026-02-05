@@ -56,10 +56,7 @@ public class FixedIntervalOrderPolicy implements CompactionCandidateSearchPolicy
   }
 
   @Override
-  public CompactionEligibility checkEligibilityForCompaction(
-      CompactionCandidate candidate,
-      CompactionTaskStatus latestTaskStatus
-  )
+  public CompactionEligibility checkEligibilityForCompaction(CompactionCandidate candidate)
   {
     return findIndex(candidate) < Integer.MAX_VALUE
         ? CompactionEligibility.FULL_COMPACTION_ELIGIBLE
