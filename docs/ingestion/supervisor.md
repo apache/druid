@@ -204,14 +204,14 @@ The following table outlines the configuration properties related to the `costBa
 
 | Property|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 60000 |
+|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 600000 |
 |`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25 |
 |`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
 |`defaultProcessingRate`|A planned processing rate per task, required for first cost estimations. | No | 1000 |
 |`useTaskCountBoundaries`|Enables the bounded partitions-per-task window when selecting task counts.|No| `false` |
-|`highLagThreshold`|Per-partition lag threshold that triggers burst scale-up when set to `0` or higher. Set to a negative value to disable burst scale-up.|No|-1|
-|`minScaleDownDelay`| Minimum duration between successful scale actions, specified as an ISO-8601 duration string. | No | `PT30M` |
-|`scaleDownDuringTaskRolloverOnly`| Indicates whether task scaling down is limited to periods during task rollovers only. | No | False |
+|`highLagThreshold`|Per-partition lag threshold that triggers burst scale-up when set to a value greater than `0`. Set to a negative value to disable burst scale-up.|No|-1|
+|`minScaleDownDelay`|Minimum duration between successful scale actions, specified as an ISO-8601 duration string.|No|`PT30M`|
+|`scaleDownDuringTaskRolloverOnly`|Indicates whether task scaling down is limited to periods during task rollovers only.|No|`false`|
 
 The following example shows a supervisor spec with `lagBased` autoscaler:
 
