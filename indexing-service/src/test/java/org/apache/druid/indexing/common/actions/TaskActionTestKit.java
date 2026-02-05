@@ -201,17 +201,21 @@ public class TaskActionTestKit extends ExternalResource
     };
 
     SupervisorManager supervisorManager = new SupervisorManager(objectMapper, null);
+    SegmentAllocationQueue segmentAllocationQueue = new SegmentAllocationQueue(
+        taskLockbox,
+        taskLockConfig,
+        metadataStorageCoordinator,
+        emitter,
+        ScheduledExecutors::fixed
+    );
+    if (segmentAllocationQueue.isEnabled()) {
+      segmentAllocationQueue.becomeLeader();
+    }
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,
         metadataStorageCoordinator,
-        new SegmentAllocationQueue(
-            taskLockbox,
-            taskLockConfig,
-            metadataStorageCoordinator,
-            emitter,
-            ScheduledExecutors::fixed
-        ),
+        segmentAllocationQueue,
         emitter,
         supervisorManager,
         objectMapper

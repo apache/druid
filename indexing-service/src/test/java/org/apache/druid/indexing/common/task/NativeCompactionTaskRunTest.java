@@ -42,26 +42,30 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
 
     for (LockGranularity lockGranularity : new LockGranularity[]{LockGranularity.TIME_CHUNK, LockGranularity.SEGMENT}) {
       for (boolean useCentralizedDatasourceSchema : new boolean[]{true, false}) {
-        for (boolean useSegmentMetadataCache : new boolean[]{false, true}) {
-          for (boolean useConcurrentLocks : new boolean[]{false, true}) {
-            for (Interval inputInterval : new Interval[]{TEST_INTERVAL, TEST_INTERVAL_DAY}) {
-              for (Granularity segmentGran : new Granularity[]{null, Granularities.HOUR, Granularities.SIX_HOUR}) {
-                String name = StringUtils.format(
-                    "lockGranularity=%s, useCentralizedDatasourceSchema=%s,  useSegmentMetadataCache=%s, useConcurrentLocks=%s",
-                    lockGranularity,
-                    useCentralizedDatasourceSchema,
-                    useSegmentMetadataCache,
-                    useConcurrentLocks
-                );
-                constructors.add(new Object[]{
-                    name,
-                    lockGranularity,
-                    useCentralizedDatasourceSchema,
-                    useSegmentMetadataCache,
-                    useConcurrentLocks,
-                    inputInterval,
-                    segmentGran
-                });
+        for (boolean batchSegmentAllocation : new boolean[]{true, false}) {
+          for (boolean useSegmentMetadataCache : new boolean[]{false, true}) {
+            for (boolean useConcurrentLocks : new boolean[]{false, true}) {
+              for (Interval inputInterval : new Interval[]{TEST_INTERVAL, TEST_INTERVAL_DAY}) {
+                for (Granularity segmentGran : new Granularity[]{null, Granularities.HOUR, Granularities.SIX_HOUR}) {
+                  String name = StringUtils.format(
+                      "lockGranularity=%s, useCentralizedDatasourceSchema=%s, batchSegmentAllocation=%s, useSegmentMetadataCache=%s, useConcurrentLocks=%s",
+                      lockGranularity,
+                      useCentralizedDatasourceSchema,
+                      batchSegmentAllocation,
+                      useSegmentMetadataCache,
+                      useConcurrentLocks
+                  );
+                  constructors.add(new Object[]{
+                      name,
+                      lockGranularity,
+                      useCentralizedDatasourceSchema,
+                      batchSegmentAllocation,
+                      useSegmentMetadataCache,
+                      useConcurrentLocks,
+                      inputInterval,
+                      segmentGran
+                  });
+                }
               }
             }
           }
@@ -76,6 +80,7 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
       String name,
       LockGranularity lockGranularity,
       boolean useCentralizedDatasourceSchema,
+      boolean batchSegmentAllocation,
       boolean useSegmentMetadataCache,
       boolean useConcurrentLocks,
       Interval inputInterval,
@@ -86,6 +91,7 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
         name,
         lockGranularity,
         useCentralizedDatasourceSchema,
+        batchSegmentAllocation,
         useSegmentMetadataCache,
         useConcurrentLocks,
         inputInterval,

@@ -211,6 +211,7 @@ public abstract class CompactionTaskRunBase
       String name,
       LockGranularity lockGranularity,
       boolean useCentralizedDatasourceSchema,
+      boolean batchSegmentAllocation,
       boolean useSegmentMetadataCache,
       boolean useConcurrentLocks,
       Interval inputInterval,
@@ -221,7 +222,7 @@ public abstract class CompactionTaskRunBase
     this.useCentralizedDatasourceSchema = useCentralizedDatasourceSchema;
     taskActionTestKit.setUseCentralizedDatasourceSchema(useCentralizedDatasourceSchema)
                      .setUseSegmentMetadataCache(useSegmentMetadataCache)
-                     .setBatchSegmentAllocation(false);
+                     .setBatchSegmentAllocation(batchSegmentAllocation);
     this.useConcurrentLocks = useConcurrentLocks;
     this.inputInterval = inputInterval;
     this.segmentGranularity = segmentGranularity;

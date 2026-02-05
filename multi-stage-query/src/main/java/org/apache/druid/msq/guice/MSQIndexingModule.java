@@ -29,7 +29,6 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
