@@ -202,8 +202,8 @@ Note: Kinesis is not supported yet, support is in progress.
 
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 
-| Property|Description|Required| Default |
-|---------|---------------------------------------------------|---|--|
+| Property|Description|Required|Default|
+|---------|-----------|--------|-------|
 |`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 60000 |
 |`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25 |
 |`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
