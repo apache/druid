@@ -88,7 +88,7 @@ druid.indexer.selector.type=consul
 | `druid.discovery.consul.watch.circuitBreakerSleep` | ISO8601 Duration | Sleep duration when circuit breaker trips after exceeding maxWatchRetries. | `PT2M` (2 minutes) | No |
 | `druid.discovery.consul.leader.coordinatorLeaderLockPath` | String | Consul KV path for Coordinator leader lock. | `druid/leader/coordinator` | No |
 | `druid.discovery.consul.leader.overlordLeaderLockPath` | String | Consul KV path for Overlord leader lock. | `druid/leader/overlord` | No |
-| `druid.discovery.consul.leader.leaderMaxErrorRetries` | Long | Max consecutive leader-election errors before stopping election attempts. Use `-1` for unlimited retries. | `20` | No |
+| `druid.discovery.consul.leader.leaderMaxErrorRetries` | Long | Max consecutive leader-election errors before stopping election attempts. Use `-1` or `0` for unlimited retries (default). Leader election retries indefinitely by default because giving up breaks cluster operation, and exponential backoff (up to `leaderRetryBackoffMax`) prevents overwhelming Consul during transient failures. | `unlimited` | No |
 | `druid.discovery.consul.leader.leaderRetryBackoffMax` | ISO8601 Duration | Maximum backoff applied between leader-election retries. | `PT5M` | No |
 | `druid.discovery.consul.leader.leaderSessionTtl` | ISO8601 Duration | TTL for leader election session. Auto-calculated if not set. | `max(45s, 3 * healthCheckInterval)` | No |
 

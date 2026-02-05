@@ -271,7 +271,14 @@ public class ConsulDruidNodeAnnouncer implements DruidNodeAnnouncer
           // Keep WARN for recovery actions - these are important state changes
           LOGGER.warn("Re-registering [%s] after %d failures", serviceId, failures);
           try {
+            // Re-fetch from map; node may have been concurrently removed during shutdown
             DiscoveryDruidNode node = announcedNodes.get(serviceId);
+            if (node == null) {
+              // Node was unannounced (e.g., during shutdown) - skip re-registration
+              LOGGER.info("Skipping re-registration for [%s] - node no longer announced", serviceId);
+              consecutiveFailures.remove(serviceId);
+              continue;
+            }
             consulApiClient.registerService(node);
             consulApiClient.passTtlCheck(serviceId, "Re-registered");
             consecutiveFailures.remove(serviceId);
