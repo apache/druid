@@ -87,7 +87,7 @@ idlenessCost = taskCount × taskDuration × predictedIdleRatio — wasted comput
 
 #### Kubernetes client mode (experimental)
 
-The new experimental Kubernetes client mode uses the `fabric8` `SharedInformers` to cache k8s metadata. This greatly reduces API traffic between the Overlord and k8s control plane. You can try out this feature using the following config:
+In `kubernetes-overlord-extensions` an experimental Kubernetes client mode was added. The new mode uses the `fabric8` `SharedInformers` to cache k8s metadata. This greatly reduces API traffic between the Overlord and k8s control plane. You can try out this feature using the following config:
 
 ```
 druid.indexer.runner.useK8sSharedInformers=true
