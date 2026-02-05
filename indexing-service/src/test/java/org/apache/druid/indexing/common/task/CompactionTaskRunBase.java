@@ -50,6 +50,10 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -1562,8 +1566,8 @@ public abstract class CompactionTaskRunBase
     taskActionTestKit.getTaskLockbox().add(task);
     taskActionTestKit.getTaskStorage().insert(task, TaskStatus.running(task.getId()));
 
-    TestSpyTaskActionClient spyTaskActionClient =
-        new TestSpyTaskActionClient(new LocalTaskActionClient(task, taskActionTestKit.getTaskActionToolbox()));
+    WrappingTaskActionClient spyTaskActionClient =
+        new WrappingTaskActionClient(new LocalTaskActionClient(task, taskActionTestKit.getTaskActionToolbox()));
     registerTaskActionClient(task.getId(), spyTaskActionClient);
     final TaskToolbox box = createTaskToolbox(objectMapper, spyTaskActionClient);
 
@@ -1822,5 +1826,57 @@ public abstract class CompactionTaskRunBase
   )
   {
     return StringUtils.format("%s,%s,%s\n", ts, dim, val);
+  }
+
+  /**
+   * Wraps a TaskActionClient to track published segments and their schema mappings from transactional actions.
+   */
+  private static class WrappingTaskActionClient implements TaskActionClient
+  {
+    private final Set<DataSegment> publishedSegments = new HashSet<>();
+    private final SegmentSchemaMapping segmentSchemaMapping
+        = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    private final TaskActionClient delegate;
+
+    WrappingTaskActionClient(TaskActionClient delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+    {
+      // Track segments and schemas from transactional actions
+      if (taskAction instanceof SegmentTransactionalInsertAction) {
+        SegmentTransactionalInsertAction insertAction = (SegmentTransactionalInsertAction) taskAction;
+        publishedSegments.addAll(insertAction.getSegments());
+        if (insertAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(insertAction.getSegmentSchemaMapping());
+        }
+      } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+        SegmentTransactionalReplaceAction replaceAction = (SegmentTransactionalReplaceAction) taskAction;
+        publishedSegments.addAll(replaceAction.getSegments());
+        if (replaceAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(replaceAction.getSegmentSchemaMapping());
+        }
+      } else if (taskAction instanceof SegmentTransactionalAppendAction) {
+        SegmentTransactionalAppendAction appendAction = (SegmentTransactionalAppendAction) taskAction;
+        publishedSegments.addAll(appendAction.getSegments());
+        if (appendAction.getSegmentSchemaMapping() != null) {
+          segmentSchemaMapping.merge(appendAction.getSegmentSchemaMapping());
+        }
+      }
+      return delegate.submit(taskAction);
+    }
+
+    Set<DataSegment> getPublishedSegments()
+    {
+      return publishedSegments;
+    }
+
+    SegmentSchemaMapping getSegmentSchemas()
+    {
+      return segmentSchemaMapping;
+    }
   }
 }

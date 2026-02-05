@@ -39,7 +39,7 @@ import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
-import org.apache.druid.msq.indexing.IndexerControllerContext;
+import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
 import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
@@ -250,15 +250,13 @@ public class MSQIndexingModule implements DruidModule
   }
 
   @Provides
-  IndexerControllerContext.Builder providesContextBuilder(Injector injector)
+  IndexerControllerContextFactory providesContextFactory(Injector injector)
   {
     ServiceClientFactory clientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                             .withRetryPolicy(StandardRetryPolicy.unlimited());
-    return (MSQControllerTask task, TaskToolbox toolbox) -> new IndexerControllerContext(
-        task,
-        toolbox,
+    return new IndexerControllerContextFactory(
         injector,
         clientFactory,
         overlordClient

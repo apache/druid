@@ -55,7 +55,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.indexing.IndexerControllerContext;
+import org.apache.druid.msq.indexing.IndexerControllerContextFactory;
 import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -238,21 +238,27 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         binder -> binder.bind(GroupingEngine.class).toInstance(groupingEngine)
     );
     injector = Guice.createInjector(modules);
-    // bind IndexerControllerContext.Builder to build a MSQTestControllerContext, overriding the one in MSQIndexingModule
+    // bind IndexerControllerContextFactory to build a MSQTestControllerContext, overriding the one in MSQIndexingModule
     injector = Guice.createInjector(
         Modules.override(modules)
-               .with(binder -> binder.bind(IndexerControllerContext.Builder.class)
-                                     .toInstance((MSQControllerTask cTask, TaskToolbox unused) -> new MSQTestControllerContext(
-                                         cTask.getId(),
-                                         objectMapper,
-                                         injector,
-                                         taskActionClients.get(cTask.getId()),
-                                         MSQTestBase.makeTestWorkerMemoryParameters(),
-                                         cTask.getTaskLockType(),
-                                         cTask.getQuerySpec().getContext(),
-                                         new StubServiceEmitter(),
-                                         coordinatorClient
-                                     ))));
+               .with(binder -> binder.bind(IndexerControllerContextFactory.class)
+                                     .toInstance(new IndexerControllerContextFactory(null, null, null) {
+                                       @Override
+                                       public ControllerContext buildWithTask(MSQControllerTask cTask, TaskToolbox unused)
+                                       {
+                                         return new MSQTestControllerContext(
+                                             cTask.getId(),
+                                             objectMapper,
+                                             injector,
+                                             taskActionClients.get(cTask.getId()),
+                                             MSQTestBase.makeTestWorkerMemoryParameters(),
+                                             cTask.getTaskLockType(),
+                                             cTask.getQuerySpec().getContext(),
+                                             new StubServiceEmitter(),
+                                             coordinatorClient
+                                         );
+                                       }
+                                     })));
   }
 
   protected MSQCompactionRunner getMSQCompactionRunner()

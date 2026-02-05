@@ -411,6 +411,7 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
+    // if schema is not time-sorted, the time column mapping would already be in inputColToVirtualCol
     if (!dataSchema.getDimensionsSpec().getDimensionNames().contains(ColumnHolder.TIME_COLUMN_NAME)) {
       if (isQueryGranularityEmptyOrNone(dataSchema)) {
         // Dimensions in group-by aren't allowed to have time column name as the output name.

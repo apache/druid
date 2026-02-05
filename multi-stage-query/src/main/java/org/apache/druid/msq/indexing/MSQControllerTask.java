@@ -260,7 +260,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
-    final ControllerContext context = injector.getInstance(IndexerControllerContext.Builder.class)
+    final ControllerContext context = injector.getInstance(IndexerControllerContextFactory.class)
                                               .buildWithTask(this, toolbox);
     controller = new ControllerImpl(
         querySpec,

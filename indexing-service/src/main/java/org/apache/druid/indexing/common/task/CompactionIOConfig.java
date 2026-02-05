@@ -60,6 +60,9 @@ public class CompactionIOConfig implements IOConfig
     return inputSpec;
   }
 
+  /**
+   * @deprecated Provided for backwards compatibility. Can lead to data being accidentally overshadowed.
+   */
   @Deprecated
   @JsonProperty("allowNonAlignedInterval")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
