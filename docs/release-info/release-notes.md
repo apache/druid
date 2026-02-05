@@ -120,11 +120,11 @@ You can control the retention behavior for reports using the following configs:
 
 #### New segment format
 
-The new version 10 segment format improves upon version 9. Version 10 supports partial segment downloads, a feature provided by the experimental virtual storage fabric feature. To streamline partial fetches, the base segment contents get combined into a single file called `druid.segment`.
+The new version 10 segment format improves upon version 9. It is off by default and not compatible with older segment format versions.
 
 Set `druid.indexer.task.buildV10=true` to make segments in the new format.
 
-Note that previous versions of Druid don't support version 10. If you downgrade, you must reindex your data with a supported segment format version.
+If you downgrade, you must reindex your data with a supported segment format version.
 
 You can use the `bin/dump-segment` tool to view segment metadata. The tool outputs serialized JSON.
 
