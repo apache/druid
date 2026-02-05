@@ -165,7 +165,7 @@ public abstract class CompactionTaskRunBase
       NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec());
 
   protected static final Interval TEST_INTERVAL_DAY = Intervals.of("2014-01-01/2014-01-02");
-  protected static final Interval TEST_INTERVAL = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T03:00:00Z");
+  protected static final Interval TEST_INTERVAL = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T06:00:00Z");
   protected static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
       "2014-01-01T00:00:10Z,b,2\n",
@@ -408,7 +408,7 @@ public abstract class CompactionTaskRunBase
             (short) 1
         ), segments.get(i).getShardSpec());
       }
-    } else if (segmentGranularity.equals(Granularities.THREE_HOUR)) {
+    } else if (segmentGranularity.equals(Granularities.SIX_HOUR)) {
       Assert.assertEquals(1, segments.size());
       Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
       Assert.assertEquals(
@@ -437,19 +437,19 @@ public abstract class CompactionTaskRunBase
     final CompactionTask compactionTask =
         compactionTaskBuilder(segmentGranularity).interval(inputInterval, true).build();
     List<String> rows = new ArrayList<>();
-    rows.add("2014-01-01T03:00:10Z,a,1\n");
-    rows.add("2014-01-01T03:00:10Z,b,2\n");
-    rows.add("2014-01-01T03:00:10Z,c,3\n");
-    rows.add("2014-01-01T04:00:20Z,a,1\n");
-    rows.add("2014-01-01T04:00:20Z,b,2\n");
-    rows.add("2014-01-01T04:00:20Z,c,3\n");
-    rows.add("2014-01-01T05:00:30Z,a,1\n");
-    rows.add("2014-01-01T05:00:30Z,b,2\n");
-    rows.add("2014-01-01T05:00:30Z,c,3\n");
+    rows.add("2014-01-01T06:00:10Z,a,1\n");
+    rows.add("2014-01-01T06:00:10Z,b,2\n");
+    rows.add("2014-01-01T06:00:10Z,c,3\n");
+    rows.add("2014-01-01T07:00:20Z,a,1\n");
+    rows.add("2014-01-01T07:00:20Z,b,2\n");
+    rows.add("2014-01-01T07:00:20Z,c,3\n");
+    rows.add("2014-01-01T08:00:30Z,a,1\n");
+    rows.add("2014-01-01T08:00:30Z,b,2\n");
+    rows.add("2014-01-01T08:00:30Z,c,3\n");
     final IndexTask indexTask = buildIndexTask(
         DEFAULT_PARSE_SPEC,
         rows,
-        Intervals.of("2014-01-01T03:00:00Z/2014-01-01T06:00:00Z"),
+        Intervals.of("2014-01-01T06:00:00Z/2014-01-01T12:00:00Z"),
         false
     );
 
@@ -469,7 +469,7 @@ public abstract class CompactionTaskRunBase
 
     for (int i = 0; i < 6; i++) {
       Assert.assertEquals(
-          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", 3 + i / 2, 3 + i / 2 + 1),
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", 6 + i / 2, 6 + i / 2 + 1),
           segments.get(i).getInterval()
       );
       if (lockGranularity == LockGranularity.SEGMENT) {
@@ -494,7 +494,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "use Granularities.WEEK segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
     // Test when inputInterval is less than Granularities.WEEK is not allowed
@@ -517,7 +517,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "use Granularities.WEEK segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
     // Test when inputInterval is less than Granularities.WEEK is allowed
@@ -548,7 +548,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
         && lockGranularity != LockGranularity.SEGMENT
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
@@ -580,8 +580,8 @@ public abstract class CompactionTaskRunBase
   public void testCompactionWithFilterInTransformSpec() throws Exception
   {
     Assume.assumeTrue(
-        "test with three hour granularity is enough",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with six hour granularity is enough",
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -632,8 +632,8 @@ public abstract class CompactionTaskRunBase
   public void testCompactionWithNewMetricInMetricsSpec() throws Exception
   {
     Assume.assumeTrue(
-        "test with three hour granularity is enough",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        "test with six hour granularity is enough",
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -688,7 +688,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -716,7 +716,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test three hour segment granularity is enough",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -748,7 +748,7 @@ public abstract class CompactionTaskRunBase
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
@@ -875,7 +875,7 @@ public abstract class CompactionTaskRunBase
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of
@@ -973,7 +973,7 @@ public abstract class CompactionTaskRunBase
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
@@ -1135,7 +1135,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     final List<String> spatialrows = ImmutableList.of(
         "2014-01-01T00:00:10Z,a,10,100,1\n",
@@ -1167,7 +1167,7 @@ public abstract class CompactionTaskRunBase
     verifyTaskSuccessRowsAndSchemaMatch(indexTaskResult, 6);
 
     final CompactionTask compactionTask =
-        compactionTaskBuilder(Granularities.THREE_HOUR).interval(TEST_INTERVAL, true).build();
+        compactionTaskBuilder(Granularities.SIX_HOUR).interval(TEST_INTERVAL, true).build();
 
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair, 6);
@@ -1177,7 +1177,7 @@ public abstract class CompactionTaskRunBase
 
     Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
     CompactionState defaultCompactionState = getDefaultCompactionState(
-        Granularities.THREE_HOUR,
+        Granularities.SIX_HOUR,
         Granularities.MINUTE,
         List.of(TEST_INTERVAL)
     );
@@ -1241,7 +1241,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     final List<String> rows = ImmutableList.of(
         "2014-01-01T00:00:10Z,a,10,100,1\n",
@@ -1275,7 +1275,7 @@ public abstract class CompactionTaskRunBase
     verifyTaskSuccessRowsAndSchemaMatch(indexTaskResult, 6);
 
     final CompactionTask compactionTask =
-        compactionTaskBuilder(Granularities.THREE_HOUR).interval(TEST_INTERVAL, true).build();
+        compactionTaskBuilder(Granularities.SIX_HOUR).interval(TEST_INTERVAL, true).build();
 
     final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
     verifyTaskSuccessRowsAndSchemaMatch(resultPair, 6);
@@ -1288,7 +1288,7 @@ public abstract class CompactionTaskRunBase
         compactionTask.getCompactionRunner() instanceof NativeCompactionRunner ? List.of() : List.of("__time", "val");
     CompactionState expectedState =
         getDefaultCompactionState(
-            Granularities.THREE_HOUR,
+            Granularities.SIX_HOUR,
             Granularities.MINUTE,
             List.of(TEST_INTERVAL)
         ).toBuilder()
@@ -1354,7 +1354,7 @@ public abstract class CompactionTaskRunBase
   {
     Assume.assumeTrue(
         "test with defined segment granularity and interval in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
+        Granularities.SIX_HOUR.equals(segmentGranularity) && TEST_INTERVAL.equals(inputInterval)
     );
     // Compaction will produce one segment sorted by [x, __time], even though input rows are sorted by __time.
     final List<String> rows = ImmutableList.of(
@@ -1749,7 +1749,7 @@ public abstract class CompactionTaskRunBase
           Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
         }
       }
-    } else if (gran.equals(Granularities.THREE_HOUR)) {
+    } else if (gran.equals(Granularities.SIX_HOUR)) {
       Assert.assertEquals(1, segments.size());
       Assert.assertEquals(TEST_INTERVAL, segments.get(0).getInterval());
       Assert.assertEquals(

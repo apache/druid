@@ -45,7 +45,7 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
         for (boolean useSegmentMetadataCache : new boolean[]{false, true}) {
           for (boolean useConcurrentLocks : new boolean[]{false, true}) {
             for (Interval inputInterval : new Interval[]{TEST_INTERVAL, TEST_INTERVAL_DAY}) {
-              for (Granularity segmentGran : new Granularity[]{null, Granularities.HOUR, Granularities.THREE_HOUR}) {
+              for (Granularity segmentGran : new Granularity[]{null, Granularities.HOUR, Granularities.SIX_HOUR}) {
                 String name = StringUtils.format(
                     "lockGranularity=%s, useCentralizedDatasourceSchema=%s,  useSegmentMetadataCache=%s, useConcurrentLocks=%s",
                     lockGranularity,

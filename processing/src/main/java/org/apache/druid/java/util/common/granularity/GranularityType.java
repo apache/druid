@@ -59,7 +59,6 @@ public enum GranularityType
       4,
       "PT1H"
   ),
-  THREE_HOUR(HOUR, "PT3H"),
   SIX_HOUR(HOUR, "PT6H"),
   EIGHT_HOUR(HOUR, "PT8H"),
   DAY(
@@ -223,8 +222,6 @@ public enum GranularityType
           return GranularityType.EIGHT_HOUR;
         } else if (vals[index] == 6) {
           return GranularityType.SIX_HOUR;
-        } else if (vals[index] == 3) {
-          return GranularityType.THREE_HOUR;
         } else if (vals[index] == 1) {
           return GranularityType.HOUR;
         }

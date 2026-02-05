@@ -135,7 +135,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         for (boolean useSegmentMetadataCache : new boolean[]{false, true}) {
           for (boolean useConcurrentLocks : new boolean[]{false, true}) {
             for (Interval inputInterval : new Interval[]{TEST_INTERVAL}) {
-              for (Granularity segmentGran : new Granularity[]{Granularities.THREE_HOUR}) {
+              for (Granularity segmentGran : new Granularity[]{Granularities.SIX_HOUR}) {
                 String name = StringUtils.format(
                     "lockGranularity=%s, useCentralizedDatasourceSchema=%s,  useSegmentMetadataCache=%s, useConcurrentLocks=%s",
                     lockGranularity,
@@ -297,7 +297,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
   public void testCompactionWithNewMetricInMetricsSpec() throws Exception
   {
     // MSQ doesn't support count aggregator
-    Assume.assumeTrue(segmentGranularity != null && !segmentGranularity.isFinerThan(Granularities.THREE_HOUR));
+    Assume.assumeTrue(segmentGranularity != null && !segmentGranularity.isFinerThan(Granularities.SIX_HOUR));
     verifyTaskSuccessRowsAndSchemaMatch(runIndexTask(), TOTAL_TEST_ROWS);
 
     final CompactionTask compactionTask =
@@ -333,7 +333,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assume.assumeTrue(lockGranularity != LockGranularity.SEGMENT);
     Assume.assumeTrue(
         "test with defined segment granularity in this test",
-        Granularities.THREE_HOUR.equals(segmentGranularity)
+        Granularities.SIX_HOUR.equals(segmentGranularity)
     );
 
     // The following task creates (several, more than three, last time I checked, six) HOUR segments with intervals of

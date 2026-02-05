@@ -57,7 +57,6 @@ public class Granularities
   public static final Granularity FIFTEEN_MINUTE = GranularityType.FIFTEEN_MINUTE.getDefaultGranularity();
   public static final Granularity THIRTY_MINUTE = GranularityType.THIRTY_MINUTE.getDefaultGranularity();
   public static final Granularity HOUR = GranularityType.HOUR.getDefaultGranularity();
-  public static final Granularity THREE_HOUR = GranularityType.THREE_HOUR.getDefaultGranularity();
   public static final Granularity SIX_HOUR = GranularityType.SIX_HOUR.getDefaultGranularity();
   public static final Granularity EIGHT_HOUR = GranularityType.EIGHT_HOUR.getDefaultGranularity();
   public static final Granularity DAY = GranularityType.DAY.getDefaultGranularity();
