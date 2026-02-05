@@ -55,7 +55,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -65,6 +64,8 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -309,40 +310,39 @@ public class IndexerControllerContext implements ControllerContext
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
     final int frameSize = MultiStageQueryContext.getFrameSize(queryContext);
-    final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
-    final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
-    builder
-        .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled)
-        .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
-        .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
-        .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
-        .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version())
-        .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
-        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
-        .put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
-
-    if (maxThreads != null) {
-      builder.put(MultiStageQueryContext.CTX_MAX_THREADS, maxThreads);
+    // Worker context is based on overall query context.
+    final Map<String, Object> workerContextMap = new LinkedHashMap<>();
+    for (Map.Entry<String, Object> entry : querySpec.getContext().asMap().entrySet()) {
+      if (entry.getValue() != null) {
+        workerContextMap.put(entry.getKey(), entry.getValue());
+      }
     }
+
+    // Override certain items to ensure they are the same across all workers; just in case workers have a different
+    // default from the controller.
+    workerContextMap.put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled);
+    workerContextMap.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
+    workerContextMap.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    workerContextMap.put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages);
+    workerContextMap.put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version());
+    workerContextMap.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
+    workerContextMap.put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+    workerContextMap.put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
 
     if (querySpec.getId() != null) {
-      builder.put(BaseQuery.QUERY_ID, querySpec.getId());
-    }
-
-    if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
-      builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+      workerContextMap.put(BaseQuery.QUERY_ID, querySpec.getId());
     }
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
-      builder.put(
+      workerContextMap.put(
           MultiStageQueryContext.CTX_SELECT_DESTINATION,
           destination.toSelectDestination().getName()
       );
     }
 
-    return builder.build();
+    return workerContextMap;
   }
 
   /**
@@ -356,11 +356,9 @@ public class IndexerControllerContext implements ControllerContext
       final Map<String, Object> controllerTaskContext
   )
   {
-    final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
-
     // Put worker context into the task context. That way, workers can get these context keys either from
     // WorkOrder#getContext or Task#getContext.
-    taskContextOverridesBuilder.putAll(
+    final Map<String, Object> taskContext = new HashMap<>(
         makeWorkerContextMap(
             querySpec,
             queryKernelConfig.isDurableStorage(),
@@ -370,13 +368,13 @@ public class IndexerControllerContext implements ControllerContext
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)
       );
     }
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD)
       );
@@ -386,9 +384,9 @@ public class IndexerControllerContext implements ControllerContext
     @SuppressWarnings("unchecked")
     Map<String, Object> tags = (Map<String, Object>) controllerTaskContext.get(DruidMetrics.TAGS);
     if (tags != null) {
-      taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
+      taskContext.put(DruidMetrics.TAGS, tags);
     }
 
-    return taskContextOverridesBuilder.build();
+    return ImmutableMap.copyOf(taskContext);
   }
 }

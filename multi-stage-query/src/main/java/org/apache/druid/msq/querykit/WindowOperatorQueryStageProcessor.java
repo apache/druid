@@ -25,38 +25,32 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.exec.FrameContext;
-import org.apache.druid.msq.exec.std.BasicStandardStageProcessor;
+import org.apache.druid.msq.exec.ExecutionContext;
+import org.apache.druid.msq.exec.std.BasicStageProcessor;
 import org.apache.druid.msq.exec.std.ProcessorsAndChannels;
+import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
-import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.RowSignature;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 @JsonTypeName("window")
-public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcessor
+public class WindowOperatorQueryStageProcessor extends BasicStageProcessor
 {
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
@@ -116,20 +110,12 @@ public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcess
   }
 
   @Override
-  public ProcessorsAndChannels<Object, Long> makeProcessors(
-      StageDefinition stageDefinition,
-      int workerNumber,
-      List<InputSlice> inputSlices,
-      InputSliceReader inputSliceReader,
-      @Nullable Object extra,
-      OutputChannelFactory outputChannelFactory,
-      FrameContext frameContext,
-      int maxOutstandingProcessors,
-      CounterTracker counters,
-      Consumer<Throwable> warningPublisher
-  )
+  public ListenableFuture<Long> execute(ExecutionContext context)
   {
+    final StandardStageRunner<Object, Long> stageRunner = new StandardStageRunner<>(context);
+
     // Expecting a single input slice from some prior stage.
+    final List<InputSlice> inputSlices = context.workOrder().getInputs();
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
@@ -138,7 +124,7 @@ public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcess
           partition.getPartitionNumber(),
           i -> {
             try {
-              return outputChannelFactory.openChannel(i);
+              return stageRunner.workOutputChannelFactory().openChannel(i);
             }
             catch (IOException e) {
               throw new RuntimeException(e);
@@ -147,9 +133,7 @@ public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcess
       );
     }
 
-    final Sequence<ReadableInput> readableInputs =
-        Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
-
+    final Sequence<ReadableInput> readableInputs = QueryKitUtils.readPartitions(context, slice.getPartitions());
     final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
@@ -159,20 +143,22 @@ public class WindowOperatorQueryStageProcessor extends BasicStandardStageProcess
               query.context(),
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(
-                  frameContext.frameWriterSpec(),
+              context.workOrder().getStageDefinition().createFrameWriterFactory(
+                  context.frameContext().frameWriterSpec(),
                   outputChannel.getFrameMemoryAllocator()
               ),
               readableInput.getChannelFrameReader(),
-              frameContext.jsonMapper(),
+              context.frameContext().jsonMapper(),
               operatorList
           );
         }
     );
 
-    return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(processors),
-        OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+    return stageRunner.run(
+        new ProcessorsAndChannels<>(
+            ProcessorManagers.of(processors),
+            OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
+        )
     );
   }
 

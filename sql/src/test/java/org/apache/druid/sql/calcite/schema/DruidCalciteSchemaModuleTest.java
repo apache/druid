@@ -55,6 +55,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
@@ -106,6 +107,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @BeforeEach
   public void setUp()
   {
+    EasyMock.expect(plannerConfig.isEnableSysQueriesTable()).andReturn(false).anyTimes();
     EasyMock.replay(plannerConfig);
     target = new DruidCalciteSchemaModule();
     injector = Guice.createInjector(
@@ -134,6 +136,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .toInstance(CentralizedDatasourceSchemaConfig.create());
           binder.bind(HttpClient.class).toInstance(httpClient);
           binder.bind(HttpClient.class).annotatedWith(EscalatedClient.class).toInstance(httpClient);
+          binder.bind(new TypeLiteral<Set<SqlEngine>>() {}).toInstance(ImmutableSet.of());
         },
         new LifecycleModule(),
         target);

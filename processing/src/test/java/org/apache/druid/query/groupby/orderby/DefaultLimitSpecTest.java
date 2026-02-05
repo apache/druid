@@ -382,4 +382,73 @@ public class DefaultLimitSpecTest
 
     limitSpec.withOffsetToLimit();
   }
+
+  @Test
+  public void testSortWithNullDimensionValues()
+  {
+    // Test that sorting works correctly when dimension values include nulls.
+    // After the fix for null handling, objectToStrings returns actual null instead of "null" string.
+
+    // Create rows with null dimension values: [null], ["a"], ["b"]
+    List<ResultRow> rowsWithNulls = ImmutableList.of(
+        ResultRow.of("b"),
+        ResultRow.of((Object) null),
+        ResultRow.of("a")
+    );
+
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING)),
+        null
+    );
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1"))
+                    .setGranularity(Granularities.ALL)
+                    .setSubtotalsSpec(ImmutableList.of(ImmutableList.of("k1")))
+                    .build()
+    );
+
+    List<ResultRow> result = limitFn.apply(Sequences.simple(rowsWithNulls)).toList();
+    Assert.assertEquals(3, result.size());
+    // Null should sort first in ascending order
+    Assert.assertNull(result.get(0).get(0));
+    Assert.assertEquals("a", result.get(1).get(0));
+    Assert.assertEquals("b", result.get(2).get(0));
+  }
+
+  @Test
+  public void testSortWithNullDimensionValuesDescending()
+  {
+    // Test descending sort with null values
+    List<ResultRow> rowsWithNulls = ImmutableList.of(
+        ResultRow.of("b"),
+        ResultRow.of((Object) null),
+        ResultRow.of("a")
+    );
+
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.DESCENDING)),
+        null
+    );
+
+    Function<Sequence<ResultRow>, Sequence<ResultRow>> limitFn = limitSpec.build(
+        GroupByQuery.builder()
+                    .setDataSource("dummy")
+                    .setInterval("1000/3000")
+                    .setDimensions(new DefaultDimensionSpec("k1", "k1"))
+                    .setGranularity(Granularities.ALL)
+                    .setSubtotalsSpec(ImmutableList.of(ImmutableList.of("k1")))
+                    .build()
+    );
+
+    List<ResultRow> result = limitFn.apply(Sequences.simple(rowsWithNulls)).toList();
+    Assert.assertEquals(3, result.size());
+    // Null should sort last in descending order
+    Assert.assertEquals("b", result.get(0).get(0));
+    Assert.assertEquals("a", result.get(1).get(0));
+    Assert.assertNull(result.get(2).get(0));
+  }
 }

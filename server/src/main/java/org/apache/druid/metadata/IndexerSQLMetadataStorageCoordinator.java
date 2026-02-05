@@ -56,6 +56,7 @@ import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -111,6 +112,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
+  private final IndexingStateStorage indexingStateStorage;
 
   private final SegmentMetadataTransactionFactory transactionFactory;
 
@@ -121,7 +123,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
       SegmentSchemaManager segmentSchemaManager,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      IndexingStateStorage indexingStateStorage
   )
   {
     this.transactionFactory = transactionFactory;
@@ -133,6 +136,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.schemaPersistEnabled =
         centralizedDatasourceSchemaConfig.isEnabled()
         && !centralizedDatasourceSchemaConfig.isTaskSchemaPublishDisabled();
+    this.indexingStateStorage = indexingStateStorage;
   }
 
   @LifecycleStart
@@ -438,12 +442,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = segments.iterator().next().getDataSource();
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Try to update datasource metadata first
             if (startMetadata != null) {
-              final SegmentPublishResult result = updateDataSourceMetadataInTransaction(
+              final SegmentPublishResult metadataResult = updateDataSourceMetadataInTransaction(
                   transaction,
                   supervisorId,
                   dataSource,
@@ -452,8 +456,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               );
 
               // Do not proceed if the datasource metadata update failed
-              if (!result.isSuccess()) {
-                return result;
+              if (!metadataResult.isSuccess()) {
+                return metadataResult;
               }
             }
 
@@ -462,6 +466,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markIndexingStateFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       throw e;
@@ -478,7 +489,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = verifySegmentsToCommit(replaceSegments);
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
@@ -520,6 +531,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markIndexingStateFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       return SegmentPublishResult.fail(e.getMessage());
@@ -1213,7 +1231,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     try {
-      return inReadWriteDatasourceTransaction(
+      final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Try to update datasource metadata first
@@ -1254,6 +1272,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
           }
       );
+
+      // Mark compaction state fingerprints as active after successful publish
+      if (result.isSuccess()) {
+        markIndexingStateFingerprintsAsActive(result.getSegments());
+      }
+
+      return result;
     }
     catch (CallbackFailedException e) {
       throw e;
@@ -1807,7 +1832,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             usedSegments.contains(segment),
             segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
             segmentMetadata == null ? null : segmentMetadata.getNumRows(),
-            null
+            null,
+            segment.getIndexingStateFingerprint()
         );
       }).collect(Collectors.toSet());
 
@@ -1929,7 +1955,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               null,
               oldSegmentMetadata.getSchemaFingerprint(),
               oldSegmentMetadata.getNumRows(),
-              upgradedFromSegmentId
+              upgradedFromSegmentId,
+              oldSegmentMetadata.getIndexingStateFingerprint()
           )
       );
     }
@@ -2021,7 +2048,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           true,
           segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
           segmentMetadata == null ? null : segmentMetadata.getNumRows(),
-          upgradedFromSegmentIdMap.get(segment.getId().toString())
+          upgradedFromSegmentIdMap.get(segment.getId().toString()),
+          segment.getIndexingStateFingerprint()
       );
     }).collect(Collectors.toSet());
 
@@ -2683,6 +2711,41 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
     return upgradedToSegmentIds;
+  }
+
+  /**
+   * Marks indexing state fingerprints as active (non-pending) for successfully published segments.
+   * <p>
+   * Extracts unique indexing state fingerprints from the given segments and marks them as active
+   * in the inexing state storage. This is called after successful segment publishing to indicate
+   * that the indexing state is no longer pending and can be retained with the regular grace period.
+   *
+   * @param segments The segments that were successfully published
+   */
+  private void markIndexingStateFingerprintsAsActive(Set<DataSegment> segments)
+  {
+    if (segments == null || segments.isEmpty()) {
+      return;
+    }
+
+    // Collect unique non-null indexing state fingerprints
+    final List<String> fingerprints = segments.stream()
+                                             .map(DataSegment::getIndexingStateFingerprint)
+                                             .filter(fp -> fp != null && !fp.isEmpty())
+                                             .distinct()
+                                             .collect(Collectors.toList());
+
+    try {
+      int rowsUpdated = indexingStateStorage.markIndexingStatesAsActive(fingerprints);
+      if (rowsUpdated > 0) {
+        log.info("Marked indexing states active for the following fingerprints: %s", fingerprints);
+      }
+    }
+    catch (Exception e) {
+      // Log but don't fail the overall operation - the fingerprint will stay pending
+      // and be cleaned up by the pending grace period
+      log.warn(e, "Failed to mark indexing states for the following fingerprints as active (Future segments publishes may remediate): %s", fingerprints);
+    }
   }
 
   /**

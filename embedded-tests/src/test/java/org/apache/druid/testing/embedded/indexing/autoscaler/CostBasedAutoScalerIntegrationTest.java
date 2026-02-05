@@ -41,7 +41,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Seconds;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -59,6 +59,7 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
  * <p>
  * Tests the autoscaler's ability to compute optimal task counts based on partition count and cost metrics (lag and idle time).
  */
+@SuppressWarnings("resource")
 public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
@@ -95,18 +96,11 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
       }
     };
 
-    // Increase worker capacity to handle more tasks
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-           .addProperty("druid.worker.capacity", "60");
-
-    overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}")
-            .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
-    coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
+           .addProperty("druid.worker.capacity", "100");
 
     cluster.useLatchableEmitter()
-           .useDefaultTimeoutForLatchableEmitter(120)
+           .useDefaultTimeoutForLatchableEmitter(60)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
@@ -138,6 +132,8 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
+        .scaleDownDuringTaskRolloverOnly(false)
+        .scaleDownBarrier(1)
         .build();
 
     final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
@@ -162,7 +158,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(125)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
     final String superId = dataSource + "_super_scaleup";
@@ -215,6 +210,66 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
+  @Test
+  void test_scaleDownDuringTaskRollover()
+  {
+    final String superId = dataSource + "_super";
+    final int initialTaskCount = 10;
+
+    final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
+        .builder()
+        .enableTaskAutoScaler(true)
+        .taskCountMin(1)
+        .taskCountMax(10)
+        .taskCountStart(initialTaskCount)
+        .scaleActionPeriodMillis(2000)
+        .minTriggerScaleActionFrequencyMillis(2000)
+        // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
+        .lagWeight(0.1)
+        .idleWeight(0.9)
+        .scaleDownDuringTaskRolloverOnly(true)
+        // Do not slow scale-downs
+        .scaleDownBarrier(0)
+        .build();
+
+    final KafkaSupervisorSpec spec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig, initialTaskCount);
+
+    // Submit the supervisor
+    Assertions.assertEquals(superId, cluster.callApi().postSupervisor(spec));
+
+    // Wait for at least one task running for the datasource managed by the supervisor.
+    overlord.latchableEmitter().waitForEvent(e -> e.hasMetricName("task/run/time")
+                                                   .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    // Wait for autoscaler to emit metric indicating scale-down, it should be just less than the current task count.
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                      .hasValueMatching(Matchers.lessThan((long) initialTaskCount)));
+
+    // Wait for tasks to complete (first rollover)
+    overlord.latchableEmitter().waitForEvent(e -> e.hasMetricName("task/action/success/count"));
+
+    // Wait for the task running for the datasource managed by a supervisor.
+    overlord.latchableEmitter().waitForEvent(e -> e.hasMetricName("task/run/time")
+                                                   .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    // After rollover, verify that the running task count has decreased
+    // The autoscaler should have recommended fewer tasks due to high idle time
+    final int postRolloverRunningTasks = cluster.callApi().getTaskCount("running", dataSource);
+
+    Assertions.assertTrue(
+        postRolloverRunningTasks < initialTaskCount,
+        StringUtils.format(
+            "Expected running task count to decrease after rollover. Initial: %d, After rollover: %d",
+            initialTaskCount,
+            postRolloverRunningTasks
+        )
+    );
+
+    // Suspend the supervisor to clean up
+    cluster.callApi().postSupervisor(spec.createSuspendedSpec());
+  }
+
   private void produceRecordsToKafka(int recordCount, int iterations)
   {
     int recordCountPerSlice = recordCount / iterations;
@@ -258,7 +313,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
-                .withTaskDuration(Seconds.THREE.toPeriod())
+                .withTaskDuration(Period.seconds(7))
                 .withAutoScalerConfig(autoScalerConfig)
         )
         .withId(supervisorId)

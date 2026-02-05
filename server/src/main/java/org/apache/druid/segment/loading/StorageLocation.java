@@ -80,6 +80,11 @@ import java.util.function.Supplier;
  * is repeated until either a sufficient amount of space has been reclaimed, or no additional space is able to be
  * reclaimed, in which case the new reservation fails.
  * <p>
+ * There is an auxilary mode for weak references when {@link #areWeakEntriesEphemeral} is set to true. In this mode, weak
+ * entries are short-lived entries that only exist while one or more reservation hold are active, and are unmounted when
+ * the holds are released. This is useful in cases where entries are unlikely to be re-used such as in asynchronous
+ * tasks.
+ * <p>
  * This class is thread-safe, so that multiple threads can update its state at the same time.
  * One example usage is that a historical server can use multiple threads to load different segments in parallel
  * from deep storage.
@@ -106,9 +111,7 @@ public class StorageLocation
   @GuardedBy("lock")
   private WeakCacheEntry hand;
 
-  /**
-   * Current total size of files in bytes, including weak entries.
-   */
+  private volatile boolean areWeakEntriesEphemeral = false;
 
   /**
    * Current total size of files in bytes, including weak entries.
@@ -169,6 +172,15 @@ public class StorageLocation
   public File getPath()
   {
     return path;
+  }
+
+  /**
+   * Sets whether weak cache entries should be retained after all holds are released. If true, weak references are
+   * removed and unmounted immediately after all holds are released
+   */
+  public void setAreWeakEntriesEphemeral(final boolean areWeakEntriesEphemeral)
+  {
+    this.areWeakEntriesEphemeral = areWeakEntriesEphemeral;
   }
 
   public <T extends CacheEntry> T getStaticCacheEntry(CacheEntryIdentifier entryId)
@@ -339,8 +351,11 @@ public class StorageLocation
       WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
       if (existingEntry != null && existingEntry.hold()) {
         existingEntry.visited = true;
-        weakStats.getAndUpdate(WeakStats::hit);
-        return new ReservationHold<>((T) existingEntry.cacheEntry, existingEntry::release);
+        weakStats.getAndUpdate(s -> s.hit(existingEntry.cacheEntry.getSize()));
+        return new ReservationHold<>(
+            (T) existingEntry.cacheEntry,
+            createWeakEntryReleaseRunnable(existingEntry, false)
+        );
       }
       return null;
     }
@@ -373,8 +388,11 @@ public class StorageLocation
       WeakCacheEntry retryExistingEntry = weakCacheEntries.get(entryId);
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
-        weakStats.getAndUpdate(WeakStats::hit);
-        return new ReservationHold<>((T) retryExistingEntry.cacheEntry, retryExistingEntry::release);
+        weakStats.getAndUpdate(s -> s.hit(retryExistingEntry.cacheEntry.getSize()));
+        return new ReservationHold<>(
+            (T) retryExistingEntry.cacheEntry,
+            createWeakEntryReleaseRunnable(retryExistingEntry, false)
+        );
       }
       final CacheEntry newEntry = entrySupplier.get();
       final ReclaimResult reclaimResult = canHandleWeak(newEntry);
@@ -388,28 +406,7 @@ public class StorageLocation
         weakStats.getAndUpdate(s -> s.load(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
-            () -> {
-              newWeakEntry.release();
-              lock.writeLock().lock();
-              try {
-                weakCacheEntries.computeIfPresent(
-                    newEntry.getId(),
-                    (cacheEntryIdentifier, weakCacheEntry) -> {
-                      if (!weakCacheEntry.cacheEntry.isMounted()) {
-                        // if we never successfully mounted, go ahead and remove so we don't have a dead entry
-                        unlinkWeakEntry(weakCacheEntry);
-                        // we call unmount anyway to terminate the phaser
-                        weakCacheEntry.unmount();
-                        return null;
-                      }
-                      return weakCacheEntry;
-                    }
-                );
-              }
-              finally {
-                lock.writeLock().unlock();
-              }
-            }
+            createWeakEntryReleaseRunnable(newWeakEntry, true)
         );
       } else {
         weakStats.getAndUpdate(WeakStats::reject);
@@ -442,6 +439,52 @@ public class StorageLocation
     finally {
       lock.writeLock().unlock();
     }
+  }
+
+  /**
+   * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
+   * If {@link #evictImmediately} is true and there are no more holds after releasing, the entry is immediately
+   * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.
+   */
+  private Runnable createWeakEntryReleaseRunnable(
+      final WeakCacheEntry weakEntry,
+      final boolean isNewEntry
+  )
+  {
+    return () -> {
+      weakEntry.release();
+
+      if (!isNewEntry && !areWeakEntriesEphemeral) {
+        // No need to consider removal from weakCacheEntries on hold release.
+        return;
+      }
+
+      lock.writeLock().lock();
+      try {
+        weakCacheEntries.computeIfPresent(
+            weakEntry.cacheEntry.getId(),
+            (cacheEntryIdentifier, weakCacheEntry) -> {
+              // If we never successfully mounted, go ahead and remove so we don't have a dead entry.
+              // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
+              final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+              if ((isNewEntry && !isMounted)
+                  || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
+                unlinkWeakEntry(weakCacheEntry);
+                weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
+                if (isMounted) {
+                  weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+                }
+                return null;
+              } else {
+                return weakCacheEntry;
+              }
+            }
+        );
+      }
+      finally {
+        lock.writeLock().unlock();
+      }
+    };
   }
 
   /**
@@ -975,6 +1018,7 @@ public class StorageLocation
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
     private final AtomicLong hitCount = new AtomicLong(0);
+    private final AtomicLong hitBytes = new AtomicLong(0);
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
@@ -984,9 +1028,10 @@ public class StorageLocation
       this.sizeUsed = sizeUsed;
     }
 
-    public WeakStats hit()
+    public WeakStats hit(long size)
     {
       hitCount.getAndIncrement();
+      hitBytes.getAndAdd(size);
       return this;
     }
 
@@ -1026,6 +1071,12 @@ public class StorageLocation
     public long getHitCount()
     {
       return hitCount.get();
+    }
+
+    @Override
+    public long getHitBytes()
+    {
+      return hitBytes.get();
     }
 
     @Override

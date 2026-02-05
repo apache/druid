@@ -78,6 +78,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -419,7 +420,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && withinMinMaxRecordTime(row),
+        this::ensureRowIsNonNullAndWithinMessageTimeBounds,
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -2144,26 +2145,33 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
   }
 
-  public boolean withinMinMaxRecordTime(final InputRow row)
+  /**
+   * Returns {@link InputRowFilterResult#ACCEPTED} if the row should be accepted,
+   * or a rejection reason otherwise.
+   */
+  InputRowFilterResult ensureRowIsNonNullAndWithinMessageTimeBounds(@Nullable InputRow row)
   {
-    final boolean beforeMinimumMessageTime = minMessageTime.isAfter(row.getTimestamp());
-    final boolean afterMaximumMessageTime = maxMessageTime.isBefore(row.getTimestamp());
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
+    if (row == null) {
+      return InputRowFilterResult.NULL_OR_EMPTY_RECORD;
+    } else if (minMessageTime.isAfter(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is before minimumMessageTime[%s]",
             row.getTimestamp(),
             minMessageTime
         );
-      } else if (afterMaximumMessageTime) {
+      }
+      return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
+    } else if (maxMessageTime.isBefore(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is after maximumMessageTime[%s]",
             row.getTimestamp(),
             maxMessageTime
         );
       }
+      return InputRowFilterResult.AFTER_MAX_MESSAGE_TIME;
     }
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+    return InputRowFilterResult.ACCEPTED;
   }
 }

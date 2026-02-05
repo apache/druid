@@ -20,6 +20,9 @@
 package org.apache.druid.msq.input;
 
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.msq.input.stage.StageInputSlice;
 
 import java.util.function.Consumer;
 
@@ -29,19 +32,13 @@ import java.util.function.Consumer;
 public interface InputSliceReader
 {
   /**
-   * Returns the number of {@link ReadableInput} that would result from a call to {@link #attach}.
+   * Prepares an input slice for reading. Does not actually begin reading. The returned {@link PhysicalInputSlice}
+   * contains {@link ReadablePartitions} from {@link StageInputSlice} and pointers to {@link LoadableSegment}
+   * or {@link DataServerQueryHandler} for all other slice types.
    *
    * @throws UnsupportedOperationException if this reader does not support this spec
    */
-  int numReadableInputs(InputSlice slice);
-
-  /**
-   * Returns an iterable sequence of {@link ReadableInput} for an {@link InputSpec}, bundled with a
-   * {@link org.apache.druid.frame.read.FrameReader} if appropriate.
-   *
-   * @throws UnsupportedOperationException if this reader does not support this spec
-   */
-  ReadableInputs attach(
+  PhysicalInputSlice attach(
       int inputNumber,
       InputSlice slice,
       CounterTracker counters,

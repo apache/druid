@@ -41,8 +41,6 @@ import java.util.function.Consumer;
  */
 public class ExternalSegment extends RowBasedSegment<InputRow>
 {
-
-  private final InputSource inputSource;
   private final RowSignature signature;
 
   /**
@@ -141,16 +139,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
         reader.rowAdapter(),
         signature
     );
-    this.inputSource = inputSource;
     this.signature = signature;
-  }
-
-  /**
-   * Return the input source that the segment is a representation of
-   */
-  public InputSource externalInputSource()
-  {
-    return inputSource;
   }
 
   /**

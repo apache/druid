@@ -70,6 +70,8 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
     final int priority = 111;
     final String tier = "tier";
 
+    EasyMock.expect(druidServerConfig.getTier()).andReturn(tier).once();
+    EasyMock.expect(druidServerConfig.getPriority()).andReturn(priority).once();
     EasyMock.expect(druidServerConfig.getMaxSize()).andReturn(maxSize).once();
     EasyMock.expect(segmentLoadDropMgr.getSegmentsToDelete()).andReturn(ImmutableList.of(dataSegment)).once();
     EasyMock.expect(druidServerConfig.getTier()).andReturn(tier).once();
@@ -92,7 +94,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
     monitor.doMonitor(serviceEmitter);
     EasyMock.verify(druidServerConfig, segmentManager, segmentLoadDropMgr);
 
-    serviceEmitter.verifyValue("segment/max", maxSize);
+    serviceEmitter.verifyValue("segment/max", Map.of("tier", tier, "priority", String.valueOf(priority)), maxSize);
     serviceEmitter.verifyValue(
         "segment/pendingDelete",
         Map.of("tier", tier, "dataSource", dataSource, "priority", String.valueOf(priority)),

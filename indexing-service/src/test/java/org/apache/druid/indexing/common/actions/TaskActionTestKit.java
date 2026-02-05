@@ -41,6 +41,8 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -134,7 +136,8 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     taskLockbox.syncFromStorage();
@@ -176,6 +179,7 @@ public class TaskActionTestKit extends ExternalResource
     testDerbyConnector.createConfigTable();
     testDerbyConnector.createTaskTables();
     testDerbyConnector.createAuditTable();
+    testDerbyConnector.createIndexingStatesTable();
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
@@ -198,6 +202,7 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         new NoopSegmentSchemaCache(),
+        new IndexingStateCache(),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
         emitter

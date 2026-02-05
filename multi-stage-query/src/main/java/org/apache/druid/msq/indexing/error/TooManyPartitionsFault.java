@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.util.Objects;
 
@@ -37,9 +38,10 @@ public class TooManyPartitionsFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Too many partitions (max = %d); try breaking your query up into smaller queries or "
-        + "using a larger target size",
-        maxPartitions
+        "Too many partitions (max = %d). Try increasing the limit using the %s query context parameter, "
+        + "breaking your query up into smaller queries, or using a larger target size.",
+        maxPartitions,
+        MultiStageQueryContext.CTX_MAX_PARTITIONS
     );
     this.maxPartitions = maxPartitions;
   }

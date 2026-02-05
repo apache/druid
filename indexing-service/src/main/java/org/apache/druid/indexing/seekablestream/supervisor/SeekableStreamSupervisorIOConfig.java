@@ -86,7 +86,7 @@ public abstract class SeekableStreamSupervisorIOConfig
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
     this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
-    // if autoscaler is enabled then taskCount will be ignored here and initial taskCount will equal to taskCountStart/taskCountMin
+    // if autoscaler is enabled, then taskCount will be ignored here and initial taskCount will equal to taskCountStart/taskCountMin
     if (autoScalerEnabled) {
       final Integer startTaskCount = autoScalerConfig.getTaskCountStart();
       this.taskCount = startTaskCount != null ? startTaskCount : autoScalerConfig.getTaskCountMin();

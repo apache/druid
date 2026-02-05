@@ -100,6 +100,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
     public static final CoordinatorStat TOTAL_CAPACITY
         = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
+    public static final CoordinatorStat STORAGE_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("storageCap", "tier/storage/capacity");
     public static final CoordinatorStat REPLICATION_FACTOR
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT

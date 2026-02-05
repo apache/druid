@@ -224,6 +224,7 @@ ROUTINE_SCHEMA
 ROUTINE_TYPE
 Rackspace
 Redis
+residualFilterMode
 S3
 SAS
 SDK
@@ -2445,12 +2446,15 @@ ZGC
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
+SPECTATOR_PERCENTILE
+SPECTATOR_COUNT
 PercentileBuckets
 spectatorHistogram
 spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+countSpectatorHistogram
 
 - ../docs/development/extensions-contrib/ddsketch-quantiles.md
 quantilesFromDDSketch

@@ -67,15 +67,39 @@ public class TestHttpClient implements HttpClient
 
   private final Map<URL, SimpleServerManager> servers = new HashMap<>();
   private final ObjectMapper objectMapper;
+  @Nullable
+  private final ListenableFuture future;
+  private final long responseDelayMillis;
 
   public TestHttpClient(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
+    this.future = null;
+    this.responseDelayMillis = -1;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, ListenableFuture future)
+  {
+    this.objectMapper = objectMapper;
+    this.future = future;
+    this.responseDelayMillis = -1;
+  }
+
+  public TestHttpClient(ObjectMapper objectMapper, long responseDelayMillis)
+  {
+    this.objectMapper = objectMapper;
+    this.future = null;
+    this.responseDelayMillis = responseDelayMillis;
   }
 
   public void addServerAndRunner(DruidServer server, SimpleServerManager serverManager)
   {
     servers.put(computeUrl(server), serverManager);
+  }
+
+  public void addUrlAndRunner(URL queryId, SimpleServerManager serverManager)
+  {
+    servers.put(queryId, serverManager);
   }
 
   @Nullable
@@ -137,11 +161,21 @@ public class TestHttpClient implements HttpClient
       response.setContent(
           HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
       );
+      if (responseDelayMillis > 0) {
+        Thread.sleep(responseDelayMillis);
+      }
       final ClientResponse<Intermediate> intermClientResponse = handler.handleResponse(response, NOOP_TRAFFIC_COP);
       final ClientResponse<Final> finalClientResponse = handler.done(intermClientResponse);
-      return Futures.immediateFuture(finalClientResponse.getObj());
+      if (future != null) {
+        return future;
+      } else {
+        return Futures.immediateFuture(finalClientResponse.getObj());
+      }
     }
     catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }

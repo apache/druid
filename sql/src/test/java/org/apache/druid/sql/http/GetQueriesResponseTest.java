@@ -105,6 +105,24 @@ public class GetQueriesResponseTest
     }
 
     @Override
+    public String engine()
+    {
+      return "test";
+    }
+
+    @Override
+    public String state()
+    {
+      return "RUNNING";
+    }
+
+    @Override
+    public String executionId()
+    {
+      return "test-execution-id";
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {

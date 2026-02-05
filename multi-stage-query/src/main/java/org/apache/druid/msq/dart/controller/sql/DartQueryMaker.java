@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
@@ -31,7 +32,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
@@ -46,13 +46,15 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.QueryDefMSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -113,13 +115,14 @@ public class DartQueryMaker implements QueryMaker
   private final DartControllerConfig controllerConfig;
 
   /**
-   * Executor for {@link #runWithoutReport(ControllerHolder)}. Number of thread is equal to
+   * Executor for {@link #runWithIterator(ControllerHolder)}. Number of thread is equal to
    * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
    */
   private final ExecutorService controllerExecutor;
   private final ServerConfig serverConfig;
 
   final QueryKitSpecFactory queryKitSpecFactory;
+  final MultiQueryKit queryKit;
 
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
@@ -129,6 +132,7 @@ public class DartQueryMaker implements QueryMaker
       DartControllerConfig controllerConfig,
       ExecutorService controllerExecutor,
       QueryKitSpecFactory queryKitSpecFactory,
+      MultiQueryKit queryKit,
       ServerConfig serverConfig
   )
   {
@@ -139,6 +143,7 @@ public class DartQueryMaker implements QueryMaker
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
     this.queryKitSpecFactory = queryKitSpecFactory;
+    this.queryKit = queryKit;
     this.serverConfig = serverConfig;
   }
 
@@ -226,12 +231,12 @@ public class DartQueryMaker implements QueryMaker
       // runWithReport, runWithoutReport are responsible for calling controllerRegistry.deregister(controllerHolder)
       // when their work is done.
       final Sequence<Object[]> results =
-          fullReport ? runWithReport(controllerHolder) : runWithoutReport(controllerHolder);
+          fullReport ? runWithReport(controllerHolder) : runWithIterator(controllerHolder);
       return QueryResponse.withEmptyContext(results);
     }
     catch (Throwable e) {
       // Error while calling runWithReport or runWithoutReport. Deregister controller immediately.
-      controllerRegistry.deregister(controllerHolder);
+      controllerRegistry.deregister(controllerHolder, null);
       throw e;
     }
   }
@@ -252,16 +257,16 @@ public class DartQueryMaker implements QueryMaker
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister(ControllerHolder)} to be called upon completion (either
-   * success or failure).
+   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
   private Sequence<Object[]> runWithReport(final ControllerHolder controllerHolder)
   {
-    final Future<Map<String, Object>> reportFuture;
+    final Future<TaskReport.ReportMap> reportFuture;
 
     // Run in controllerExecutor. Control doesn't really *need* to be moved to another thread, but we have to
     // use the controllerExecutor anyway, to ensure we respect the concurrentQueries configuration.
     reportFuture = controllerExecutor.submit(() -> {
+      TaskReport.ReportMap retVal = null;
       final String threadName = Thread.currentThread().getName();
 
       try {
@@ -269,7 +274,6 @@ public class DartQueryMaker implements QueryMaker
 
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-            TaskReportMSQDestination.instance(),
             () -> new LimitedOutputStream(
                 baos,
                 controllerConfig.getMaxQueryReportSize(),
@@ -282,12 +286,13 @@ public class DartQueryMaker implements QueryMaker
             ),
             plannerContext.getJsonMapper(),
             controllerHolder.getController().queryId(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            MSQDestination.UNLIMITED
         );
 
         if (controllerHolder.run(queryListener)) {
-          return plannerContext.getJsonMapper()
-                               .readValue(baos.toByteArray(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+          retVal = plannerContext.getJsonMapper()
+                                 .readValue(baos.toByteArray(), TaskReport.ReportMap.class);
         } else {
           // Controller was canceled before it ran.
           throw MSQErrorReport
@@ -301,9 +306,11 @@ public class DartQueryMaker implements QueryMaker
         }
       }
       finally {
-        controllerRegistry.deregister(controllerHolder);
+        controllerRegistry.deregister(controllerHolder, retVal);
         Thread.currentThread().setName(threadName);
       }
+
+      return retVal;
     });
 
     // Return a sequence that reads one row (the report) from reportFuture.
@@ -338,10 +345,9 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Run a query and return the results only, streamed back using {@link ResultIteratorMaker}.
    *
-   * Arranges for {@link DartControllerRegistry#deregister(ControllerHolder)} to be called upon completion (either
-   * success or failure).
+   * Arranges for {@link DartControllerRegistry#deregister} to be called upon completion (either success or failure).
    */
-  private Sequence<Object[]> runWithoutReport(final ControllerHolder controllerHolder)
+  private Sequence<Object[]> runWithIterator(final ControllerHolder controllerHolder)
   {
     return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
   }
@@ -360,7 +366,7 @@ public class DartQueryMaker implements QueryMaker
   }
 
   /**
-   * Helper for {@link #runWithoutReport(ControllerHolder)}.
+   * Helper for {@link #runWithIterator(ControllerHolder)}.
    */
   class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
   {
@@ -419,7 +425,20 @@ public class DartQueryMaker implements QueryMaker
           throw e;
         }
         finally {
-          controllerRegistry.deregister(controllerHolder);
+          final MSQTaskReport taskReport;
+
+          if (resultIterator.report != null) {
+            taskReport = new MSQTaskReport(
+                controllerHolder.getController().queryId(),
+                resultIterator.report
+            );
+          } else {
+            taskReport = null;
+          }
+
+          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
+          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
+          controllerRegistry.deregister(controllerHolder, reportMap);
           Thread.currentThread().setName(threadName);
         }
       });
@@ -446,7 +465,7 @@ public class DartQueryMaker implements QueryMaker
   }
 
   /**
-   * Helper for {@link ResultIteratorMaker}, which is in turn a helper for {@link #runWithoutReport(ControllerHolder)}.
+   * Helper for {@link ResultIteratorMaker}, which is in turn a helper for {@link #runWithIterator(ControllerHolder)}.
    */
   static class ResultIterator implements Iterator<Object[]>, QueryListener
   {
@@ -467,6 +486,7 @@ public class DartQueryMaker implements QueryMaker
     private Either<Throwable, Object[]> current;
 
     private volatile boolean complete;
+    private volatile MSQTaskReportPayload report;
 
     @Nullable
     private final Duration timeout;
@@ -559,7 +579,8 @@ public class DartQueryMaker implements QueryMaker
     public void onQueryComplete(MSQTaskReportPayload report)
     {
       try {
-        complete = true;
+        this.report = report;
+        this.complete = true;
 
         final MSQStatusReport statusReport = report.getStatus();
 

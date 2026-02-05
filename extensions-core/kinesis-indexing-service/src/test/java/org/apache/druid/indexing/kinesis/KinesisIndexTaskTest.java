@@ -68,9 +68,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -82,9 +79,11 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -167,7 +166,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   );
 
   private static KinesisRecordSupplier recordSupplier;
-  private static ServiceEmitter emitter;
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -193,13 +191,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @BeforeClass
   public static void setupClass()
   {
-    emitter = new ServiceEmitter(
-        "service",
-        "host",
-        new NoopEmitter()
-    );
-    emitter.start();
-    EmittingLogger.registerEmitter(emitter);
     taskExec = MoreExecutors.listeningDecorator(
         Executors.newCachedThreadPool(
             Execs.makeThreadFactory("kinesis-task-test-%d")
@@ -251,7 +242,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     taskExec.shutdown();
     taskExec.awaitTermination(20, TimeUnit.MINUTES);
-    emitter.close();
   }
 
   private void waitUntil(KinesisIndexTask task, Predicate<KinesisIndexTask> predicate)
@@ -355,6 +345,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
   @Test(timeout = 120_000L)
@@ -752,6 +749,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, endOffsets)),
         newDataSchemaMetadata()
     );
+
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(6, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(5, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
@@ -801,7 +805,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(2).totalProcessed(3));
+                                     .thrownAwayByReason(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata
     assertEqualsExceptVersion(
@@ -864,7 +868,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(2).totalProcessed(3));
+                                     .thrownAwayByReason(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME, 2).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -923,7 +927,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyAll();
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 0, 5))
-                                     .thrownAway(4).totalProcessed(1));
+                                     .thrownAwayByReason(InputRowFilterResult.NULL_OR_EMPTY_RECORD, 4).totalProcessed(1));
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());
@@ -1031,6 +1035,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         newDataSchemaMetadata()
     );
+    final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
+    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
@@ -1194,6 +1204,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
     Assert.assertNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1201,7 +1213,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, 763,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 4,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1284,6 +1297,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
     Assert.assertNotNull(reportData.getErrorMsg());
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1291,7 +1306,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());

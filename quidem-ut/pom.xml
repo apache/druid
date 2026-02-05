@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>36.0.0-SNAPSHOT</version>
+        <version>37.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -541,20 +541,30 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <executable>java</executable>
-                    <arguments>
-                        <argument>-classpath</argument>
-                        <classpath />
-                        <argument>-Dquidem.uri=${quidem.uri}</argument>
-                        <argument>-Dquidem.record.autostart=${quidem.record.autostart}</argument>
-                        <argument>org.apache.druid.quidem.Launcher</argument>
-                    </arguments>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>quidem</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath />
+                                <argument>-Dquidem.uri=${quidem.uri}</argument>
+                                <argument>-Dquidem.record.autostart=${quidem.record.autostart}</argument>
+                                <argument>org.apache.druid.quidem.Launcher</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
