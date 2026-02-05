@@ -366,7 +366,7 @@ name: Guice
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.1.0
+version: 6.0.0
 libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-servlet
@@ -1580,7 +1580,7 @@ name: Jakarta Dependency Injection
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.0.3
+version: 2.0.1
 libraries:
   - jakarta.inject: jakarta.inject-api
 
@@ -3488,7 +3488,7 @@ name: ASM
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 9.8
+version: 9.9.1
 copyright: INRIA, France Telecom
 license_file_path: licenses/bin/asm.BSD3
 libraries:
