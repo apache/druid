@@ -84,6 +84,7 @@
         <scala.library.version>2.13.14</scala.library.version>
         <avatica.version>1.27.0</avatica.version>
         <avro.version>1.11.4</avro.version>
+        <bytebuddy.version>1.17.7</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -1232,18 +1233,16 @@
                 <artifactId>assertj-core</artifactId>
                 <version>3.24.2</version>
                 <scope>test</scope>
-                <exclusions>
-                  <!-- exclude older byte-buddy until assertj-core depends on 1.14+ for Java 21 -->
-                  <exclusion>
-                    <groupId>net.bytebuddy</groupId>
-                    <artifactId>byte-buddy</artifactId>
-                  </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.15.11</version>
+                <version>${bytebuddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${bytebuddy.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ircclouds.irc</groupId>
