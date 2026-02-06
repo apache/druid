@@ -95,7 +95,7 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.46.0</errorprone.version>
+        <errorprone.version>2.35.1</errorprone.version>
         <fabric8.version>7.5.2</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
