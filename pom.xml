@@ -1321,7 +1321,7 @@
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>7.3.0</version>
+                <version>7.5.0</version>
                 <!-- testng ships guice 4.2, which requires a newer version of guava -->
                 <exclusions>
                     <exclusion>
@@ -1765,7 +1765,7 @@
                                 </bannedDependencies>
                                 <requireUpperBoundDeps>
                                     <excludes>
-                                       <!-- upgrading this later -->
+                                       <!-- upgrading this later ? -->
 <!--                                       <exclude>org.testng:testng</exclude> -->
                                     </excludes>
                                 </requireUpperBoundDeps>
