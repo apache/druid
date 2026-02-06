@@ -31,6 +31,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -92,16 +93,18 @@ public class RequestLogLine
 
   public String getSqlQueryLine(ObjectMapper objectMapper) throws JsonProcessingException
   {
+
+    final Map<String, Object> queryMap = new LinkedHashMap<>();
+    queryMap.put("context", sqlQueryContext);
+    queryMap.put("query", sql == null ? "<unavailable>" : sql);
+
     return JOINER.join(
         Arrays.asList(
             timestamp,
             remoteAddr,
             "",
             objectMapper.writeValueAsString(queryStats),
-            objectMapper.writeValueAsString(ImmutableMap.of(
-                "query", sql == null ? "<unavailable>" : sql,
-                "context", sqlQueryContext
-            ))
+            objectMapper.writeValueAsString(queryMap)
         )
     );
   }
