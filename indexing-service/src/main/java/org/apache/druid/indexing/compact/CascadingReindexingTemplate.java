@@ -635,7 +635,60 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       }
     }
 
+    // Validate the completed timeline before returning
+    validateSegmentGranularityTimeline(baseTimeline);
+
     return baseTimeline;
+  }
+
+  /**
+   * Validates that the completed segment granularity timeline follows the constraint that
+   * granularity must stay the same or become finer as we move from past to present.
+   * <p>
+   * This ensures that operators cannot misconfigure rules that would cause data to be
+   * recompacted from coarse to fine granularity as it ages (e.g., DAY -> HOUR),
+   * which is typically undesirable and inefficient.
+   *
+   * @param timeline the completed base timeline with granularity information
+   * @throws IAE if granularity becomes coarser as we move toward present
+   */
+  private void validateSegmentGranularityTimeline(List<IntervalWithGranularity> timeline)
+  {
+    if (timeline.size() <= 1) {
+      return; // Nothing to validate
+    }
+
+    for (int i = 1; i < timeline.size(); i++) {
+      IntervalWithGranularity olderInterval = timeline.get(i - 1);
+      IntervalWithGranularity newerInterval = timeline.get(i);
+
+      Granularity olderGran = olderInterval.granularity;
+      Granularity newerGran = newerInterval.granularity;
+
+      // As we move from past (older intervals) to present (newer intervals),
+      // granularity should stay the same or get finer.
+      // If the older interval's granularity is finer than the newer interval's granularity,
+      // that means we're getting coarser as we move toward present, which is invalid.
+      if (olderGran.isFinerThan(newerGran)) {
+        throw new IAE(
+            "Invalid segment granularity timeline for dataSource[%s]: "
+            + "Interval[%s] with granularity[%s] is more recent than "
+            + "interval[%s] with granularity[%s], but has a coarser granularity. "
+            + "Segment granularity must stay the same or become finer as data ages from present to past.",
+            dataSource,
+            newerInterval.interval,
+            newerGran,
+            olderInterval.interval,
+            olderGran
+        );
+      }
+    }
+
+    LOG.debug(
+        "Segment granularity timeline validation passed for dataSource[%s] with [%d] intervals",
+        dataSource,
+        timeline.size()
+    );
   }
 
   /**

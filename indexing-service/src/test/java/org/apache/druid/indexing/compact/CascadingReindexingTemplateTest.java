@@ -1197,6 +1197,127 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     return mockParams;
   }
 
+  /**
+   * TEST: Validation failure - default granularity is coarser than most recent segment granularity rule
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P30D→HOUR, P90D→DAY</li>
+   *   <li>Other Rules: P7D-metrics (finer than P30D, triggers prepending with default granularity)</li>
+   *   <li>Default Segment Granularity: MONTH (COARSER than HOUR!)</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Sort rules by period: P90D→DAY (oldest), P30D→HOUR (newest)</li>
+   *   <li>P7D metrics is finer than P30D, so prepend interval with default MONTH granularity</li>
+   *   <li>Timeline would be: [-∞, DAY_boundary) DAY, [DAY_boundary, HOUR_boundary) HOUR, [HOUR_boundary, MONTH_boundary) MONTH</li>
+   *   <li>Validation: HOUR → MONTH progression means granularity is getting COARSER toward present</li>
+   * </ol>
+   * <p>
+   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_failsWhenDefaultGranularityIsCoarserThanMostRecentSegmentGranRule()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
+        ))
+        .metricsRules(List.of(
+            new ReindexingMetricsRule("metrics-7d", null, Period.days(7), new AggregatorFactory[0])
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.MONTH  // MONTH is coarser than HOUR!
+    );
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> template.generateAlignedSearchIntervals(referenceTime)
+    );
+
+    Assert.assertTrue(
+        exception.getMessage().contains("Invalid segment granularity timeline")
+    );
+    Assert.assertTrue(
+        exception.getMessage().contains("coarser granularity")
+    );
+  }
+
+  /**
+   * TEST: Validation failure - older rule has finer granularity than newer rule
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P30D→DAY, P90D→HOUR</li>
+   *   <li>Other Rules: None</li>
+   *   <li>Default Segment Granularity: DAY</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Sort rules by period: P90D→HOUR (oldest), P30D→DAY (newest)</li>
+   *   <li>Timeline would be: [-∞, HOUR_boundary) HOUR, [HOUR_boundary, DAY_boundary) DAY</li>
+   *   <li>Validation: HOUR → DAY progression means granularity is getting COARSER toward present</li>
+   *   <li>This violates the constraint: older data (P90D) has HOUR granularity, newer data (P30D) has DAY granularity</li>
+   * </ol>
+   * <p>
+   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_failsWhenOlderRuleHasFinerGranularityThanNewerRule()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(
+            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(30), Granularities.DAY),
+            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(90), Granularities.HOUR)
+        ))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> template.generateAlignedSearchIntervals(referenceTime)
+    );
+
+    Assert.assertTrue(
+        exception.getMessage().contains("Invalid segment granularity timeline")
+    );
+    Assert.assertTrue(
+        exception.getMessage().contains("coarser granularity")
+    );
+  }
+
   private DruidInputSource createMockSource()
   {
     final Interval[] capturedInterval = new Interval[1];
