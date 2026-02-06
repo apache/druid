@@ -25,6 +25,7 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -131,7 +132,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   @Override
   protected Comparator<CompactionCandidate> getSegmentComparator()
   {
-    return this::compare;
+    return Comparator.comparing(o -> Objects.requireNonNull(o.getPolicyEligibility()), this::compare);
   }
 
   @Override
@@ -179,7 +180,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
         '}';
   }
 
-  private int compare(CompactionCandidate candidateA, CompactionCandidate candidateB)
+  private int compare(CompactionEligibility candidateA, CompactionEligibility candidateB)
   {
     final double fragmentationDiff
         = computeFragmentationIndex(candidateB) - computeFragmentationIndex(candidateA);
@@ -187,12 +188,13 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   }
 
   @Override
-  public CompactionEligibility checkEligibilityForCompaction(CompactionCandidate candidate)
+  public CompactionEligibility checkEligibilityForCompaction(
+      CompactionCandidate.ProposedCompaction candidate,
+      CompactionEligibility eligibility
+  )
   {
-    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
-    if (uncompacted == null) {
-      return CompactionEligibility.FULL_COMPACTION_ELIGIBLE;
-    } else if (uncompacted.getNumSegments() < 1) {
+    final CompactionStatistics uncompacted = Objects.requireNonNull(eligibility.getUncompactedStats());
+    if (uncompacted.getNumSegments() < 1) {
       return CompactionEligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
       return CompactionEligibility.fail(
@@ -215,15 +217,21 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     }
 
     final double uncompactedBytesRatio = (double) uncompacted.getTotalBytes() /
-                                         (uncompacted.getTotalBytes() + candidate.getCompactedStats().getTotalBytes());
+                                         (uncompacted.getTotalBytes() + eligibility.getCompactedStats()
+                                                                                   .getTotalBytes());
     if (uncompactedBytesRatio < incrementalCompactionUncompactedBytesRatioThreshold) {
-      return CompactionEligibility.incrementalCompaction(
+      String reason = StringUtils.format(
           "Uncompacted bytes ratio[%.2f] is below threshold[%.2f]",
           uncompactedBytesRatio,
           incrementalCompactionUncompactedBytesRatioThreshold
       );
+      return CompactionEligibility.builder(CompactionEligibility.State.INCREMENTAL_COMPACTION, reason)
+                                  .compacted(eligibility.getCompactedStats())
+                                  .uncompacted(eligibility.getUncompactedStats())
+                                  .uncompactedSegments(eligibility.getUncompactedSegments())
+                                  .build();
     } else {
-      return CompactionEligibility.FULL_COMPACTION_ELIGIBLE;
+      return eligibility;
     }
   }
 
@@ -234,9 +242,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
    * A higher fragmentation index causes the candidate to be higher in priority
    * for compaction.
    */
-  private double computeFragmentationIndex(CompactionCandidate candidate)
+  private double computeFragmentationIndex(CompactionEligibility eligibility)
   {
-    final CompactionStatistics uncompacted = candidate.getUncompactedStats();
+    final CompactionStatistics uncompacted = eligibility.getUncompactedStats();
     if (uncompacted == null || uncompacted.getNumSegments() < 1 || uncompacted.getTotalBytes() < 1) {
       return 0;
     }

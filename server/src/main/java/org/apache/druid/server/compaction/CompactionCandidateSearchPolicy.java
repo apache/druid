@@ -49,5 +49,13 @@ public interface CompactionCandidateSearchPolicy
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
    */
-  CompactionEligibility checkEligibilityForCompaction(CompactionCandidate candidate);
+  default CompactionEligibility checkEligibilityForCompaction(CompactionCandidate candidate)
+  {
+    return checkEligibilityForCompaction(candidate.getProposedCompaction(), candidate.getPolicyEligibility());
+  }
+
+  CompactionEligibility checkEligibilityForCompaction(
+      CompactionCandidate.ProposedCompaction candidate,
+      CompactionEligibility eligibility
+  );
 }

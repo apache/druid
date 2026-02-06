@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
@@ -29,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class CompactionStatusTrackerTest
@@ -47,8 +49,7 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForSubmittedTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -58,8 +59,7 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForSuccessfulTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
@@ -70,8 +70,7 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForFailedTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
@@ -83,8 +82,7 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForRepeatedlyFailingTask()
   {
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
@@ -105,8 +103,7 @@ public class CompactionStatusTrackerTest
   public void testComputeCompactionStatusForSuccessfulTask()
   {
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-    final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     // Verify that interval is originally eligible for compaction
     CompactionStatus status
@@ -130,5 +127,21 @@ public class CompactionStatusTrackerTest
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
     status = statusTracker.computeCompactionStatus(candidateSegments);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
+  }
+
+  public static CompactionCandidate createCandidate(
+      List<DataSegment> segments,
+      @Nullable Granularity targetSegmentGranularity
+  )
+  {
+    CompactionCandidate.ProposedCompaction proposedCompaction = CompactionCandidate.ProposedCompaction.from(
+        segments,
+        targetSegmentGranularity
+    );
+    return CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "approve without check")
+                                .compacted(CompactionStatistics.create(1, 1, 1))
+                                .uncompacted(CompactionStatistics.create(1, 1, 1))
+                                .uncompactedSegments(List.of()).build()
+                                .createCandidate(proposedCompaction);
   }
 }
