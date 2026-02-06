@@ -56,9 +56,10 @@ import java.util.Objects;
  *       "deleteWhere": {
  *         "type": "not",
  *         "field": {
- *           "type": "selector",
- *           "dimension": "is_bot",
- *           "value": "true"
+ *           "type": "equals",
+ *           "column": "is_bot",
+ *           "matchValueType": "STRING"
+ *           "matchValue": "true"
  *         }
  *       },
  *       "description": "Remove bot traffic from segments older than 90 days"
@@ -69,9 +70,12 @@ import java.util.Objects;
  *       "deleteWhere": {
  *         "type": "not",
  *         "field": {
- *           "type": "in",
- *           "dimension": "priority",
- *           "values": ["low", "spam"]
+ *           {
+ *             "type": "inType",
+ *             "column": "priority",
+ *             "matchValueType": "STRING",
+ *             "sortedValues": ["low", "spam"]
+ *           }
  *         }
  *       },
  *       "description": "Remove low-priority data from segments older than 180 days"

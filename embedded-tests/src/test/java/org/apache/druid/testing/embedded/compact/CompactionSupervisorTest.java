@@ -43,8 +43,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.VirtualColumns;
@@ -311,7 +311,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         "deletionRule",
         "Drop rows where item is 'hat'",
         Period.days(7),
-        new SelectorDimFilter("item", "hat", null),
+        new EqualityFilter("item", ColumnType.STRING, "hat", null),
         null
     );
 
@@ -392,7 +392,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         "deleteByNestedField",
         "Remove rows where extraInfo.fieldA = 'valueA'",
         Period.days(7),
-        new SelectorDimFilter("extractedFieldA", "valueA", null),
+        new EqualityFilter("extractedFieldA", ColumnType.STRING, "valueA", null),
         virtualColumns
     );
 
@@ -468,7 +468,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .withTransformSpec(
             // This filter drops all rows: expression "false" always evaluates to false
             new CompactionTransformSpec(
-                new NotDimFilter(new SelectorDimFilter("item", "shirt", null)),
+                new NotDimFilter(new EqualityFilter("item", ColumnType.STRING, "shirt", null)),
                 null
             )
         );

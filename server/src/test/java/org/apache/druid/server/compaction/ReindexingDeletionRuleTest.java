@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -39,7 +39,7 @@ public class ReindexingDeletionRuleTest
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-12-19T12:00:00Z");
   private static final Period PERIOD_30_DAYS = Period.days(30);
 
-  private final DimFilter testFilter = new SelectorDimFilter("isRobot", "true", null);
+  private final DimFilter testFilter = new EqualityFilter("isRobot", ColumnType.STRING, "true", null);
   private final VirtualColumns virtualColumns = VirtualColumns.create(
       ImmutableList.of(
           new ExpressionVirtualColumn(
