@@ -412,6 +412,11 @@
                 <artifactId>kotlin-stdlib</artifactId>
                 <version>1.9.25</version>
             </dependency>
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>26.0.2</version>
+            </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
             and direct dependency of druid-ranger
@@ -1780,6 +1785,25 @@
                                        <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
                                        <exclude>com.sun.activation:jakarta.activation</exclude>
                                        <exclude>com.google.http-client:google-http-client-apache-v2</exclude>
+                                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
+                                       <exclude>org.eclipse.jetty:jetty-xml</exclude>
+                                       <exclude>javax.xml.bind:jaxb-api</exclude>
+                                       <exclude>org.osgi:org.osgi.core</exclude>
+                                       <exclude>org.yaml:snakeyaml</exclude>
+                                       <exclude>com.github.luben:zstd-jni</exclude>
+                                       <exclude>org.scala-lang:scala-library</exclude>
+                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
+                                       <exclude>com.google.http-client:google-http-client</exclude>
+                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
+                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
+                                       <exclude>io.netty:netty-transport-native-kqueue</exclude>
+                                       <exclude>io.netty:netty-transport-native-epoll</exclude>
+                                       <exclude>io.netty:netty-handler-proxy</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                       <exclude>io.netty:netty-codec-http</exclude>
+                                       <exclude>io.confluent:kafka-schema-registry-client</exclude>
+                                       <exclude>org.apache.kafka:kafka-clients</exclude>
+                                       <exclude>io.confluent:kafka-protobuf-provider</exclude>
                                     </excludes>
                                 </requireUpperBoundDeps>
                             </rules>
