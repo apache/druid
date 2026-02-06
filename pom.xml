@@ -1813,6 +1813,7 @@
                                        <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
+                                       <exclude>com.google.errorprone:error_prone_annotations</exclude>
                                     </excludes>
                                     <excludedScopes>
                                        <excludedScope>provided</excludedScope>
