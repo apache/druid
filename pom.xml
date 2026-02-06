@@ -614,7 +614,7 @@
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.5.2-3</version>
+                <version>1.5.6-4</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -1182,7 +1182,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.6.0</version>
+                <version>3.7.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -1776,6 +1776,10 @@
                                        <exclude>com.google.guava:guava</exclude>
                                        <exclude>commons-io:commons-io</exclude>
                                        <exclude>org.apache.commons:commons-compress</exclude>
+                                       <exclude>org.projectlombok:lombok</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
+                                       <exclude>com.sun.activation:jakarta.activation</exclude>
+                                       <exclude>com.google.http-client:google-http-client-apache-v2</exclude>
                                     </excludes>
                                 </requireUpperBoundDeps>
                             </rules>
