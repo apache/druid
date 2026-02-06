@@ -1796,33 +1796,24 @@
                                        <exclude>io.airlift:aircompressor</exclude>
                                        <exclude>com.squareup.okio:okio</exclude>
                                        <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
-
-                                       <exclude>org.testng:testng</exclude>
-                                       <exclude>commons-io:commons-io</exclude>
-                                       <exclude>org.apache.commons:commons-compress</exclude>
-                                       <exclude>org.projectlombok:lombok</exclude>
                                        <exclude>com.sun.activation:jakarta.activation</exclude>
-                                       <exclude>com.google.http-client:google-http-client-apache-v2</exclude>
-                                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
-                                       <exclude>org.eclipse.jetty:jetty-xml</exclude>
-                                       <exclude>javax.xml.bind:jaxb-api</exclude>
-                                       <exclude>org.osgi:org.osgi.core</exclude>
+                                       <exclude>org.apache.commons:commons-compress</exclude>
                                        <exclude>org.yaml:snakeyaml</exclude>
-                                       <exclude>com.github.luben:zstd-jni</exclude>
-                                       <exclude>org.scala-lang:scala-library</exclude>
-                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
-                                       <exclude>com.google.http-client:google-http-client</exclude>
-                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
-                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
                                        <exclude>io.netty:netty-transport-native-kqueue</exclude>
                                        <exclude>io.netty:netty-transport-native-epoll</exclude>
                                        <exclude>io.netty:netty-handler-proxy</exclude>
                                        <exclude>io.netty:netty-handler</exclude>
-                                        <exclude>org.jetbrains.kotlin:kotlin-stdlib-jdk8</exclude>
+                                       <exclude>com.google.http-client:google-http-client-jackson2</exclude>
+                                       <exclude>com.google.http-client:google-http-client</exclude>
+                                       <exclude>com.google.api.grpc:proto-google-common-protos</exclude>
+                                       <exclude>commons-io:commons-io</exclude>
+                                       <exclude>com.github.luben:zstd-jni</exclude>
+                                       <exclude>org.scala-lang:scala-library</exclude>
+                                       <exclude>org.bouncycastle:bcpkix-jdk18on</exclude>
+                                       <exclude>org.jetbrains.kotlin:kotlin-stdlib-jdk8</exclude>
                                        <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
-                                       <exclude>io.confluent:kafka-protobuf-provider</exclude>
                                     </excludes>
                                     <excludedScopes>
                                        <excludedScope>provided</excludedScope>
