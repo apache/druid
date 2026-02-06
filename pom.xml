@@ -896,7 +896,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-dbcp2</artifactId>
-                <version>2.0.1</version>
+                <version>2.11.0</version>
             </dependency>
             <!-- this is relocated to at.yawk.lz4, but license checker script (the one that uses licenses.yaml)
              complains about stuff (our dependencies) using org.lz4 package, so put this here even though our own
@@ -1236,6 +1236,11 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>1.15.11</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ircclouds.irc</groupId>
                 <artifactId>irc-api</artifactId>
                 <version>1.0-0014</version>
@@ -1321,7 +1326,7 @@
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>7.5.0</version>
+                <version>7.3.0</version>
                 <!-- testng ships guice 4.2, which requires a newer version of guava -->
                 <exclusions>
                     <exclusion>
@@ -1765,8 +1770,12 @@
                                 </bannedDependencies>
                                 <requireUpperBoundDeps>
                                     <excludes>
-                                       <!-- upgrading this later ? -->
-<!--                                       <exclude>org.testng:testng</exclude> -->
+                                       <!-- upgrading these later -->
+                                       <exclude>org.testng:testng</exclude>
+                                       <exclude>org.apache.zookeeper:zookeeper</exclude>
+                                       <exclude>com.google.guava:guava</exclude>
+                                       <exclude>commons-io:commons-io</exclude>
+                                       <exclude>org.apache.commons:commons-compress</exclude>
                                     </excludes>
                                 </requireUpperBoundDeps>
                             </rules>
