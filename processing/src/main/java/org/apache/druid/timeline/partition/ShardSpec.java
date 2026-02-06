@@ -57,6 +57,15 @@ import java.util.Map;
 })
 public interface ShardSpec
 {
+  /**
+   * Returns whether {@link #createChunk} returns a {@link NumberedPartitionChunk} instance.
+   * This is necessary for supporting {@link PartitionHolder#isComplete()} if updating to a new corePartitions spec.
+   */
+  default boolean isNumChunkSupported()
+  {
+    return false;
+  }
+
   @JsonIgnore
   <T> PartitionChunk<T> createChunk(T obj);
 
@@ -67,11 +76,17 @@ public interface ShardSpec
 
   int getNumCorePartitions();
 
+  /**
+   * Creates a new ShardSpec with the specified partition number.
+   */
   default ShardSpec withPartitionNum(int partitionNum1)
   {
     throw DruidException.defensive("ShardSpec[%s] does not implement withPartitionNum", this.getClass().toString());
   }
 
+  /**
+   * Creates a new ShardSpec with the specified number of core partitions.
+   */
   default ShardSpec withCorePartitions(int partitions)
   {
     throw DruidException.defensive("ShardSpec[%s] does not implement withCorePartitions", this.getClass().toString());
