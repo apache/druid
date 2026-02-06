@@ -78,6 +78,7 @@ import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate.ProposedCompaction;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -837,11 +838,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    if (CompactionEngine.NATIVE.equals(engine)) {
-      Assert.assertFalse(taskPayload.getIoConfig().isDropExisting());
-    } else {
-      Assert.assertTrue(taskPayload.getIoConfig().isDropExisting());
-    }
+    Assert.assertEquals(BatchIOConfig.DEFAULT_DROP_EXISTING, taskPayload.getIoConfig().isDropExisting());
   }
 
   @Test
