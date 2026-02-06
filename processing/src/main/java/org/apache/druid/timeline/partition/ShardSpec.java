@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.error.DruidException;
 
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,16 @@ public interface ShardSpec
   int getPartitionNum();
 
   int getNumCorePartitions();
+
+  default ShardSpec withPartitionNum(int partitionNum1)
+  {
+    throw DruidException.defensive("ShardSpec[%s] does not implement withPartitionNum", this.getClass().toString());
+  }
+
+  default ShardSpec withCorePartitions(int partitions)
+  {
+    throw DruidException.defensive("ShardSpec[%s] does not implement withCorePartitions", this.getClass().toString());
+  }
 
   /**
    * Returns the start root partition ID of the atomic update group which this segment belongs to.
@@ -119,6 +130,7 @@ public interface ShardSpec
 
   /**
    * if given domain ranges are not possible in this shard, return false; otherwise return true;
+   *
    * @return possibility of in domain
    */
   @JsonIgnore

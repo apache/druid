@@ -101,6 +101,18 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
+  public ShardSpec withPartitionNum(int partitionNum1)
+  {
+    return new NumberedShardSpec(partitionNum1, partitions);
+  }
+
+  @Override
+  public ShardSpec withCorePartitions(int partitions1)
+  {
+    return new NumberedShardSpec(partitionNum, partitions1);
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return NumberedPartitionChunk.make(partitionNum, partitions, obj);
