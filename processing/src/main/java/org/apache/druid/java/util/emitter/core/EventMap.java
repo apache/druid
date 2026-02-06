@@ -21,7 +21,6 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

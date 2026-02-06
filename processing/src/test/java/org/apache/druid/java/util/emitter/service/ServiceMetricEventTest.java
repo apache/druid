@@ -21,13 +21,10 @@
 package org.apache.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.emitter.core.EventMap;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -369,7 +366,6 @@ public class ServiceMetricEventTest
   @Test
   public void testSerializedServiceMetricEventIsOrdered() throws JsonProcessingException
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
     ServiceMetricEvent event = ServiceMetricEvent.builder()
                                                   .setCreatedTime(DateTimes.of("2026-01-01"))
                                                  .setMetric("m1", 42)
@@ -381,7 +377,7 @@ public class ServiceMetricEventTest
 
     Assert.assertEquals(
         "{\"feed\":\"test_feed\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"metric\":\"m1\",\"value\":42,\"service\":\"broker\",\"host\":\"hostA\",\"dim1\":\"xyz\",\"dim2\":\"xyz\"}",
-      mapper.writeValueAsString(event.toMap())
+        new DefaultObjectMapper().writeValueAsString(event.toMap())
     );
   }
 }
