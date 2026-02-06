@@ -177,8 +177,7 @@ public class CompactionRunSimulatorTest
         List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
     );
-    final String rejectedMessage
-        = "Rejected by search policy: Datasource/Interval is not in the list of 'eligibleCandidates'";
+    final String rejectedMessage = "Datasource/Interval is not in the list of 'eligibleCandidates'";
     Assert.assertEquals(
         List.of(
             List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]"),

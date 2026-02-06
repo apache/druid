@@ -379,10 +379,8 @@ public class CompactionJobQueue
 
   public CompactionStatus getCurrentStatusForJob(CompactionJob job)
   {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate());
-    final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
-    statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
-    return compactionStatus;
+    statusTracker.onCompactionStatusComputed(job.getCandidate(), null);
+    return statusTracker.computeCompactionStatus(job.getCandidate());
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

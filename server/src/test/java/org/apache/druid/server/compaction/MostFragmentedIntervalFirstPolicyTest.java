@@ -271,20 +271,21 @@ public class MostFragmentedIntervalFirstPolicyTest
         null
     );
 
+    final CompactionStatistics compacted = CompactionStatistics.create(1200L, 10, 1L);
+    final CompactionStatistics uncompacted = CompactionStatistics.create(400L, 100, 1L);
     final CompactionEligibility candidate = eligibilityBuilder()
-        .compacted(CompactionStatistics.create(1200L, 10, 1L))
-        .uncompacted(CompactionStatistics.create(400L, 100, 1L))
+        .compacted(compacted)
+        .uncompacted(uncompacted)
         .uncompactedSegments(List.of(SEGMENT))
         .build();
-
 
     Assertions.assertEquals(
         CompactionEligibility.builder(
                                  CompactionEligibility.State.INCREMENTAL_COMPACTION,
                                  "Uncompacted bytes ratio[0.25] is below threshold[0.50]"
                              )
-                             .compacted(CompactionStatistics.create(1200L, 10, 1L))
-                             .uncompacted(CompactionStatistics.create(400L, 100, 1L))
+                             .compacted(compacted)
+                             .uncompacted(uncompacted)
                              .uncompactedSegments(List.of(SEGMENT))
                              .build(),
         policy.checkEligibilityForCompaction(PROPOSED_COMPACTION, candidate)
