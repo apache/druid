@@ -703,10 +703,10 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     rows.add("2014-01-01T00:00:10Z,a1,11\n");
     rows.add("2014-01-01T00:00:10Z,b1,12\n");
     rows.add("2014-01-01T00:00:10Z,c1,13\n");
-    rows.add("2014-01-01T03:00:20Z,a1,11\n");
-    rows.add("2014-01-01T03:00:20Z,b1,12\n");
-    rows.add("2014-01-01T03:00:20Z,c1,13\n");
-    Interval appendInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T04:00:00Z");
+    rows.add("2014-01-01T06:00:20Z,a1,11\n");
+    rows.add("2014-01-01T06:00:20Z,b1,12\n");
+    rows.add("2014-01-01T06:00:20Z,c1,13\n");
+    Interval appendInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T07:00:00Z");
     final IndexTask appendTask = buildIndexTask(DEFAULT_PARSE_SPEC, rows, appendInterval, true);
     Pair<TaskStatus, DataSegmentsWithSchemas> appendTaskResult = runTask(appendTask);
     Assert.assertEquals(4, appendTaskResult.rhs.getSegments().size());
@@ -738,11 +738,11 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     // Test that even compactionInterval is for 6 hours, we only compact the 2 segments in HOUR 3.
     List<SegmentDescriptor> uncompactedSegmentsInHour3 =
         coordinatorClient.fetchUsedSegments(DATA_SOURCE, List.of(Intervals.of("2014-01-01/2014-01-02"))).get().stream()
-                         .filter(s -> s.getInterval().equals(Intervals.of("2014-01-01T03:00:00Z/2014-01-01T04:00:00Z")))
+                         .filter(s -> !s.getInterval().equals(TEST_INTERVAL))
                          .map(DataSegment::toDescriptor)
                          .collect(Collectors.toList());
     Assert.assertEquals(2, uncompactedSegmentsInHour3.size());
-    Interval compactionInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T06:00:00Z");
+    Interval compactionInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T12:00:00Z");
     final CompactionTask compactionTask2 =
         compactionTaskBuilder(segmentGranularity)
             .inputSpec(new CompactionIntervalSpec(compactionInterval, uncompactedSegmentsInHour3, null), true)

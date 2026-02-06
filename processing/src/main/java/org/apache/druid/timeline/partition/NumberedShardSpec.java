@@ -113,6 +113,12 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
+  public boolean isNumChunkSupported()
+  {
+    return true;
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return NumberedPartitionChunk.make(partitionNum, partitions, obj);

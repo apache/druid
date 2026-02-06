@@ -1879,12 +1879,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // For each replace interval, find the current partition number
     final Map<Interval, Integer> intervalToCurrentPartitionNum = new HashMap<>();
+    // if numChunkNotSupported by all segments in an interval, we can't update the corePartitions in shardSpec
+    final Set<Interval> numChunkNotSupported = new HashSet<>();
     for (DataSegment segment : replaceSegments) {
       int partitionNum = segment.getShardSpec().getPartitionNum();
       intervalToCurrentPartitionNum.compute(
           segment.getInterval(),
           (i, value) -> value == null ? partitionNum : Math.max(value, partitionNum)
       );
+      if (!segment.isTombstone() && !segment.getShardSpec().isNumChunkSupported()) {
+        numChunkNotSupported.add(segment.getInterval());
+      }
     }
 
     // Find the segments that need to be upgraded
@@ -1932,6 +1937,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         // but a (revoked) REPLACE lock covers this segment
         newInterval = oldInterval;
       }
+      if (!oldSegment.getShardSpec().isNumChunkSupported()) {
+        numChunkNotSupported.add(newInterval);
+      }
 
       // Compute shard spec of the upgraded segment
       final int partitionNum = intervalToCurrentPartitionNum.compute(
@@ -1971,6 +1979,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return Pair.of(upgradedSegments, segmentsToInsert.stream().map(segment -> {
       Integer partitionNum = intervalToCurrentPartitionNum.get(segment.getInterval());
       if (!segment.isTombstone()
+          && !numChunkNotSupported.contains(segment.getInterval())
           && partitionNum != null
           && partitionNum + 1 != segment.getShardSpec().getNumCorePartitions()) {
         return segment.withShardSpec(segment.getShardSpec().withCorePartitions(partitionNum + 1));
