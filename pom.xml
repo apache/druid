@@ -112,7 +112,7 @@
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>2.0.16</slf4j.version>
+        <slf4j.version>2.0.17</slf4j.version>
         <jna.version>5.18.1</jna.version>
         <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
@@ -316,7 +316,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.16.1</version>
+                <version>1.17.1</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -1763,6 +1763,12 @@
                                         <exclude>org.eclipse.jetty.toolchain:jetty-servlet-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
+                                <requireUpperBoundDeps>
+                                    <excludes>
+                                       <!-- upgrading this later -->
+<!--                                       <exclude>org.testng:testng</exclude> -->
+                                    </excludes>
+                                </requireUpperBoundDeps>
                             </rules>
                             <fail>true</fail>
                         </configuration>
