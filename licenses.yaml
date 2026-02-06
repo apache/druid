@@ -1568,7 +1568,7 @@ name: fastutil
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 8.5.18
+version: 8.5.4
 libraries:
   - it.unimi.dsi: fastutil
   - it.unimi.dsi: fastutil-core
