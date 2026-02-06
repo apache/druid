@@ -45,15 +45,12 @@ public interface CompactionCandidateSearchPolicy
   int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
 
   /**
-   * Checks if the given {@link CompactionCandidate} is eligible for compaction
-   * in the current iteration. A policy may implement this method to skip
-   * compacting intervals or segments that do not fulfil some required criteria.
+   * Applies policy-specific eligibility checks to the proposed compaction.
+   *
+   * @param candidate the proposed compaction
+   * @param eligibility initial eligibility from compaction config checks
+   * @return final eligibility after applying policy checks
    */
-  default CompactionEligibility checkEligibilityForCompaction(CompactionCandidate candidate)
-  {
-    return checkEligibilityForCompaction(candidate.getProposedCompaction(), candidate.getPolicyEligibility());
-  }
-
   CompactionEligibility checkEligibilityForCompaction(
       CompactionCandidate.ProposedCompaction candidate,
       CompactionEligibility eligibility
