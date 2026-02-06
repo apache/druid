@@ -1747,6 +1747,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1776,13 +1777,30 @@
                                 <requireUpperBoundDeps>
                                     <excludes>
                                        <!-- upgrading these later -->
-                                       <exclude>org.testng:testng</exclude>
                                        <exclude>org.apache.zookeeper:zookeeper</exclude>
                                        <exclude>com.google.guava:guava</exclude>
+                                       <exclude>org.apache.commons:commons-collections4</exclude>
+                                       <exclude>com.github.ben-manes.caffeine:caffeine</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                       <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
+                                       <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
+                                       <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
+                                       <exclude>jakarta.activation:jakarta.activation-api</exclude>
+                                       <exclude>com.google.inject.extensions:guice-assistedinject</exclude>
+                                       <exclude>com.fasterxml.jackson.module:jackson-module-guice</exclude>
+                                       <exclude>com.google.inject:guice</exclude>
+                                       <exclude>redis.clients:jedis</exclude>
+                                       <exclude>org.reflections:reflections</exclude>
+                                       <exclude>org.roaringbitmap:RoaringBitmap</exclude>
+                                       <exclude>io.airlift:aircompressor</exclude>
+                                       <exclude>com.squareup.okio:okio</exclude>
+                                       <exclude>org.apache.httpcomponents.client5:httpclient5</exclude>
+
+                                       <exclude>org.testng:testng</exclude>
                                        <exclude>commons-io:commons-io</exclude>
                                        <exclude>org.apache.commons:commons-compress</exclude>
                                        <exclude>org.projectlombok:lombok</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
                                        <exclude>com.sun.activation:jakarta.activation</exclude>
                                        <exclude>com.google.http-client:google-http-client-apache-v2</exclude>
                                        <exclude>org.eclipse.jetty:jetty-servlet</exclude>
@@ -1799,12 +1817,16 @@
                                        <exclude>io.netty:netty-transport-native-kqueue</exclude>
                                        <exclude>io.netty:netty-transport-native-epoll</exclude>
                                        <exclude>io.netty:netty-handler-proxy</exclude>
-                                       <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                                       <exclude>io.netty:netty-handler</exclude>
+                                        <exclude>org.jetbrains.kotlin:kotlin-stdlib-jdk8</exclude>
                                        <exclude>io.netty:netty-codec-http</exclude>
                                        <exclude>io.confluent:kafka-schema-registry-client</exclude>
                                        <exclude>org.apache.kafka:kafka-clients</exclude>
                                        <exclude>io.confluent:kafka-protobuf-provider</exclude>
                                     </excludes>
+                                    <excludedScopes>
+                                       <excludedScope>provided</excludedScope>
+                                    </excludedScopes>
                                 </requireUpperBoundDeps>
                             </rules>
                             <fail>true</fail>
