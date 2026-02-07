@@ -21,10 +21,8 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 public enum CompactionMode
 {
@@ -37,27 +35,6 @@ public enum CompactionMode
     )
     {
       return new CompactionCandidate(proposedCompaction, eligibility, policyNote, this);
-    }
-  },
-  INCREMENTAL_COMPACTION {
-    @Override
-    public CompactionCandidate createCandidate(
-        CompactionCandidate.ProposedCompaction proposedCompaction,
-        CompactionStatus eligibility,
-        @Nullable String policyNote
-    )
-    {
-      CompactionCandidate.ProposedCompaction newProposed = new CompactionCandidate.ProposedCompaction(
-          Objects.requireNonNull(eligibility.getUncompactedSegments()),
-          proposedCompaction.getUmbrellaInterval(),
-          proposedCompaction.getCompactionInterval(),
-          Math.toIntExact(eligibility.getUncompactedSegments()
-                                     .stream()
-                                     .map(DataSegment::getInterval)
-                                     .distinct()
-                                     .count())
-      );
-      return new CompactionCandidate(newProposed, eligibility, policyNote, this);
     }
   },
   NOT_APPLICABLE;
