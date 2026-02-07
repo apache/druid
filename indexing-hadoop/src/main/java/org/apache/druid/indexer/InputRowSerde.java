@@ -372,9 +372,9 @@ public class InputRowSerde
     }
   }
 
-  private static void writeString(String value, ByteArrayDataOutput out) throws IOException
+  private static void writeString(@Nullable String value, ByteArrayDataOutput out) throws IOException
   {
-    writeBytes(StringUtils.toUtf8(value), out);
+    writeBytes(StringUtils.toUtf8Nullable(value), out);
   }
 
   private static void writeStringArray(List<String> values, ByteArrayDataOutput out) throws IOException
@@ -389,15 +389,20 @@ public class InputRowSerde
     }
   }
 
+  @Nullable
   private static String readString(DataInput in) throws IOException
   {
     byte[] result = readBytes(in);
-    return StringUtils.fromUtf8(result);
+    return StringUtils.fromUtf8Nullable(result);
   }
 
+  @Nullable
   private static byte[] readBytes(DataInput in) throws IOException
   {
     int size = WritableUtils.readVInt(in);
+    if (size < 0) {
+      return null;
+    }
     byte[] result = new byte[size];
     in.readFully(result, 0, size);
     return result;
@@ -449,7 +454,9 @@ public class InputRowSerde
 
         if (typeHelper.getType() == ValueType.STRING) {
           List<String> dimensionValues = (List<String>) dimValues;
-          if (dimensionValues.size() == 1) {
+          // Preserve single-element lists that contain null (e.g., [null]) instead of unwrapping to null,
+          // which would then become [] when getDimension() is called. This ensures parity with native batch ingestion.
+          if (dimensionValues.size() == 1 && dimensionValues.get(0) != null) {
             event.put(dimension, dimensionValues.get(0));
           } else {
             event.put(dimension, dimensionValues);

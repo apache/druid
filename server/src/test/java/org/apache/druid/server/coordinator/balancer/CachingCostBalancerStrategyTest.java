@@ -136,7 +136,7 @@ public class CachingCostBalancerStrategyTest
       DateTime referenceTime
   )
   {
-    DruidServer druidServer = new DruidServer(name, host, null, maxSize, ServerType.HISTORICAL, "normal", 0);
+    DruidServer druidServer = new DruidServer(name, host, null, maxSize, null, ServerType.HISTORICAL, "normal", 0);
     createDataSegments(numberOfSegments, random, referenceTime)
         .forEach(druidServer::addDataSegment);
     return new ServerHolder(
