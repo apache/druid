@@ -24,9 +24,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
@@ -52,14 +52,31 @@ public class BlockingQueueFrameChannel
   private final Writable writable;
   private final Readable readable;
 
+  /**
+   * Queue of items from the writer. Ends with {@link #END_MARKER} if the writable channel is closed.
+   * Only ever updated by the writer.
+   */
   @GuardedBy("lock")
   private final ArrayDeque<Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>>> queue;
 
+  /**
+   * Whether {@link Readable#close()} has been called.
+   */
   @GuardedBy("lock")
-  private SettableFuture<?> readyForWritingFuture = null;
+  private boolean readerClosed;
 
+  /**
+   * Future that is set to null by {@link #notifyWriter()} when the reader has read from {@link #queue}
+   * or been closed.
+   */
   @GuardedBy("lock")
-  private SettableFuture<?> readyForReadingFuture = null;
+  private SettableFuture<?> readyForWritingFuture;
+
+  /**
+   * Future that is set to null by {@link #notifyReader()} when the writer has written to {@link #queue}.
+   */
+  @GuardedBy("lock")
+  private SettableFuture<?> readyForReadingFuture;
 
   /**
    * Create a channel with a particular buffer size (expressed in number of frames).
@@ -100,13 +117,6 @@ public class BlockingQueueFrameChannel
     return new BlockingQueueFrameChannel(1);
   }
 
-  private boolean isFinished()
-  {
-    synchronized (lock) {
-      return END_MARKER.equals(queue.peek());
-    }
-  }
-
   @GuardedBy("lock")
   private void notifyWriter()
   {
@@ -133,16 +143,14 @@ public class BlockingQueueFrameChannel
     public void write(RowsAndColumns rac, int partitionNumber)
     {
       synchronized (lock) {
-        if (isFinished()) {
-          throw new ISE("Channel cannot accept new frames");
+        if (isClosed()) {
+          throw DruidException.defensive("Channel cannot accept new frames");
         } else if (queue.size() >= maxQueuedFrames) {
           // Caller should have checked if this channel was ready for writing.
-          throw new ISE("Channel has no capacity");
-        } else {
-          if (!queue.offer(Optional.of(Either.value(ObjectIntPair.of(rac, partitionNumber))))) {
-            // If this happens, it's a bug in this class's capacity-counting.
-            throw new ISE("Channel had capacity, but could not add frame");
-          }
+          throw DruidException.defensive("Channel has no capacity");
+        } else if (!queue.offer(Optional.of(Either.value(ObjectIntPair.of(rac, partitionNumber))))) {
+          // If this happens, it's a bug in this class's capacity-counting.
+          throw DruidException.defensive("Channel had capacity, but could not add frame");
         }
 
         notifyReader();
@@ -169,9 +177,9 @@ public class BlockingQueueFrameChannel
       synchronized (lock) {
         queue.clear();
 
-        if (!queue.offer(Optional.of(Either.error(cause != null ? cause : new ISE("Failed"))))) {
+        if (!queue.offer(Optional.of(Either.error(cause != null ? cause : new RuntimeException("Failed"))))) {
           // If this happens, it's a bug, potentially due to incorrectly using this class with multiple writers.
-          throw new ISE("Could not write error to channel");
+          throw DruidException.defensive("Could not write error to channel");
         }
       }
     }
@@ -181,12 +189,12 @@ public class BlockingQueueFrameChannel
     {
       synchronized (lock) {
         if (isClosed()) {
-          throw new ISE("Already closed");
+          throw DruidException.defensive("Already closed");
         }
 
         if (!queue.offer(END_MARKER)) {
           // If this happens, it's a bug, potentially due to incorrectly using this class with multiple writers.
-          throw new ISE("Channel had capacity, but could not add end marker");
+          throw DruidException.defensive("Channel had capacity, but could not add end marker");
         }
 
         notifyReader();
@@ -208,13 +216,23 @@ public class BlockingQueueFrameChannel
     @Override
     public boolean isFinished()
     {
-      return BlockingQueueFrameChannel.this.isFinished();
+      synchronized (lock) {
+        if (readerClosed) {
+          throw DruidException.defensive("Closed, cannot call isFinished()");
+        }
+
+        return END_MARKER.equals(queue.peek());
+      }
     }
 
     @Override
     public boolean canRead()
     {
       synchronized (lock) {
+        if (readerClosed) {
+          throw DruidException.defensive("Closed, cannot call canRead()");
+        }
+
         return !queue.isEmpty() && !isFinished();
       }
     }
@@ -225,6 +243,10 @@ public class BlockingQueueFrameChannel
       final Optional<Either<Throwable, ObjectIntPair<RowsAndColumns>>> next;
 
       synchronized (lock) {
+        if (readerClosed) {
+          throw DruidException.defensive("Closed, cannot call read()");
+        }
+
         if (isFinished()) {
           throw new NoSuchElementException();
         }
@@ -259,7 +281,12 @@ public class BlockingQueueFrameChannel
     public void close()
     {
       synchronized (lock) {
-        queue.clear();
+        if (readerClosed) {
+          // close() should not be called twice.
+          throw DruidException.defensive("Already closed");
+        }
+
+        readerClosed = true;
         notifyWriter();
       }
     }
