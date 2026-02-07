@@ -248,10 +248,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       switch (compactionTaskState) {
         case READY:
         case TASK_IN_PROGRESS:
-          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-          snapshotBuilder.addToComplete(entry);
-          break;
         case RECENTLY_COMPLETED:
+          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
           snapshotBuilder.addToComplete(entry);
           break;
         default:
