@@ -213,7 +213,7 @@ public class LoggingRequestLoggerTest
   public void testSqlLogging() throws Exception
   {
     final RequestLogLine sqlLogLine = RequestLogLine.forSql(
-        "select * from foo", Map.of("sqlQueryId", "id1"), DateTime.parse("2026-01-01"), null, new QueryStats(Map.of("query/time", 13L))
+        "select * from foo", Map.of("sqlQueryId", "id1"), DateTimes.of("2026-01-01"), null, new QueryStats(Map.of("query/time", 13L))
     );
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(MAPPER, true, false);
 
