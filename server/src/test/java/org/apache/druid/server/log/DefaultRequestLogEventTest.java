@@ -169,7 +169,7 @@ public class DefaultRequestLogEventTest
     Assert.assertEquals(expected, observedMap);
     Assert.assertEquals(
         StringUtils.format(
-            "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sql\":\"select * from 1337\",\"sqlQueryContext\":{}}",
+            "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from 1337\"}",
             timestamp
         ),
         new DefaultObjectMapper().writeValueAsString(observedMap)

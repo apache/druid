@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * EventMap is a linked hash map implementation where the insertion order of key-value pairs is maintained.
- * It can be safely serialzed to JSON using Jackson serializer as it
+ * It can be safely serialized to JSON using Jackson serializer as it
  * respects the polymorphic annotations on entires (unlike standard Map). The example of polymorphic class is a query
  * interface, where different native query types are resolved by additional field called "queryType".
  * This implementation ensures that the annotation on the values are respected during serialization.

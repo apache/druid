@@ -68,8 +68,8 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
         .putNonNull("query", getQuery());
 
     if (getSql() != null) {
-      builder.put("sql", getSql())
-             .put("sqlQueryContext", getSqlQueryContext());
+      builder.put("sqlQueryContext", getSqlQueryContext())
+             .put("sql", getSql());
     }
 
     return builder.build();
