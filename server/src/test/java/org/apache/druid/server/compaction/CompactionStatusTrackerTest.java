@@ -100,36 +100,30 @@ public class CompactionStatusTrackerTest
   }
 
   @Test
-  public void testComputeCompactionStatusForSuccessfulTask()
+  public void testComputeCompactionTaskStateForSuccessfulTask()
   {
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
     final CompactionCandidate candidateSegments = createCandidate(List.of(WIKI_SEGMENT), null);
 
     // Verify that interval is originally eligible for compaction
-    CompactionStatus status
-        = statusTracker.computeCompactionStatus(candidateSegments);
-    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
-    Assert.assertEquals("Not compacted yet", status.getReason());
+    CompactionCandidate.TaskState status = statusTracker.computeCompactionTaskState(candidateSegments);
+    Assert.assertEquals(CompactionCandidate.TaskState.READY, status);
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
     statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
-    status = statusTracker.computeCompactionStatus(candidateSegments);
-    Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
-    Assert.assertEquals(
-        "Segment timeline not updated since last compaction task succeeded",
-        status.getReason()
-    );
+    status = statusTracker.computeCompactionTaskState(candidateSegments);
+    Assert.assertEquals(CompactionCandidate.TaskState.RECENTLY_COMPLETED, status);
 
     // Verify that interval becomes eligible again after timeline has been updated
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
-    status = statusTracker.computeCompactionStatus(candidateSegments);
-    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
+    status = statusTracker.computeCompactionTaskState(candidateSegments);
+    Assert.assertEquals(CompactionCandidate.TaskState.READY, status);
   }
 
-  public static CompactionCandidate createCandidate(
+  private static CompactionCandidate createCandidate(
       List<DataSegment> segments,
       @Nullable Granularity targetSegmentGranularity
   )
@@ -138,10 +132,11 @@ public class CompactionStatusTrackerTest
         segments,
         targetSegmentGranularity
     );
-    return CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "approve without check")
-                                .compacted(CompactionStatistics.create(1, 1, 1))
-                                .uncompacted(CompactionStatistics.create(1, 1, 1))
-                                .uncompactedSegments(List.of()).build()
-                                .createCandidate(proposedCompaction);
+    CompactionStatus status = CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "approve without check")
+                                              .compacted(CompactionStatistics.create(1, 1, 1))
+                                              .uncompacted(CompactionStatistics.create(1, 1, 1))
+                                              .uncompactedSegments(List.of())
+                                              .build();
+    return CompactionMode.FULL_COMPACTION.createCandidate(proposedCompaction, status);
   }
 }

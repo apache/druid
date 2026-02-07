@@ -45,14 +45,11 @@ public interface CompactionCandidateSearchPolicy
   int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
 
   /**
-   * Applies policy-specific eligibility checks to the proposed compaction.
+   * Creates a {@link CompactionCandidate} after applying policy-specific checks to the proposed compaction candidate.
    *
    * @param candidate the proposed compaction
    * @param eligibility initial eligibility from compaction config checks
-   * @return final eligibility after applying policy checks
+   * @return final compaction candidate
    */
-  CompactionEligibility checkEligibilityForCompaction(
-      CompactionCandidate.ProposedCompaction candidate,
-      CompactionEligibility eligibility
-  );
+  CompactionCandidate createCandidate(CompactionCandidate.ProposedCompaction candidate, CompactionStatus eligibility);
 }

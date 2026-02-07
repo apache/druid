@@ -80,13 +80,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
 
-    final Table queuedTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table queuedTable = compactionStates.get(CompactionCandidate.TaskState.READY);
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         queuedTable.getColumnNames()
@@ -106,7 +106,7 @@ public class CompactionRunSimulatorTest
         queuedTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
@@ -153,13 +153,13 @@ public class CompactionRunSimulatorTest
 
     Assert.assertNotNull(simulateResult);
 
-    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    final Map<CompactionCandidate.TaskState, Table> compactionStates = simulateResult.getCompactionStates();
     Assert.assertNotNull(compactionStates);
 
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
-    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.RECENTLY_COMPLETED));
+    Assert.assertNull(compactionStates.get(CompactionCandidate.TaskState.TASK_IN_PROGRESS));
 
-    final Table pendingTable = compactionStates.get(CompactionStatus.State.PENDING);
+    final Table pendingTable = compactionStates.get(CompactionCandidate.TaskState.READY);
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingTable.getColumnNames()
@@ -172,7 +172,7 @@ public class CompactionRunSimulatorTest
         pendingTable.getRows()
     );
 
-    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    final Table skippedTable = simulateResult.getSkippedIntervals();
     Assert.assertEquals(
         List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()

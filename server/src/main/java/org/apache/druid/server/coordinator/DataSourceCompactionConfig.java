@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.server.compaction.CompactionEligibility;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.timeline.CompactionState;
 import org.joda.time.Period;
 
@@ -112,7 +112,7 @@ public interface DataSourceCompactionConfig
   {
     ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(this);
 
-    PartitionsSpec partitionsSpec = CompactionEligibility.findPartitionsSpecFromConfig(tuningConfig);
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
                           ? IndexSpec.getDefault().getEffectiveSpec()

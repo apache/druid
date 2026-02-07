@@ -29,28 +29,16 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 
-public class CompactionEligibilityTest
+public class CompactionStatusBuilderTest
 {
   private static final String DATASOURCE = "test_datasource";
 
   @Test
-  public void testNotApplicable()
+  public void testNotEligible()
   {
-    CompactionEligibility eligibility = CompactionEligibility.NOT_APPLICABLE;
+    CompactionStatus eligibility = CompactionStatus.notEligible("test reason: %s", "failure");
 
-    Assert.assertEquals(CompactionEligibility.State.NOT_APPLICABLE, eligibility.getState());
-    Assert.assertEquals("", eligibility.getReason());
-    Assert.assertNull(eligibility.getCompactedStats());
-    Assert.assertNull(eligibility.getUncompactedStats());
-    Assert.assertNull(eligibility.getUncompactedSegments());
-  }
-
-  @Test
-  public void testFail()
-  {
-    CompactionEligibility eligibility = CompactionEligibility.fail("test reason: %s", "failure");
-
-    Assert.assertEquals(CompactionEligibility.State.NOT_ELIGIBLE, eligibility.getState());
+    Assert.assertEquals(CompactionStatus.State.NOT_ELIGIBLE, eligibility.getState());
     Assert.assertEquals("test reason: failure", eligibility.getReason());
     Assert.assertNull(eligibility.getCompactedStats());
     Assert.assertNull(eligibility.getUncompactedStats());
@@ -64,14 +52,14 @@ public class CompactionEligibilityTest
     CompactionStatistics uncompactedStats = CompactionStatistics.create(500, 3, 1);
     List<DataSegment> uncompactedSegments = createTestSegments(3);
 
-    CompactionEligibility eligibility =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "needs full compaction")
+    CompactionStatus eligibility =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "needs full compaction")
                              .compacted(compactedStats)
                              .uncompacted(uncompactedStats)
                              .uncompactedSegments(uncompactedSegments)
                              .build();
 
-    Assert.assertEquals(CompactionEligibility.State.FULL_COMPACTION, eligibility.getState());
+    Assert.assertEquals(CompactionStatus.State.ELIGIBLE, eligibility.getState());
     Assert.assertEquals("needs full compaction", eligibility.getReason());
     Assert.assertEquals(compactedStats, eligibility.getCompactedStats());
     Assert.assertEquals(uncompactedStats, eligibility.getUncompactedStats());
@@ -82,17 +70,17 @@ public class CompactionEligibilityTest
   public void testEqualsAndHashCode()
   {
     // Test with simple eligibility objects (same state and reason)
-    CompactionEligibility simple1 = CompactionEligibility.fail("reason");
-    CompactionEligibility simple2 = CompactionEligibility.fail("reason");
+    CompactionStatus simple1 = CompactionStatus.notEligible("reason");
+    CompactionStatus simple2 = CompactionStatus.notEligible("reason");
     Assert.assertEquals(simple1, simple2);
     Assert.assertEquals(simple1.hashCode(), simple2.hashCode());
 
     // Test with different reasons
-    CompactionEligibility differentReason = CompactionEligibility.fail("different");
+    CompactionStatus differentReason = CompactionStatus.notEligible("different");
     Assert.assertNotEquals(simple1, differentReason);
 
     // Test with different states
-    CompactionEligibility differentState = CompactionEligibility.NOT_APPLICABLE;
+    CompactionStatus differentState = CompactionStatus.COMPLETE;
     Assert.assertNotEquals(simple1, differentState);
 
     // Test with full compaction eligibility (with stats and segments)
@@ -100,15 +88,15 @@ public class CompactionEligibilityTest
     CompactionStatistics stats2 = CompactionStatistics.create(500, 3, 1);
     List<DataSegment> segments = createTestSegments(3);
 
-    CompactionEligibility withStats1 =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+    CompactionStatus withStats1 =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(stats2)
                              .uncompactedSegments(segments)
                              .build();
 
-    CompactionEligibility withStats2 =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+    CompactionStatus withStats2 =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(stats2)
                              .uncompactedSegments(segments)
@@ -120,8 +108,8 @@ public class CompactionEligibilityTest
 
     // Test with different compacted stats
     CompactionStatistics differentStats = CompactionStatistics.create(2000, 10, 5);
-    CompactionEligibility differentCompactedStats =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+    CompactionStatus differentCompactedStats =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(differentStats)
                              .uncompacted(stats2)
                              .uncompactedSegments(segments)
@@ -129,8 +117,8 @@ public class CompactionEligibilityTest
     Assert.assertNotEquals(withStats1, differentCompactedStats);
 
     // Test with different uncompacted stats
-    CompactionEligibility differentUncompactedStats =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+    CompactionStatus differentUncompactedStats =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(differentStats)
                              .uncompactedSegments(segments)
@@ -139,8 +127,8 @@ public class CompactionEligibilityTest
 
     // Test with different segment lists
     List<DataSegment> differentSegments = createTestSegments(5);
-    CompactionEligibility differentSegmentList =
-        CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+    CompactionStatus differentSegmentList =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(stats2)
                              .uncompactedSegments(differentSegments)
@@ -153,7 +141,7 @@ public class CompactionEligibilityTest
   {
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionEligibility.builder(CompactionEligibility.State.NOT_ELIGIBLE, null).build()
+        () -> CompactionStatus.builder(CompactionStatus.State.NOT_ELIGIBLE, null).build()
     );
   }
 
@@ -162,19 +150,19 @@ public class CompactionEligibilityTest
   {
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason").build()
+        () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason").build()
     );
 
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+        () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                                    .compacted(CompactionStatistics.create(1000, 5, 2))
                                    .build()
     );
 
     Assert.assertThrows(
         DruidException.class,
-        () -> CompactionEligibility.builder(CompactionEligibility.State.FULL_COMPACTION, "reason")
+        () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                                    .compacted(CompactionStatistics.create(1000, 5, 2))
                                    .uncompacted(CompactionStatistics.create(500, 3, 1))
                                    .build()

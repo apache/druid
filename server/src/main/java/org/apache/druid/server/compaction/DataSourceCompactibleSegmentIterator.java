@@ -28,6 +28,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -57,7 +58,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -126,11 +126,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             // Do not use the target segment granularity in the CompactionCandidate
             // as Granularities.getIterable() will cause OOM due to the above issue
             CompactionCandidate candidatesWithStatus =
-                CompactionEligibility.fail("Segments have partial-eternity intervals")
-                                     .createCandidate(CompactionCandidate.ProposedCompaction.from(
-                                         partialEternitySegments,
-                                         null
-                                     ));
+                CompactionMode.notEligible(
+                    CompactionCandidate.ProposedCompaction.from(partialEternitySegments, null),
+                    "Segments have partial-eternity intervals"
+                );
             skippedSegments.add(candidatesWithStatus);
             return;
           }
@@ -336,29 +335,31 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      CompactionCandidate.ProposedCompaction candidate =
+      CompactionCandidate.ProposedCompaction proposed =
           CompactionCandidate.ProposedCompaction.from(segments, config.getSegmentGranularity());
-      final CompactionCandidate candidatesWithStatus =
-          CompactionEligibility.evaluate(candidate, config, searchPolicy, fingerprintMapper).createCandidate(candidate);
-      switch (Objects.requireNonNull(candidatesWithStatus.getPolicyEligibility()).getState()) {
-        case NOT_APPLICABLE:
-          compactedSegments.add(candidatesWithStatus);
-          break;
-        case NOT_ELIGIBLE:
-          skippedSegments.add(candidatesWithStatus);
-          break;
-        case FULL_COMPACTION:
+      final CompactionStatus eligibility = CompactionStatus.evaluate(proposed, config, fingerprintMapper);
+      final CompactionCandidate candidate =
+          CompactionStatus.State.ELIGIBLE.equals(eligibility.getState())
+          ? searchPolicy.createCandidate(proposed, eligibility)
+          : CompactionMode.notEligible(proposed, eligibility.getReason());
+
+      switch (candidate.getMode()) {
         case INCREMENTAL_COMPACTION:
-          if (!queuedIntervals.contains(candidatesWithStatus.getProposedCompaction().getUmbrellaInterval())) {
-            queue.add(candidatesWithStatus);
-            queuedIntervals.add(candidatesWithStatus.getProposedCompaction().getUmbrellaInterval());
+        case FULL_COMPACTION:
+          if (!queuedIntervals.contains(candidate.getProposedCompaction().getUmbrellaInterval())) {
+            queue.add(candidate);
+            queuedIntervals.add(candidate.getProposedCompaction().getUmbrellaInterval());
+          }
+          break;
+        case NOT_APPLICABLE:
+          if (CompactionStatus.State.COMPLETE.equals(candidate.getEligibility().getState())) {
+            compactedSegments.add(candidate);
+          } else {
+            skippedSegments.add(candidate);
           }
           break;
         default:
-          throw DruidException.defensive(
-              "Unexpected eligibility state[%s]",
-              candidatesWithStatus.getPolicyEligibility().getState()
-          );
+          throw DruidException.defensive("Unexpected compaction mode[%s]", candidate.getMode());
       }
     }
   }
@@ -394,14 +395,14 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         final CompactionCandidate.ProposedCompaction candidates =
             CompactionCandidate.ProposedCompaction.from(segments, config.getSegmentGranularity());
 
-        final CompactionEligibility eligibility;
+        final String skipReason;
         if (candidates.getCompactionInterval().overlaps(latestSkipInterval)) {
-          eligibility = CompactionEligibility.fail("skip offset from latest[%s]", skipOffset);
+          skipReason = StringUtils.format("skip offset from latest[%s]", skipOffset);
         } else {
-          eligibility = CompactionEligibility.fail("interval locked by another task");
+          skipReason = "interval locked by another task";
         }
 
-        final CompactionCandidate candidatesWithStatus = eligibility.createCandidate(candidates);
+        final CompactionCandidate candidatesWithStatus = CompactionMode.notEligible(candidates, skipReason);
         skippedSegments.add(candidatesWithStatus);
       }
     }

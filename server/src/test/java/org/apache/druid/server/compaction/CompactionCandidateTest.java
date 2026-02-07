@@ -38,14 +38,12 @@ public class CompactionCandidateTest
   {
     List<DataSegment> segments = createTestSegments(3);
     CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
-    CompactionEligibility eligibility = CompactionEligibility.fail("test reason");
-    CompactionStatus status = CompactionStatus.COMPLETE;
+    CompactionStatus eligibility = CompactionStatus.notEligible("test reason");
 
-    CompactionCandidate candidate = new CompactionCandidate(proposed, eligibility, status);
+    CompactionCandidate candidate = new CompactionCandidate(proposed, eligibility, null, CompactionMode.FULL_COMPACTION);
 
     Assert.assertEquals(proposed, candidate.getProposedCompaction());
-    Assert.assertEquals(eligibility, candidate.getPolicyEligibility());
-    Assert.assertEquals(status, candidate.getCurrentStatus());
+    Assert.assertEquals(eligibility, candidate.getEligibility());
     Assert.assertEquals(segments, candidate.getSegments());
     Assert.assertEquals(DATASOURCE, candidate.getDataSource());
     Assert.assertEquals(3, candidate.numSegments());
@@ -96,33 +94,15 @@ public class CompactionCandidateTest
   }
 
   @Test
-  public void testWithCurrentStatus()
-  {
-    List<DataSegment> segments = createTestSegments(2);
-    CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
-    CompactionEligibility eligibility = CompactionEligibility.fail("test");
-    CompactionStatus originalStatus = CompactionStatus.COMPLETE;
-
-    CompactionCandidate candidate = new CompactionCandidate(proposed, eligibility, originalStatus);
-    CompactionStatus newStatus = CompactionStatus.pending("needs compaction");
-    CompactionCandidate updated = candidate.withCurrentStatus(newStatus);
-
-    Assert.assertNotSame(candidate, updated);
-    Assert.assertEquals(originalStatus, candidate.getCurrentStatus());
-    Assert.assertEquals(newStatus, updated.getCurrentStatus());
-    Assert.assertEquals(proposed, updated.getProposedCompaction());
-    Assert.assertEquals(eligibility, updated.getPolicyEligibility());
-  }
-
-  @Test
   public void testDelegationMethods()
   {
     List<DataSegment> segments = createTestSegments(3);
     CompactionCandidate.ProposedCompaction proposed = CompactionCandidate.ProposedCompaction.from(segments, null);
     CompactionCandidate candidate = new CompactionCandidate(
         proposed,
-        CompactionEligibility.fail("test"),
-        CompactionStatus.COMPLETE
+        CompactionStatus.notEligible("test"),
+        null,
+        CompactionMode.FULL_COMPACTION
     );
 
     Assert.assertEquals(proposed.getTotalBytes(), candidate.getTotalBytes());

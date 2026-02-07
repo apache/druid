@@ -29,6 +29,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,106 +39,6 @@ import java.util.stream.Collectors;
  */
 public class CompactionCandidate
 {
-  private final ProposedCompaction proposedCompaction;
-
-  private final CompactionEligibility policyEligiblity;
-  private final CompactionStatus currentStatus;
-
-  CompactionCandidate(
-      ProposedCompaction proposedCompaction,
-      CompactionEligibility policyEligiblity,
-      CompactionStatus currentStatus
-  )
-  {
-    this.proposedCompaction = Preconditions.checkNotNull(proposedCompaction, "proposedCompaction");
-    this.policyEligiblity = Preconditions.checkNotNull(policyEligiblity, "policyEligiblity");
-    this.currentStatus = Preconditions.checkNotNull(currentStatus, "currentStatus");
-  }
-
-  public ProposedCompaction getProposedCompaction()
-  {
-    return proposedCompaction;
-  }
-
-  /**
-   * @return Non-empty list of segments that make up this candidate.
-   */
-  public List<DataSegment> getSegments()
-  {
-    return proposedCompaction.getSegments();
-  }
-
-  public long getTotalBytes()
-  {
-    return proposedCompaction.getTotalBytes();
-  }
-
-  public int numSegments()
-  {
-    return proposedCompaction.numSegments();
-  }
-
-  /**
-   * Umbrella interval of all the segments in this candidate. This typically
-   * corresponds to a single time chunk in the segment timeline.
-   */
-  public Interval getUmbrellaInterval()
-  {
-    return proposedCompaction.getUmbrellaInterval();
-  }
-
-  /**
-   * Interval aligned to the target segment granularity used for the compaction
-   * task. This interval completely contains the {@link #getUmbrellaInterval()}.
-   */
-  public Interval getCompactionInterval()
-  {
-    return proposedCompaction.getCompactionInterval();
-  }
-
-  public String getDataSource()
-  {
-    return proposedCompaction.getDataSource();
-  }
-
-  public CompactionStatistics getStats()
-  {
-    return proposedCompaction.getStats();
-  }
-
-  /**
-   * Current compaction status of the time chunk corresponding to this candidate.
-   */
-  @Nullable
-  public CompactionStatus getCurrentStatus()
-  {
-    return currentStatus;
-  }
-
-  @Nullable
-  public CompactionEligibility getPolicyEligibility()
-  {
-    return policyEligiblity;
-  }
-
-  /**
-   * Creates a copy of this CompactionCandidate object with the given status.
-   */
-  public CompactionCandidate withCurrentStatus(CompactionStatus status)
-  {
-    return new CompactionCandidate(proposedCompaction, policyEligiblity, status);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "SegmentsToCompact{" +
-           ", proposedCompaction=" + proposedCompaction +
-           ", policyEligiblity=" + policyEligiblity +
-           ", currentStatus=" + currentStatus +
-           '}';
-  }
-
   /**
    * Non-empty list of segments of a datasource being proposed for compaction.
    * A proposed compaction typically contains all the segments of a single time chunk.
@@ -240,6 +141,30 @@ public class CompactionCandidate
     }
 
     @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      ProposedCompaction that = (ProposedCompaction) o;
+      return totalBytes == that.totalBytes
+             && numIntervals == that.numIntervals
+             && segments.equals(that.segments)
+             && umbrellaInterval.equals(that.umbrellaInterval)
+             && compactionInterval.equals(that.compactionInterval)
+             && dataSource.equals(that.dataSource);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(segments, umbrellaInterval, compactionInterval, dataSource, totalBytes, numIntervals);
+    }
+
+    @Override
     public String toString()
     {
       return "ProposedCompaction{" +
@@ -251,5 +176,117 @@ public class CompactionCandidate
              ", totalSize=" + totalBytes +
              '}';
     }
+  }
+
+  /**
+   * Used by {@link CompactionStatusTracker#computeCompactionTaskState(CompactionCandidate)}.
+   * The callsite then determines whether to launch compaction task or not.
+   */
+  public enum TaskState
+  {
+    // no other compaction candidate is running, we can start a new task
+    READY,
+    // compaction candidate is already running under a task
+    TASK_IN_PROGRESS,
+    // compaction candidate has recently been completed, and the segment timeline has not yet updated after that
+    RECENTLY_COMPLETED
+  }
+
+  private final ProposedCompaction proposedCompaction;
+
+  private final CompactionStatus eligibility;
+  @Nullable
+  private final String policyNote;
+  private final CompactionMode mode;
+
+  CompactionCandidate(
+      ProposedCompaction proposedCompaction,
+      CompactionStatus eligibility,
+      @Nullable String policyNote,
+      CompactionMode mode
+  )
+  {
+    this.proposedCompaction = Preconditions.checkNotNull(proposedCompaction, "proposedCompaction");
+    this.eligibility = Preconditions.checkNotNull(eligibility, "eligibility");
+    this.policyNote = policyNote;
+    this.mode = Preconditions.checkNotNull(mode, "mode");
+  }
+
+  public ProposedCompaction getProposedCompaction()
+  {
+    return proposedCompaction;
+  }
+
+  /**
+   * @return Non-empty list of segments that make up this candidate.
+   */
+  public List<DataSegment> getSegments()
+  {
+    return proposedCompaction.getSegments();
+  }
+
+  public long getTotalBytes()
+  {
+    return proposedCompaction.getTotalBytes();
+  }
+
+  public int numSegments()
+  {
+    return proposedCompaction.numSegments();
+  }
+
+  /**
+   * Umbrella interval of all the segments in this candidate. This typically
+   * corresponds to a single time chunk in the segment timeline.
+   */
+  public Interval getUmbrellaInterval()
+  {
+    return proposedCompaction.getUmbrellaInterval();
+  }
+
+  /**
+   * Interval aligned to the target segment granularity used for the compaction
+   * task. This interval completely contains the {@link #getUmbrellaInterval()}.
+   */
+  public Interval getCompactionInterval()
+  {
+    return proposedCompaction.getCompactionInterval();
+  }
+
+  public String getDataSource()
+  {
+    return proposedCompaction.getDataSource();
+  }
+
+  public CompactionStatistics getStats()
+  {
+    return proposedCompaction.getStats();
+  }
+
+  @Nullable
+  public String getPolicyNote()
+  {
+    return policyNote;
+  }
+
+  public CompactionMode getMode()
+  {
+    return mode;
+  }
+
+  public CompactionStatus getEligibility()
+  {
+    return eligibility;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentsToCompact{" +
+           ", proposedCompaction=" + proposedCompaction +
+           ", eligibility=" + eligibility +
+           ", policyNote=" + policyNote +
+           ", mode=" + mode +
+           '}';
   }
 }

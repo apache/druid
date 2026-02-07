@@ -26,19 +26,28 @@ import java.util.Map;
 
 public class CompactionSimulateResult
 {
-  private final Map<CompactionStatus.State, Table> compactionStates;
+  private final Map<CompactionCandidate.TaskState, Table> compactionStates;
+  private final Table skippedIntervals;
 
   @JsonCreator
   public CompactionSimulateResult(
-      @JsonProperty("compactionStates") Map<CompactionStatus.State, Table> compactionStates
+      @JsonProperty("compactionStates") Map<CompactionCandidate.TaskState, Table> compactionStates,
+      @JsonProperty("skippedIntervals") Table skippedIntervals
   )
   {
     this.compactionStates = compactionStates;
+    this.skippedIntervals = skippedIntervals;
   }
 
   @JsonProperty
-  public Map<CompactionStatus.State, Table> getCompactionStates()
+  public Map<CompactionCandidate.TaskState, Table> getCompactionStates()
   {
     return compactionStates;
+  }
+
+  @JsonProperty
+  public Table getSkippedIntervals()
+  {
+    return skippedIntervals;
   }
 }

@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -43,7 +44,6 @@ import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -281,18 +281,17 @@ public class CompactionJobQueue
     }
 
     // Check if the job is already running, completed or skipped
-    final CompactionStatus compactionStatus = getCurrentStatusForJob(job);
-    switch (compactionStatus.getState()) {
-      case RUNNING:
+    final CompactionCandidate.TaskState candidateState = getCurrentTaskStateForJob(job);
+    switch (candidateState) {
+      case TASK_IN_PROGRESS:
         return false;
-      case COMPLETE:
+      case RECENTLY_COMPLETED:
         snapshotBuilder.moveFromPendingToCompleted(candidate);
         return false;
-      case SKIPPED:
-        snapshotBuilder.moveFromPendingToSkipped(candidate);
-        return false;
-      default:
+      case READY:
         break;
+      default:
+        throw DruidException.defensive("unknown compaction candidate state[%s]", candidateState);
     }
 
     // Check if enough compaction task slots are available
@@ -377,10 +376,10 @@ public class CompactionJobQueue
     }
   }
 
-  public CompactionStatus getCurrentStatusForJob(CompactionJob job)
+  public CompactionCandidate.TaskState getCurrentTaskStateForJob(CompactionJob job)
   {
-    statusTracker.onCompactionStatusComputed(job.getCandidate(), null);
-    return statusTracker.computeCompactionStatus(job.getCandidate());
+    statusTracker.onCompactionCandidates(job.getCandidate(), null);
+    return statusTracker.computeCompactionTaskState(job.getCandidate());
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

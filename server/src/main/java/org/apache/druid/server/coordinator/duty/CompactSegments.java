@@ -47,7 +47,6 @@ import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -243,19 +242,20 @@ public class CompactSegments implements CoordinatorCustomDuty
       final String dataSourceName = entry.getDataSource();
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
 
-      final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(entry);
-      final CompactionCandidate candidatesWithStatus = entry.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
+      final CompactionCandidate.TaskState compactionTaskState = statusTracker.computeCompactionTaskState(entry);
+      statusTracker.onCompactionTaskStateComputed(entry, compactionTaskState, config);
 
-      if (compactionStatus.isComplete()) {
-        snapshotBuilder.addToComplete(candidatesWithStatus);
-        continue;
-      } else if (compactionStatus.isSkipped()) {
-        snapshotBuilder.addToSkipped(candidatesWithStatus);
-        continue;
-      } else {
-        // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
-        snapshotBuilder.addToComplete(entry);
+      switch (compactionTaskState) {
+        case READY:
+        case TASK_IN_PROGRESS:
+          // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
+          snapshotBuilder.addToComplete(entry);
+          break;
+        case RECENTLY_COMPLETED:
+          snapshotBuilder.addToComplete(entry);
+          break;
+        default:
+          throw DruidException.defensive("unexpected task state[%s]", compactionTaskState);
       }
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(
@@ -369,8 +369,8 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
-    if (candidate.getCurrentStatus() != null) {
-      autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getCurrentStatus().getReason());
+    if (candidate.getEligibility().getReason() != null) {
+      autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getEligibility().getReason());
     }
 
     autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
@@ -416,7 +416,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     iterator.getCompactedSegments().forEach(snapshotBuilder::addToComplete);
     iterator.getSkippedSegments().forEach(entry -> {
-      statusTracker.onCompactionStatusComputed(entry, datasourceToConfig.get(entry.getDataSource()));
+      statusTracker.onSkippedCandidate(entry, datasourceToConfig.get(entry.getDataSource()));
       snapshotBuilder.addToSkipped(entry);
     });
 
@@ -462,8 +462,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
-    Preconditions.checkArgument(entry.getPolicyEligibility() != null, "Must have a policy eligibility");
-    switch (entry.getPolicyEligibility().getState()) {
+    switch (entry.getMode()) {
       case FULL_COMPACTION:
         clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
         break;
@@ -475,7 +474,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         );
         break;
       default:
-        throw DruidException.defensive("Unexpected policy eligibility[%s]", entry.getPolicyEligibility());
+        throw DruidException.defensive("Unexpected compaction mode[%s]", entry.getMode());
     }
 
     return new ClientCompactionTaskQuery(
