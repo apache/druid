@@ -1107,7 +1107,6 @@ public class CompactSegmentsTest
             new ClientCompactionIOConfig(
                 new ClientCompactionIntervalSpec(
                     Intervals.of("2000/2099"),
-                    null,
                     "testSha256OfSortedSegmentIds"
                 ),
                 null

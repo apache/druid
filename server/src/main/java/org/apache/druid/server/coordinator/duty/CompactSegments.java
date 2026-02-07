@@ -464,7 +464,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final ClientCompactionIntervalSpec clientCompactionIntervalSpec;
     switch (entry.getMode()) {
       case FULL_COMPACTION:
-        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null, null);
+        clientCompactionIntervalSpec = new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null);
         break;
       default:
         throw DruidException.defensive("Unexpected compaction mode[%s]", entry.getMode());
