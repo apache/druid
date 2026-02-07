@@ -684,6 +684,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return Map.of(segmentProvider.incrementalCompaction
                     ? new MultipleSpecificSegmentSpec(StreamSupport.stream(segmentsToCompact.spliterator(), false)
                                                                    .map(DataSegment::toDescriptor)
+                                                                   .map(segmentProvider::trimSegment)
                                                                    .collect(Collectors.toList()))
                     : new MultipleIntervalSegmentSpec(List.of(segmentProvider.interval)), dataSchema);
     }
@@ -1259,8 +1260,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final Interval interval;
 
     private final boolean incrementalCompaction;
-    private final Predicate<DataSegment> segmentsToCompactPredicate;
+
     private final Predicate<DataSegment> segmentsToUpgradePredicate;
+    private final Predicate<DataSegment> segmentsToCompactPredicate;
 
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
@@ -1271,14 +1273,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           && ((CompactionIntervalSpec) inputSpec).getUncompactedSegments() != null) {
         incrementalCompaction = true;
         Set<SegmentDescriptor> uncompactedSegments = Set.copyOf(((CompactionIntervalSpec) inputSpec).getUncompactedSegments());
-        this.segmentsToCompactPredicate = s -> uncompactedSegments.contains(s.toDescriptor());
+        // only segments completely within interval should be upgraded, because we could just
         this.segmentsToUpgradePredicate = s -> !uncompactedSegments.contains(s.toDescriptor())
                                                && this.interval.contains(s.getInterval());
+        this.segmentsToCompactPredicate = Predicates.not(this.segmentsToUpgradePredicate);
       } else {
         incrementalCompaction = false;
-        this.segmentsToCompactPredicate = Predicates.alwaysTrue();
         this.segmentsToUpgradePredicate = Predicates.alwaysFalse();
+        this.segmentsToCompactPredicate = Predicates.alwaysTrue();
       }
+    }
+
+    SegmentDescriptor trimSegment(SegmentDescriptor segment)
+    {
+      if (!segment.getInterval().overlaps(interval)) {
+        throw DruidException.defensive("segment[%] doesn't overlap with interval[%s]", segment, interval);
+      }
+      if (interval.contains(segment.getInterval())) {
+        return segment;
+      }
+      return new SegmentDescriptor(
+          segment.getInterval().overlap(interval),
+          segment.getVersion(),
+          segment.getPartitionNumber()
+      );
     }
 
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException

@@ -63,6 +63,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -161,9 +162,19 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
   {
     final TimelineLookup<String, DataSegment> timeline =
         getTimeline(tableInputSpec.getDataSource(), tableInputSpec.getIntervals());
-    final Predicate<SegmentDescriptor> segmentFilter = tableInputSpec.getSegments() != null
-                                                       ? Set.copyOf(tableInputSpec.getSegments())::contains
-                                                       : Predicates.alwaysTrue();
+    final Predicate<SegmentDescriptor> segmentFilter;
+    if (tableInputSpec.getSegments() == null) {
+      segmentFilter = Predicates.alwaysTrue();
+    } else {
+      Map<Integer, List<Interval>> intervalMap = new HashMap<>();
+      for (SegmentDescriptor s : tableInputSpec.getSegments()) {
+        intervalMap.computeIfAbsent(Objects.hash(s.getPartitionNumber() + s.getVersion()), unused -> new ArrayList<>())
+                   .add(s.getInterval());
+      }
+      segmentFilter = s -> intervalMap.getOrDefault(Objects.hash(s.getPartitionNumber() + s.getVersion()), List.of())
+                                      .stream()
+                                      .anyMatch(itvl -> itvl.overlaps(s.getInterval()));
+    }
 
     if (timeline == null) {
       return Collections.emptySet();
