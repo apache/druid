@@ -337,11 +337,21 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
       CompactionCandidate.ProposedCompaction proposed =
           CompactionCandidate.ProposedCompaction.from(segments, config.getSegmentGranularity());
-      final CompactionStatus eligibility = CompactionStatus.evaluate(proposed, config, fingerprintMapper);
-      final CompactionCandidate candidate =
-          CompactionStatus.State.ELIGIBLE.equals(eligibility.getState())
-          ? searchPolicy.createCandidate(proposed, eligibility)
-          : CompactionMode.notEligible(proposed, eligibility.getReason());
+      final CompactionStatus eligibility = CompactionStatus.compute(proposed, config, fingerprintMapper);
+      final CompactionCandidate candidate;
+      switch (eligibility.getState()) {
+        case COMPLETE:
+          candidate = CompactionMode.complete(proposed);
+          break;
+        case NOT_ELIGIBLE:
+          candidate = CompactionMode.notEligible(proposed, eligibility.getReason());
+          break;
+        case ELIGIBLE:
+          candidate = searchPolicy.createCandidate(proposed, eligibility);
+          break;
+        default:
+          throw DruidException.defensive("unknown compaction state[%s]", eligibility.getState());
+      }
 
       switch (candidate.getMode()) {
         case INCREMENTAL_COMPACTION:

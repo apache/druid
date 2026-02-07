@@ -357,7 +357,7 @@ public class CompactionStatusTest
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
@@ -407,7 +407,7 @@ public class CompactionStatusTest
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
@@ -462,7 +462,7 @@ public class CompactionStatusTest
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), Granularities.HOUR),
         compactionConfig,
         fingerprintMapper
@@ -517,7 +517,7 @@ public class CompactionStatusTest
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper
@@ -571,7 +571,7 @@ public class CompactionStatusTest
         .build();
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper
@@ -663,7 +663,7 @@ public class CompactionStatusTest
     indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "wrongFingerprint", expectedState, DateTimes.nowUtc());
     syncCacheFromManager();
 
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
@@ -708,7 +708,7 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).indexingStateFingerprint(expectedFingerprint).build()
     );
 
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
@@ -762,7 +762,7 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).indexingStateFingerprint(null).lastCompactionState(createCompactionStateWithGranularity(Granularities.DAY)).build()
     );
 
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
@@ -792,7 +792,7 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT_2).lastCompactionState(lastCompactionState).build()
     );
 
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(segments, null),
         compactionConfig,
         fingerprintMapper
@@ -814,7 +814,7 @@ public class CompactionStatusTest
       String expectedReason
   )
   {
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         proposedCompaction,
         compactionConfig,
         fingerprintMapper
@@ -834,7 +834,7 @@ public class CompactionStatusTest
         = DataSegment.builder(WIKI_SEGMENT)
                      .lastCompactionState(lastCompactionState)
                      .build();
-    final CompactionStatus status = CompactionStatus.evaluate(
+    final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.ProposedCompaction.from(List.of(segment), null),
         compactionConfig,
         fingerprintMapper

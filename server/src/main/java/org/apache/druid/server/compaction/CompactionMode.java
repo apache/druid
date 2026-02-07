@@ -52,10 +52,10 @@ public enum CompactionMode
           proposedCompaction.getUmbrellaInterval(),
           proposedCompaction.getCompactionInterval(),
           Math.toIntExact(eligibility.getUncompactedSegments()
-                                          .stream()
-                                          .map(DataSegment::getInterval)
-                                          .distinct()
-                                          .count())
+                                     .stream()
+                                     .map(DataSegment::getInterval)
+                                     .distinct()
+                                     .count())
       );
       return new CompactionCandidate(newProposed, eligibility, policyNote, this);
     }
@@ -94,7 +94,10 @@ public enum CompactionMode
     );
   }
 
-  public static CompactionCandidate notEligible(CompactionCandidate.ProposedCompaction proposedCompaction, String reason)
+  public static CompactionCandidate notEligible(
+      CompactionCandidate.ProposedCompaction proposedCompaction,
+      String reason
+  )
   {
     // CompactionStatus returns an ineligible reason, have not even got to policy check yet
     return new CompactionCandidate(
@@ -103,5 +106,10 @@ public enum CompactionMode
         null,
         CompactionMode.NOT_APPLICABLE
     );
+  }
+
+  public static CompactionCandidate complete(CompactionCandidate.ProposedCompaction proposedCompaction)
+  {
+    return new CompactionCandidate(proposedCompaction, CompactionStatus.COMPLETE, null, CompactionMode.NOT_APPLICABLE);
   }
 }

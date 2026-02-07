@@ -121,12 +121,18 @@ public class CompactionStatus
       case COMPLETE:
         break;
       case NOT_ELIGIBLE:
-        InvalidInput.conditionalException(!Strings.isNullOrEmpty(reason), "must provide a reason");
+        InvalidInput.conditionalException(
+            !Strings.isNullOrEmpty(reason),
+            "must provide a reason why compaction not eligible"
+        );
         break;
       case ELIGIBLE:
-        InvalidInput.conditionalException(compacted != null, "must provide compacted stats");
-        InvalidInput.conditionalException(uncompacted != null, "must provide uncompacted stats");
-        InvalidInput.conditionalException(uncompactedSegments != null, "must provide uncompactedSegments");
+        InvalidInput.conditionalException(compacted != null, "must provide compacted stats for compaction");
+        InvalidInput.conditionalException(uncompacted != null, "must provide uncompacted stats for compaction");
+        InvalidInput.conditionalException(
+            uncompactedSegments != null,
+            "must provide uncompactedSegments for compaction"
+        );
         break;
       default:
         throw DruidException.defensive("unexpected compaction status state[%s]", state);
@@ -186,7 +192,7 @@ public class CompactionStatus
    * @return a new {@link CompactionCandidate} with updated eligibility and status. For incremental
    * compaction, returns a candidate containing only the uncompacted segments.
    */
-  public static CompactionStatus evaluate(
+  public static CompactionStatus compute(
       CompactionCandidate.ProposedCompaction proposedCompaction,
       DataSourceCompactionConfig config,
       IndexingStateFingerprintMapper fingerprintMapper
@@ -366,7 +372,7 @@ public class CompactionStatus
   }
 
   /**
-   * Evaluates checks to determine the compaction status of a
+   * Evaluates {@link #CHECKS} to determine the compaction status of a
    * {@link CompactionCandidate}.
    */
   private static class Evaluator
