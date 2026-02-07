@@ -798,7 +798,7 @@ public class CompactionStatusTest
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.getState().equals(CompactionStatus.State.ELIGIBLE));
+    Assert.assertEquals(CompactionStatus.State.NOT_ELIGIBLE, status.getState());
     Assert.assertTrue(status.getReason().contains("'inputSegmentSize' exceeded"));
     Assert.assertTrue(status.getReason().contains("200000000"));
     Assert.assertTrue(status.getReason().contains("150000000"));

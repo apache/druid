@@ -32,6 +32,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
@@ -44,6 +45,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionMode;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
@@ -367,8 +369,11 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
     final Map<String, Object> autoCompactionContext = newAutoCompactionContext(config.getTaskContext());
 
-    if (candidate.getEligibility().getReason() != null) {
-      autoCompactionContext.put(COMPACTION_REASON_KEY, candidate.getEligibility().getReason());
+    if (CompactionMode.NOT_APPLICABLE.equals(candidate.getMode())) {
+      autoCompactionContext.put(
+          COMPACTION_REASON_KEY,
+          GuavaUtils.firstNonNull(candidate.getPolicyNote(), candidate.getEligibility().getReason())
+      );
     }
 
     autoCompactionContext.put(STORE_COMPACTION_STATE_KEY, storeCompactionStatePerSegment);
