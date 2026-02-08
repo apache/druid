@@ -354,6 +354,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
 
       switch (candidate.getMode()) {
+        case INCREMENTAL_COMPACTION:
         case FULL_COMPACTION:
           if (!queuedIntervals.contains(candidate.getProposedCompaction().getUmbrellaInterval())) {
             queue.add(candidate);

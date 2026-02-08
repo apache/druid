@@ -19,13 +19,18 @@
 
 package org.apache.druid.client.indexing;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.compaction.CompactionCandidate.ProposedCompaction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -120,5 +125,41 @@ public class ClientCompactionIntervalSpecTest
     // The segmentGranularity of WEEK does not align with the umbrella interval (umbrella interval cannot be evenly divide into the segmentGranularity)
     // Hence the compaction interval is modified to aling with the segmentGranularity
     Assert.assertEquals(Intervals.of("2015-02-09/2015-04-20"), actual.getCompactionInterval());
+  }
+
+  @Test
+  public void testClientCompactionIntervalSpec_throwsException_whenEmptySegmentsList()
+  {
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    List<SegmentDescriptor> emptySegments = List.of();
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> new ClientCompactionIntervalSpec(interval, emptySegments, null)
+    );
+  }
+
+  @Test
+  public void testClientCompactionIntervalSpec_serde() throws Exception
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Interval interval = Intervals.of("2015-04-11/2015-04-12");
+    List<SegmentDescriptor> segments = List.of(
+        new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
+    );
+
+    // Test with uncompactedSegments (incremental compaction)
+    ClientCompactionIntervalSpec withSegments = new ClientCompactionIntervalSpec(interval, segments, "sha256hash");
+    String json1 = mapper.writeValueAsString(withSegments);
+    ClientCompactionIntervalSpec deserialized1 = mapper.readValue(json1, ClientCompactionIntervalSpec.class);
+    Assert.assertEquals(withSegments, deserialized1);
+    Assert.assertEquals(segments, deserialized1.getUncompactedSegments());
+
+    // Test without uncompactedSegments (full compaction)
+    ClientCompactionIntervalSpec withoutSegments = new ClientCompactionIntervalSpec(interval, null, null);
+    String json2 = mapper.writeValueAsString(withoutSegments);
+    ClientCompactionIntervalSpec deserialized2 = mapper.readValue(json2, ClientCompactionIntervalSpec.class);
+    Assert.assertEquals(withoutSegments, deserialized2);
+    Assert.assertNull(deserialized2.getUncompactedSegments());
   }
 }

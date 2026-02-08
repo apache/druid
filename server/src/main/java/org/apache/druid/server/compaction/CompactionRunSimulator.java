@@ -123,6 +123,7 @@ public class CompactionRunSimulator
                 )
             ));
             break;
+          case INCREMENTAL_COMPACTION:
           case FULL_COMPACTION:
             queuedIntervals.addRow(createRow(
                 candidateSegments,

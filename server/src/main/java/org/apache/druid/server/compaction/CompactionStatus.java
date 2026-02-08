@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
  */
 public class CompactionStatus
 {
-  public static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, "", null, null);
+  public static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, "", null, null, null);
 
   public enum State
   {
@@ -94,7 +94,7 @@ public class CompactionStatus
 
   public static CompactionStatus notEligible(String messageFormat, Object... args)
   {
-    return new CompactionStatus(State.NOT_ELIGIBLE, StringUtils.format(messageFormat, args), null, null);
+    return new CompactionStatus(State.NOT_ELIGIBLE, StringUtils.format(messageFormat, args), null, null, null);
   }
 
   private final State state;
@@ -104,12 +104,15 @@ public class CompactionStatus
   private final CompactionStatistics compacted;
   @Nullable
   private final CompactionStatistics uncompacted;
+  @Nullable
+  private final List<DataSegment> uncompactedSegments;
 
   private CompactionStatus(
       State state,
       String reason,
       @Nullable CompactionStatistics compacted,
-      @Nullable CompactionStatistics uncompacted
+      @Nullable CompactionStatistics uncompacted,
+      @Nullable List<DataSegment> uncompactedSegments
   )
   {
     this.state = state;
@@ -126,12 +129,17 @@ public class CompactionStatus
       case ELIGIBLE:
         InvalidInput.conditionalException(compacted != null, "must provide compacted stats for compaction");
         InvalidInput.conditionalException(uncompacted != null, "must provide uncompacted stats for compaction");
+        InvalidInput.conditionalException(
+            uncompactedSegments != null,
+            "must provide uncompactedSegments for compaction"
+        );
         break;
       default:
         throw DruidException.defensive("unexpected compaction status state[%s]", state);
     }
     this.compacted = compacted;
     this.uncompacted = uncompacted;
+    this.uncompactedSegments = uncompactedSegments;
   }
 
   static CompactionStatusBuilder builder(State state, String reason)
@@ -159,6 +167,12 @@ public class CompactionStatus
   public CompactionStatistics getCompactedStats()
   {
     return compacted;
+  }
+
+  @Nullable
+  public List<DataSegment> getUncompactedSegments()
+  {
+    return uncompactedSegments;
   }
 
   /**
@@ -200,13 +214,14 @@ public class CompactionStatus
     return state == that.state
            && Objects.equals(reason, that.reason)
            && Objects.equals(compacted, that.compacted)
-           && Objects.equals(uncompacted, that.uncompacted);
+           && Objects.equals(uncompacted, that.uncompacted)
+           && Objects.equals(uncompactedSegments, that.uncompactedSegments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(state, reason, compacted, uncompacted);
+    return Objects.hash(state, reason, compacted, uncompacted, uncompactedSegments);
   }
 
   @Override
@@ -217,6 +232,7 @@ public class CompactionStatus
            + ", reason='" + reason + '\''
            + ", compacted=" + compacted
            + ", uncompacted=" + uncompacted
+           + ", uncompactedSegments=" + uncompactedSegments
            + '}';
   }
 
@@ -457,6 +473,7 @@ public class CompactionStatus
       } else {
         return builder(State.ELIGIBLE, reasonsForCompaction.get(0)).compacted(createStats(compactedSegments))
                                                                    .uncompacted(createStats(uncompactedSegments))
+                                                                   .uncompactedSegments(uncompactedSegments)
                                                                    .build();
       }
     }
@@ -841,6 +858,7 @@ public class CompactionStatus
     private State state;
     private CompactionStatistics compacted;
     private CompactionStatistics uncompacted;
+    private List<DataSegment> uncompactedSegments;
     private String reason;
 
     CompactionStatusBuilder(State state, String reason)
@@ -861,9 +879,15 @@ public class CompactionStatus
       return this;
     }
 
+    CompactionStatusBuilder uncompactedSegments(List<DataSegment> uncompactedSegments)
+    {
+      this.uncompactedSegments = uncompactedSegments;
+      return this;
+    }
+
     CompactionStatus build()
     {
-      return new CompactionStatus(state, reason, compacted, uncompacted);
+      return new CompactionStatus(state, reason, compacted, uncompacted, uncompactedSegments);
     }
   }
 }

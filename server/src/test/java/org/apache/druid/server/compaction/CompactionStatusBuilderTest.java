@@ -42,6 +42,7 @@ public class CompactionStatusBuilderTest
     Assert.assertEquals("test reason: failure", eligibility.getReason());
     Assert.assertNull(eligibility.getCompactedStats());
     Assert.assertNull(eligibility.getUncompactedStats());
+    Assert.assertNull(eligibility.getUncompactedSegments());
   }
 
   @Test
@@ -49,17 +50,20 @@ public class CompactionStatusBuilderTest
   {
     CompactionStatistics compactedStats = CompactionStatistics.create(1000, 5, 2);
     CompactionStatistics uncompactedStats = CompactionStatistics.create(500, 3, 1);
+    List<DataSegment> uncompactedSegments = createTestSegments(3);
 
     CompactionStatus eligibility =
         CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "needs full compaction")
                              .compacted(compactedStats)
                              .uncompacted(uncompactedStats)
+                             .uncompactedSegments(uncompactedSegments)
                              .build();
 
     Assert.assertEquals(CompactionStatus.State.ELIGIBLE, eligibility.getState());
     Assert.assertEquals("needs full compaction", eligibility.getReason());
     Assert.assertEquals(compactedStats, eligibility.getCompactedStats());
     Assert.assertEquals(uncompactedStats, eligibility.getUncompactedStats());
+    Assert.assertEquals(uncompactedSegments, eligibility.getUncompactedSegments());
   }
 
   @Test
@@ -79,20 +83,23 @@ public class CompactionStatusBuilderTest
     CompactionStatus differentState = CompactionStatus.COMPLETE;
     Assert.assertNotEquals(simple1, differentState);
 
-    // Test with full compaction eligibility (with stats)
+    // Test with full compaction eligibility (with stats and segments)
     CompactionStatistics stats1 = CompactionStatistics.create(1000, 5, 2);
     CompactionStatistics stats2 = CompactionStatistics.create(500, 3, 1);
+    List<DataSegment> segments = createTestSegments(3);
 
     CompactionStatus withStats1 =
         CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(stats2)
+                             .uncompactedSegments(segments)
                              .build();
 
     CompactionStatus withStats2 =
         CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(stats2)
+                             .uncompactedSegments(segments)
                              .build();
 
     // Same values - should be equal
@@ -105,6 +112,7 @@ public class CompactionStatusBuilderTest
         CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(differentStats)
                              .uncompacted(stats2)
+                             .uncompactedSegments(segments)
                              .build();
     Assert.assertNotEquals(withStats1, differentCompactedStats);
 
@@ -113,8 +121,19 @@ public class CompactionStatusBuilderTest
         CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                              .compacted(stats1)
                              .uncompacted(differentStats)
+                             .uncompactedSegments(segments)
                              .build();
     Assert.assertNotEquals(withStats1, differentUncompactedStats);
+
+    // Test with different segment lists
+    List<DataSegment> differentSegments = createTestSegments(5);
+    CompactionStatus differentSegmentList =
+        CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
+                             .compacted(stats1)
+                             .uncompacted(stats2)
+                             .uncompactedSegments(differentSegments)
+                             .build();
+    Assert.assertNotEquals(withStats1, differentSegmentList);
   }
 
   @Test
@@ -129,13 +148,11 @@ public class CompactionStatusBuilderTest
   @Test
   public void testBuilderRequiresStatsForFullCompaction()
   {
-    // Should throw when neither stat is provided
     Assert.assertThrows(
         DruidException.class,
         () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason").build()
     );
 
-    // Should throw when only compacted stat is provided
     Assert.assertThrows(
         DruidException.class,
         () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
@@ -143,12 +160,13 @@ public class CompactionStatusBuilderTest
                                    .build()
     );
 
-    // Should succeed when both stats are provided
-    CompactionStatus status = CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
+    Assert.assertThrows(
+        DruidException.class,
+        () -> CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "reason")
                                    .compacted(CompactionStatistics.create(1000, 5, 2))
                                    .uncompacted(CompactionStatistics.create(500, 3, 1))
-                                   .build();
-    Assert.assertNotNull(status);
+                                   .build()
+    );
   }
 
   private static List<DataSegment> createTestSegments(int count)
