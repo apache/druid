@@ -1524,17 +1524,6 @@ public abstract class CompactionTaskRunBase
       boolean appendToExisting
   ) throws Exception
   {
-    return buildIndexTask(DEFAULT_SEGMENT_GRAN, parseSpec, rows, interval, appendToExisting);
-  }
-
-  protected IndexTask buildIndexTask(
-      Granularity segmentGranularity,
-      ParseSpec parseSpec,
-      List<String> rows,
-      Interval interval,
-      boolean appendToExisting
-  ) throws Exception
-  {
     File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
@@ -1551,7 +1540,7 @@ public abstract class CompactionTaskRunBase
             tmpDir,
             parseSpec,
             null,
-            new UniformGranularitySpec(segmentGranularity, DEFAULT_QUERY_GRAN, List.of(interval)),
+            new UniformGranularitySpec(DEFAULT_SEGMENT_GRAN, DEFAULT_QUERY_GRAN, List.of(interval)),
             IndexTaskTest.createTuningConfig(2, 2, 2L, null, false, true),
             appendToExisting,
             false
