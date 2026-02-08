@@ -234,7 +234,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1,
         HumanReadableBytes.valueOf(2),
         HumanReadableBytes.valueOf(3),
-        null,
+        0.5,
         "foo"
     );
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
