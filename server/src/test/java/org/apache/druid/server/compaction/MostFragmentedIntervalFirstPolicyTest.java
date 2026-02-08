@@ -253,7 +253,6 @@ public class MostFragmentedIntervalFirstPolicyTest
 
   private static CompactionStatus.CompactionStatusBuilder eligibilityBuilder()
   {
-    return CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "approve")
-                           .uncompactedSegments(List.of());
+    return CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "approve");
   }
 }

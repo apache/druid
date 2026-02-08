@@ -135,7 +135,6 @@ public class CompactionStatusTrackerTest
     CompactionStatus status = CompactionStatus.builder(CompactionStatus.State.ELIGIBLE, "approve without check")
                                               .compacted(CompactionStatistics.create(1, 1, 1))
                                               .uncompacted(CompactionStatistics.create(1, 1, 1))
-                                              .uncompactedSegments(List.of())
                                               .build();
     return CompactionMode.FULL_COMPACTION.createCandidate(proposedCompaction, status);
   }
