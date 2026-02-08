@@ -360,6 +360,11 @@ public class DimensionsSpec
            '}';
   }
 
+  public Builder toBuilder()
+  {
+    return new Builder(this);
+  }
+
   public static final class Builder
   {
     private List<DimensionSchema> dimensions;

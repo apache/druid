@@ -841,7 +841,11 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertEquals(BatchIOConfig.DEFAULT_DROP_EXISTING, taskPayload.getIoConfig().isDropExisting());
+    if (CompactionEngine.NATIVE.equals(engine)) {
+      Assert.assertEquals(BatchIOConfig.DEFAULT_DROP_EXISTING, taskPayload.getIoConfig().isDropExisting());
+    } else {
+      Assert.assertTrue(taskPayload.getIoConfig().isDropExisting());
+    }
   }
 
   @Test

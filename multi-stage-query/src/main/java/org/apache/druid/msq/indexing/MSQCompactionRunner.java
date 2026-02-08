@@ -412,12 +412,19 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
-    if (isQueryGranularityEmptyOrNone(dataSchema)) {
-      // Dimensions in group-by aren't allowed to have time column name as the output name.
-      dimensionSpecs.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
-    } else {
-      // The changed granularity would result in a new virtual column that needs to be aggregated upon.
-      dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+    // if schema is not time-sorted, the time column mapping would already be in inputColToVirtualCol
+    if (!dataSchema.getDimensionsSpec().getDimensionNames().contains(ColumnHolder.TIME_COLUMN_NAME)) {
+      if (isQueryGranularityEmptyOrNone(dataSchema)) {
+        // Dimensions in group-by aren't allowed to have time column name as the output name.
+        dimensionSpecs.add(new DefaultDimensionSpec(
+            ColumnHolder.TIME_COLUMN_NAME,
+            TIME_VIRTUAL_COLUMN,
+            ColumnType.LONG
+        ));
+      } else {
+        // The changed granularity would result in a new virtual column that needs to be aggregated upon.
+        dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+      }
     }
     // If virtual columns are created from dimensions, replace dimension columns names with virtual column names.
     dimensionSpecs.addAll(

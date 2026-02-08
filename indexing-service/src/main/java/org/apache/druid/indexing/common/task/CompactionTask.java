@@ -441,7 +441,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
-    return determineLockGranularityAndTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
+    return determineLockGranularityAndTryLock(taskActionClient, List.of(umbrellaInterval(segments, segmentProvider)));
   }
 
   @Override
@@ -474,6 +474,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * <li> Rollup is done on a multi-valued string dimension or an unknown dimension
    * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
    * </ul>
+   *
    * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a multi-valued
    * string or unknown dimension.
    */
@@ -635,12 +636,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           toolbox.getEmitter(),
           metricBuilder,
           segmentProvider.dataSource,
-          JodaUtils.umbrellaInterval(
-              Iterables.transform(
-                  timelineSegments,
-                  DataSegment::getInterval
-              )
-          ),
+          umbrellaInterval(timelineSegments, segmentProvider),
           lazyFetchSegments(
               timelineSegments,
               toolbox.getSegmentCacheManager()
@@ -669,6 +665,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
     return VersionedIntervalTimeline.getAllObjects(timelineSegments);
+  }
+
+  private static Interval umbrellaInterval(Iterable<DataSegment> segments, SegmentProvider segmentProvider)
+  {
+    return JodaUtils.umbrellaInterval(
+        List.of(
+            JodaUtils.umbrellaInterval(Iterables.transform(segments, DataSegment::getInterval)),
+            segmentProvider.interval
+        ));
   }
 
   private static DataSchema createDataSchema(
@@ -964,9 +969,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // Store forceSegmentSortByTime only if false, for compatibility with legacy compaction states.
       final Boolean forceSegmentSortByTime = includeTimeAsDimension ? false : null;
       return DimensionsSpec.builder()
-          .setDimensions(dimensionSchemas)
-          .setForceSegmentSortByTime(forceSegmentSortByTime)
-          .build();
+                           .setDimensions(dimensionSchemas)
+                           .setForceSegmentSortByTime(forceSegmentSortByTime)
+                           .build();
     }
 
     public AggregatorFactory[] getMetricsSpec()
@@ -1016,7 +1021,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
      * Sort {@link #segmentsIterable} in order, such that we look at later segments prior to earlier ones. Useful when
      * analyzing dimensions, as it allows us to take the latest value we see, and therefore prefer types from more
      * recent segments, if there was a change.
-     *
+     * <p>
      * Returns a List copy of the original Iterable.
      */
     private List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> sortSegmentsListNewestFirst()
@@ -1146,7 +1151,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           final QueryableIndex projectionIndex = Preconditions.checkNotNull(
               index.getProjectionQueryableIndex(schema.getName())
           );
-          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(schema.getGroupingColumns().size());
+          final List<DimensionSchema> columnSchemas = Lists.newArrayListWithExpectedSize(
+              schema.getGroupingColumns().size()
+          );
           for (String groupingColumn : schema.getGroupingColumns()) {
             if (groupingColumn.equals(schema.getTimeColumnName())) {
               columnSchemas.add(
@@ -1291,6 +1298,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return inputSpec(new CompactionIntervalSpec(interval, null));
     }
 
+    public Builder interval(Interval interval, boolean dropExisting)
+    {
+      return inputSpec(new CompactionIntervalSpec(interval, null), dropExisting);
+    }
+
     public Builder segments(List<DataSegment> segments)
     {
       return inputSpec(SpecificSegmentsSpec.fromSegments(segments));
@@ -1394,7 +1406,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   /**
    * Compcation Task Tuning Config.
-   *
+   * <p>
    * An extension of ParallelIndexTuningConfig. As of now, all this TuningConfig
    * does is fail if the TuningConfig contains
    * `awaitSegmentAvailabilityTimeoutMillis` that is != 0 since it is not
