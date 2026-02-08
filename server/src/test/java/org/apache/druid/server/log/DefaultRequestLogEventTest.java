@@ -165,14 +165,14 @@ public class DefaultRequestLogEventTest
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 
-    EventMap observedMap = defaultRequestLogEvent.toMap();
-    Assert.assertEquals(expected, observedMap);
+    final EventMap observedEventMap = defaultRequestLogEvent.toMap();
+    Assert.assertEquals(expected, observedEventMap);
     Assert.assertEquals(
         StringUtils.format(
             "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from 1337\"}",
             timestamp
         ),
-        new DefaultObjectMapper().writeValueAsString(observedMap)
+        new DefaultObjectMapper().writeValueAsString(observedEventMap)
     );
   }
 

@@ -366,13 +366,13 @@ public class ServiceMetricEventTest
   @Test
   public void testSerializedServiceMetricEventIsOrdered() throws JsonProcessingException
   {
-    ServiceMetricEvent event = ServiceMetricEvent.builder()
-                                                  .setCreatedTime(DateTimes.of("2026-01-01"))
-                                                 .setMetric("m1", 42)
-                                                 .setDimension("dim1", "xyz")
-                                                 .setFeed("test_feed")
-                                                 .setDimension("dim2", "xyz")
-                                                 .build("broker", "hostA");
+    final ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                       .setCreatedTime(DateTimes.of("2026-01-01"))
+                                                       .setMetric("m1", 42)
+                                                       .setDimension("dim1", "xyz")
+                                                       .setFeed("test_feed")
+                                                       .setDimension("dim2", "xyz")
+                                                       .build("broker", "hostA");
 
 
     Assert.assertEquals(

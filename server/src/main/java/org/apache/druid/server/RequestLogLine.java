@@ -93,7 +93,6 @@ public class RequestLogLine
 
   public String getSqlQueryLine(ObjectMapper objectMapper) throws JsonProcessingException
   {
-
     final Map<String, Object> queryMap = new LinkedHashMap<>();
     queryMap.put("context", sqlQueryContext);
     queryMap.put("query", sql == null ? "<unavailable>" : sql);
