@@ -580,6 +580,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return Collections.emptyMap();
     }
 
+    if (segmentProvider.incrementalCompaction) {
+      Iterable<DataSegment> segmentsNotCompletelyWithinin =
+          Iterables.filter(timelineSegments, s -> !segmentProvider.interval.contains(s.getInterval()));
+      if (segmentsNotCompletelyWithinin.iterator().hasNext()) {
+        throw new ISE(
+            "Incremental compaction doesn't allow segments not completely within interval[%s]",
+            segmentProvider.interval
+        );
+      }
+    }
+
     if (granularitySpec == null || granularitySpec.getSegmentGranularity() == null) {
       Map<QuerySegmentSpec, DataSchema> inputSchemas = new HashMap<>();
       // if segment is already compacted in incremental compaction, they need to be upgraded directly, supported in MSQ
@@ -1259,8 +1270,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final Interval interval;
 
     private final boolean incrementalCompaction;
-    private final Predicate<DataSegment> segmentsToCompactPredicate;
     private final Predicate<DataSegment> segmentsToUpgradePredicate;
+    private final Predicate<DataSegment> segmentsToCompactPredicate;
 
     SegmentProvider(String dataSource, CompactionInputSpec inputSpec)
     {
@@ -1271,13 +1282,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           && ((CompactionIntervalSpec) inputSpec).getUncompactedSegments() != null) {
         incrementalCompaction = true;
         Set<SegmentDescriptor> uncompactedSegments = Set.copyOf(((CompactionIntervalSpec) inputSpec).getUncompactedSegments());
-        this.segmentsToCompactPredicate = s -> uncompactedSegments.contains(s.toDescriptor());
         this.segmentsToUpgradePredicate = s -> !uncompactedSegments.contains(s.toDescriptor())
                                                && this.interval.contains(s.getInterval());
+        this.segmentsToCompactPredicate = Predicates.not(this.segmentsToUpgradePredicate);
       } else {
         incrementalCompaction = false;
-        this.segmentsToCompactPredicate = Predicates.alwaysTrue();
         this.segmentsToUpgradePredicate = Predicates.alwaysFalse();
+        this.segmentsToCompactPredicate = Predicates.alwaysTrue();
       }
     }
 

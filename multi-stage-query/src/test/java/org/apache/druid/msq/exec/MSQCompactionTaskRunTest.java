@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.task.CompactionTaskRunBase;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -689,6 +690,55 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
     Assert.assertEquals(6, usedSegments.size());
     final List<ShardSpec> shards = usedSegments.stream().map(DataSegment::getShardSpec).collect(Collectors.toList());
     Assert.assertEquals(Set.of("range"), shards.stream().map(ShardSpec::getType).collect(Collectors.toSet()));
+  }
+
+  @Test
+  public void testIncrementalCompactionOverlappingInterval() throws Exception
+  {
+    Assume.assumeTrue(lockGranularity == LockGranularity.TIME_CHUNK);
+    Assume.assumeTrue("Incremental compaction depends on concurrent lock", useConcurrentLocks);
+
+    List<String> rows = new ArrayList<>();
+    rows.add("2014-01-01T00:00:10Z,a1,11\n");
+    rows.add("2014-01-01T00:00:10Z,b1,12\n");
+    rows.add("2014-01-01T00:00:10Z,c1,13\n");
+    rows.add("2014-01-01T06:00:20Z,a1,11\n");
+    rows.add("2014-01-01T06:00:20Z,b1,12\n");
+    rows.add("2014-01-01T06:00:20Z,c1,13\n");
+    rows.add("2014-01-01T08:00:20Z,b1,12\n");
+    rows.add("2014-01-01T08:00:20Z,c1,13\n");
+    rows.add("2014-01-01T10:00:20Z,b1,12\n");
+    rows.add("2014-01-01T10:00:20Z,c1,13\n");
+    final IndexTask indexTask = buildIndexTask(
+        Granularities.SIX_HOUR,
+        DEFAULT_PARSE_SPEC,
+        rows,
+        TEST_INTERVAL_DAY,
+        true
+    );
+    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runTask(indexTask);
+    // created 2 segments in HOUR 0 -> HOUR 6, and 4 segments in HOUR 6 -> HOUR12
+    Assert.assertEquals(6, indexTaskResult.rhs.getSegments().size());
+    verifyTaskSuccessRowsAndSchemaMatch(indexTaskResult, 10);
+
+    // First compaction task to only compact 6 segments from indexTask.
+    final Interval compactionInterval = Intervals.of("2014-01-01T00:00:00Z/2014-01-01T08:00:00Z");
+    final List<SegmentDescriptor> uncompactedFromIndexTask =
+        indexTaskResult.rhs.getSegments()
+                           .stream()
+                           .filter(s -> compactionInterval.contains(s.getInterval()))
+                           .map(DataSegment::toDescriptor)
+                           .collect(Collectors.toList());
+
+    final CompactionTask compactionTask1 =
+        compactionTaskBuilder(Granularities.EIGHT_HOUR)
+            .inputSpec(new CompactionIntervalSpec(compactionInterval, uncompactedFromIndexTask, null), true)
+            .build();
+    ISE e = Assert.assertThrows(ISE.class, () -> runTask(compactionTask1));
+    Assert.assertEquals(
+        "Incremental compaction doesn't allow segments not completely within interval[2014-01-01T00:00:00.000Z/2014-01-01T08:00:00.000Z]",
+        e.getMessage()
+    );
   }
 
   @Override
