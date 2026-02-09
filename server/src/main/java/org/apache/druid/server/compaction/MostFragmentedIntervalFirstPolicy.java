@@ -75,8 +75,9 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
     );
     InvalidInput.conditionalException(
         incrementalCompactionUncompactedRatioThreshold == null
-        || incrementalCompactionUncompactedRatioThreshold > 0,
-        "'incrementalCompactionUncompactedRatioThreshold'[%s] must be greater than 0",
+        || (incrementalCompactionUncompactedRatioThreshold >= 0.0d
+            && incrementalCompactionUncompactedRatioThreshold < 1.0d),
+        "'incrementalCompactionUncompactedRatioThreshold'[%s] must be between 0.0 and 1.0",
         incrementalCompactionUncompactedRatioThreshold
     );
 
