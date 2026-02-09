@@ -653,7 +653,7 @@ public class MSQCompactionRunner implements CompactionRunner
     List<PostAggregator> postAggregators =
         inputColToVirtualCol.entrySet()
                             .stream()
-                            .filter(entry -> entry.getKey().startsWith(ARRAY_VIRTUAL_COLUMN_PREFIX))
+                            .filter(entry -> entry.getValue().getOutputName().startsWith(ARRAY_VIRTUAL_COLUMN_PREFIX))
                             .map(
                                 entry ->
                                     new ExpressionPostAggregator(
