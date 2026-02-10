@@ -37,6 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kinesis.KinesisClient;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamRequest;
 import software.amazon.awssdk.services.kinesis.model.DescribeStreamResponse;
@@ -836,5 +837,52 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
 
     target.close();
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_standardEndpoint()
+  {
+    Assert.assertEquals(
+        Region.US_EAST_1,
+        KinesisRecordSupplier.parseRegionFromEndpoint("https://kinesis.us-east-1.amazonaws.com")
+    );
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_withoutScheme()
+  {
+    Assert.assertEquals(
+        Region.EU_WEST_1,
+        KinesisRecordSupplier.parseRegionFromEndpoint("kinesis.eu-west-1.amazonaws.com")
+    );
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_cnRegion()
+  {
+    Assert.assertEquals(
+        Region.of("cn-north-1"),
+        KinesisRecordSupplier.parseRegionFromEndpoint("https://kinesis.cn-north-1.amazonaws.com")
+    );
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_null()
+  {
+    Assert.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint(null));
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_nonAwsEndpoint()
+  {
+    Assert.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint("https://localhost:4566"));
+  }
+
+  @Test
+  public void testParseRegionFromEndpoint_noKinesisPrefix()
+  {
+    Assert.assertNull(
+        KinesisRecordSupplier.parseRegionFromEndpoint("https://custom.us-east-1.amazonaws.com")
+    );
   }
 }

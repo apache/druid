@@ -32,6 +32,16 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Loads AWS session credentials from a properties file and refreshes them periodically.
+ *
+ * <p>The credentials file must contain {@code sessionToken}, {@code accessKey}, and {@code secretKey} properties.
+ * Credentials are loaded immediately on construction and refreshed every hour via a background thread.
+ *
+ * <p>Note: In AWS SDK v1, {@code AWSCredentialsProvider} had a {@code refresh()} method as part of the interface.
+ * In SDK v2, {@code AwsCredentialsProvider} has no such method, so refresh is handled internally via a
+ * scheduled executor.
+ */
 public class FileSessionCredentialsProvider implements AwsCredentialsProvider
 {
   private final ScheduledExecutorService scheduler =
