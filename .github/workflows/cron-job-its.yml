@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [ query, security ]
+        testing_group: [ security ]
     uses: ./.github/workflows/reusable-standard-its.yml
     needs: build
     with:

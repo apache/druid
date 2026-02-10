@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -83,7 +84,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
         // maxBytes must be a literal
         return null;
       }
-      maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
+      maxSizeBytes = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxBytes), NAME, "maxBytes").intValue();
     }
     final DruidExpression arg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), arguments.get(0));
     final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();

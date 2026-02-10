@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -88,7 +89,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final int maxNumEntries = ((Number) RexLiteral.value(maxNumEntriesOperand)).intValue();
+    final int maxNumEntries = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(maxNumEntriesOperand), NAME, "maxNumEntries").intValue();
 
     // Look for existing matching aggregatorFactory.
     for (final Aggregation existing : existingAggregations) {

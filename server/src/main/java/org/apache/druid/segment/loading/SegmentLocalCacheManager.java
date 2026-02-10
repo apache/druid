@@ -793,7 +793,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                     entry.referenceProvider,
                     entry.dataSegment.getSize(),
                     waitTime,
-                    System.nanoTime() - startTime
+                    System.nanoTime() - execStartTime
                 );
               }
           );

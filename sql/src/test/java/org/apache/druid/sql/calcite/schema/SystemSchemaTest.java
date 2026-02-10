@@ -583,7 +583,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(14, serverFields.size());
+    Assert.assertEquals(15, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
 
@@ -847,7 +847,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     final List<DruidServer> servers = new ArrayList<>();
     servers.add(mockDataServer(historical1.getDruidNode().getHostAndPortToUse(), 200L, 1000L, "tier"));
-    servers.add(mockDataServer(historical2.getDruidNode().getHostAndPortToUse(), 400L, 1000L, "tier"));
+    servers.add(mockDataServer(historical2.getDruidNode().getHostAndPortToUse(), 400L, 1000L, 100L, "tier2"));
     servers.add(mockDataServer(peon1.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
     servers.add(mockDataServer(peon2.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
     servers.add(mockDataServer(broker1.getDruidNode().getHostAndPortToUse(), 0L, 1000L, "tier"));
@@ -888,6 +888,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -906,6 +907,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -921,9 +923,10 @@ public class SystemSchemaTest extends CalciteTestBase
             8083,
             -1,
             NodeRole.HISTORICAL,
-            "tier",
+            "tier2",
             400L,
             1000L,
+            100L,
             nonLeader,
             startTimeStr,
             version,
@@ -941,6 +944,7 @@ public class SystemSchemaTest extends CalciteTestBase
             NodeRole.INDEXER,
             "tier",
             0L,
+            1000L,
             1000L,
             nonLeader,
             startTimeStr,
@@ -960,6 +964,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -977,6 +982,7 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
+        1000L,
         nonLeader,
         startTimeStr,
         version,
@@ -992,6 +998,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.COORDINATOR,
             null,
+            0L,
             0L,
             0L,
             1L,
@@ -1012,6 +1019,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -1030,6 +1038,7 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             200L,
             1000L,
+            1000L,
             nonLeader,
             startTimeStr,
             version,
@@ -1046,6 +1055,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.OVERLORD,
             null,
+            0L,
             0L,
             0L,
             1L,
@@ -1067,6 +1077,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
+            0L,
             startTimeStr,
             version,
             null,
@@ -1082,6 +1093,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.OVERLORD,
             null,
+            0L,
             0L,
             0L,
             0L,
@@ -1102,6 +1114,7 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
+            0L,
             nonLeader,
             startTimeStr,
             version,
@@ -1118,6 +1131,7 @@ public class SystemSchemaTest extends CalciteTestBase
             -1,
             NodeRole.MIDDLE_MANAGER,
             null,
+            0L,
             0L,
             0L,
             nonLeader,
@@ -1137,6 +1151,7 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
+        1000L,
         nonLeader,
         startTimeStr,
         version,
@@ -1155,12 +1170,18 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private DruidServer mockDataServer(String name, long currentSize, long maxSize, String tier)
   {
+    return mockDataServer(name, currentSize, maxSize, maxSize, tier);
+  }
+
+  private DruidServer mockDataServer(String name, long currentSize, long maxSize, long storageSize, String tier)
+  {
     final DruidServer server = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(serverInventoryView.getInventoryValue(name))
             .andReturn(server)
             .once();
     EasyMock.expect(server.getCurrSize()).andReturn(currentSize).once();
     EasyMock.expect(server.getMaxSize()).andReturn(maxSize).once();
+    EasyMock.expect(server.getStorageSize()).andReturn(storageSize).once();
     EasyMock.expect(server.getTier()).andReturn(tier).once();
     return server;
   }
@@ -1174,6 +1195,7 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable String tier,
       @Nullable Long currSize,
       @Nullable Long maxSize,
+      @Nullable Long storageSize,
       @Nullable Long isLeader,
       String startTime,
       String version,
@@ -1191,6 +1213,7 @@ public class SystemSchemaTest extends CalciteTestBase
         tier,
         currSize,
         maxSize,
+        storageSize,
         isLeader,
         startTime,
         version,

@@ -27,6 +27,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.input.LoadableSegment;
@@ -305,6 +306,10 @@ public class ReadableInputQueue implements Closeable
               // Transfer segment from "loadingSegments" to "loadedSegments" and return a reference to it.
               if (loadingSegments.remove(acquireSegmentAction)) {
                 try {
+                  final ChannelCounters inputCounters = nextLoadableSegment.inputCounters();
+                  if (inputCounters != null) {
+                    inputCounters.addLoad(segment);
+                  }
                   final SegmentReferenceHolder referenceHolder = new SegmentReferenceHolder(
                       new SegmentReference(
                           nextLoadableSegment.descriptor(),

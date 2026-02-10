@@ -108,14 +108,8 @@
       <artifactId>error_prone_annotations</artifactId>
     </dependency>
     <dependency>
-      <groupId>jakarta.inject</groupId>
-      <artifactId>jakarta.inject-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>javax.inject</groupId>
       <artifactId>javax.inject</artifactId>
-      <version>1</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>jakarta.validation</groupId>
@@ -452,6 +446,11 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-migrationsupport</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

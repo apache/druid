@@ -77,13 +77,13 @@ public class CostBasedAutoScalerMockTest
   @Test
   public void testScaleUpWhenOptimalGreaterThanCurrent()
   {
-    // Use config with barrier=2 to test counter reset behavior
+    // Use config with a long barrier to test cooldown behavior
     CostBasedAutoScalerConfig barrierConfig = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(100)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(2)
-                                                                        .build();
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .minScaleDownDelay(Duration.standardHours(1))
+                                                                       .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
         mockSupervisor,
@@ -94,14 +94,7 @@ public class CostBasedAutoScalerMockTest
 
     int currentTaskCount = 10;
     int scaleUpOptimal = 17;
-    int scaleDownOptimal = 5;
-
-    // First, increment the scaleDownCounter by making a scale-down attempt
-    doReturn(scaleDownOptimal).when(autoScaler).computeOptimalTaskCount(any());
-    setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
-    Assert.assertEquals("Scale-down blocked (counter=1)", -1, autoScaler.computeTaskCountForScaleAction());
-
-    // Now trigger scale-up, which should reset the counter
+    // Trigger scale-up, which should set the cooldown timer
     doReturn(scaleUpOptimal).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(currentTaskCount, 5000.0, 0.1);
 
@@ -111,11 +104,11 @@ public class CostBasedAutoScalerMockTest
         autoScaler.computeTaskCountForScaleAction()
     );
 
-    // Verify counter was reset: scale-down should be blocked again (counter starts from 0)
-    doReturn(scaleDownOptimal).when(autoScaler).computeOptimalTaskCount(any());
+    // Verify cooldown blocks immediate subsequent scaling
+    doReturn(scaleUpOptimal).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
     Assert.assertEquals(
-        "Scale-down should be blocked after scale-up reset the counter",
+        "Scale action should be blocked during the cooldown window",
         -1,
         autoScaler.computeTaskCountForScaleAction()
     );
@@ -140,13 +133,13 @@ public class CostBasedAutoScalerMockTest
   @Test
   public void testScaleDownBlockedReturnsMinusOne()
   {
-    // Use config with barrier=2 to test counter behavior
+    // Use config with a long barrier to test cooldown behavior
     CostBasedAutoScalerConfig barrierConfig = CostBasedAutoScalerConfig.builder()
-                                                                        .taskCountMax(100)
-                                                                        .taskCountMin(1)
-                                                                        .enableTaskAutoScaler(true)
-                                                                        .scaleDownBarrier(2)
-                                                                        .build();
+                                                                       .taskCountMax(100)
+                                                                       .taskCountMin(1)
+                                                                       .enableTaskAutoScaler(true)
+                                                                       .minScaleDownDelay(Duration.standardHours(1))
+                                                                       .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
         mockSupervisor,
@@ -161,23 +154,16 @@ public class CostBasedAutoScalerMockTest
     doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
 
-    // First attempt: counter=1, blocked
+    // First attempt: allowed (no prior scale action)
     Assert.assertEquals(
-        "Should return -1 when optimal is less than current (scale-down blocked, counter=1)",
-        -1,
-        autoScaler.computeTaskCountForScaleAction()
-    );
-
-    // Second attempt: counter=2, succeeds (barrier reached)
-    Assert.assertEquals(
-        "Scale-down should succeed when barrier reached",
+        "Scale-down should succeed when no prior scale action exists",
         optimalCount,
         autoScaler.computeTaskCountForScaleAction()
     );
 
-    // Verify counter was reset: next scale-down should be blocked again
+    // Second attempt: blocked by cooldown
     Assert.assertEquals(
-        "Scale-down should be blocked after successful scale-down reset the counter",
+        "Scale-down should be blocked during the cooldown window",
         -1,
         autoScaler.computeTaskCountForScaleAction()
     );
@@ -300,8 +286,8 @@ public class CostBasedAutoScalerMockTest
     int result = autoScaler.computeTaskCountForScaleAction();
 
     Assert.assertEquals(
-        "Should block scale-down even by one task",
-        -1,
+        "Should allow scale-down by one task when cooldown has elapsed",
+        optimalCount,
         result
     );
   }
@@ -314,7 +300,7 @@ public class CostBasedAutoScalerMockTest
                                                                             .taskCountMin(1)
                                                                             .enableTaskAutoScaler(true)
                                                                             .scaleDownDuringTaskRolloverOnly(true)
-                                                                            .scaleDownBarrier(1) // Set the barrier to 1 so it would trigger immediately if not blocked
+                                                                            .minScaleDownDelay(Duration.ZERO)
                                                                             .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
@@ -345,6 +331,7 @@ public class CostBasedAutoScalerMockTest
                                                                             .taskCountMin(1)
                                                                             .enableTaskAutoScaler(true)
                                                                             .scaleDownDuringTaskRolloverOnly(true)
+                                                                            .minScaleDownDelay(Duration.ZERO)
                                                                             .build();
 
     CostBasedAutoScaler autoScaler = spy(new CostBasedAutoScaler(
@@ -357,11 +344,12 @@ public class CostBasedAutoScalerMockTest
     int currentTaskCount = 50;
     int optimalCount = 30;
 
-    // Set up lastKnownMetrics by calling computeTaskCountForScaleAction first
-    doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
+    // Set up lastKnownMetrics by calling computeTaskCountForScaleAction first without scaling
+    doReturn(currentTaskCount).when(autoScaler).computeOptimalTaskCount(any());
     setupMocksForMetricsCollection(currentTaskCount, 10.0, 0.9);
     autoScaler.computeTaskCountForScaleAction(); // This populates lastKnownMetrics
 
+    doReturn(optimalCount).when(autoScaler).computeOptimalTaskCount(any());
     Assert.assertEquals(
         "Should scale-down during rollover when scaleDownDuringTaskRolloverOnly is true",
         optimalCount,
