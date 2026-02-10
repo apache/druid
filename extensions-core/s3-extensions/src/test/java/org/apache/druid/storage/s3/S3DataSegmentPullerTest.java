@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -145,7 +146,7 @@ public class S3DataSegmentPullerTest
 
     S3Exception exception = (S3Exception) S3Exception.builder()
         .message("S3DataSegmentPullerTest")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("NoSuchKey")
             .errorMessage("S3DataSegmentPullerTest")
             .build())
@@ -194,7 +195,7 @@ public class S3DataSegmentPullerTest
 
     S3Exception exception = (S3Exception) S3Exception.builder()
         .message("S3DataSegmentPullerTest")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("Slow Down")
             .errorMessage("S3DataSegmentPullerTest")
             .build())

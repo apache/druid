@@ -46,6 +46,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
   private S3Utils.S3ObjectWithBucket currentObjectSummary;
+  private boolean initialized;
 
   ObjectSummaryWithBucketIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
@@ -58,21 +59,29 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     this.maxRetries = maxRetries;
-
-    prepareNextRequest();
-    fetchNextBatch();
-    advanceObjectSummary();
   }
 
   @Override
   public boolean hasNext()
   {
+    initialize();
     return currentObjectSummary != null;
+  }
+
+  private void initialize()
+  {
+    if (!initialized) {
+      initialized = true;
+      prepareNextRequest();
+      fetchNextBatch();
+      advanceObjectSummary();
+    }
   }
 
   @Override
   public S3Utils.S3ObjectWithBucket next()
   {
+    initialize();
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
@@ -148,6 +157,13 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
     currentObjectSummary = null;
   }
 
+  /**
+   * Checks if a given object is a directory placeholder and should be ignored.
+   *
+   * Adapted from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder(). Does not include the check for
+   * legacy JetS3t directory placeholder objects, since it is based on content-type, which isn't available in an
+   * S3Object.
+   */
   private static boolean isDirectoryPlaceholder(final S3Object objectSummary)
   {
     // Recognize "standard" directory place-holder indications used by Amazon's AWS Console and Panic's Transmit.
