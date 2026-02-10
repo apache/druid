@@ -103,13 +103,9 @@ public class S3DataSegmentKiller implements DataSegmentKiller
           k -> new ArrayList<>()
       );
       if (path.endsWith("/")) {
-        // segment is not compressed, list objects and add them all to delete list
-        final ListObjectsV2Result list = s3Client.listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(path)
-        );
-        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
-          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(objectSummary.getKey()));
-        }
+        // segment is not compressed, list all objects with pagination and add them to delete list
+        listAllKeysWithPrefix(s3Client, s3Bucket, path, inputDataConfig.getMaxListingLength())
+            .forEach(key -> keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key)));
       } else {
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
         keysToDelete.add(new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path)));
@@ -133,6 +129,40 @@ public class S3DataSegmentKiller implements DataSegmentKiller
           "Couldn't delete segments from S3. See the task logs for more details."
       );
     }
+  }
+
+  /**
+   * Lists all object keys under the given prefix using pagination. S3 returns at most 1000 keys per request,
+   * so segment directories with more than 1000 files would previously be only partially deleted. This method
+   * follows continuation tokens to ensure all objects are listed and can be removed from deep storage.
+   *
+   * @param s3Client        client used to communicate with s3
+   * @param s3Bucket        the bucket name
+   * @param prefix          the key prefix (e.g. segment path ending with /)
+   * @param maxListingLength maximum keys per list request (e.g. 1000)
+   * @return list of all object keys under the prefix
+   */
+  private List<String> listAllKeysWithPrefix(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String s3Bucket,
+      String prefix,
+      int maxListingLength
+  )
+  {
+    List<String> keys = new ArrayList<>();
+    ListObjectsV2Request request = new ListObjectsV2Request()
+        .withBucketName(s3Bucket)
+        .withPrefix(prefix)
+        .withMaxKeys(maxListingLength);
+    ListObjectsV2Result result;
+    do {
+      result = S3Utils.retryS3Operation(() -> s3Client.listObjectsV2(request), 3);
+      for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
+        keys.add(objectSummary.getKey());
+      }
+      request.setContinuationToken(result.getNextContinuationToken());
+    } while (result.isTruncated());
+    return keys;
   }
 
   /**
@@ -222,13 +252,13 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
 
       if (s3Path.endsWith("/")) {
-        // segment is not compressed, list objects and delete them all
-        final ListObjectsV2Result list = s3Client.listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(s3Path)
+        // segment is not compressed, list all objects with pagination and delete them all
+        final List<String> keysToDelete = listAllKeysWithPrefix(
+            s3Client, s3Bucket, s3Path, inputDataConfig.getMaxListingLength()
         );
-        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
-          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, objectSummary.getKey());
-          s3Client.deleteObject(s3Bucket, objectSummary.getKey());
+        for (String key : keysToDelete) {
+          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, key);
+          s3Client.deleteObject(s3Bucket, key);
         }
       } else {
         String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);

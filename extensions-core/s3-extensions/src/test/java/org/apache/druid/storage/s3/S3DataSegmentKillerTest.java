@@ -47,6 +47,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(EasyMockRunner.class)
@@ -608,5 +609,92 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
         objectSummary22,
         list2
     );
+  }
+
+  /**
+   * Verifies that when a segment directory has more than one page of objects (S3 returns truncated list),
+   * the killer paginates through all pages and deletes every object from deep storage.
+   */
+  @Test
+  public void test_kill_not_zipped_pagination_deletesAllObjectsFromDeepStorage() throws SegmentLoadingException
+  {
+    final int firstPageSize = 1000;
+    final int secondPageSize = 100;
+    final int totalKeys = firstPageSize + secondPageSize;
+    final String continuationToken = "next-page-token";
+
+    List<S3ObjectSummary> firstPage = new ArrayList<>(firstPageSize);
+    for (int i = 0; i < firstPageSize; i++) {
+      S3ObjectSummary summary = new S3ObjectSummary();
+      summary.setBucketName(TEST_BUCKET);
+      summary.setKey(KEY_1 + "/file_" + i);
+      firstPage.add(summary);
+    }
+    List<S3ObjectSummary> secondPage = new ArrayList<>(secondPageSize);
+    for (int i = firstPageSize; i < totalKeys; i++) {
+      S3ObjectSummary summary = new S3ObjectSummary();
+      summary.setBucketName(TEST_BUCKET);
+      summary.setKey(KEY_1 + "/file_" + i);
+      secondPage.add(summary);
+    }
+
+    ListObjectsV2Result firstResult = new ListObjectsV2Result();
+    firstResult.setObjectSummaries(firstPage);
+    firstResult.setTruncated(true);
+    firstResult.setNextContinuationToken(continuationToken);
+
+    ListObjectsV2Result secondResult = new ListObjectsV2Result();
+    secondResult.setObjectSummaries(secondPage);
+    secondResult.setTruncated(false);
+    secondResult.setNextContinuationToken(null);
+
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(S3InputDataConfig.MAX_LISTING_LENGTH_MAX);
+
+    s3Client.listObjectsV2(EasyMock.cmp(
+        new ListObjectsV2Request().withBucketName(TEST_BUCKET).withPrefix(KEY_1 + "/").withMaxKeys(1000),
+        (ListObjectsV2Request o1, ListObjectsV2Request o2) -> {
+          if (!o1.getBucketName().equals(o2.getBucketName())) {
+            return o1.getBucketName().compareTo(o2.getBucketName());
+          }
+          if (!o1.getPrefix().equals(o2.getPrefix())) {
+            return o1.getPrefix().compareTo(o2.getPrefix());
+          }
+          return 0;
+        },
+        LogicalOperator.EQUAL
+    ));
+    EasyMock.expectLastCall().andReturn(firstResult).once();
+
+    s3Client.listObjectsV2(EasyMock.cmp(
+        new ListObjectsV2Request().withBucketName(TEST_BUCKET).withPrefix(KEY_1 + "/").withMaxKeys(1000)
+            .withContinuationToken(continuationToken),
+        (ListObjectsV2Request o1, ListObjectsV2Request o2) -> {
+          if (!o1.getBucketName().equals(o2.getBucketName())) {
+            return o1.getBucketName().compareTo(o2.getBucketName());
+          }
+          if (!o1.getPrefix().equals(o2.getPrefix())) {
+            return o1.getPrefix().compareTo(o2.getPrefix());
+          }
+          String t1 = o1.getContinuationToken();
+          String t2 = o2.getContinuationToken();
+          if (t1 == null ? t2 != null : !t1.equals(t2)) {
+            return t1 == null ? -1 : (t2 == null ? 1 : t1.compareTo(t2));
+          }
+          return 0;
+        },
+        LogicalOperator.EQUAL
+    ));
+    EasyMock.expectLastCall().andReturn(secondResult).once();
+
+    EasyMock.expect(s3Client.deleteObject(EasyMock.eq(TEST_BUCKET), EasyMock.anyString()))
+            .andVoid()
+            .times(totalKeys);
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(DATA_SEGMENT_1_NO_ZIP);
+
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 }
