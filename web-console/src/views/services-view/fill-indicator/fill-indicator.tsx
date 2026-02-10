@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { clamp } from '../../../utils';
+
 import './fill-indicator.scss';
 
 export interface FillIndicatorProps {
@@ -27,7 +29,7 @@ export function FillIndicator({ value }: FillIndicatorProps) {
   if (formattedValue === '0.0' && value > 0) formattedValue = '~' + formattedValue;
   return (
     <div className="fill-indicator">
-      <div className="bar" style={{ width: `${value * 100}%` }} />
+      <div className="bar" style={{ width: `${clamp(value, 0, 1) * 100}%` }} />
       <div className="label">{formattedValue + '%'}</div>
     </div>
   );
