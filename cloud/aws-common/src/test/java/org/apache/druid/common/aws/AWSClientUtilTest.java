@@ -21,6 +21,7 @@ package org.apache.druid.common.aws;
 
 import org.junit.Assert;
 import org.junit.Test;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 
@@ -39,7 +40,7 @@ public class AWSClientUtilTest
   {
     AwsServiceException ex = AwsServiceException.builder()
         .message("RequestTimeout")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("RequestTimeout")
             .build())
         .build();
@@ -81,7 +82,7 @@ public class AWSClientUtilTest
   {
     AwsServiceException ex = AwsServiceException.builder()
         .message("ProvisionedThroughputExceededException")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("ProvisionedThroughputExceededException")
             .build())
         .build();
@@ -93,7 +94,7 @@ public class AWSClientUtilTest
   {
     AwsServiceException ex = AwsServiceException.builder()
         .message("RequestExpired")
-        .awsErrorDetails(software.amazon.awssdk.awscore.exception.AwsErrorDetails.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
             .errorCode("RequestExpired")
             .build())
         .build();

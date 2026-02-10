@@ -521,7 +521,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
    * Parse region from a Kinesis endpoint URL.
    * Expected format: https://kinesis.{region}.amazonaws.com
    */
-  private static Region parseRegionFromEndpoint(String endpoint)
+  @VisibleForTesting
+  static Region parseRegionFromEndpoint(String endpoint)
   {
     if (endpoint == null) {
       return null;
