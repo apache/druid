@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.grpc.server.GrpcEndpointInitializer;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -61,7 +62,7 @@ public class TestServer extends BaseCalciteQueryTest
         null,
         DefaultQueryConfig.NIL,
         authMapper,
-        null
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
     serverInit.start();
     Runtime.getRuntime().addShutdownHook(new Thread()

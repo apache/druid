@@ -119,23 +119,10 @@ public class QueryDriver
   }
 
   /**
-   * Backward-compatible constructor for existing tests.
-   */
-  public QueryDriver(
-      final ObjectMapper jsonMapper,
-      final SqlStatementFactory sqlStatementFactory,
-      final Map<String, Object> defaultContext,
-      final QueryLifecycleFactory queryLifecycleFactory
-  )
-  {
-    this(jsonMapper, sqlStatementFactory, defaultContext, queryLifecycleFactory, null);
-  }
-
-  /**
    * Submit a query with cancellation support.
    *
    * @param cancelCallback will be populated with a Runnable that cancels the query.
-   *                       The caller should invoke this if the client cancels.
+   *                       The caller should invoke this if the query should be cancelled.
    */
   public QueryResponse submitQuery(
       QueryRequest request,
@@ -203,6 +190,7 @@ public class QueryDriver
 
       Thread.currentThread().setName(StringUtils.format("grpc-native[%s]", query.getId()));
       final ByteString results = encodeNativeResults(request, sequence, rowSignature);
+      // TODO: should we call queryLifecycle.emitLogsAndMetrics() here?
       return QueryResponse.newBuilder()
                           .setQueryId(query.getId())
                           .setStatus(QueryStatus.OK)
