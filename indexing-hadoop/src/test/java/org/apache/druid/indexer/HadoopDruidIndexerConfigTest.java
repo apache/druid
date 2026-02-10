@@ -38,6 +38,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.IndexMerger;
+import org.apache.druid.segment.IndexMergerV10;
+import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
@@ -46,11 +49,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 public class HadoopDruidIndexerConfigTest
@@ -212,6 +217,79 @@ public class HadoopDruidIndexerConfigTest
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
     int targetPartitionSize = config.getTargetPartitionSize();
     Assert.assertEquals(maxRowsPerSegment, targetPartitionSize);
+  }
+
+  /**
+   * Tests that INDEX_MERGER is configured correctly based on the properties.
+   * Verifies the merger type (V9 or V10) and storeEmptyColumns flag match what properties dictate.
+   */
+  @Test
+  public void testIndexMergerMatchesProperties() throws Exception
+  {
+    IndexMerger indexMerger = HadoopDruidIndexerConfig.INDEX_MERGER;
+    Properties properties = HadoopDruidIndexerConfig.PROPERTIES;
+
+    boolean buildV10 = Boolean.parseBoolean(properties.getProperty("druid.indexer.task.buildV10", "false"));
+    boolean expectedStoreEmptyColumns = buildV10 ||
+        Boolean.parseBoolean(properties.getProperty("druid.indexer.task.storeEmptyColumns", "true"));
+
+    if (buildV10) {
+      Assert.assertTrue(
+          "When buildV10=true, INDEX_MERGER should be IndexMergerV10",
+          indexMerger instanceof IndexMergerV10
+      );
+    } else {
+      Assert.assertTrue(
+          "When buildV10=false, INDEX_MERGER should be IndexMergerV9",
+          indexMerger instanceof IndexMergerV9
+      );
+      // Use reflection to verify storeEmptyColumns on IndexMergerV9
+      Field storeEmptyColumnsField = IndexMergerV9.class.getDeclaredField("storeEmptyColumns");
+      storeEmptyColumnsField.setAccessible(true);
+      boolean actualStoreEmptyColumns = (boolean) storeEmptyColumnsField.get(indexMerger);
+      Assert.assertEquals(
+          "storeEmptyColumns flag should match property value",
+          expectedStoreEmptyColumns,
+          actualStoreEmptyColumns
+      );
+    }
+  }
+
+  /**
+   * Tests that druid.indexer.task properties are passed to Hadoop jobs via getAllowedProperties().
+   */
+  @Test
+  public void testIndexerPropertiesArePassedToHadoopJobs()
+  {
+    HadoopIngestionSpec spec = new HadoopIngestionSpecBuilder().build();
+    HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(spec);
+
+    String storeEmptyColumnsKey = "druid.indexer.task.storeEmptyColumns";
+    String buildV10Key = "druid.indexer.task.buildV10";
+    String originalStoreEmpty = HadoopDruidIndexerConfig.PROPERTIES.getProperty(storeEmptyColumnsKey);
+    String originalBuildV10 = HadoopDruidIndexerConfig.PROPERTIES.getProperty(buildV10Key);
+
+    try {
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(storeEmptyColumnsKey, "true");
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(buildV10Key, "true");
+
+      Map<String, String> allowedProperties = config.getAllowedProperties();
+      Assert.assertEquals("true", allowedProperties.get(storeEmptyColumnsKey));
+      Assert.assertEquals("true", allowedProperties.get(buildV10Key));
+    }
+    finally {
+      restoreProperty(storeEmptyColumnsKey, originalStoreEmpty);
+      restoreProperty(buildV10Key, originalBuildV10);
+    }
+  }
+
+  private void restoreProperty(String key, String originalValue)
+  {
+    if (originalValue != null) {
+      HadoopDruidIndexerConfig.PROPERTIES.setProperty(key, originalValue);
+    } else {
+      HadoopDruidIndexerConfig.PROPERTIES.remove(key);
+    }
   }
 
   private static class HadoopIngestionSpecBuilder

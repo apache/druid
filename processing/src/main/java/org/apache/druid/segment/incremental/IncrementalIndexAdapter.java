@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
@@ -227,7 +228,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     if (index instanceof IncrementalIndex) {
-      return ((IncrementalIndex) index).getMetadata();
+      IncrementalIndex incrementalIndex = (IncrementalIndex) index;
+      return incrementalIndex.getMetadata()
+                             .withDimensionOrder(
+                                 incrementalIndex.getDimensionOrder()
+                                                 .stream()
+                                                 .map(OrderBy::ascending)
+                                                 .collect(Collectors.toList())
+                             );
     }
     throw DruidException.defensive("cannot get metadata of projection");
   }

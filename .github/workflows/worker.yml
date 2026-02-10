@@ -21,7 +21,7 @@ on:
       jdk:
         required: false
         type: string
-        default: '17'
+        default: '21'
       script:
         required: true
         type: string
@@ -38,6 +38,11 @@ on:
         required: false
         type: string
         description: "Artifacts to download. For example: 'unit-test-reports-*'"
+      execute:
+        required: false
+        type: boolean
+        default: true
+        description: 'Controls execution of the invocation - this is a workaround for github actions matrix element skip limitation'
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
@@ -54,6 +59,7 @@ jobs:
   execute:
     name: "${{ inputs.key }}"
     runs-on: ubuntu-latest
+    if: ${{ inputs.execute }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -83,6 +89,22 @@ jobs:
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60
+
+      - name: Publish Test Report
+        if: ${{ hashFiles('**/TEST-*.xml') != '' }}
+        uses: mikepenz/action-junit-report@v5
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
+        with:
+          check_name: "Test Report - ${{ inputs.key }}"
+          report_paths: '**/TEST-*.xml'
+          detailed_summary: true
+          flaky_summary: true
+          annotate_only: true
+          fail_on_failure: true
+          check_retries: true
+          truncate_stack_traces: false
+          job_summary: false
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

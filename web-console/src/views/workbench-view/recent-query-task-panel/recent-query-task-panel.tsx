@@ -104,6 +104,7 @@ FROM sys.tasks
 WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
+          context: { engine: 'native' },
         },
         signal,
       );

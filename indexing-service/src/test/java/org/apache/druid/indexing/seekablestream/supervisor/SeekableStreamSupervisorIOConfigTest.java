@@ -80,7 +80,7 @@ public class SeekableStreamSupervisorIOConfigTest
   }
 
   @Test
-  public void testAutoScalerEnabledTrueAndFalse()
+  public void testAutoScalerEnabledPreservesTaskCountWhenNonNull()
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 

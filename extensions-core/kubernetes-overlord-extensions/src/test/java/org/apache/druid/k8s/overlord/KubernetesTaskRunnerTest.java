@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -27,6 +28,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -39,6 +41,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -53,6 +57,8 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,6 +66,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -78,19 +85,28 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
   @Mock private ListenableFuture<TaskStatus> statusFuture;
+  @Mock private ConfigManager configManager;
 
-  private KubernetesTaskRunnerConfig config;
+  private KubernetesTaskRunnerStaticConfig staticConfig;
+  private KubernetesTaskRunnerEffectiveConfig config;
   private KubernetesTaskRunner runner;
   private Task task;
 
   @Before
   public void setup()
   {
-    config = KubernetesTaskRunnerConfig.builder()
+    staticConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();
 
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(null, 1);
+
+    config = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
+
     task = K8sTestUtils.createTask(ID, 0);
+
+    configManager = EasyMock.createNiceMock(ConfigManager.class);
+    EasyMock.replay(configManager);
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -98,7 +114,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     );
   }
 
@@ -113,7 +130,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -163,7 +181,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -219,7 +238,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -771,9 +791,75 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     );
     kubernetesTaskRunner.stop();
     Assert.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_increase_updatesExecutorAndCapacity() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // increase from 1 -> 3
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 3));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(3, executor.getCorePoolSize());
+    Assert.assertEquals(3, executor.getMaximumPoolSize());
+    Assert.assertEquals(3, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_decrease_updatesExecutorAndCapacity() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // first increase to 4 to ensure we can decrease after
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 4));
+    // then decrease 4 -> 2
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 2));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(2, executor.getCorePoolSize());
+    Assert.assertEquals(2, executor.getMaximumPoolSize());
+    Assert.assertEquals(2, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_sameCapacity_noChangeAndNoError() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // initial capacity is 1 in setup; calling with 1 should be a no-op
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 1));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(1, executor.getCorePoolSize());
+    Assert.assertEquals(1, executor.getMaximumPoolSize());
+    Assert.assertEquals(1, runner.getTotalCapacity());
   }
 }

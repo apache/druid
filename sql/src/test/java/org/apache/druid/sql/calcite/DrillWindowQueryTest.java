@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
@@ -223,9 +224,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      super.addSegmentsToWalker(walker);
+      super.addSegmentsToWalker(walker, jsonMapper);
       final File tmpFolder = tempDirProducer.newTempFolder();
       TestDataBuilder.attachIndexesForDrillTestDatasources(walker, tmpFolder);
       return walker;

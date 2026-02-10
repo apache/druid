@@ -122,6 +122,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         "localhost:1234",
         null,
         10000000L,
+        null,
         ServerType.HISTORICAL,
         "default_tier",
         0
@@ -207,6 +208,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                 input,
                 null,
                 10000000L,
+                null,
                 ServerType.HISTORICAL,
                 "default_tier",
                 0

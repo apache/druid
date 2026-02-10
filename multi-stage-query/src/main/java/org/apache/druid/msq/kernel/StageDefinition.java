@@ -48,6 +48,8 @@ import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -85,8 +87,6 @@ import java.util.function.Supplier;
  */
 public class StageDefinition
 {
-  private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
-
   // If adding any fields here, add them to builder(StageDefinition) below too.
   private final StageId id;
   private final List<InputSpec> inputSpecs;
@@ -292,12 +292,6 @@ public class StageDefinition
     return shuffleCheckHasMultipleValues;
   }
 
-  public int getMaxPartitionCount()
-  {
-    // Pretends to be an instance method, but really returns a constant. Maybe one day this will be defined per stage.
-    return MAX_PARTITIONS;
-  }
-
   public int getStageNumber()
   {
     return id.getStageNumber();
@@ -334,8 +328,19 @@ public class StageDefinition
     return mustGatherResultKeyStatistics(shuffleSpec);
   }
 
+  /**
+   * Generate partition boundaries for {@link ShuffleKind#GLOBAL_SORT} shuffles.
+   *
+   * @param collector     statistics collector, to be provided if {@link #mustGatherResultKeyStatistics()}
+   * @param maxPartitions maximum number of partitions to generate. On the controller, this is the value of
+   *                      {@link MultiStageQueryContext#getMaxPartitions(QueryContext)}. On workers, this method
+   *                      is only used when the number of partitions is determined ahead of time by the
+   *                      {@link ShuffleSpec}, so {@link Integer#MAX_VALUE} is typically provided for this parameter
+   *                      out of convenience.
+   */
   public Either<Long, ClusterByPartitions> generatePartitionBoundariesForShuffle(
-      @Nullable ClusterByStatisticsCollector collector
+      @Nullable ClusterByStatisticsCollector collector,
+      int maxPartitions
   )
   {
     if (shuffleSpec == null) {
@@ -351,7 +356,7 @@ public class StageDefinition
     } else if (!mustGatherResultKeyStatistics() && collector != null) {
       throw new ISE("Statistics gathered, but not required for stage[%d]", getStageNumber());
     } else {
-      return ((GlobalSortShuffleSpec) shuffleSpec).generatePartitionsForGlobalSort(collector, MAX_PARTITIONS);
+      return ((GlobalSortShuffleSpec) shuffleSpec).generatePartitionsForGlobalSort(collector, maxPartitions);
     }
   }
 

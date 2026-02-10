@@ -36,8 +36,10 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
 
   druid-coordinator:
     extends:
@@ -46,9 +48,12 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
-      - druid-overlord
-      - druid-metadata-storage
-      - druid-zookeeper-kafka
+      druid-overlord:
+        condition: service_started
+      druid-metadata-storage:
+        condition: service_healthy
+      druid-zookeeper-kafka:
+        condition: service_started
 
   druid-historical:
     extends:

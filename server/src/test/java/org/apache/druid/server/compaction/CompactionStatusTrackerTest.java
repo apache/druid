@@ -120,7 +120,7 @@ public class CompactionStatusTrackerTest
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     status = statusTracker.computeCompactionStatus(candidateSegments, policy);
-    Assert.assertEquals(CompactionStatus.State.COMPLETE, status.getState());
+    Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
     Assert.assertEquals(
         "Segment timeline not updated since last compaction task succeeded",
         status.getReason()

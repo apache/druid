@@ -142,7 +142,7 @@ public class ByteBufferHashTable
 
     // Clear used bits of new table
     for (int i = 0; i < maxBuckets; i++) {
-      tableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      tableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
   }
 
@@ -181,7 +181,7 @@ public class ByteBufferHashTable
 
     // Clear used bits of new table
     for (int i = 0; i < newBuckets; i++) {
-      newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      newTableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
 
     // Loop over old buckets and copy to new table
@@ -202,7 +202,7 @@ public class ByteBufferHashTable
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
-        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
+        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & Groupers.USED_FLAG_MASK;
         final int newBucket = findBucket(true, newBuckets, newTableBuffer, keyBuffer, keyHash);
 
         if (newBucket < 0) {
@@ -300,35 +300,81 @@ public class ByteBufferHashTable
     final int startBucket = keyHash % buckets;
     int bucket = startBucket;
 
-    outer:
+    // Pre-compute hash with used flag for comparison.
+    final int keyHashWithUsedFlag = Groupers.getUsedFlag(keyHash);
+    final int keyBufferPosition = keyBuffer.position();
+
     while (true) {
       final int bucketOffset = bucket * bucketSizeWithHash;
+      final int storedHashWithUsedFlag = targetTableBuffer.getInt(bucketOffset);
 
-      if ((targetTableBuffer.get(bucketOffset) & 0x80) == 0) {
+      if ((storedHashWithUsedFlag & Groupers.USED_FLAG_BIT) == 0) {
         // Found unused bucket before finding our key
         return allowNewBucket ? bucket : -1;
       }
 
-      for (int i = bucketOffset + HASH_SIZE, j = keyBuffer.position(); j < keyBuffer.position() + keySize; i++, j++) {
-        if (targetTableBuffer.get(i) != keyBuffer.get(j)) {
-          bucket += 1;
-          if (bucket == buckets) {
-            bucket = 0;
-          }
-
-          if (bucket == startBucket) {
-            // Came back around to the start without finding a free slot, that was a long trip!
-            // Should never happen unless buckets == regrowthThreshold.
-            return -1;
-          }
-
-          continue outer;
-        }
+      if (storedHashWithUsedFlag == keyHashWithUsedFlag &&
+          keysEqual(targetTableBuffer, bucketOffset + HASH_SIZE, keyBuffer, keyBufferPosition, keySize)) {
+        // Found our key in a used bucket
+        return bucket;
       }
 
-      // Found our key in a used bucket
-      return bucket;
+      // Move to next bucket (linear probing)
+      bucket += 1;
+      if (bucket == buckets) {
+        bucket = 0;
+      }
+
+      if (bucket == startBucket) {
+        // Came back around to the start without finding a free slot, that was a long trip!
+        // Should never happen unless buckets == regrowthThreshold.
+        return -1;
+      }
     }
+  }
+
+  /**
+   * Compare keys using long/int comparisons for better performance than byte-by-byte.
+   */
+  private static boolean keysEqual(
+      final ByteBuffer tableBuffer,
+      int tableOffset,
+      final ByteBuffer keyBuffer,
+      int keyOffset,
+      int length
+  )
+  {
+    // Compare 8 bytes at a time
+    while (length >= Long.BYTES) {
+      if (tableBuffer.getLong(tableOffset) != keyBuffer.getLong(keyOffset)) {
+        return false;
+      }
+      tableOffset += Long.BYTES;
+      keyOffset += Long.BYTES;
+      length -= Long.BYTES;
+    }
+
+    // Compare 4 bytes if remaining
+    if (length >= Integer.BYTES) {
+      if (tableBuffer.getInt(tableOffset) != keyBuffer.getInt(keyOffset)) {
+        return false;
+      }
+      tableOffset += Integer.BYTES;
+      keyOffset += Integer.BYTES;
+      length -= Integer.BYTES;
+    }
+
+    // Compare remaining 1-3 bytes
+    while (length > 0) {
+      if (tableBuffer.get(tableOffset) != keyBuffer.get(keyOffset)) {
+        return false;
+      }
+      tableOffset++;
+      keyOffset++;
+      length--;
+    }
+
+    return true;
   }
 
   protected boolean canAllowNewBucket()

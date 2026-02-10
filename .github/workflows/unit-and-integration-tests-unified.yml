@@ -51,70 +51,20 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  build:
-    name: "build (jdk${{ matrix.jdk }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        jdk: [ '17', '21' ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v4
-
-      # skip the "cache: maven" step from setup-java. We explicitly use a
-      # different cache key since we cannot reuse it across commits.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.jdk }}
-
-      # the build step produces SNAPSHOT artifacts into the local maven repository,
-      # we include github.sha in the cache key to make it specific to that build/jdk
-      - name: Cache Maven m2 repository
-        id: maven
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
-          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
-
-      - name: Cache targets
-        id: target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ./**/target
-          key: maven-${{ runner.os }}-${{ matrix.jdk }}-targets-${{ github.sha }}
-
-      - name: Cache image
-        id: docker_container
-        uses: actions/cache@v4
-        with:
-          key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
-          path: |
-            ./druid-container-jdk${{ matrix.jdk }}.tar.gz
-            ./integration-tests-ex/image/target/env.sh
-
-      - name: Maven build
-        id: maven_build
-        run: |
-          ./it.sh ci
-
   unit-tests:
     name: "unit tests"
     uses: ./.github/workflows/ci.yml
 
   standard-its:
-    needs: [build, unit-tests]
+    needs: [unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
   docker-tests:
-    needs: [build, unit-tests]
+    needs: [unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [build, unit-tests, standard-its, docker-tests]
+    needs: [unit-tests, standard-its, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:

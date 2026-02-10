@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -41,14 +42,17 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
-import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.rules.ExternalResource;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TaskActionTestKit extends ExternalResource
 {
@@ -64,7 +68,46 @@ public class TaskActionTestKit extends ExternalResource
   private BlockingExecutorService metadataCachePollExec;
 
   private boolean useSegmentMetadataCache = false;
+  private boolean useCentralizedDatasourceSchema = false;
+  private boolean batchSegmentAllocation = true;
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
+  private AtomicBoolean configFinalized = new AtomicBoolean();
+
+  public TaskActionTestKit setUseSegmentMetadataCache(boolean useSegmentMetadataCache)
+  {
+    if (configFinalized.get()) {
+      throw new IllegalStateException("Test config already finalized");
+    }
+    this.useSegmentMetadataCache = useSegmentMetadataCache;
+    return this;
+  }
+
+  public TaskActionTestKit setUseCentralizedDatasourceSchema(boolean useCentralizedDatasourceSchema)
+  {
+    if (configFinalized.get()) {
+      throw new IllegalStateException("Test config already finalized");
+    }
+    this.useCentralizedDatasourceSchema = useCentralizedDatasourceSchema;
+    return this;
+  }
+
+  public TaskActionTestKit setBatchSegmentAllocation(boolean batchSegmentAllocation)
+  {
+    if (configFinalized.get()) {
+      throw new IllegalStateException("Test config already finalized");
+    }
+    this.batchSegmentAllocation = batchSegmentAllocation;
+    return this;
+  }
+
+  public TaskActionTestKit setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
+  {
+    if (configFinalized.get()) {
+      throw new IllegalStateException("Test config already finalized");
+    }
+    this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
+    return this;
+  }
 
   public StubServiceEmitter getServiceEmitter()
   {
@@ -86,6 +129,11 @@ public class TaskActionTestKit extends ExternalResource
     return taskLockbox;
   }
 
+  public TaskStorage getTaskStorage()
+  {
+    return taskStorage;
+  }
+
   public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()
   {
     return metadataStorageCoordinator;
@@ -96,16 +144,6 @@ public class TaskActionTestKit extends ExternalResource
     return taskActionToolbox;
   }
 
-  public void setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
-  {
-    this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
-  }
-
-  public void setUseSegmentMetadataCache(boolean useSegmentMetadataCache)
-  {
-    this.useSegmentMetadataCache = useSegmentMetadataCache;
-  }
-
   public void syncSegmentMetadataCache()
   {
     metadataCachePollExec.finishNextPendingTasks(4);
@@ -114,11 +152,13 @@ public class TaskActionTestKit extends ExternalResource
   @Override
   public void before()
   {
+    Preconditions.checkState(configFinalized.compareAndSet(false, true));
     emitter = new StubServiceEmitter();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(new Period("PT24H")));
     testDerbyConnector = new TestDerbyConnector(
         new MetadataStorageConnectorConfig(),
-        metadataStorageTablesConfig
+        metadataStorageTablesConfig,
+        CentralizedDatasourceSchemaConfig.enabled(useCentralizedDatasourceSchema)
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
     final SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
@@ -134,12 +174,19 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector,
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.enabled(useCentralizedDatasourceSchema),
+        new HeapMemoryIndexingStateStorage()
     );
     taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     taskLockbox.syncFromStorage();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
+      @Override
+      public boolean isBatchSegmentAllocation()
+      {
+        return batchSegmentAllocation;
+      }
+
       @Override
       public long getBatchAllocationWaitTime()
       {
@@ -153,22 +200,28 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
 
+    SupervisorManager supervisorManager = new SupervisorManager(objectMapper, null);
+    SegmentAllocationQueue segmentAllocationQueue = new SegmentAllocationQueue(
+        taskLockbox,
+        taskLockConfig,
+        metadataStorageCoordinator,
+        emitter,
+        ScheduledExecutors::fixed
+    );
+    if (segmentAllocationQueue.isEnabled()) {
+      segmentAllocationQueue.becomeLeader();
+    }
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,
         metadataStorageCoordinator,
-        new SegmentAllocationQueue(
-            taskLockbox,
-            taskLockConfig,
-            metadataStorageCoordinator,
-            emitter,
-            ScheduledExecutors::fixed
-        ),
+        segmentAllocationQueue,
         emitter,
-        EasyMock.createMock(SupervisorManager.class),
+        supervisorManager,
         objectMapper
     );
     testDerbyConnector.createDataSourceTable();
+    testDerbyConnector.createUpgradeSegmentsTable();
     testDerbyConnector.createPendingSegmentsTable();
     testDerbyConnector.createSegmentSchemasTable();
     testDerbyConnector.createSegmentTable();
@@ -176,6 +229,7 @@ public class TaskActionTestKit extends ExternalResource
     testDerbyConnector.createConfigTable();
     testDerbyConnector.createTaskTables();
     testDerbyConnector.createAuditTable();
+    testDerbyConnector.createIndexingStatesTable();
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
@@ -198,6 +252,7 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null)),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         new NoopSegmentSchemaCache(),
+        new IndexingStateCache(),
         testDerbyConnector,
         (poolSize, name) -> new WrappingScheduledExecutorService(name, metadataCachePollExec, false),
         emitter

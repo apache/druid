@@ -57,6 +57,7 @@ import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
 import {
+  assemble,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -149,7 +150,12 @@ export interface WorkbenchViewState {
 
   columnMetadataState: QueryState<readonly ColumnMetadata[]>;
 
-  details?: { id: string; initTab?: ExecutionDetailsTab; initExecution?: Execution };
+  details?: {
+    type: 'task' | 'dart';
+    id: string;
+    initTab?: ExecutionDetailsTab;
+    initExecution?: Execution;
+  };
 
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
@@ -226,6 +232,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         return await queryDruidSql<ColumnMetadata>(
           {
             query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+            context: { engine: 'native' },
           },
           signal,
         );
@@ -291,9 +298,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, false);
   };
 
-  private readonly handleDetailsWithId = (id: string, initTab?: ExecutionDetailsTab) => {
+  private readonly handleDetailsWithTaskId = (id: string, initTab?: ExecutionDetailsTab) => {
     this.setState({
-      details: { id, initTab },
+      details: { type: 'task', id, initTab },
+    });
+  };
+
+  private readonly handleDetailsWithSqlId = (id: string, initTab?: ExecutionDetailsTab) => {
+    this.setState({
+      details: { type: 'dart', id, initTab },
     });
   };
 
@@ -306,7 +319,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     initTab?: ExecutionDetailsTab,
   ) => {
     this.setState({
-      details: { id: execution.id, initExecution: execution, initTab },
+      details: {
+        type: execution.engine === 'sql-msq-dart' ? 'dart' : 'task',
+        id: execution.id,
+        initExecution: execution,
+        initTab,
+      },
     });
   };
 
@@ -342,6 +360,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     return (
       <ExecutionDetailsDialog
+        type={details.type}
         id={details.id}
         initTab={details.initTab}
         initExecution={details.initExecution}
@@ -486,6 +505,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         onSubmit={execution => {
           this.setState({
             details: {
+              type: 'task',
               id: execution.id,
               initExecution: execution,
             },
@@ -552,7 +572,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             <div
               key={i}
               className={classNames('tab-button', { active })}
-              data-tooltip={tabEntry.tabName}
+              data-tooltip={assemble(tabEntry.tabName, tabEntry.query.formatLastExecution()).join(
+                '\n',
+              )}
             >
               {active ? (
                 <Popover
@@ -964,13 +986,16 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               {showRecentQueryTaskPanel && (
                 <RecentQueryTaskPanel
                   onClose={this.handleRecentQueryTaskPanelClose}
-                  onExecutionDetails={this.handleDetailsWithId}
+                  onExecutionDetails={this.handleDetailsWithTaskId}
                   onChangeQuery={this.handleQueryStringChange}
                   onNewTab={this.handleNewTab}
                 />
               )}
               {showCurrentDartPanel && (
-                <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
+                <CurrentDartPanel
+                  onClose={this.handleCurrentDartPanelClose}
+                  onExecutionDetails={this.handleDetailsWithSqlId}
+                />
               )}
             </div>
           )}

@@ -241,12 +241,18 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 * Can use either the native compaction engine or the [MSQ task engine](#use-msq-for-auto-compaction)
 * More reactive and submits tasks as soon as a compaction slot is available
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
+* Uses new Indexing State Fingerprinting mechanisms to store less data per segment in metadata storage
 
 
-To use compaction supervisors, update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
+To use compaction supervisors, the following configuration requirements must be met:
 
-*  `useSupervisors` to `true` so that compaction tasks can be run as supervisor tasks
-*  `engine` to `msq` to use the MSQ task engine as the compaction engine or to `native` (default value) to use the native engine.
+* You must be using incremental segment metadata caching:
+  * `druid.manager.segments.useIncrementalCache` set to `always` or `ifSynced` in your Overlord and Coordinator runtime properties.
+    * See [Segment metadata caching](../configuration/index.md#metadata-retrieval) for full configuration documentation.
+
+* update the [compaction dynamic config](../api-reference/automatic-compaction-api.md#update-cluster-level-compaction-config) and set:
+  *  `useSupervisors` to `true` so that compaction tasks can be run as supervisor tasks
+  *  `engine` to `msq` to use the MSQ task engine as the compaction engine or to `native` (default value) to use the native engine.
 
 Compaction supervisors use the same syntax as auto-compaction using Coordinator duties with one key difference: you submit the auto-compaction as a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec`.
 

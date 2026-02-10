@@ -514,28 +514,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "incrementalAutoTypes",
                         input -> {
-                          input.mapSchema(
-                              schema ->
-                                  new IncrementalIndexSchema(
-                                      schema.getMinTimestamp(),
-                                      schema.getTimestampSpec(),
-                                      schema.getQueryGranularity(),
-                                      schema.getVirtualColumns(),
-                                      schema.getDimensionsSpec().withDimensions(
-                                          schema.getDimensionsSpec()
-                                                .getDimensions()
-                                                .stream()
-                                                .map(
-                                                    dimensionSchema ->
-                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
-                                                )
-                                                .collect(Collectors.toList())
-                                      ),
-                                      schema.getMetrics(),
-                                      schema.isRollup(),
-                                      schema.getProjections()
-                                  )
-                          );
+                          input.mapSchema(BaseFilterTest::mapToAutoSchema);
                           final IncrementalIndex index = input.buildIncrementalIndex();
                           return Pair.of(new IncrementalIndexCursorFactory(index), index);
                         }
@@ -543,29 +522,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "mmappedAutoTypes",
                         input -> {
-                          input.mapSchema(
-                              schema ->
-                                  new IncrementalIndexSchema(
-                                      schema.getMinTimestamp(),
-                                      schema.getTimestampSpec(),
-                                      schema.getQueryGranularity(),
-                                      schema.getVirtualColumns(),
-                                      schema.getDimensionsSpec().withDimensions(
-                                          schema.getDimensionsSpec()
-                                                .getDimensions()
-                                                .stream()
-                                                .map(
-                                                    dimensionSchema ->
-                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
-                                                )
-                                                .collect(Collectors.toList())
-                                      ),
-                                      schema.getMetrics(),
-                                      schema.isRollup(),
-                                      schema.getProjections()
-                                  )
-                          );
-                          final QueryableIndex index = input.buildMMappedIndex();
+                          final QueryableIndex index = input.mapSchema(BaseFilterTest::mapToAutoSchema)
+                                                            .buildMMappedIndex();
                           return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
@@ -573,34 +531,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         "mmappedAutoTypesMerged",
                         input -> {
                           final QueryableIndex index =
-                              input
-                                  .mapSchema(
-                                      schema ->
-                                          new IncrementalIndexSchema(
-                                              schema.getMinTimestamp(),
-                                              schema.getTimestampSpec(),
-                                              schema.getQueryGranularity(),
-                                              schema.getVirtualColumns(),
-                                              schema.getDimensionsSpec().withDimensions(
-                                                  schema.getDimensionsSpec()
-                                                        .getDimensions()
-                                                        .stream()
-                                                        .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
-                                                        )
-                                                        .collect(Collectors.toList())
-                                              ),
-                                              schema.getMetrics(),
-                                              schema.isRollup(),
-                                              schema.getProjections()
-                                          )
-                                  )
-                                  // if 1 row per segment some of the columns have null values for the row which causes 'auto'
-                                  // typing default value coercion to be lost in default value mode, so make sure there is at
-                                  // least one number in each segment for these tests to pass correctly because the column
-                                  // is typeless and so doesn't write out zeros like regular numbers do
-                                  .intermediaryPersistSize(3)
-                                  .buildMMappedIndex();
+                              input.mapSchema(BaseFilterTest::mapToAutoSchema)
+                                   // if 1 row per segment some of the columns have null values for the row which causes 'auto'
+                                   // typing default value coercion to be lost in default value mode, so make sure there is at
+                                   // least one number in each segment for these tests to pass correctly because the column
+                                   // is typeless and so doesn't write out zeros like regular numbers do
+                                   .intermediaryPersistSize(3)
+                                   .buildMMappedIndex();
 
                           return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
@@ -682,37 +619,46 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V0),
         new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
     };
+    final List<Boolean> falseAndTrue = List.of(false, true);
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
         for (Map.Entry<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finisherEntry :
             finishers.entrySet()) {
-          for (boolean cnf : ImmutableList.of(false, true)) {
-            for (boolean optimize : ImmutableList.of(false, true)) {
-              for (boolean storeNullColumns : ImmutableList.of(false, true)) {
-                for (StringEncodingStrategy encodingStrategy : stringEncoding) {
-                  final String testName = StringUtils.format(
-                      "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s], storeNullColumns[%s]",
-                      bitmapSerdeFactoryEntry.getKey(),
-                      segmentWriteOutMediumFactoryEntry.getKey(),
-                      finisherEntry.getKey(),
-                      cnf,
-                      optimize,
-                      encodingStrategy.getType(),
-                      storeNullColumns
-                  );
-                  final IndexBuilder indexBuilder = IndexBuilder
-                      .create()
-                      .schema(DEFAULT_INDEX_SCHEMA)
-                      .writeNullColumns(storeNullColumns)
-                      .indexSpec(
-                          IndexSpec.builder()
-                                   .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
-                                   .withStringDictionaryEncoding(encodingStrategy)
-                                   .build()
-                      )
-                      .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-                  constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+          for (boolean cnf : falseAndTrue) {
+            for (boolean optimize : falseAndTrue) {
+              for (boolean storeNullColumns : falseAndTrue) {
+                for (boolean useV10 : falseAndTrue) {
+                  for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                    if (shouldSkipOptions(finisherEntry, storeNullColumns, useV10, encodingStrategy)) {
+                      continue;
+                    }
+                    final String testName = StringUtils.format(
+                        "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s], storeNullColumns[%s]",
+                        bitmapSerdeFactoryEntry.getKey(),
+                        segmentWriteOutMediumFactoryEntry.getKey(),
+                        finisherEntry.getKey(),
+                        cnf,
+                        optimize,
+                        encodingStrategy.getType(),
+                        storeNullColumns
+                    );
+                    final IndexBuilder indexBuilder = IndexBuilder
+                        .create()
+                        .schema(DEFAULT_INDEX_SCHEMA)
+                        .writeNullColumns(storeNullColumns)
+                        .indexSpec(
+                            IndexSpec.builder()
+                                     .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
+                                     .withStringDictionaryEncoding(encodingStrategy)
+                                     .build()
+                        )
+                        .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                    if (useV10) {
+                      indexBuilder.useV10();
+                    }
+                    constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+                  }
                 }
               }
             }
@@ -722,6 +668,50 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     }
 
     return constructors;
+  }
+
+  /**
+   * Check for options combinations to skip
+   */
+  private static boolean shouldSkipOptions(
+      Map.Entry<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finisherEntry,
+      boolean storeNullColumns,
+      boolean useV10,
+      StringEncodingStrategy encodingStrategy
+  )
+  {
+    if (finisherEntry.getKey().contains("mmap")) {
+      // storeNullColumns does not exist on v10, which always stores 'null' columns
+      return useV10 && !storeNullColumns;
+    }
+    // if not mmap, these options are irrelevant, so trim down to only run in 1 case
+    return storeNullColumns || useV10 || !StringEncodingStrategy.UTF8_STRATEGY.equals(encodingStrategy);
+  }
+
+  /**
+   * Convert schema to use {@link AutoTypeColumnSchema} for {@link IncrementalIndexSchema#dimensionsSpec}
+   */
+  private static IncrementalIndexSchema mapToAutoSchema(IncrementalIndexSchema schema)
+  {
+    return new IncrementalIndexSchema(
+        schema.getMinTimestamp(),
+        schema.getTimestampSpec(),
+        schema.getQueryGranularity(),
+        schema.getVirtualColumns(),
+        schema.getDimensionsSpec().withDimensions(
+            schema.getDimensionsSpec()
+                  .getDimensions()
+                  .stream()
+                  .map(
+                      dimensionSchema ->
+                          AutoTypeColumnSchema.of(dimensionSchema.getName())
+                  )
+                  .collect(Collectors.toList())
+        ),
+        schema.getMetrics(),
+        schema.isRollup(),
+        schema.getProjections()
+    );
   }
 
   protected boolean isAutoSchema()
@@ -1110,7 +1100,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 cursorFactory.getRowSignature(),
-                false,
                 false
             )
         )

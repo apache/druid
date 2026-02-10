@@ -292,7 +292,7 @@ exports[`HeaderBar matches snapshot 1`] = `
             multiline={false}
             popoverProps={{}}
             shouldDismissPopover={true}
-            text="Capabilty detection"
+            text="Capability detection"
           >
             <Blueprint5.MenuItem
               active={false}

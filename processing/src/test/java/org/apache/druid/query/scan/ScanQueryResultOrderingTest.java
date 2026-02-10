@@ -396,6 +396,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
         brokerRunner.run(QueryPlus.wrap(query))
     ).toList();
 
-    return results.stream().mapToInt(row -> (int) row[1]).boxed().collect(Collectors.toList());
+    return results.stream().mapToInt(row -> ((Number) row[1]).intValue()).boxed().collect(Collectors.toList());
   }
 }

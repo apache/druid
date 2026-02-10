@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
@@ -44,13 +43,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.indexing.InputChannelFactory;
-import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.InputSlices;
 import org.apache.druid.msq.input.MapInputSliceReader;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
@@ -60,12 +56,10 @@ import org.apache.druid.msq.input.inline.InlineInputSlice;
 import org.apache.druid.msq.input.inline.InlineInputSliceReader;
 import org.apache.druid.msq.input.lookup.LookupInputSlice;
 import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
-import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSliceReader;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSliceReader;
-import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -145,7 +139,11 @@ public class RunWorkOrder
   )
   {
     this.workOrder = workOrder;
-    this.inputChannelFactory = inputChannelFactory;
+    this.inputChannelFactory = new CountingInputChannelFactory(
+        inputChannelFactory,
+        workOrder,
+        counterTracker
+    );
     this.counterTracker = counterTracker;
     this.exec = exec;
     this.cancellationId = cancellationId;
@@ -174,7 +172,6 @@ public class RunWorkOrder
 
     try {
       exec.registerCancellationId(cancellationId);
-      initGlobalSortPartitionBoundariesIfNeeded();
       startStageProcessor();
       setUpCompletionCallbacks();
     }
@@ -285,25 +282,6 @@ public class RunWorkOrder
   }
 
   /**
-   * Initialize {@link #stagePartitionBoundariesFuture} if it will be needed (i.e. if {@link ShuffleKind#GLOBAL_SORT})
-   * but does not need statistics. In this case, it is known upfront, before the job starts.
-   */
-  private void initGlobalSortPartitionBoundariesIfNeeded()
-  {
-    if (workOrder.getStageDefinition().doesShuffle()
-        && workOrder.getStageDefinition().getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
-        && !workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
-      // Result key stats aren't needed, so the partition boundaries are knowable ahead of time. Compute them now.
-      final ClusterByPartitions boundaries =
-          workOrder.getStageDefinition()
-                   .generatePartitionBoundariesForShuffle(null)
-                   .valueOrThrow();
-
-      stagePartitionBoundariesFuture.set(boundaries);
-    }
-  }
-
-  /**
    * Callbacks that fire when all work for the stage is done (i.e. when {@link #stageResultFuture} resolves).
    */
   private void setUpCompletionCallbacks()
@@ -406,6 +384,7 @@ public class RunWorkOrder
         exec,
         makeInputSliceReader(),
         this::makeIntermediateOutputChannelFactory,
+        inputChannelFactory,
         makeStageOutputChannelFactory(),
         stagePartitionBoundariesFuture,
         frameContext,
@@ -418,25 +397,11 @@ public class RunWorkOrder
 
   private InputSliceReader makeInputSliceReader()
   {
-    final String queryId = workOrder.getQueryDefinition().getQueryId();
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-
-    final InputChannels inputChannels =
-        new InputChannelsImpl(
-            workOrder.getQueryDefinition(),
-            InputSlices.allReadablePartitions(workOrder.getInputs()),
-            inputChannelFactory,
-            frameContext.frameWriterSpec(),
-            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
-            exec,
-            cancellationId,
-            counterTracker
-        );
-
     return new MapInputSliceReader(
         ImmutableMap.<Class<? extends InputSlice>, InputSliceReader>builder()
                     .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
-                    .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
+                    .put(StageInputSlice.class, StageInputSliceReader.INSTANCE)
                     .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")))
                     .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                     .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
@@ -466,7 +431,12 @@ public class RunWorkOrder
       case LOCAL_STORAGE:
         final File fileChannelDirectory =
             frameContext.tempDir(StringUtils.format("output_stage_%06d", workOrder.getStageNumber()));
-        outputChannelFactory = new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+        outputChannelFactory = new FileOutputChannelFactory(
+            fileChannelDirectory,
+            frameSize,
+            null,
+            frameContext.wireTransferableContext()
+        );
         break;
 
       case DURABLE_STORAGE_INTERMEDIATE:
@@ -499,8 +469,12 @@ public class RunWorkOrder
     final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tempDir, StringUtils.format("intermediate-stage-%06d", workOrder.getStageNumber()));
-    final FileOutputChannelFactory fileOutputChannelFactory =
-        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateByteTracker);
+    final FileOutputChannelFactory fileOutputChannelFactory = new FileOutputChannelFactory(
+        fileChannelDirectory,
+        frameSize,
+        intermediateByteTracker,
+        frameContext.wireTransferableContext()
+    );
 
     if (workOrder.getOutputChannelMode().isDurable()
         && frameContext.storageParameters().isIntermediateStorageLimitConfigured()) {
@@ -532,7 +506,8 @@ public class RunWorkOrder
         frameSize,
         MSQTasks.makeStorageConnector(workerContext.injector()),
         tmpDir,
-        isQueryResults
+        isQueryResults,
+        frameContext.wireTransferableContext()
     );
   }
 }

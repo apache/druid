@@ -21,7 +21,9 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
@@ -35,15 +37,27 @@ public class RunWorkOrderTest
   public void test_stop()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
+    final WorkOrder workOrder = Mockito.mock(WorkOrder.class);
+    final CounterTracker counters = Mockito.mock(CounterTracker.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
     final FrameContext frameContext = Mockito.mock(FrameContext.class);
     final WorkerStorageParameters storageParameters = Mockito.mock(WorkerStorageParameters.class);
+    final InputChannelFactory inputChannelFactory = Mockito.mock(InputChannelFactory.class);
     final RunWorkOrderListener listener = Mockito.mock(RunWorkOrderListener.class);
 
     Mockito.when(frameContext.storageParameters()).thenReturn(storageParameters);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
+        new RunWorkOrder(
+            workOrder,
+            inputChannelFactory,
+            counters,
+            exec,
+            CANCELLATION_ID,
+            workerContext,
+            frameContext,
+            listener
+        );
 
     runWorkOrder.stop(null);
 
@@ -59,15 +73,27 @@ public class RunWorkOrderTest
   public void test_stop_error()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
+    final WorkOrder workOrder = Mockito.mock(WorkOrder.class);
+    final CounterTracker counters = Mockito.mock(CounterTracker.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
     final FrameContext frameContext = Mockito.mock(FrameContext.class);
     final WorkerStorageParameters storageParameters = Mockito.mock(WorkerStorageParameters.class);
+    final InputChannelFactory inputChannelFactory = Mockito.mock(InputChannelFactory.class);
     final RunWorkOrderListener listener = Mockito.mock(RunWorkOrderListener.class);
 
     Mockito.when(frameContext.storageParameters()).thenReturn(storageParameters);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
+        new RunWorkOrder(
+            workOrder,
+            inputChannelFactory,
+            counters,
+            exec,
+            CANCELLATION_ID,
+            workerContext,
+            frameContext,
+            listener
+        );
 
     final ISE exception = new ISE("oops");
 
@@ -88,9 +114,12 @@ public class RunWorkOrderTest
   public void test_stop_errorDuringExecCancel()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
+    final WorkOrder workOrder = Mockito.mock(WorkOrder.class);
+    final CounterTracker counters = Mockito.mock(CounterTracker.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
     final FrameContext frameContext = Mockito.mock(FrameContext.class);
     final WorkerStorageParameters storageParameters = Mockito.mock(WorkerStorageParameters.class);
+    final InputChannelFactory inputChannelFactory = Mockito.mock(InputChannelFactory.class);
     final RunWorkOrderListener listener = Mockito.mock(RunWorkOrderListener.class);
 
     final ISE exception = new ISE("oops");
@@ -98,7 +127,16 @@ public class RunWorkOrderTest
     Mockito.doThrow(exception).when(exec).cancel(CANCELLATION_ID);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
+        new RunWorkOrder(
+            workOrder,
+            inputChannelFactory,
+            counters,
+            exec,
+            CANCELLATION_ID,
+            workerContext,
+            frameContext,
+            listener
+        );
 
     Assert.assertThrows(
         IllegalStateException.class,
@@ -114,9 +152,12 @@ public class RunWorkOrderTest
   public void test_stop_errorDuringFrameContextClose()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
+    final WorkOrder workOrder = Mockito.mock(WorkOrder.class);
+    final CounterTracker counters = Mockito.mock(CounterTracker.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
     final FrameContext frameContext = Mockito.mock(FrameContext.class);
     final WorkerStorageParameters storageParameters = Mockito.mock(WorkerStorageParameters.class);
+    final InputChannelFactory inputChannelFactory = Mockito.mock(InputChannelFactory.class);
     final RunWorkOrderListener listener = Mockito.mock(RunWorkOrderListener.class);
 
     final ISE exception = new ISE("oops");
@@ -124,7 +165,16 @@ public class RunWorkOrderTest
     Mockito.doThrow(exception).when(frameContext).close();
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
+        new RunWorkOrder(
+            workOrder,
+            inputChannelFactory,
+            counters,
+            exec,
+            CANCELLATION_ID,
+            workerContext,
+            frameContext,
+            listener
+        );
 
     Assert.assertThrows(
         IllegalStateException.class,

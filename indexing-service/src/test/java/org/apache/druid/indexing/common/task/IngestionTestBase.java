@@ -87,6 +87,8 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -139,6 +141,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private TestDataSegmentKiller dataSegmentKiller;
   private SegmentMetadataCache segmentMetadataCache;
   private SegmentSchemaCache segmentSchemaCache;
+  private IndexingStateCache indexingStateCache;
   protected File reportsFile;
 
   protected IngestionTestBase()
@@ -164,6 +167,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     connector.createSegmentSchemasTable();
     connector.createSegmentTable();
     connector.createPendingSegmentsTable();
+    connector.createIndexingStatesTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -172,13 +176,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
 
     segmentSchemaCache = new SegmentSchemaCache();
+    indexingStateCache = new IndexingStateCache();
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         createTransactionFactory(),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new HeapMemoryIndexingStateStorage()
     );
     segmentsMetadataManager = new SqlSegmentsMetadataManagerV2(
         segmentMetadataCache,
@@ -232,7 +238,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   public SegmentCacheManager newSegmentLoader(File storageDir)
   {
-    return segmentCacheManagerFactory.manufacturate(storageDir);
+    return segmentCacheManagerFactory.manufacturate(storageDir, true);
   }
 
   public ObjectMapper getObjectMapper()
@@ -337,6 +343,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         segmentSchemaCache,
+        indexingStateCache,
         derbyConnectorRule.getConnector(),
         ScheduledExecutors::fixed,
         NoopServiceEmitter.instance()

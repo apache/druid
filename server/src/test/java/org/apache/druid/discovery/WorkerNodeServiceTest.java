@@ -20,6 +20,7 @@
 package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class WorkerNodeServiceTest
         "c1"
     );
 
-    ObjectMapper mapper = DruidServiceTestUtils.newJsonMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
     DruidService actual = mapper.readValue(
         mapper.writeValueAsString(expected),
         DruidService.class

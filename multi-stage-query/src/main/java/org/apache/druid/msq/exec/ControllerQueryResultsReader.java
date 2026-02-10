@@ -121,7 +121,7 @@ public class ControllerQueryResultsReader implements FrameProcessor<Void>
       queryListener.onResultsComplete();
       return ReturnOrAwait.returnObject(null);
     } else {
-      final Frame frame = in.read();
+      final Frame frame = in.readFrame();
       Yielder<Object[]> rowYielder = Yielders.each(
           SqlStatementResourceHelper.getResultSequence(
               frame,

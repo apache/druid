@@ -248,7 +248,7 @@ public class BlockingExecutorService implements ExecutorService
         future.complete(result);
       }
       catch (Exception e) {
-        throw new ISE("Error while executing task", e);
+        throw new ISE(e, "Error[%s] while executing task", e.getMessage());
       }
     }
   }

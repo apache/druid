@@ -76,6 +76,15 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     this.observedShutdownBootstrapCount = new AtomicInteger(0);
   }
 
+  /**
+   * Registers a pre-built segment, so that {@link #acquireSegment} and {@link #acquireCachedSegment}
+   * will return this segment instead of creating one from the DataSegment's loadSpec.
+   */
+  public void registerSegment(final DataSegment dataSegment, final Segment segment)
+  {
+    referenceProviders.put(dataSegment, ReferenceCountedSegmentProvider.of(segment));
+  }
+
   @Override
   public boolean canHandleSegments()
   {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
@@ -115,11 +116,14 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       ArrayOfDoublesSketchModule.registerSerde();
 
-      final QueryableIndex index = IndexBuilder.create()
+      final QueryableIndex index = IndexBuilder.create(jsonMapper)
                                                .tmpDir(tempDirProducer.newTempFolder())
                                                .segmentWriteOutMediumFactory(
                                                    OffHeapMemorySegmentWriteOutMediumFactory.instance()

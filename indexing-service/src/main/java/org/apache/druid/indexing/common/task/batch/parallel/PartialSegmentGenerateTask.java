@@ -25,7 +25,6 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
@@ -169,7 +168,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, buildSegmentsMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, buildSegmentsMeters, getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();

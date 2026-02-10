@@ -283,7 +283,7 @@ public class OverlordTest
     Assert.assertEquals(Optional.absent(), overlord.getRedirectLocation());
 
     final TaskQueryTool taskQueryTool
-        = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, null);
+        = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
         = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff

@@ -19,6 +19,11 @@
 
 package org.apache.druid.msq.exec;
 
+import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
+import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
+import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+
 public class Limits
 {
   /**
@@ -45,9 +50,10 @@ public class Limits
   public static final int MAX_WORKERS = 1000;
 
   /**
-   * Maximum number of input files per worker
+   * Default maximum number of input files per worker. Exceeding this will yield a {@link TooManyInputFilesFault}.
+   * Can be overridden by the context parameter {@link MultiStageQueryContext#CTX_MAX_INPUT_FILES_PER_WORKER}.
    */
-  public static final int MAX_INPUT_FILES_PER_WORKER = 10_000;
+  public static final int DEFAULT_MAX_INPUT_FILES_PER_WORKER = 10_000;
 
   /**
    * Maximum number of parse exceptions with their stack traces a worker can send to the controller.
@@ -94,9 +100,17 @@ public class Limits
   public static final long MAX_SELECT_RESULT_ROWS = 3_000;
 
   /**
-   * Max number of partition buckets for ingestion queries.
+   * Max number of partition buckets. Exceeding this will yield a {@link TooManyBucketsFault}. For an ingestion job,
+   * this is the maximum number of output time chunks.
    */
   public static final int MAX_PARTITION_BUCKETS = 5_000;
+
+  /**
+   * Default max number of output partitions for a stage. Exceeding this will yield a {@link TooManyPartitionsFault}.
+   * For an ingestion job, this is the maximum number of segments that can be created.
+   * Can be overridden by the context parameter {@link MultiStageQueryContext#CTX_MAX_PARTITIONS}.
+   */
+  public static final int DEFAULT_MAX_PARTITIONS = 25_000;
 
   /**
    * Max number of rows with the same key in a window. This acts as a guardrail for

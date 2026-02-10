@@ -57,6 +57,7 @@ public class TestTimelineServerView implements TimelineServerView
       "dummy:15723",
       null,
       0,
+      null,
       ServerType.HISTORICAL,
       "dummy",
       0
@@ -66,6 +67,7 @@ public class TestTimelineServerView implements TimelineServerView
       "dummy2:15723",
       null,
       0,
+      null,
       ServerType.REALTIME,
       "dummy",
       0
@@ -75,6 +77,7 @@ public class TestTimelineServerView implements TimelineServerView
       "dummy3:15723",
       null,
       0,
+      null,
       ServerType.BROKER,
       "dummy",
       0

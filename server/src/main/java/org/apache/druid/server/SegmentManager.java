@@ -196,7 +196,7 @@ public class SegmentManager
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     return cacheManager.acquireSegment(dataSegment);
   }
@@ -380,11 +380,11 @@ public class SegmentManager
               try (final Closer closer = Closer.create()) {
                 final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
                 long numberOfRows = oldSegment.map(segment -> {
+                  closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }
-                  CloseableUtils.closeAndWrapExceptions(segment);
                   return 0;
                 }).orElse(0);
 

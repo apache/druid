@@ -110,4 +110,10 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorFactory.getName()) : null
     );
   }
+
+  @Override
+  protected String getName()
+  {
+    return NAME;
+  }
 }

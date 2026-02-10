@@ -27,12 +27,7 @@ Apache Druid uses [Apache ZooKeeper](http://zookeeper.apache.org/) (ZK) for mana
 
 ## Minimum ZooKeeper versions
 
-Apache Druid supports ZooKeeper versions 3.5.x and above.
-
-:::info
- Note: Starting with Apache Druid 0.22.0, support for ZooKeeper 3.4.x has been removed
- Starting with Apache Druid 31.0.0, support for Zookeeper-based segment loading has been removed.
-:::
+Apache Druid supports all stable versions of ZooKeeper. For information about ZooKeeper's stable version, see [ZooKeeper releases](https://zookeeper.apache.org/releases.html).
 
 ## ZooKeeper Operations
 

@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
@@ -58,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PodTemplateTaskAdapterTest
 {
-  private KubernetesTaskRunnerConfig taskRunnerConfig;
+  private KubernetesTaskRunnerStaticConfig taskRunnerConfig;
   private PodTemplate podTemplateSpec;
   private TaskConfig taskConfig;
   private DruidNode node;

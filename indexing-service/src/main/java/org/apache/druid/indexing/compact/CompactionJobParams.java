@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -33,18 +34,21 @@ public class CompactionJobParams
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
+  private final IndexingStateFingerprintMapper fingerprintMapper;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
       ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider,
-      CompactionSnapshotBuilder snapshotBuilder
+      CompactionSnapshotBuilder snapshotBuilder,
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
     this.scheduleStartTime = scheduleStartTime;
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
+    this.fingerprintMapper = indexingStateFingerprintMapper;
   }
 
   /**
@@ -86,6 +90,11 @@ public class CompactionJobParams
   public CompactionSnapshotBuilder getSnapshotBuilder()
   {
     return snapshotBuilder;
+  }
+
+  public IndexingStateFingerprintMapper getFingerprintMapper()
+  {
+    return fingerprintMapper;
   }
 
   @FunctionalInterface

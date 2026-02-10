@@ -230,6 +230,7 @@ public class MSQWorkerTaskLauncherRetryTest
   {
     private final ConcurrentSkipListSet<Integer> unknownLocationWorkers = new ConcurrentSkipListSet<>();
     private final ConcurrentSkipListSet<Integer> failedWorkers = new ConcurrentSkipListSet<>();
+    private final ConcurrentSkipListSet<String> canceledTasks = new ConcurrentSkipListSet<>();
 
     @Override
     public ListenableFuture<URI> findCurrentLeader()
@@ -246,6 +247,7 @@ public class MSQWorkerTaskLauncherRetryTest
     @Override
     public ListenableFuture<Void> cancelTask(String taskId)
     {
+      canceledTasks.add(taskId);
       return Futures.immediateFuture(null);
     }
 
@@ -265,7 +267,9 @@ public class MSQWorkerTaskLauncherRetryTest
       final Map<String, TaskStatus> taskStatusMap = new HashMap<>();
       for (String taskId : taskIds) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
-        if (failedWorkers.contains(workerNumber)) {
+        if (canceledTasks.contains(taskId)) {
+          taskStatusMap.put(taskId, TaskStatus.failure(taskId, "Canceled"));
+        } else if (failedWorkers.contains(workerNumber)) {
           taskStatusMap.put(taskId, TaskStatus.failure(taskId, "Task failed"));
         } else if (unknownLocationWorkers.contains(workerNumber)) {
           taskStatusMap.put(taskId, TaskStatus.running(taskId).withLocation(TaskLocation.unknown()));
@@ -279,7 +283,7 @@ public class MSQWorkerTaskLauncherRetryTest
     @Override
     public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      if (failedWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {
+      if (canceledTasks.contains(taskId) || failedWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {
         return Futures.immediateFuture(new TaskStatusResponse(taskId, createFailedTaskStatus(taskId)));
       }
       if (unknownLocationWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {

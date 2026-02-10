@@ -196,18 +196,14 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       List<ResourceAction> permissions
   )
   {
-    // Setup authentication by creating user and password
-    postAsAdmin(null, "/authentication/db/basic/users/%s", user);
-
-    final BasicAuthenticatorCredentialUpdate credentials
-        = new BasicAuthenticatorCredentialUpdate(password, 5000);
-    postAsAdmin(credentials, "/authentication/db/basic/users/%s/credentials", user);
-
-    // Setup authorization by assigning a role to the user
-    postAsAdmin(null, "/authorization/db/basic/users/%s", user);
-    postAsAdmin(null, "/authorization/db/basic/roles/%s", role);
-    postAsAdmin(null, "/authorization/db/basic/users/%s/roles/%s", user, role);
-    postAsAdmin(permissions, "/authorization/db/basic/roles/%s/permissions", role);
+    EmbeddedBasicAuthResource.createUserWithPermissions(
+        getHttpClient(User.ADMIN),
+        getCoordinator(),
+        user,
+        password,
+        role,
+        permissions
+    );
   }
 
   private void postAsAdmin(

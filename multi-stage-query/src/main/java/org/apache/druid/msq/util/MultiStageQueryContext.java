@@ -26,7 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -35,12 +35,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
+import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.msq.rpc.ControllerResource;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
@@ -141,6 +143,15 @@ public class MultiStageQueryContext
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
+  public static final String CTX_MAX_INPUT_FILES_PER_WORKER = "maxInputFilesPerWorker";
+  public static final String CTX_MAX_PARTITIONS = "maxPartitions";
+
+  /**
+   * Used by {@link #getMaxClusteredByColumns(QueryContext)}. Can be used to adjust the limit of columns appearing
+   * in clusterBy, where the default is {@link Limits#MAX_CLUSTERED_BY_COLUMNS}. This parameter is undocumented
+   * because its main purpose is to speed up the test {@code MSQFaultsTest#testInsertWithHugeClusteringKeys}.
+   */
+  public static final String CTX_MAX_CLUSTERED_BY_COLUMNS = "maxClusteredByColumns";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
@@ -157,10 +168,22 @@ public class MultiStageQueryContext
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
-  public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}.
+   */
+  static final String CTX_MAX_ROWS_IN_MEMORY = "maxRowsInMemory";
+
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}. Alternate spelling of {@link #CTX_MAX_ROWS_IN_MEMORY}.
+   * Ignored if {@link #CTX_MAX_ROWS_IN_MEMORY} is set.
+   */
+  static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+
+  /**
+   * Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+   * OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+   */
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
@@ -194,6 +217,13 @@ public class MultiStageQueryContext
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
   public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
 
+  /**
+   * Whether workers should send live counter updates to the controller via the message relay. When enabled, workers
+   * periodically send counter snapshots to the controller, allowing the controller to have more up-to-date progress
+   * information.
+   */
+  public static final String CTX_LIVE_REPORT_COUNTERS = "liveReportCounters";
+
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
@@ -225,9 +255,14 @@ public class MultiStageQueryContext
   public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
 
   /**
-   * Maximum number of threads to use for processing. Acts as a cap on the value of {@link WorkerContext#threadCount()}.
+   * Maximum number of threads to use for processing. Cap on the value of {@link ExecutionContext#threadCount()}.
    */
   public static final String CTX_MAX_THREADS = "maxThreads";
+
+  /**
+   * Maximum number of segments to load ahead of them being needed. Used when setting up {@link ReadableInputQueue}.
+   */
+  public static final String CTX_SEGMENT_LOAD_AHEAD_COUNT = "segmentLoadAheadCount";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -312,6 +347,42 @@ public class MultiStageQueryContext
         CTX_MAX_INPUT_BYTES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
+  }
+
+  public static int getMaxInputFilesPerWorker(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_INPUT_FILES_PER_WORKER);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_INPUT_FILES_PER_WORKER, value);
+    }
+    return value;
+  }
+
+  public static int getMaxPartitions(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_PARTITIONS);
+    if (value == null) {
+      return Limits.DEFAULT_MAX_PARTITIONS;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_PARTITIONS, value);
+    }
+    return value;
+  }
+
+  public static int getMaxClusteredByColumns(final QueryContext queryContext)
+  {
+    final Integer value = queryContext.getInt(CTX_MAX_CLUSTERED_BY_COLUMNS);
+    if (value == null) {
+      return Limits.MAX_CLUSTERED_BY_COLUMNS;
+    }
+    if (value <= 0) {
+      throw InvalidInput.exception("%s must be a positive integer, got[%d]", CTX_MAX_CLUSTERED_BY_COLUMNS, value);
+    }
+    return value;
   }
 
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
@@ -413,9 +484,14 @@ public class MultiStageQueryContext
     return destination;
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext)
+  public static int getMaxRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+    Integer ctxValue = queryContext.getInt(CTX_MAX_ROWS_IN_MEMORY);
+    if (ctxValue == null) {
+      ctxValue = queryContext.getInt(CTX_ROWS_IN_MEMORY);
+    }
+
+    return ctxValue != null ? ctxValue : DEFAULT_MAX_ROWS_IN_MEMORY;
   }
 
   public static Integer getMaxNumSegments(final QueryContext queryContext)
@@ -469,6 +545,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
   }
 
+  /**
+   * See {@link #CTX_LIVE_REPORT_COUNTERS}.
+   */
+  public static boolean getLiveReportCounters(final QueryContext queryContext, final boolean defaultValue)
+  {
+    return queryContext.getBoolean(CTX_LIVE_REPORT_COUNTERS, defaultValue);
+  }
+
   public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
@@ -515,6 +599,11 @@ public class MultiStageQueryContext
   public static Integer getMaxThreads(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_MAX_THREADS);
+  }
+
+  public static Integer getSegmentLoadAheadCount(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_SEGMENT_LOAD_AHEAD_COUNT);
   }
 
   /**
@@ -602,26 +691,22 @@ public class MultiStageQueryContext
         + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
 
     if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.EXCLUSIVE,
-                              TaskLockType.REPLACE,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.EXCLUSIVE,
+          TaskLockType.REPLACE,
+          taskLockType
+      );
     }
     if (!isReplaceQuery && !(taskLockType.equals(TaskLockType.SHARED) || taskLockType.equals(TaskLockType.APPEND))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
-                              + appendErrorMessage,
-                              TaskLockType.SHARED,
-                              TaskLockType.APPEND,
-                              taskLockType
-                          );
+      throw InvalidInput.exception(
+          "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
+          + appendErrorMessage,
+          TaskLockType.SHARED,
+          TaskLockType.APPEND,
+          taskLockType
+      );
     }
     return taskLockType;
   }

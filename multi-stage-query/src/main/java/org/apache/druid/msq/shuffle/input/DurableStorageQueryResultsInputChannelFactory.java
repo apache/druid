@@ -20,8 +20,10 @@
 package org.apache.druid.msq.shuffle.input;
 
 import org.apache.druid.frame.util.DurableStorageUtils;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -33,10 +35,11 @@ public class DurableStorageQueryResultsInputChannelFactory extends DurableStorag
   public DurableStorageQueryResultsInputChannelFactory(
       String controllerTaskId,
       StorageConnector storageConnector,
-      ExecutorService remoteInputStreamPool
+      ExecutorService remoteInputStreamPool,
+      @Nullable WireTransferableContext wireTransferableContext
   )
   {
-    super(controllerTaskId, storageConnector, remoteInputStreamPool);
+    super(controllerTaskId, storageConnector, remoteInputStreamPool, wireTransferableContext);
   }
 
   @Override

@@ -20,7 +20,10 @@
 
 .ReactTable {
   &.centered-table {
-    .rt-th,
+    .rt-th {
+      align-content: start;
+    }
+
     .rt-td {
       align-content: center;
     }

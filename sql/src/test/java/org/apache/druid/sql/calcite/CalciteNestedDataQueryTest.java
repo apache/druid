@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -239,11 +240,14 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -2746,17 +2750,17 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "case_searched(notnull(\"v1\"),(\"v1\" == '100'),0)",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            ),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0")
-                            )
-                        )
+                        .setDimensions(new DefaultDimensionSpec("v1", "d0"))
                         .setDimFilter(
-                            expressionFilter(
-                                "case_searched(notnull(json_value(\"nest\",'$.x', 'STRING')),(json_value(\"nest\",'$.x', 'STRING') == '100'),0)"
-                            )
+                            expressionFilter("\"v0\"")
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -2771,6 +2775,42 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterUpperEqualsColumn()
+  {
+    cannotVectorizeUnlessFallback();
+    testQuery(
+        "SELECT "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE UPPER(JSON_VALUE(nest, '$.z')) = string",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "(upper(\"v1\") == \"string\")",
+                          ColumnType.LONG,
+                          queryFramework().macroTable()
+                      ),
+                      new NestedFieldVirtualColumn("nest", "$.z", "v1", ColumnType.STRING)
+                  )
+                  .filters(expressionFilter("\"v0\""))
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
                     .build()
     );
   }
@@ -6326,7 +6366,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "\"b\"",
                 "2",
                 "b",
-                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}",
+                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"123\"],\"v\":[]}",
                 "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
                 "[\"a\",\"b\",\"c\"]",
                 "[null,\"b\"]",

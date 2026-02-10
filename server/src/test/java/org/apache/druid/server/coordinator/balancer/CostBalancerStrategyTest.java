@@ -405,7 +405,7 @@ public class CostBalancerStrategyTest
   private DruidServer createHistorical()
   {
     String serverName = "hist_" + uniqueServerId++;
-    return new DruidServer(serverName, serverName, null, 10L << 30, ServerType.HISTORICAL, "hot", 1);
+    return new DruidServer(serverName, serverName, null, 10L << 30, null, ServerType.HISTORICAL, "hot", 1);
   }
 
 }

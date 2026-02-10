@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,10 +39,15 @@ import java.nio.channels.Channels;
 public class FileStageOutputReader implements StageOutputReader
 {
   private final FrameFile frameFile;
+  private final WireTransferable.ConcreteDeserializer deserializer;
 
-  public FileStageOutputReader(FrameFile frameFile)
+  public FileStageOutputReader(
+      final FrameFile frameFile,
+      final WireTransferable.ConcreteDeserializer deserializer
+  )
   {
     this.frameFile = frameFile;
+    this.deserializer = deserializer;
   }
 
   /**
@@ -83,7 +89,7 @@ public class FileStageOutputReader implements StageOutputReader
   @Override
   public ReadableFrameChannel readLocally()
   {
-    return new ReadableFileFrameChannel(frameFile.newReference());
+    return new ReadableFileFrameChannel(frameFile.newReference(), deserializer);
   }
 
   /**

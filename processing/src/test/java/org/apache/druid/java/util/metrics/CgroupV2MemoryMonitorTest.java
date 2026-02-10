@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
@@ -65,7 +64,6 @@ public class CgroupV2MemoryMonitorTest
   {
     final CgroupV2MemoryMonitor monitor = new CgroupV2MemoryMonitor(
         discoverer,
-        ImmutableMap.of(),
         FeedDefiningMonitor.DEFAULT_METRICS_FEED
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");

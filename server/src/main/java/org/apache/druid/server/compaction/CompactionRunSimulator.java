@@ -132,13 +132,19 @@ public class CompactionRunSimulator
     };
 
     // Unlimited task slots to ensure that simulator does not skip any interval
-    final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+    final ClusterCompactionConfig clusterConfig = compactionConfig.clusterConfig();
+    final ClusterCompactionConfig configWithUnlimitedTaskSlots = new ClusterCompactionConfig(
+        1.0,
+        Integer.MAX_VALUE,
+        clusterConfig.getCompactionPolicy(),
+        clusterConfig.isUseSupervisors(),
+        clusterConfig.getEngine(),
+        clusterConfig.isStoreCompactionStatePerSegment()
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
-        configWithUnlimitedTaskSlots,
+        compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,
         defaultEngine,
         stats

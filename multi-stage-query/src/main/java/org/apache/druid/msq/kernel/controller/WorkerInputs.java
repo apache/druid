@@ -62,6 +62,7 @@ public class WorkerInputs
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
       final WorkerAssignmentStrategy assignmentStrategy,
+      final int maxInputFilesPerWorker,
       final long maxInputBytesPerWorker
   )
   {
@@ -99,6 +100,7 @@ public class WorkerInputs
             inputSpec,
             stageWorkerCountMap,
             slicer,
+            maxInputFilesPerWorker,
             maxInputBytesPerWorker
         );
 

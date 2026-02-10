@@ -19,18 +19,29 @@
 
 package org.apache.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Scopes;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
+import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -39,12 +50,31 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitterModule;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -53,72 +83,72 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.easymock.EasyMock.mock;
 
 public class CliPeonTest
 {
-
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+  private final CompactionTask.Builder compactBuilder =
+      new CompactionTask.Builder("test_ds", new SegmentCacheManagerFactory(TestIndex.INDEX_IO, mapper))
+      .id("compact_test_taskid")
+      .inputSpec(new CompactionIntervalSpec(Intervals.of("2020/2021"), null));
 
   @Test
   public void testCliPeonK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8s");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "k8s");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
   public void testCliPeonNonK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "httpRemote");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "httpRemote");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertTrue(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
-  public void testCliPeonK8sANdWorkerIsK8sMode() throws IOException
+  public void testCliPeonK8sAndWorkerIsK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8sAndWorker");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "k8sAndWorker");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
   public void testCliPeonPolicyEnforcerInToolbox() throws IOException
   {
-    CliPeon runnable = new CliPeon();
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
-
-    Properties properties = new Properties();
+    final Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    runnable.configure(properties);
-    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-
-    Injector secondaryInjector = runnable.makeInjector();
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(null), secondaryInjector.getInstance(PolicyEnforcer.class));
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    Assert.assertEquals(
+        new RestrictAllTablesPolicyEnforcer(null),
+        peonInjector.getInstance(PolicyEnforcer.class)
+    );
   }
 
   @Test
@@ -169,43 +199,184 @@ public class CliPeonTest
   @Test
   public void testCliPeonLocalTmpStorage() throws IOException
   {
+    final Properties properties = new Properties();
     File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(NoopTask.create()), StandardCharsets.UTF_8);
+    final Injector peonInjector = makePeonInjector(file, properties);
 
-    CliPeon runnable = new CliPeon();
-    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
-    Properties properties = new Properties();
-    runnable.configure(properties);
-    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-    Injector secondaryInjector = runnable.makeInjector();
-    Assert.assertNotNull(secondaryInjector);
-
-    LocalTmpStorageConfig localTmpStorageConfig = secondaryInjector.getInstance(LocalTmpStorageConfig.class);
+    LocalTmpStorageConfig localTmpStorageConfig = peonInjector.getInstance(LocalTmpStorageConfig.class);
     Assert.assertEquals(new File(file.getParent(), "/tmp").getAbsolutePath(), localTmpStorageConfig.getTmpDir().getAbsolutePath());
   }
 
-  private static class FakeCliPeon extends CliPeon
+  @Test
+  public void testTaskWithDefaultContext() throws IOException
   {
-    List<String> taskAndStatusFile = new ArrayList<>();
+    final CompactionTask compactionTask = compactBuilder.build();
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
-    FakeCliPeon(String taskDirectory, String runnerType)
-    {
-      try {
-        taskAndStatusFile.add(taskDirectory);
-        taskAndStatusFile.add("1");
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+  }
 
-        Field privateField = CliPeon.class
-            .getDeclaredField("taskAndStatusFile");
-        privateField.setAccessible(true);
-        privateField.set(this, taskAndStatusFile);
+  @Test
+  public void testTaskWithContextOverrides() throws IOException
+  {
+    final CompactionTask compactionTask = compactBuilder
+        .context(Map.of(
+            "lookupLoadingMode", LookupLoadingSpec.Mode.NONE,
+            "broadcastDatasourceLoadingMode", BroadcastDatasourceLoadingSpec.Mode.NONE
+        ))
+        .build();
 
-        System.setProperty("druid.indexer.runner.type", runnerType);
-      }
-      catch (Exception ex) {
-        // do nothing
-      }
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+  }
+
+  @Test
+  public void testTaskWithMetricsSpecDoesNotCauseCyclicDependency() throws IOException
+  {
+    final CompactionTask compactionTask = compactBuilder
+        .metricsSpec(new AggregatorFactory[]{
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        })
+        .build();
+
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
+
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+  }
+
+  @Test
+  public void testTaskWithMonitorsAndMetricsSpecDoNotCauseCyclicDependency() throws IOException
+  {
+    final CompactionTask compactionTask = compactBuilder
+        .metricsSpec(new AggregatorFactory[]{
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        }).build();
+
+    final Properties properties = new Properties();
+    properties.setProperty(
+        "druid.monitoring.monitors",
+        "[\"org.apache.druid.server.metrics.ServiceStatusMonitor\","
+        + " \"org.apache.druid.java.util.metrics.JvmMonitor\"]"
+    );
+    final Injector peonInjector = makePeonInjector(compactionTask, properties);
+
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+  }
+
+  @Test
+  public void testCliPeonMetricsContainAllTaskDimensions() throws IOException
+  {
+    final CompactionTask compactionTask = compactBuilder
+        .metricsSpec(new AggregatorFactory[]{
+            new CountAggregatorFactory("cnt"),
+            new LongSumAggregatorFactory("val", "val")
+        }).build();
+
+    final Injector peonInjector = makePeonInjectorWithStubEmitter(compactionTask, temporaryFolder, mapper);
+    verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
+    verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
+
+    Emitter instance = peonInjector.getInstance(Emitter.class);
+    Assert.assertTrue(instance instanceof StubServiceEmitter);
+    instance.start();
+
+    ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
+    ServiceEventBuilder eventBuilder = builder.setMetric("foo", 1.0);
+    builder.setDimension("dd", "wikipedia");
+    builder.setDimension("ee", "index");
+    ((StubServiceEmitter) instance).emit(eventBuilder);
+
+    StubServiceEmitter stubEmitter = (StubServiceEmitter) instance;
+    Assert.assertEquals(1, stubEmitter.getNumEmittedEvents());
+    List<Event> events = stubEmitter.getEvents();
+    for (Event event : events) {
+      Assert.assertTrue(event instanceof ServiceMetricEvent);
+      EventMap map = event.toMap();
+      Assert.assertEquals(compactionTask.getDataSource(), map.get("dataSource"));
+      Assert.assertEquals(compactionTask.getId(), map.get("id"));
+      Assert.assertEquals(compactionTask.getId(), map.get("taskId"));
+      Assert.assertEquals(compactionTask.getType(), map.get("taskType"));
+      Assert.assertEquals(compactionTask.getGroupId(), map.get("groupId"));
     }
+  }
+
+  private Injector makePeonInjector(File taskFile, Properties properties)
+  {
+    final CliPeon peon = new CliPeon();
+    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
+
+    peon.configure(properties);
+    peon.configure(properties, GuiceInjectors.makeStartupInjector());
+    return peon.makeInjector(Set.of(NodeRole.PEON));
+  }
+
+  public static Injector makePeonInjectorWithStubEmitter(Task task, TemporaryFolder temporaryFolder, ObjectMapper mapper) throws IOException
+  {
+    File taskFile = temporaryFolder.newFile("task.json");
+    FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
+
+    final Properties properties = new Properties();
+    properties.setProperty("druid.emitter", "stub");
+
+    final Injector baseInjector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(properties);
+        }
+    );
+
+    final CliPeon peon = new CliPeon()
+    {
+      @Override
+      protected List<? extends Module> getModules()
+      {
+        // Load the CliPeon with StubServiceEmitter
+        List<Module> modules = new ArrayList<>(super.getModules());
+        modules.add(new StubServiceEmitterModule());
+        return modules;
+      }
+    };
+
+    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
+
+    peon.configure(properties);
+    peon.configure(properties, baseInjector);
+    return peon.makeInjector(Set.of(NodeRole.PEON));
+  }
+
+  private Injector makePeonInjector(Task task, Properties properties) throws IOException
+  {
+    File taskFile = temporaryFolder.newFile("task.json");
+    FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
+    return makePeonInjector(taskFile, properties);
+  }
+
+  private static void verifyLoadSpecHolder(LoadSpecHolder observedLoadSpecHolder, Task task)
+  {
+    Assert.assertTrue(observedLoadSpecHolder instanceof PeonLoadSpecHolder);
+    Assert.assertEquals(task.getLookupLoadingSpec(), observedLoadSpecHolder.getLookupLoadingSpec());
+    Assert.assertEquals(
+        task.getBroadcastDatasourceLoadingSpec(),
+        observedLoadSpecHolder.getBroadcastDatasourceLoadingSpec()
+    );
+  }
+
+  private static void verifyTaskHolder(TaskHolder observedTaskHolder, Task task)
+  {
+    Assert.assertTrue(observedTaskHolder instanceof PeonTaskHolder);
+    Assert.assertEquals(task.getId(), observedTaskHolder.getTaskId());
+    Assert.assertEquals(task.getDataSource(), observedTaskHolder.getDataSource());
   }
 
   private static class TestTask extends NoopTask

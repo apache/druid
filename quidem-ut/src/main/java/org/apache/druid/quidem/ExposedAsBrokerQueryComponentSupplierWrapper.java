@@ -41,6 +41,7 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerServiceModule;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
@@ -194,6 +195,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
+        new DefaultServerHolderModule(),
         ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of())
     );
   }

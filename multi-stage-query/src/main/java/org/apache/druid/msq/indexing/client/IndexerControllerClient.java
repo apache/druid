@@ -46,16 +46,19 @@ public class IndexerControllerClient implements ControllerClient
 {
   private final ServiceClient serviceClient;
   private final ObjectMapper jsonMapper;
+  private final boolean liveReportCounters;
   private final Closeable baggage;
 
   public IndexerControllerClient(
       final ServiceClient serviceClient,
       final ObjectMapper jsonMapper,
+      final boolean liveReportCounters,
       final Closeable baggage
   )
   {
     this.serviceClient = serviceClient;
     this.jsonMapper = jsonMapper;
+    this.liveReportCounters = liveReportCounters;
     this.baggage = baggage;
   }
 
@@ -99,12 +102,14 @@ public class IndexerControllerClient implements ControllerClient
   @Override
   public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree) throws IOException
   {
-    final String path = StringUtils.format("/counters/%s", StringUtils.urlEncode(workerId));
-    doRequest(
-        new RequestBuilder(HttpMethod.POST, path)
-            .jsonContent(jsonMapper, snapshotsTree),
-        IgnoreHttpResponseHandler.INSTANCE
-    );
+    if (liveReportCounters) {
+      final String path = StringUtils.format("/counters/%s", StringUtils.urlEncode(workerId));
+      doRequest(
+          new RequestBuilder(HttpMethod.POST, path)
+              .jsonContent(jsonMapper, snapshotsTree),
+          IgnoreHttpResponseHandler.INSTANCE
+      );
+    }
   }
 
   @Override

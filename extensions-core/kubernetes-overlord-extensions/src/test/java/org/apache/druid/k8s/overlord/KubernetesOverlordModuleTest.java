@@ -27,6 +27,7 @@ import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.ConfigManagerConfig;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -44,6 +45,7 @@ import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClient
 import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientFactory;
 import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientFactory;
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -51,14 +53,18 @@ import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.DruidNode;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.net.URL;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 @RunWith(EasyMockRunner.class)
 public class KubernetesOverlordModuleTest
@@ -81,7 +87,25 @@ public class KubernetesOverlordModuleTest
   private AuditManager auditManager;
   @Mock
   private MetadataStorageConnector metadataStorageConnector;
+  @Mock
+  private ConfigManager configManager;
   private Injector injector;
+
+  @Before
+  public void setUpConfigManagerMock()
+  {
+    EasyMock.reset(configManager);
+    EasyMock.expect(configManager.watchConfig(
+        EasyMock.anyString(),
+        EasyMock.anyObject()
+    )).andReturn(new AtomicReference<>(null)).anyTimes();
+    EasyMock.expect(configManager.addListener(
+        EasyMock.eq(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY),
+        EasyMock.anyString(),
+        EasyMock.anyObject(Consumer.class)
+    )).andReturn(true).anyTimes();
+    EasyMock.replay(configManager);
+  }
 
   @Test
   public void testDefaultHttpRemoteTaskRunnerFactoryBindSuccessfully()
@@ -179,7 +203,6 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.sidecarSupport", "false");
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     injector = makeInjectorWithProperties(props, false, true);
-
 
     TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
 
@@ -325,6 +348,7 @@ public class KubernetesOverlordModuleTest
                   }).toInstance(Suppliers.ofInstance(metadataStorageTablesConfig));
               binder.bind(AuditManager.class).toInstance(auditManager);
               binder.bind(MetadataStorageConnector.class).toInstance(metadataStorageConnector);
+              binder.bind(ConfigManager.class).toInstance(configManager);
             },
             new ConfigModule(),
             new IndexingServiceTaskLogsModule(props),

@@ -118,7 +118,7 @@ public interface SegmentCacheManager
    * returned {@link Segment} from {@link ReferenceCountedObjectProvider#acquireReference()} must be closed when the
    * caller is finished doing segment things.
    */
-  AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException;
+  AcquireSegmentAction acquireSegment(DataSegment dataSegment);
 
   /**
    * Alternative to {@link #acquireCachedSegment(DataSegment)}, to return the {@link File} location of the segment files
@@ -138,4 +138,10 @@ public interface SegmentCacheManager
   void shutdownBootstrap();
 
   void shutdown();
+
+  /**
+   * Collect {@link StorageStats}, if available.
+   */
+  @Nullable
+  StorageStats getStorageStats();
 }

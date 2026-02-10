@@ -161,7 +161,6 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
 
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);

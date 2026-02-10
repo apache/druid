@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -39,6 +40,8 @@ public class NestedDataColumnSchemaTest
                                             new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1)
                                         )
                                         .setObjectStorageCompression(CompressionStrategy.ZSTD)
+                                        .setLongFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+                                        .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
                                         .build();
 
   private static final DefaultColumnFormatConfig DEFAULT_NESTED_SPEC_CONFIG = new DefaultColumnFormatConfig(

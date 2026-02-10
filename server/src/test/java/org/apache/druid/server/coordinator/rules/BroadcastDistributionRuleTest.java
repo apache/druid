@@ -173,7 +173,7 @@ public class BroadcastDistributionRuleTest
   {
     final ServerHolder eligibleServer = create10gbHistorical(TIER_1);
     final ServerHolder serverWithNoDiskSpace = new ServerHolder(
-        new DruidServer("server1", "server1", null, 0L, ServerType.HISTORICAL, TIER_1, 0)
+        new DruidServer("server1", "server1", null, 0L, null, ServerType.HISTORICAL, TIER_1, 0)
             .toImmutableDruidServer(),
         new TestLoadQueuePeon()
     );
@@ -264,6 +264,6 @@ public class BroadcastDistributionRuleTest
   private DruidServer create10gbServer(ServerType type, String tier)
   {
     final String name = "server_" + serverId++;
-    return new DruidServer(name, name, null, 10L << 30, type, tier, 0);
+    return new DruidServer(name, name, null, 10L << 30, null, type, tier, 0);
   }
 }

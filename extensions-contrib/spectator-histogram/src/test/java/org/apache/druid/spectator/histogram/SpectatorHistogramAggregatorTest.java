@@ -884,6 +884,97 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assert.assertNull("Row [5] should have null percentiles when histogram is null", results.get(5).get(2));
   }
 
+  @Test
+  public void testCountPostAggregator() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0,
+        Granularities.NONE,
+        10,
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimenions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_cost_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_cost_histogram\"}}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    // The merged histogram has 9 total observations (1+1+3+3+1 from the buckets)
+    Assert.assertEquals(9L, results.get(0).get(1));
+  }
+
+  @Test
+  public void testCountPostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0,
+        Granularities.NONE,
+        10,
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"countSpectatorHistogram\", \"name\": \"count\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and count values
+    // Product A: 1 observation
+    Assert.assertEquals(1L, results.get(0).get(2));
+    // Product B: 6 observations (1+3+2 from buckets at indices 30, 40, 50)
+    Assert.assertEquals(6L, results.get(1).get(2));
+    // Product C: 2 observations (1+1 from buckets at indices 50, 20000)
+    Assert.assertEquals(2L, results.get(2).get(2));
+
+    // Last three rows have null histograms, so count should also be null
+    Assert.assertNull("Row [3] should have null count when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null count when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null count when histogram is null", results.get(5).get(2));
+  }
+
   private static void assertResultsMatch(List<ResultRow> results, int rowNum, String expectedProduct)
   {
     ResultRow row = results.get(rowNum);

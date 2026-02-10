@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -68,6 +69,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
+  private final IndexingStateFingerprintMapper fingerprintMapper;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -84,12 +86,14 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       DataSourceCompactionConfig config,
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
-      CompactionCandidateSearchPolicy searchPolicy
+      CompactionCandidateSearchPolicy searchPolicy,
+      IndexingStateFingerprintMapper indexingStateFingerprintMapper
   )
   {
     this.config = config;
     this.dataSource = config.getDataSource();
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
+    this.fingerprintMapper = indexingStateFingerprintMapper;
 
     populateQueue(timeline, skipIntervals);
   }
@@ -326,7 +330,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
 
       final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
-      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config, fingerprintMapper);
       final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
 
       if (compactionStatus.isComplete()) {

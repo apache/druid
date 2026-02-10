@@ -59,7 +59,6 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -79,6 +78,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -146,6 +146,9 @@ import java.util.stream.Collectors;
 public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
     implements ChatHandler
 {
+  public static final String AUTOSCALER_METRICS_KEY = "autoscalerMetrics";
+  public static final String POLL_IDLE_RATIO_KEY = "pollIdleRatio";
+
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   public enum Status
@@ -239,6 +242,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
+  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
 
   protected volatile boolean pauseRequested = false;
   private volatile long nextCheckpointTime;
@@ -319,7 +323,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Returns the supervisorId for the task this runner is executing.
    * Backwards compatibility: if task spec from metadata has a null supervisorId field, falls back to dataSource
-  */
+   */
   public String getSupervisorId()
   {
     return task.getSupervisorId();
@@ -416,7 +420,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && withinMinMaxRecordTime(row),
+        this::ensureRowIsNonNullAndWithinMessageTimeBounds,
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -431,7 +435,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Set up SegmentGenerationMetrics
     this.segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(task, segmentGenerationMetrics, rowIngestionMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, task.getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(CTX_KEY_LOOKUP_TIER);
@@ -455,6 +459,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
+      this.recordSupplier = recordSupplier;
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1209,7 +1214,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return metrics;
   }
 
-
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
@@ -1663,6 +1667,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put(AUTOSCALER_METRICS_KEY, Map.of(POLL_IDLE_RATIO_KEY, this.recordSupplier.getPollIdleRatioMetric()));
+    }
     return returnMap;
   }
 
@@ -2138,26 +2145,33 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
   }
 
-  public boolean withinMinMaxRecordTime(final InputRow row)
+  /**
+   * Returns {@link InputRowFilterResult#ACCEPTED} if the row should be accepted,
+   * or a rejection reason otherwise.
+   */
+  InputRowFilterResult ensureRowIsNonNullAndWithinMessageTimeBounds(@Nullable InputRow row)
   {
-    final boolean beforeMinimumMessageTime = minMessageTime.isAfter(row.getTimestamp());
-    final boolean afterMaximumMessageTime = maxMessageTime.isBefore(row.getTimestamp());
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
+    if (row == null) {
+      return InputRowFilterResult.NULL_OR_EMPTY_RECORD;
+    } else if (minMessageTime.isAfter(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is before minimumMessageTime[%s]",
             row.getTimestamp(),
             minMessageTime
         );
-      } else if (afterMaximumMessageTime) {
+      }
+      return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
+    } else if (maxMessageTime.isBefore(row.getTimestamp())) {
+      if (log.isDebugEnabled()) {
         log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            "CurrentTimeStamp[%s] is after maximumMessageTime[%s]",
             row.getTimestamp(),
             maxMessageTime
         );
       }
+      return InputRowFilterResult.AFTER_MAX_MESSAGE_TIME;
     }
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+    return InputRowFilterResult.ACCEPTED;
   }
 }

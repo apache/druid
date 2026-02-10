@@ -49,7 +49,6 @@ import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 
 import javax.annotation.Nonnull;
-
 import java.util.Collections;
 import java.util.Optional;
 
@@ -140,7 +139,7 @@ public class ReadStage extends AbstractFrameProcessorStage
   {
     if (dataSource instanceof TableDataSource) {
       TableDataSource ids = (TableDataSource) dataSource;
-      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
+      TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null, null);
       return inputSpec;
     }
     if (dataSource instanceof InlineDataSource) {

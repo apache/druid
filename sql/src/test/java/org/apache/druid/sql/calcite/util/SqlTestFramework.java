@@ -201,7 +201,10 @@ public class SqlTestFramework
 
     Class<? extends SqlEngine> getSqlEngineClass();
 
-    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker);
+    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    );
 
     /**
      * Should return a module which provides the core Druid components.
@@ -280,9 +283,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return delegate.addSegmentsToWalker(walker);
+      return delegate.addSegmentsToWalker(walker, jsonMapper);
     }
 
     @Override
@@ -605,9 +611,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
+      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker, jsonMapper);
     }
 
     @Override
@@ -1056,7 +1065,7 @@ public class SqlTestFramework
     {
       builder.resourceCloser.register(walker);
       if (testDataSets.isEmpty()) {
-        builder.componentSupplier.addSegmentsToWalker(walker);
+        builder.componentSupplier.addSegmentsToWalker(walker, jsonMapper);
       } else {
         for (TestDataSet testDataSet : testDataSets) {
           walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());

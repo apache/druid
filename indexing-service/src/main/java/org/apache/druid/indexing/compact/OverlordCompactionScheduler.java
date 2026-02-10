@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -44,6 +45,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.segment.metadata.IndexingStateCache;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -139,6 +142,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final boolean shouldPollSegments;
   private final long schedulePeriodMillis;
 
+  private final IndexingStateStorage indexingStateStorage;
+  private final IndexingStateCache indexingStateCache;
+
   @Inject
   public OverlordCompactionScheduler(
       TaskMaster taskMaster,
@@ -154,7 +160,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       ScheduledExecutorFactory executorFactory,
       BrokerClient brokerClient,
       ServiceEmitter emitter,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      IndexingStateStorage indexingStateStorage,
+      IndexingStateCache indexingStateCache
   )
   {
     final long segmentPollPeriodMillis =
@@ -180,6 +188,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.druidInputSourceFactory = druidInputSourceFactory;
+    this.indexingStateStorage = indexingStateStorage;
+    this.indexingStateCache = indexingStateCache;
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
@@ -208,7 +218,18 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @LifecycleStart
   public synchronized void start()
   {
-    // Do nothing
+    // Validate that if compaction supervisors are enabled, the segment metadata incremental cache must be enabled
+    if (compactionConfigSupplier.get().isUseSupervisors()) {
+      if (segmentManager != null && !segmentManager.isPollingDatabasePeriodically()) {
+        throw DruidException
+            .forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
+            .build(
+                "Compaction supervisors require segment metadata cache to be enabled. "
+                + "Set 'druid.manager.segments.useIncrementalCache=always' or 'ifSynced'"
+            );
+      }
+    }
   }
 
   @LifecycleStop
@@ -366,7 +387,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         taskLockbox,
         overlordClient,
         brokerClient,
-        objectMapper
+        objectMapper,
+        indexingStateStorage,
+        indexingStateCache
     );
     latestJobQueue.set(queue);
 

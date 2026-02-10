@@ -74,19 +74,19 @@ public class TaskReportQueryListener implements QueryListener
   private boolean resultsCurrentlyOpen;
 
   public TaskReportQueryListener(
-      final MSQDestination destination,
       final OutputStreamSupplier reportSink,
       final ObjectMapper jsonMapper,
       final String taskId,
-      final Map<String, Object> taskContext
+      final Map<String, Object> taskContext,
+      final long rowsInTaskReport
   )
   {
-    this.rowsInTaskReport = destination.getRowsInTaskReport();
     this.reportSink = reportSink;
     this.jsonMapper = jsonMapper;
     this.serializers = jsonMapper.getSerializerProviderInstance();
     this.taskId = taskId;
     this.taskContext = taskContext;
+    this.rowsInTaskReport = rowsInTaskReport;
   }
 
   @Override

@@ -156,8 +156,10 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       // numeric no lhs null
       "SELECT NVL(long1, long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
       "SELECT NVL(long1, long5 + long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
-      "SELECT CASE WHEN MOD(long1, 2) = 0 THEN -1 WHEN MOD(long1, 2) = 1 THEN long2 / MOD(long1, 2) ELSE long3 END FROM expressions GROUP BY 1"
-
+      "SELECT CASE WHEN MOD(long1, 2) = 0 THEN -1 WHEN MOD(long1, 2) = 1 THEN long2 / MOD(long1, 2) ELSE long3 END FROM expressions GROUP BY 1",
+      // cast
+      "SELECT CAST(string1 as BIGINT) + CAST(string3 as DOUBLE) + long3, COUNT(*) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT COUNT(*), SUM(CAST(string1 as BIGINT) + CAST(string3 as BIGINT)) FROM expressions WHERE double3 < 1010.0 AND double3 > 100.0"
   );
 
   @Param({
@@ -229,7 +231,9 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "55",
       "56",
       "57",
-      "58"
+      "58",
+      "59",
+      "60"
   })
   private String query;
 

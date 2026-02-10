@@ -61,6 +61,11 @@ public interface ExecutionContext
   ListenableFuture<ClusterByPartitions> globalClusterByPartitions();
 
   /**
+   * Factory for reading stage input channels.
+   */
+  InputChannelFactory inputChannelFactory();
+
+  /**
    * Factory for generating stage output channels.
    */
   OutputChannelFactory outputChannelFactory();

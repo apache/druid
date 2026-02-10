@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -46,6 +45,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -81,6 +81,7 @@ import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -682,6 +683,7 @@ public class StreamAppenderator implements Appenderator
           @Override
           public Object call() throws IOException
           {
+            final long startPersistCpuNanos = JvmUtils.safeGetThreadCpuTime();
             try {
               setTaskThreadContext();
               for (Pair<FireHydrant, SegmentIdWithShardSpec> pair : indexesToPersist) {
@@ -747,15 +749,16 @@ public class StreamAppenderator implements Appenderator
               throw e;
             }
             finally {
+              metrics.setPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - startPersistCpuNanos);
+              metrics.incrementPersistTimeMillis(persistStopwatch.millisElapsed());
               metrics.incrementNumPersists();
-              metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
               persistStopwatch.stop();
             }
           }
         }
     );
 
-    final long startDelay = runExecStopwatch.elapsed(TimeUnit.MILLISECONDS);
+    final long startDelay = runExecStopwatch.millisElapsed();
     metrics.incrementPersistBackPressureMillis(startDelay);
     if (startDelay > WARN_DELAY) {
       log.warn("Ingestion was throttled for [%,d] millis because persists were pending.", startDelay);
@@ -935,8 +938,10 @@ public class StreamAppenderator implements Appenderator
       }
 
       final File mergedFile;
-      final long mergeFinishTime;
-      final long startTime = System.nanoTime();
+      final DataSegment mergedSegment;
+      final Stopwatch mergeStopwatch = Stopwatch.createStarted();
+      final long mergeTimeMillis;
+      final long startMergeCpuNanos = JvmUtils.safeGetThreadCpuTime();
       List<QueryableIndex> indexes = new ArrayList<>();
       Closer closer = Closer.create();
       try {
@@ -961,9 +966,19 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getMaxColumnsToMerge()
         );
 
-        mergeFinishTime = System.nanoTime();
+        metrics.setMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - startMergeCpuNanos);
+        mergeTimeMillis = mergeStopwatch.millisElapsed();
+        metrics.setMergeTime(mergeTimeMillis);
 
-        log.debug("Segment[%s] built in %,dms.", identifier, (mergeFinishTime - startTime) / 1000000);
+        log.debug("Segment[%s] built in %,dms.", identifier, mergeTimeMillis);
+        QueryableIndex index = indexIO.loadIndex(mergedFile);
+        closer.register(index);
+        mergedSegment =
+            sink.getSegment()
+                .toBuilder()
+                .dimensions(Lists.newArrayList(index.getAvailableDimensions().iterator()))
+                .totalRows(index.getNumRows())
+                .build();
       }
       catch (Throwable t) {
         throw closer.rethrow(t);
@@ -972,27 +987,24 @@ public class StreamAppenderator implements Appenderator
         closer.close();
       }
 
-      final DataSegment segmentToPush = sink.getSegment().withDimensions(
-          IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes, schema.getDimensionsSpec())
-      );
-
+      final Stopwatch pushStopwatch = Stopwatch.createStarted();
       // dataSegmentPusher retries internally when appropriate; no need for retries here.
-      final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, mergedSegment, useUniquePath);
 
-      final long pushFinishTime = System.nanoTime();
-
+      final long pushTimeMillis = pushStopwatch.millisElapsed();
       objectMapper.writeValue(descriptorFile, segment);
 
       log.info(
-          "Segment[%s] of %,d bytes "
+          "Segment[%s] of %,d bytes and %,d rows "
           + "built from %d incremental persist(s) in %,dms; "
           + "pushed to deep storage in %,dms. "
           + "Load spec is: %s",
           identifier,
           segment.getSize(),
+          segment.getTotalRows(),
           indexes.size(),
-          (mergeFinishTime - startTime) / 1000000,
-          (pushFinishTime - mergeFinishTime) / 1000000,
+          mergeTimeMillis,
+          pushTimeMillis,
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
@@ -1795,11 +1807,17 @@ public class StreamAppenderator implements Appenderator
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
         Sink sink = sinkEntry.getValue();
-        currentSinkSignatureMap.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSignature(), sink.getNumRows()));
+        currentSinkSignatureMap.put(
+            segmentIdWithShardSpec.asSegmentId(),
+            Pair.of(sink.getSignature(), sink.getNumRows())
+        );
       }
 
       Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSignatureMap);
-      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSignatureMap, currentSinkSignatureMap);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(
+          previousSinkSignatureMap,
+          currentSinkSignatureMap
+      );
 
       // update previous reference
       previousSinkSignatureMap = currentSinkSignatureMap;

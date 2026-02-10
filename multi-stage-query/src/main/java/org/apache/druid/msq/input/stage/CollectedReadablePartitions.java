@@ -57,6 +57,12 @@ public class CollectedReadablePartitions implements ReadablePartitions
   }
 
   @Override
+  public boolean isEmpty()
+  {
+    return partitionToWorkerMap.isEmpty();
+  }
+
+  @Override
   public Iterator<ReadablePartition> iterator()
   {
     return Iterators.transform(

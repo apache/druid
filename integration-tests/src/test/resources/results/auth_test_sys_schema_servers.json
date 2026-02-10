@@ -11,7 +11,9 @@
     "is_leader": null,
     "start_time": "0",
     "version": "0.0.0",
-    "labels": null
+    "labels": null,
+    "available_processors": 0,
+    "total_memory": 0
   },
   {
     "server": "%%BROKER%%:8282",
@@ -25,6 +27,8 @@
     "is_leader": null,
     "start_time": "0",
     "version": "0.0.0",
-    "labels": null
+    "labels": null,
+    "available_processors": 0,
+    "total_memory": 0
   }
 ]

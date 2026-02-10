@@ -366,8 +366,18 @@ export class Execution {
 
   static getProgressDescription(execution: Execution | undefined): string {
     if (!execution?.stages) return 'Loading...';
-    if (!execution.isWaitingForQuery())
-      return 'Query complete, waiting for segments to be loaded...';
+    if (!execution.isWaitingForQuery()) {
+      switch (execution.engine) {
+        case 'sql-msq-task':
+          return 'Query complete, waiting for segments to be loaded...';
+
+        case 'sql-msq-dart':
+          return 'Got a non-running report. Did you reuse a sqlQueryID?';
+
+        default:
+          return 'Query not running.';
+      }
+    }
 
     let ret = execution.stages.getStage(0)?.phase ? 'Running query...' : 'Starting query...';
     if (execution.usageInfo) {
@@ -554,6 +564,10 @@ export class Execution {
   public isWaitingForQuery(): boolean {
     const { status } = this;
     return status !== 'SUCCESS' && status !== 'FAILED';
+  }
+
+  public isWaitingForSegments(): boolean {
+    return Boolean(this.stages && !this.isWaitingForQuery() && this.engine === 'sql-msq-task');
   }
 
   public getSegmentStatusDescription() {

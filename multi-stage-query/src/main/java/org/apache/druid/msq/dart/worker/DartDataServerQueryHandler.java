@@ -45,6 +45,7 @@ import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.StandardRetryPolicy;
 
 import java.util.Collections;
 import java.util.List;
@@ -151,6 +152,6 @@ public class DartDataServerQueryHandler implements DataServerQueryHandler
 
   private DataServerClient makeDataServerClient(ServiceLocation serviceLocation)
   {
-    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper);
+    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper, StandardRetryPolicy.noRetries());
   }
 }

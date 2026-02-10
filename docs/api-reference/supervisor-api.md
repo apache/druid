@@ -3598,11 +3598,32 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Handoff task groups for a supervisor early
 
-Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution.
 
 #### URL
 
 `POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="202 ACCEPTED">
+
+*Request has been accepted and handoff will be initiated in the background.*
+
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
+*Invalid supervisor ID or the supervisor is not running.*
+
+</TabItem>
+<TabItem value="3" label="400 BAD REQUEST">
+
+*Supervisor does not support early handoff.*
+
+</TabItem>
+</Tabs>
 
 #### Sample request
 
@@ -3639,8 +3660,10 @@ Content-Type: application/json
 #### Sample response
 
 <details>
-  <summary>View the response</summary>
-(empty response)
+  <summary>202 Accepted</summary>
+
+*Empty response*
+
 </details>
 
 ### Shut down a supervisor

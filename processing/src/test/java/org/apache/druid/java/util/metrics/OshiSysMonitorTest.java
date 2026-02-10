@@ -52,11 +52,6 @@ public class OshiSysMonitorTest
   private HardwareAbstractionLayer hal;
   private OperatingSystem os;
 
-  private enum STATS
-  {
-    MEM, SWAP, FS, DISK, NET, CPU, SYS, TCP
-  }
-
   @Before
   public void setUp()
   {
@@ -134,6 +129,23 @@ public class OshiSysMonitorTest
     emitter.verifyEmitted("sys/mem/used", 1);
     emitter.verifyEmitted("sys/mem/free", 1);
     emitter.verifyEmitted("sys/swap/pageIn", 0);
+    emitter.verifyEmitted("sys/fs/max", 0);
+  }
+
+  @Test
+  public void testJnaBindingsWithRealSystemInfo()
+  {
+    // Use a real SystemInfo instance rather than a mock to ensure all Oshi/JNA bindings are correctly wired
+    OshiSysMonitor m = createMonitor(new SystemInfo(), List.of("mem"));
+    StubServiceEmitter emitter = new StubServiceEmitter();
+
+    m.start();
+    m.doMonitor(emitter);
+    m.stop();
+
+    emitter.verifyEmitted("sys/mem/max", 1);
+    emitter.verifyEmitted("sys/mem/used", 1);
+    emitter.verifyEmitted("sys/mem/free", 1);
     emitter.verifyEmitted("sys/fs/max", 0);
   }
 
@@ -635,6 +647,6 @@ public class OshiSysMonitorTest
 
   private OshiSysMonitor createMonitor(SystemInfo si, List<String> categories)
   {
-    return new OshiSysMonitor(ImmutableMap.of(), new OshiSysMonitorConfig(categories), si);
+    return new OshiSysMonitor(new OshiSysMonitorConfig(categories), si);
   }
 }

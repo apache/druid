@@ -41,8 +41,11 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataReadOnlyTransactionFa
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.IndexingStateCache;
+import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SqlIndexingStateStorage;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.MetadataManager;
 
@@ -59,7 +62,9 @@ import java.util.Set;
  * <li>{@link IndexerMetadataStorageCoordinator}</li>
  * <li>{@link CoordinatorConfigManager}</li>
  * <li>{@link SegmentMetadataCache}</li>
+ * <li>{@link IndexingStateCache} - Overlord only</li>
  * <li>{@link SegmentSchemaCache} - Coordinator only</li>
+ * <li>{@link SqlIndexingStateStorage}</li>
  * </ul>
  */
 public class MetadataManagerModule implements Module
@@ -101,6 +106,9 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
+    binder.bind(IndexingStateStorage.class)
+          .to(SqlIndexingStateStorage.class)
+          .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {
@@ -128,6 +136,7 @@ public class MetadataManagerModule implements Module
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataTransactionFactory.class)
             .in(LazySingleton.class);
+      binder.bind(IndexingStateCache.class).in(LazySingleton.class);
     } else {
       binder.bind(SegmentMetadataTransactionFactory.class)
             .to(SqlSegmentMetadataReadOnlyTransactionFactory.class)

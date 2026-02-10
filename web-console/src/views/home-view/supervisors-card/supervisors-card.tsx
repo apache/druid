@@ -45,6 +45,7 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "running",
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
+              context: { engine: 'native' },
             },
             signal,
           )

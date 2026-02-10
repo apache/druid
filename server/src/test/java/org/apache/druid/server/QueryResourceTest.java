@@ -258,7 +258,7 @@ public class QueryResourceTest
 
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
-    emitter = new StubServiceEmitter();
+    emitter = StubServiceEmitter.createStarted();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 

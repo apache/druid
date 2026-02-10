@@ -50,6 +50,7 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
         }>(
           {
             query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+            context: { engine: 'native' },
           },
           signal,
         );

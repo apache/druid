@@ -20,9 +20,11 @@
 package org.apache.druid.msq.querykit.scan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -50,7 +52,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
 {
   private final ObjectMapper jsonMapper;
 
-  public ScanQueryKit(final ObjectMapper jsonMapper)
+  @Inject
+  public ScanQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }

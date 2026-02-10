@@ -21,7 +21,7 @@ package org.apache.druid.frame.channel;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -72,7 +72,7 @@ public class ReadableConcatFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns read()
   {
     if (!canRead()) {
       throw new NoSuchElementException();

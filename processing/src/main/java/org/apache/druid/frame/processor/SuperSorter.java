@@ -42,7 +42,6 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -499,7 +498,7 @@ public class SuperSorter
     final List<ReadableFrameChannel> in = new ArrayList<>();
 
     for (final Frame frame : inputBuffer) {
-      in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
+      in.add(singleReadableFrameChannel(frame));
     }
 
     runMerger(0, ultimateMergersRunSoFar++, in, Collections.emptyList());
@@ -537,7 +536,7 @@ public class SuperSorter
         break;
       }
 
-      in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
+      in.add(singleReadableFrameChannel(frame));
     }
 
     runMerger(0, levelZeroMergersRunSoFar++, in, ImmutableList.of());
@@ -1055,7 +1054,7 @@ public class SuperSorter
     }
   }
 
-  private static ReadableFrameChannel singleReadableFrameChannel(final FrameWithPartition frame)
+  private static ReadableFrameChannel singleReadableFrameChannel(final Frame frame)
   {
     try {
       final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();

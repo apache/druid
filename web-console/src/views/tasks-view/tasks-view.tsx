@@ -188,6 +188,7 @@ ORDER BY
           return await queryDruidSql(
             {
               query: TasksView.TASK_SQL,
+              context: { engine: 'native' },
             },
             signal,
           );
@@ -714,6 +715,7 @@ ORDER BY
         )}
         {executionDialogOpen && (
           <ExecutionDetailsDialog
+            type="task"
             id={executionDialogOpen}
             goToTask={taskId => {
               onFiltersChange(TableFilters.eq({ task_id: taskId }));

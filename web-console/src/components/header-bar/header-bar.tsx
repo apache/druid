@@ -204,13 +204,13 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       <MenuDivider />
       <MenuItem
         icon={IconNames.HIGH_PRIORITY}
-        text="Capabilty detection"
+        text="Capability detection"
         intent={capabilitiesOverride ? Intent.DANGER : undefined}
       >
         {capabilitiesOverride && (
           <>
             <MenuItem
-              text="Use automatic capabilty detection"
+              text="Use automatic capability detection"
               onClick={() => setCapabilitiesOverride(undefined)}
               intent={Intent.PRIMARY}
             />
@@ -380,7 +380,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           >
             <Button
               icon={IconNames.HIGH_PRIORITY}
-              text="Manual capabilty detection"
+              text="Manual capability detection"
               intent={Intent.DANGER}
               minimal
             />

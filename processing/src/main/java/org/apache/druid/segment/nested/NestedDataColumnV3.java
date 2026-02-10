@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -50,7 +49,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       SegmentFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
+      NestedCommonFormatColumnFormatSpec formatSpec,
       ByteOrder byteOrder
   )
   {
@@ -67,7 +66,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         doubleDictionarySupplier,
         null,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder,
         NestedPathFinder.JQ_PATH_ROOT
     );

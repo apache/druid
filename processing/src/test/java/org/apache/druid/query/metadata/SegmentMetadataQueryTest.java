@@ -73,6 +73,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -103,8 +104,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   );
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final String DATASOURCE = "testDatasource";
-  private static final AggregateProjectionMetadata.Schema PROJECTION1_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
-  private static final AggregateProjectionMetadata.Schema PROJECTION2_SCHEMA = TestIndex.PROJECTIONS.get(1).toMetadataSchema();
+  private static final AggregateProjectionSchema PROJECTION1_SCHEMA = TestIndex.PROJECTIONS.get(0).toMetadataSchema();
+  private static final AggregateProjectionSchema PROJECTION2_SCHEMA = TestIndex.PROJECTIONS.get(1).toMetadataSchema();
   private static final int PROJECTION1_ROWS = 279;
   private static final int PROJECTION2_ROWS = 93;
 

@@ -49,7 +49,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
 
   /**
    * Resources that a {@link KafkaIndexTask} is authorized to use. Includes
-   * performing a read action on external resource of type
+   * performing a read action on an external resource of type
    */
   public static final Set<ResourceAction> INPUT_SOURCE_RESOURCES = Set.of(
       AuthorizationUtils.createExternalResourceReadAction(KafkaIndexTaskModule.SCHEME)

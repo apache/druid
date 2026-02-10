@@ -497,6 +497,36 @@ public class NestedGroupByArrayQueryTest
     );
   }
 
+  @Test
+  public void testGroupByRootArrayVariantElementLong()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.LONG))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn(
+                                                  "arrayVariant",
+                                                  "$[1]",
+                                                  "v0",
+                                                  ColumnType.LONG
+                                              )
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{null, 20L},
+            new Object[]{1L, 8L}
+        )
+    );
+  }
+
   private void runResults(
       GroupByQuery groupQuery,
       List<Object[]> expectedResults

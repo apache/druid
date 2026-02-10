@@ -19,11 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * Nested field writer for string type columns of {@link NestedDataColumnSerializer}
@@ -54,12 +50,5 @@ public final class ScalarStringFieldColumnWriter extends GlobalDictionaryEncoded
   int lookupGlobalId(String value)
   {
     return globalDictionaryIdLookup.lookupString(value);
-  }
-
-  @Override
-  void writeColumnTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
-  {
-    writeLongAndDoubleColumnLength(channel, 0, 0);
-    encodedValueSerializer.writeTo(channel, fileBuilder);
   }
 }

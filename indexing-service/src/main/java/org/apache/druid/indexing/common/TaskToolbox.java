@@ -358,6 +358,9 @@ public class TaskToolbox
     return jsonMapper;
   }
 
+  /**
+   * Returns a {@link SegmentCacheManager} in virtual storage mode.
+   */
   public SegmentCacheManager getSegmentCacheManager()
   {
     return segmentCacheManager;

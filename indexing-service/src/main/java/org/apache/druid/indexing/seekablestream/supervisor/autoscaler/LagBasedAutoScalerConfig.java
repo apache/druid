@@ -103,8 +103,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
 
     this.scaleInStep = scaleInStep != null ? scaleInStep : 1;
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
-    this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
-        != null ? minTriggerScaleActionFrequencyMillis : 600000;
+    this.minTriggerScaleActionFrequencyMillis =
+        minTriggerScaleActionFrequencyMillis != null ? minTriggerScaleActionFrequencyMillis : 600000;
 
     Preconditions.checkArgument(
         stopTaskCountRatio == null || (stopTaskCountRatio > 0.0 && stopTaskCountRatio <= 1.0),

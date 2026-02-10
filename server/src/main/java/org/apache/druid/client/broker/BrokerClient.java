@@ -65,4 +65,23 @@ public interface BrokerClient
    * Updates the broker with the given {@link CoordinatorDynamicConfig}.
    */
   ListenableFuture<Boolean> updateCoordinatorDynamicConfig(CoordinatorDynamicConfig config);
+
+  /**
+   * Gets the report for a SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId the SQL query ID
+   * @param selfOnly   if true, only check the local broker; if false, check all brokers
+   *
+   * @return JSON response from the report API
+   */
+  ListenableFuture<String> getQueryReport(String sqlQueryId, boolean selfOnly);
+
+  /**
+   * Cancels a SQL query by its SQL query ID.
+   *
+   * @param sqlQueryId the SQL query ID to cancel
+   *
+   * @return true if the cancellation was accepted
+   */
+  ListenableFuture<Boolean> cancelSqlQuery(String sqlQueryId);
 }

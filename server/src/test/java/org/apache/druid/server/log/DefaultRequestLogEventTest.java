@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
@@ -126,7 +127,7 @@ public class DefaultRequestLogEventTest
   }
 
   @Test
-  public void testDefaultRequestLogEventToMapSQL()
+  public void testDefaultRequestLogEventToMapSQL() throws JsonProcessingException
   {
     final String feed = "test";
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
@@ -164,7 +165,15 @@ public class DefaultRequestLogEventTest
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 
-    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
+    final EventMap observedEventMap = defaultRequestLogEvent.toMap();
+    Assert.assertEquals(expected, observedEventMap);
+    Assert.assertEquals(
+        StringUtils.format(
+            "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from 1337\"}",
+            timestamp
+        ),
+        new DefaultObjectMapper().writeValueAsString(observedEventMap)
+    );
   }
 
   @Test

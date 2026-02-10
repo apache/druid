@@ -52,7 +52,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
-import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -109,7 +108,6 @@ public class OverlordResourceTest
   private TaskStorage taskStorage;
   private GlobalTaskLockbox taskLockbox;
   private JacksonConfigManager configManager;
-  private ProvisioningStrategy provisioningStrategy;
   private AuthConfig authConfig;
   private TaskQueryTool taskQueryTool;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -128,7 +126,6 @@ public class OverlordResourceTest
     taskRunner = EasyMock.createMock(TaskRunner.class);
     taskQueue = EasyMock.createStrictMock(TaskQueue.class);
     configManager = EasyMock.createMock(JacksonConfigManager.class);
-    provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
@@ -138,7 +135,6 @@ public class OverlordResourceTest
         taskStorage,
         taskLockbox,
         taskMaster,
-        provisioningStrategy,
         () -> configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class).get()
     );
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
@@ -226,8 +222,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter,
         authConfig,
         configManager,
-        auditManager,
-        provisioningStrategy
+        auditManager
     );
   }
 
@@ -351,6 +346,26 @@ public class OverlordResourceTest
 
     Assert.assertEquals(1, responseObjects.size());
     Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+  }
+
+  @Test
+  public void test_getAllActiveTasks_withTaskQueryTool_returnsRunningTasksOnly()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.expect(taskQueue.getTaskInfos()).andReturn(
+        List.of(
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("s"), new NoopTask("s", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.failure("f", ""), new NoopTask("f", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r1"), new NoopTask("r1", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r2"), new NoopTask("r2", null, null, 1L, 0L, null))
+        )
+    );
+
+    replayAll();
+
+    final List<TaskStatusPlus> activeTasks = taskQueryTool.getAllActiveTasks();
+    Assert.assertEquals(2, activeTasks.size());
+    Assert.assertTrue(activeTasks.stream().allMatch(status -> status.getStatusCode().equals(TaskState.RUNNING)));
   }
 
   @Test

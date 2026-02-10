@@ -20,13 +20,10 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -40,7 +37,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -243,7 +239,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         .dynamicPartitionWithMaxRows(5000)
         .withId(compactTaskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(compactTaskId, compactionTask));
-    cluster.callApi().waitForTaskToSucceed(taskId, eventCollector.latchableEmitter());
+    cluster.callApi().waitForTaskToSucceed(compactTaskId, eventCollector.latchableEmitter());
 
     // Verify the compacted data
     final int numCompactedSegments = 5;
@@ -308,13 +304,10 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("RUNNING", supervisorStatus.getState());
     Assertions.assertEquals(topic, supervisorStatus.getSource());
 
-    // Get the task statuses
-    List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>)
-            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
-    );
-    Assertions.assertFalse(taskStatuses.isEmpty());
-    Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
+    // Confirm tasks are being created and running
+    int runningTasks = cluster.callApi().getTaskCount("running", dataSource);
+    int completedTasks = cluster.callApi().getTaskCount("complete", dataSource);
+    Assertions.assertTrue(runningTasks + completedTasks > 0);
 
     // Suspend the supervisor and verify the state
     cluster.callApi().onLeaderOverlord(
@@ -347,9 +340,12 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     final Optional<InputStream> streamOptional =
-        overlord.bindings()
-                .getInstance(TaskLogStreamer.class)
-                .streamTaskLog(taskId, 0);
+        cluster.callApi().waitForResult(
+            () -> overlord.bindings()
+                          .getInstance(TaskLogStreamer.class)
+                          .streamTaskLog(taskId, 0),
+            Optional::isPresent
+        ).go();
 
     Assertions.assertTrue(streamOptional.isPresent());
 

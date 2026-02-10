@@ -112,9 +112,11 @@ public class S3DataSegmentPuller implements URIDataPuller
         return result;
       } else if (s3Coords.getPath().endsWith("/")) {
         // segment is not compressed, list objects and pull them all
-        final ListObjectsV2Result list = s3Client.listObjectsV2(
-            new ListObjectsV2Request().withBucketName(s3Coords.getBucket())
-                                      .withPrefix(s3Coords.getPath())
+        final ListObjectsV2Result list = S3Utils.retryS3Operation(
+            () -> s3Client.listObjectsV2(
+                new ListObjectsV2Request().withBucketName(s3Coords.getBucket())
+                                          .withPrefix(s3Coords.getPath())
+            )
         );
         FileUtils.FileCopyResult copyResult = new FileUtils.FileCopyResult();
         for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {

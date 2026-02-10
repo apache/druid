@@ -269,7 +269,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
     return podTemplateAnnotationBuilder.build();
   }
-  
+
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     Preconditions.checkNotNull(config.getNamespace(), "When using Custom Pod Templates, druid.indexer.runner.namespace cannot be null.");

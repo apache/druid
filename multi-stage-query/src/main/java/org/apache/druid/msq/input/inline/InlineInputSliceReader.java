@@ -19,22 +19,25 @@
 
 package org.apache.druid.msq.input.inline;
 
-import com.google.common.collect.Iterables;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.input.AdaptedLoadableSegment;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.LoadableSegment;
+import org.apache.druid.msq.input.PhysicalInputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -55,13 +58,7 @@ public class InlineInputSliceReader implements InputSliceReader
   }
 
   @Override
-  public int numReadableInputs(InputSlice slice)
-  {
-    return 1;
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       final int inputNumber,
       final InputSlice slice,
       final CounterTracker counters,
@@ -69,17 +66,19 @@ public class InlineInputSliceReader implements InputSliceReader
   )
   {
     final InlineDataSource dataSource = ((InlineInputSlice) slice).getDataSource();
+    final List<LoadableSegment> segments = new ArrayList<>();
 
-    return ReadableInputs.segments(
-        Iterables.transform(
-            segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY),
-            segment -> ReadableInput.segment(
-                new SegmentWithDescriptor(
-                    () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
-                    DUMMY_SEGMENT_DESCRIPTOR
-                )
-            )
-        )
-    );
+    for (final Segment segment : segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY)) {
+      segments.add(
+          AdaptedLoadableSegment.create(
+              segment,
+              Intervals.ETERNITY,
+              "inline data",
+              counters.channel(CounterNames.inputChannel(inputNumber))
+          )
+      );
+    }
+
+    return new PhysicalInputSlice(ReadablePartitions.empty(), segments, Collections.emptyList());
   }
 }
