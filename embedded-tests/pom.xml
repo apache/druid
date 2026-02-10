@@ -29,9 +29,6 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
-    <!--  Hadoop relies upon JDK 11 language level which breaks when upgraded to anything higher, but we can use 17 in \
-    embedded-tests, which supports more features such as multiline text block literal delimiter (""")  -->
-    <maven.compiler.release>17</maven.compiler.release>
   </properties>
 
   <parent>
@@ -549,7 +546,6 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.5</version>
       <scope>test</scope>
     </dependency>
 
@@ -557,14 +553,6 @@
 
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <configuration>
-          <release>${maven.compiler.release}</release> <!-- forced for this module -->
-        </configuration>
-      </plugin>
       <!-- Skip this module from jacoco coverage as it contains only tests -->
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -579,6 +567,13 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <excludedGroups>docker-test</excludedGroups>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <configuration>
+          <skip>true</skip>
         </configuration>
       </plugin>
     </plugins>

@@ -72,8 +72,8 @@
             <artifactId>joda-time</artifactId>
         </dependency>
         <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.inject</groupId>
@@ -260,7 +260,6 @@
         <dependency>
             <groupId>com.google.api.grpc</groupId>
             <artifactId>proto-google-common-protos</artifactId>
-            <version>2.48.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
