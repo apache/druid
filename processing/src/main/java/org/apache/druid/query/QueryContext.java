@@ -777,4 +777,9 @@ public class QueryContext
   {
     return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
   }
+
+  public int getMaxVirtualColumnsForBitmapIndexing()
+  {
+    return getInt(QueryContexts.CTX_MAX_VIRTUAL_COLUMNS_FOR_BITMAP, QueryContexts.DEFAULT_MAX_VIRTUAL_COLUMNS_FOR_BITMAP);
+  }
 }
