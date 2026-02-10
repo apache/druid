@@ -60,7 +60,8 @@ public class TestServer extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         null,
         DefaultQueryConfig.NIL,
-        authMapper
+        authMapper,
+        null
     );
     serverInit.start();
     Runtime.getRuntime().addShutdownHook(new Thread()
