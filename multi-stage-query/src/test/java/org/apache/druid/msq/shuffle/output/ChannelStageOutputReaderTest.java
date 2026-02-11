@@ -280,7 +280,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private static final int EXPECTED_NUM_ROWS = 1209;
 
     private final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(MAX_FRAMES);
-    private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
+    private ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
 
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -310,7 +310,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     @After
     public void tearDown()
     {
-      reader.close();
+      if (reader != null) {
+        reader.close();
+      }
     }
 
     @Test
@@ -337,6 +339,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
           IllegalStateException.class,
           reader::readLocally
       );
+
+      // Prevent close() in tearDown, which would fail.
+      reader = null;
     }
 
     @Test
