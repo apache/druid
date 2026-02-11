@@ -27,6 +27,7 @@ import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
@@ -57,16 +58,19 @@ public class KubernetesTaskExecutionConfigResource
   private static final Logger log = new Logger(KubernetesTaskExecutionConfigResource.class);
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
+  private final KubernetesTaskRunnerStaticConfig staticConfig;
   private AtomicReference<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = null;
 
   @Inject
   public KubernetesTaskExecutionConfigResource(
       final JacksonConfigManager configManager,
-      final AuditManager auditManager
+      final AuditManager auditManager,
+      final KubernetesTaskRunnerStaticConfig staticConfig
   )
   {
     this.configManager = configManager;
     this.auditManager = auditManager;
+    this.staticConfig = staticConfig;
   }
 
   /**
@@ -160,7 +164,14 @@ public class KubernetesTaskExecutionConfigResource
   private KubernetesTaskRunnerDynamicConfig getDynamicConfig()
   {
     if (dynamicConfigRef == null) {
-      dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
+      dynamicConfigRef = configManager.watch(
+          KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+          KubernetesTaskRunnerDynamicConfig.class,
+          new DefaultKubernetesTaskRunnerDynamicConfig(
+              KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY,
+              staticConfig.getCapacity()
+          )
+      );
     }
     return dynamicConfigRef.get();
   }

@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.execution;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.easymock.EasyMock;
@@ -33,6 +34,7 @@ import javax.ws.rs.core.Response;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class KubernetesTaskExecutionConfigResourceTest
 {
@@ -40,6 +42,13 @@ public class KubernetesTaskExecutionConfigResourceTest
   private AuditManager auditManager;
   private HttpServletRequest req;
   private KubernetesTaskRunnerDynamicConfig dynamicConfig;
+  private KubernetesTaskRunnerStaticConfig staticConfig;
+
+  private static final KubernetesTaskRunnerDynamicConfig DEFAULT_DYNAMIC_CONFIG =
+      new DefaultKubernetesTaskRunnerDynamicConfig(
+          KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY,
+          Integer.MAX_VALUE
+      );
 
   @Before
   public void setUp()
@@ -48,6 +57,7 @@ public class KubernetesTaskExecutionConfigResourceTest
     auditManager = EasyMock.createMock(AuditManager.class);
     req = EasyMock.createMock(HttpServletRequest.class);
     dynamicConfig = EasyMock.createMock(KubernetesTaskRunnerDynamicConfig.class);
+    staticConfig = new KubernetesTaskRunnerStaticConfig();
   }
 
   @Test
@@ -55,11 +65,13 @@ public class KubernetesTaskExecutionConfigResourceTest
   {
     EasyMock.expect(configManager.watch(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
     )).andReturn(new AtomicReference<>(null));
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
-        auditManager
+        auditManager,
+        staticConfig
     );
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
@@ -82,11 +94,13 @@ public class KubernetesTaskExecutionConfigResourceTest
   {
     EasyMock.expect(configManager.watch(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
     )).andReturn(new AtomicReference<>(null));
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
-        auditManager
+        auditManager,
+        staticConfig
     );
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(null).anyTimes();
     EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn(null).anyTimes();
@@ -109,14 +123,16 @@ public class KubernetesTaskExecutionConfigResourceTest
   {
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
-        auditManager
+        auditManager,
+        staticConfig
     );
 
     PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
     KubernetesTaskRunnerDynamicConfig currentConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 5);
     EasyMock.expect(configManager.watch(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
     )).andReturn(new AtomicReference<>(currentConfig));
 
     PodTemplateSelectStrategy requestStrategy = new TaskTypePodTemplateSelectStrategy();
@@ -147,14 +163,16 @@ public class KubernetesTaskExecutionConfigResourceTest
   {
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
-        auditManager
+        auditManager,
+        staticConfig
     );
 
     PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
     KubernetesTaskRunnerDynamicConfig currentConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 2);
     EasyMock.expect(configManager.watch(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
     )).andReturn(new AtomicReference<>(currentConfig));
 
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, 7);
@@ -184,14 +202,16 @@ public class KubernetesTaskExecutionConfigResourceTest
   {
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
         configManager,
-        auditManager
+        auditManager,
+        staticConfig
     );
 
     PodTemplateSelectStrategy currentStrategy = new TaskTypePodTemplateSelectStrategy();
     KubernetesTaskRunnerDynamicConfig currentConfig = new DefaultKubernetesTaskRunnerDynamicConfig(currentStrategy, 9);
     EasyMock.expect(configManager.watch(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        KubernetesTaskRunnerDynamicConfig.class
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
     )).andReturn(new AtomicReference<>(currentConfig));
 
     KubernetesTaskRunnerDynamicConfig requestConfig = new DefaultKubernetesTaskRunnerDynamicConfig(null, null);
@@ -214,5 +234,29 @@ public class KubernetesTaskExecutionConfigResourceTest
 
     Response result = testedResource.setExecutionConfig(requestConfig, req);
     assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+  }
+
+  @Test
+  public void getExecutionConfig_ReturnsDefaultWhenNoConfigSet()
+  {
+    EasyMock.expect(configManager.watch(
+        KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
+        KubernetesTaskRunnerDynamicConfig.class,
+        DEFAULT_DYNAMIC_CONFIG
+    )).andReturn(new AtomicReference<>(DEFAULT_DYNAMIC_CONFIG));
+    EasyMock.replay(configManager, auditManager);
+
+    KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
+        configManager,
+        auditManager,
+        staticConfig
+    );
+
+    Response result = testedResource.getExecutionConfig();
+    assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
+
+    KubernetesTaskRunnerDynamicConfig returnedConfig = (KubernetesTaskRunnerDynamicConfig) result.getEntity();
+    assertNotNull(returnedConfig);
+    assertEquals(DEFAULT_DYNAMIC_CONFIG, returnedConfig);
   }
 }
