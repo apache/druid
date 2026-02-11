@@ -102,7 +102,8 @@ public class QueryFrameworkUtils
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         authorizerMapper,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+        null  // BrokerConfigManager - null for tests
     );
   }
 

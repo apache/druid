@@ -66,6 +66,7 @@ import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.server.BrokerConfigManager;
 import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
@@ -77,6 +78,7 @@ import org.apache.druid.server.SubqueryGuardrailHelperProvider;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.http.BrokerDynamicConfigsResource;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
@@ -163,6 +165,8 @@ public class CliBroker extends ServerRunnable
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
+          binder.bind(BrokerConfigManager.class).in(LazySingleton.class);
+
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
           Jerseys.addResource(binder, BrokerQueryResource.class);
           binder.bind(SubqueryGuardrailHelper.class).toProvider(SubqueryGuardrailHelperProvider.class);
@@ -171,6 +175,7 @@ public class CliBroker extends ServerRunnable
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
           Jerseys.addResource(binder, BrokerDynamicConfigResource.class);
+          Jerseys.addResource(binder, BrokerDynamicConfigsResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
 

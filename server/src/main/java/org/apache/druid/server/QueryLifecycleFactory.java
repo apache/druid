@@ -32,6 +32,8 @@ import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
+import javax.annotation.Nullable;
+
 @LazySingleton
 public class QueryLifecycleFactory
 {
@@ -44,6 +46,7 @@ public class QueryLifecycleFactory
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final BrokerConfigManager brokerConfigManager;
 
   @Inject
   public QueryLifecycleFactory(
@@ -55,7 +58,8 @@ public class QueryLifecycleFactory
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<DefaultQueryConfig> queryConfigSupplier
+      final Supplier<DefaultQueryConfig> queryConfigSupplier,
+      @Nullable final BrokerConfigManager brokerConfigManager
   )
   {
     this.conglomerate = conglomerate;
@@ -67,6 +71,7 @@ public class QueryLifecycleFactory
     this.defaultQueryConfig = queryConfigSupplier.get();
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.brokerConfigManager = brokerConfigManager;
   }
 
   public QueryLifecycle factorize()
@@ -81,6 +86,7 @@ public class QueryLifecycleFactory
         defaultQueryConfig,
         authConfig,
         policyEnforcer,
+        brokerConfigManager,
         System.currentTimeMillis(),
         System.nanoTime()
     );

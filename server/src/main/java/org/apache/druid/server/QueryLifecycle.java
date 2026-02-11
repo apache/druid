@@ -99,6 +99,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final BrokerConfigManager brokerConfigManager;
   private final long startMs;
   private final long startNs;
 
@@ -121,6 +122,7 @@ public class QueryLifecycle
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      @Nullable final BrokerConfigManager brokerConfigManager,
       final long startMs,
       final long startNs
   )
@@ -134,6 +136,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.brokerConfigManager = brokerConfigManager;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -158,6 +161,8 @@ public class QueryLifecycle
   )
   {
     initialize(query);
+
+    checkQueryBlocklist();
 
     final Sequence<T> results;
 
@@ -307,6 +312,30 @@ public class QueryLifecycle
     doAuthorize(authenticationResult, authorizationResult);
     if (!state.equals(State.AUTHORIZED)) {
       throw DruidException.defensive("Unexpected state [%s], expecting [%s].", state, State.AUTHORIZED);
+    }
+  }
+
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    if (brokerConfigManager == null) {
+      // BrokerConfigManager not available, skip blocklist check
+      return;
+    }
+
+    final BrokerDynamicConfig config = brokerConfigManager.getCurrentDynamicConfig();
+
+    for (QueryBlocklistRule rule : config.getQueryBlocklist()) {
+      if (rule.matches(baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build("Query blocked by broker blocklist rule: %s", rule.getRuleName());
+      }
     }
   }
 

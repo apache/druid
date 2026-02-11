@@ -292,7 +292,8 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())),
+        null
     );
   }
 
