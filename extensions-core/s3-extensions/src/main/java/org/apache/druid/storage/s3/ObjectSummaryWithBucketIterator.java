@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Iterator that returns S3 objects along with their bucket names.
@@ -46,7 +47,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
   private ListObjectsV2Response result;
   private Iterator<S3Object> objectSummaryIterator;
   private S3Utils.S3ObjectWithBucket currentObjectSummary;
-  private boolean initialized;
+  private AtomicBoolean initialized;
 
   ObjectSummaryWithBucketIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
@@ -59,6 +60,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     this.maxRetries = maxRetries;
+    this.initialized = new AtomicBoolean(false);
   }
 
   @Override
@@ -70,8 +72,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
 
   private void initialize()
   {
-    if (!initialized) {
-      initialized = true;
+    if (initialized.compareAndSet(false, true)) {
       prepareNextRequest();
       fetchNextBatch();
       advanceObjectSummary();
