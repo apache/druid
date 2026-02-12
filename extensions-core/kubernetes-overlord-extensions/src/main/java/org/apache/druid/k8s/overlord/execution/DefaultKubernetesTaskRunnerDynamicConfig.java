@@ -35,7 +35,9 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
 
   @JsonCreator
   public DefaultKubernetesTaskRunnerDynamicConfig(
+      @Nullable
       @JsonProperty("podTemplateSelectStrategy") PodTemplateSelectStrategy podTemplateSelectStrategy,
+      @Nullable
       @JsonProperty("capacity") Integer capacity
   )
   {
