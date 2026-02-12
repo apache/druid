@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -46,7 +47,7 @@ public class QueryLifecycleFactory
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
-  private final BrokerConfigManager brokerConfigManager;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   @Inject
   public QueryLifecycleFactory(
@@ -59,7 +60,7 @@ public class QueryLifecycleFactory
       final PolicyEnforcer policyEnforcer,
       final AuthorizerMapper authorizerMapper,
       final Supplier<DefaultQueryConfig> queryConfigSupplier,
-      @Nullable final BrokerConfigManager brokerConfigManager
+      @Nullable final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -71,7 +72,7 @@ public class QueryLifecycleFactory
     this.defaultQueryConfig = queryConfigSupplier.get();
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
-    this.brokerConfigManager = brokerConfigManager;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
   }
 
   public QueryLifecycle factorize()
@@ -86,7 +87,7 @@ public class QueryLifecycleFactory
         defaultQueryConfig,
         authConfig,
         policyEnforcer,
-        brokerConfigManager,
+        brokerViewOfCoordinatorConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

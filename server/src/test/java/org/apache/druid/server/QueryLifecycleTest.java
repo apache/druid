@@ -29,6 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Scopes;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.ISE;
@@ -59,6 +60,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -126,7 +128,7 @@ public class QueryLifecycleTest
   PolicyEnforcer policyEnforcer;
   @Bind(lazy = true)
   @Nullable
-  BrokerConfigManager brokerConfigManager;
+  BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
 
   QueryMetrics metrics;
   AuthenticationResult authenticationResult;
@@ -158,7 +160,7 @@ public class QueryLifecycleTest
     authenticationResult = EasyMock.createMock(AuthenticationResult.class);
     authConfig = new AuthConfig();
     policyEnforcer = NoopPolicyEnforcer.instance();
-    brokerConfigManager = null; // Not needed for these tests
+    brokerViewOfCoordinatorConfig = null; // Not needed for these tests
 
     injector = Guice.createInjector(
         BoundFieldModule.of(this),
@@ -835,11 +837,13 @@ public class QueryLifecycleTest
         null,
         null
     );
-    BrokerDynamicConfig brokerConfig = new BrokerDynamicConfig(ImmutableList.of(rule));
+    CoordinatorDynamicConfig brokerConfig = CoordinatorDynamicConfig.builder()
+        .withQueryBlocklist(ImmutableList.of(rule))
+        .build();
 
-    // Mock BrokerConfigManager to return config with blocklist
-    BrokerConfigManager mockBrokerConfigManager = EasyMock.createMock(BrokerConfigManager.class);
-    EasyMock.expect(mockBrokerConfigManager.getCurrentDynamicConfig()).andReturn(brokerConfig).once();
+    // Mock BrokerViewOfCoordinatorConfig to return config with blocklist
+    BrokerViewOfCoordinatorConfig mockBrokerViewOfCoordinatorConfig = EasyMock.createMock(BrokerViewOfCoordinatorConfig.class);
+    EasyMock.expect(mockBrokerViewOfCoordinatorConfig.getDynamicConfig()).andReturn(brokerConfig).anyTimes();
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -847,11 +851,11 @@ public class QueryLifecycleTest
             .andReturn(toolChest)
             .once();
 
-    EasyMock.replay(mockBrokerConfigManager);
+    EasyMock.replay(mockBrokerViewOfCoordinatorConfig);
     replayAll();
 
-    // Override brokerConfigManager for this test
-    brokerConfigManager = mockBrokerConfigManager;
+    // Override brokerViewOfCoordinatorConfig for this test
+    brokerViewOfCoordinatorConfig = mockBrokerViewOfCoordinatorConfig;
     QueryLifecycle lifecycle = createLifecycle();
 
     // This should throw because query matches blocklist rule
@@ -861,10 +865,10 @@ public class QueryLifecycleTest
     );
     Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertTrue(e.getMessage().contains("Query blocked by broker blocklist rule"));
+    Assert.assertTrue(e.getMessage().contains("Query blocked by rule"));
     Assert.assertTrue(e.getMessage().contains("test-rule"));
 
-    EasyMock.verify(mockBrokerConfigManager);
+    EasyMock.verify(mockBrokerViewOfCoordinatorConfig);
   }
 
   @Test
@@ -877,11 +881,13 @@ public class QueryLifecycleTest
         null,
         null
     );
-    BrokerDynamicConfig brokerConfig = new BrokerDynamicConfig(ImmutableList.of(rule));
+    CoordinatorDynamicConfig brokerConfig = CoordinatorDynamicConfig.builder()
+        .withQueryBlocklist(ImmutableList.of(rule))
+        .build();
 
-    // Mock BrokerConfigManager to return config with blocklist
-    BrokerConfigManager mockBrokerConfigManager = EasyMock.createMock(BrokerConfigManager.class);
-    EasyMock.expect(mockBrokerConfigManager.getCurrentDynamicConfig()).andReturn(brokerConfig).once();
+    // Mock BrokerViewOfCoordinatorConfig to return config with blocklist
+    BrokerViewOfCoordinatorConfig mockBrokerViewOfCoordinatorConfig = EasyMock.createMock(BrokerViewOfCoordinatorConfig.class);
+    EasyMock.expect(mockBrokerViewOfCoordinatorConfig.getDynamicConfig()).andReturn(brokerConfig).anyTimes();
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -893,17 +899,17 @@ public class QueryLifecycleTest
             .once();
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
 
-    EasyMock.replay(mockBrokerConfigManager);
+    EasyMock.replay(mockBrokerViewOfCoordinatorConfig);
     replayAll();
 
-    // Override brokerConfigManager for this test
-    brokerConfigManager = mockBrokerConfigManager;
+    // Override brokerViewOfCoordinatorConfig for this test
+    brokerViewOfCoordinatorConfig = mockBrokerViewOfCoordinatorConfig;
     QueryLifecycle lifecycle = createLifecycle();
 
     // This should succeed because query doesn't match blocklist rule
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
 
-    EasyMock.verify(mockBrokerConfigManager);
+    EasyMock.verify(mockBrokerViewOfCoordinatorConfig);
   }
 
   private HttpServletRequest mockRequest()

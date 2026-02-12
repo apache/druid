@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -99,7 +101,7 @@ public class QueryLifecycle
   private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
-  private final BrokerConfigManager brokerConfigManager;
+  private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
   private final long startMs;
   private final long startNs;
 
@@ -122,7 +124,7 @@ public class QueryLifecycle
       final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
-      @Nullable final BrokerConfigManager brokerConfigManager,
+      @Nullable final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
       final long startMs,
       final long startNs
   )
@@ -136,7 +138,7 @@ public class QueryLifecycle
     this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
-    this.brokerConfigManager = brokerConfigManager;
+    this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -323,18 +325,23 @@ public class QueryLifecycle
    */
   private void checkQueryBlocklist()
   {
-    if (brokerConfigManager == null) {
-      // BrokerConfigManager not available, skip blocklist check
-      return;
+    if (brokerViewOfCoordinatorConfig == null) {
+      return; // Not running on broker, skip blocklist check
     }
 
-    final BrokerDynamicConfig config = brokerConfigManager.getCurrentDynamicConfig();
+    CoordinatorDynamicConfig config = brokerViewOfCoordinatorConfig.getDynamicConfig();
+    if (config == null) {
+      return; // Config not loaded yet, allow query (best effort)
+    }
 
     for (QueryBlocklistRule rule : config.getQueryBlocklist()) {
-      if (rule.matches(baseQuery)) {
+      if (rule.matches(this.baseQuery)) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.FORBIDDEN)
-                            .build("Query blocked by broker blocklist rule: %s", rule.getRuleName());
+                            .build(
+                                "Query blocked by rule[%s]",
+                                rule.getRuleName()
+                            );
       }
     }
   }
