@@ -117,6 +117,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -268,11 +269,27 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
   public List<DataSegment> findSegmentsToLock(TaskActionClient taskActionClient, List<Interval> intervals)
       throws IOException
   {
-    return findInputSegments(
+    List<DataSegment> allSegments = findInputSegments(
         getDataSource(),
         taskActionClient,
         intervals
     );
+
+    // Check if specific segments were passed via context (from CompactionTask)
+    @SuppressWarnings("unchecked")
+    List<String> specificSegmentIds = (List<String>) getContext().get(
+        CompactionTask.CTX_KEY_SPECIFIC_SEGMENTS_TO_COMPACT
+    );
+
+    if (specificSegmentIds != null && !specificSegmentIds.isEmpty()) {
+      // Filter to only the specified segments
+      Set<String> segmentIdSet = new HashSet<>(specificSegmentIds);
+      return allSegments.stream()
+                        .filter(segment -> segmentIdSet.contains(segment.getId().toString()))
+                        .collect(Collectors.toList());
+    }
+
+    return allSegments;
   }
 
   @Override

@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfi
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,10 +44,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +129,34 @@ public class NativeCompactionRunner implements CompactionRunner
     ).collect(Collectors.toList());
   }
 
+  /**
+   * When using {@link SpecificSegmentsSpec}, resolves specific segment IDs that belong to the given interval
+   * and returns them as {@link WindowedSegmentId} objects. Returns null for interval-based compaction.
+   */
+  @Nullable
+  private static List<WindowedSegmentId> resolveSegmentIdsForInterval(
+      CompactionInputSpec inputSpec,
+      String dataSource,
+      Interval interval
+  )
+  {
+    if (!(inputSpec instanceof SpecificSegmentsSpec)) {
+      return null;
+    }
+    SpecificSegmentsSpec spec = (SpecificSegmentsSpec) inputSpec;
+    List<WindowedSegmentId> segmentIds = new ArrayList<>();
+    for (String segmentIdStr : spec.getSegments()) {
+      SegmentId segmentId = SegmentId.tryParse(dataSource, segmentIdStr);
+      if (segmentId != null && interval.contains(segmentId.getInterval())) {
+        segmentIds.add(new WindowedSegmentId(
+            segmentIdStr,
+            Collections.singletonList(segmentId.getInterval())
+        ));
+      }
+    }
+    return segmentIds.isEmpty() ? null : segmentIds;
+  }
+
   private String createIndexTaskSpecId(String taskId, int i)
   {
     return StringUtils.format("%s_%d", taskId, i);
@@ -140,18 +172,33 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionIOConfig compactionIOConfig
   )
   {
-    if (!compactionIOConfig.isAllowNonAlignedInterval()) {
-      // Validate interval alignment.
+    // Resolve specific segment IDs for minor compaction if using SpecificSegmentsSpec
+    final List<WindowedSegmentId> segmentIds = resolveSegmentIdsForInterval(
+        compactionIOConfig.getInputSpec(),
+        dataSchema.getDataSource(),
+        interval
+    );
+
+    final Interval inputInterval;
+    if (segmentIds != null && !segmentIds.isEmpty()) {
+      // When compacting specific segments, use segment IDs instead of interval
+      inputInterval = null;
+    } else {
+      inputInterval = interval;
+    }
+
+    if (inputInterval != null && !compactionIOConfig.isAllowNonAlignedInterval()) {
+      // Validate interval alignment only when using interval-based input (not segment-ID mode).
       final Granularity segmentGranularity = dataSchema.getGranularitySpec().getSegmentGranularity();
       final Interval widenedInterval = Intervals.utc(
-          segmentGranularity.bucketStart(interval.getStart()).getMillis(),
-          segmentGranularity.bucketEnd(interval.getEnd().minus(1)).getMillis()
+          segmentGranularity.bucketStart(inputInterval.getStart()).getMillis(),
+          segmentGranularity.bucketEnd(inputInterval.getEnd().minus(1)).getMillis()
       );
 
-      if (!interval.equals(widenedInterval)) {
+      if (!inputInterval.equals(widenedInterval)) {
         throw new IAE(
             "Interval[%s] to compact is not aligned with segmentGranularity[%s]",
-            interval,
+            inputInterval,
             segmentGranularity
         );
       }
@@ -160,8 +207,8 @@ public class NativeCompactionRunner implements CompactionRunner
     return new ParallelIndexIOConfig(
         new DruidInputSource(
             dataSchema.getDataSource(),
-            interval,
-            null,
+            inputInterval,
+            segmentIds,
             null,
             null,
             null,
@@ -304,6 +351,13 @@ public class NativeCompactionRunner implements CompactionRunner
     newContext.putIfAbsent(CompactSegments.STORE_COMPACTION_STATE_KEY, STORE_COMPACTION_STATE);
     // Set the priority of the compaction task.
     newContext.put(Tasks.PRIORITY_KEY, compactionTask.getPriority());
+
+    // Pass specific segment IDs to sub-tasks when using SpecificSegmentsSpec.
+    // This ensures sub-tasks lock only the specified segments, not all segments in the interval.
+    if (compactionTask.getIoConfig().getInputSpec() instanceof SpecificSegmentsSpec) {
+      SpecificSegmentsSpec specificSpec = (SpecificSegmentsSpec) compactionTask.getIoConfig().getInputSpec();
+      newContext.put(CompactionTask.CTX_KEY_SPECIFIC_SEGMENTS_TO_COMPACT, specificSpec.getSegments());
+    }
     return newContext;
   }
 
