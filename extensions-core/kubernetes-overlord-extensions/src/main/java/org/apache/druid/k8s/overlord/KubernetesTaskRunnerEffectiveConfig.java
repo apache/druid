@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
