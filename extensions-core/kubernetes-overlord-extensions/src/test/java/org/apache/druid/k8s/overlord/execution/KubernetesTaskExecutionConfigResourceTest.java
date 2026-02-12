@@ -127,7 +127,7 @@ public class KubernetesTaskExecutionConfigResourceTest
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
         expectedMerged,
         AuthorizationUtils.buildAuditInfo(req)
-    )).andReturn(ConfigManager.SetResult.fail(new RuntimeException(), false));
+    )).andReturn(ConfigManager.SetResult.failure(new RuntimeException()));
     EasyMock.replay(configManager, auditManager);
 
     Response result = testedResource.setExecutionConfig(inputConfig, req);
@@ -275,27 +275,33 @@ public class KubernetesTaskExecutionConfigResourceTest
   @SuppressWarnings("unchecked")
   public void getExecutionConfigHistory_SanityCheck()
   {
-    AuditInfo admin = new AuditInfo("admin", "initial setup", "10.0.0.1");
-    AuditInfo operator = new AuditInfo("operator", "scaled up capacity", "10.0.0.2");
-    AuditInfo paranoidUser = new AuditInfo("paranoid-user", "rollback to safe config", "10.0.0.3");
+    AuditInfo admin = new AuditInfo("admin", "crewmate", "initial setup", "10.0.0.1");
+    AuditInfo operator = new AuditInfo("operator", "imposter", "scaled up capacity", "10.0.0.2");
+    AuditInfo paranoidUser = new AuditInfo("paranoid-user", "crewmate", "rollback to safe config", "10.0.0.3");
 
     String configKey = KubernetesTaskRunnerDynamicConfig.CONFIG_KEY;
 
-    AuditEntry entry1 = new AuditEntry(
-        configKey, configKey, admin,
-        "{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":5}",
-        DateTimes.of("2024-06-01T10:00:00Z")
-    );
-    AuditEntry entry2 = new AuditEntry(
-        configKey, configKey, operator,
-        "{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":20}",
-        DateTimes.of("2024-09-15T14:30:00Z")
-    );
-    AuditEntry entry3 = new AuditEntry(
-        configKey, configKey, paranoidUser,
-        "{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":10}",
-        DateTimes.of("2024-11-20T08:00:00Z")
-    );
+    AuditEntry entry1 = AuditEntry.builder()
+        .key(configKey)
+        .type(configKey)
+        .auditInfo(admin)
+        .serializedPayload("{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":5}")
+        .auditTime(DateTimes.of("2024-06-01T10:00:00Z"))
+        .build();
+    AuditEntry entry2 = AuditEntry.builder()
+        .key(configKey)
+        .type(configKey)
+        .auditInfo(operator)
+        .serializedPayload("{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":20}")
+        .auditTime(DateTimes.of("2024-09-15T14:30:00Z"))
+        .build();
+    AuditEntry entry3 = AuditEntry.builder()
+        .key(configKey)
+        .type(configKey)
+        .auditInfo(paranoidUser)
+        .serializedPayload("{\"type\":\"default\",\"podTemplateSelectStrategy\":{\"type\":\"taskType\"},\"capacity\":10}")
+        .auditTime(DateTimes.of("2024-11-20T08:00:00Z"))
+        .build();
 
     List<AuditEntry> fullHistory = ImmutableList.of(entry3, entry2, entry1);
     List<AuditEntry> lastTwo = ImmutableList.of(entry3, entry2);
@@ -309,7 +315,9 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     KubernetesTaskExecutionConfigResource testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager, auditManager, DEFAULT_CONFIG
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
     Response result = testedResource.getExecutionConfigHistory(null, 2);
     assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -324,7 +332,9 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager, auditManager, DEFAULT_CONFIG
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
     result = testedResource.getExecutionConfigHistory(intervalStr, null);
     assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -339,7 +349,9 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager, auditManager, DEFAULT_CONFIG
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
     result = testedResource.getExecutionConfigHistory(intervalStr, 99);
     assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -352,7 +364,9 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager, auditManager, DEFAULT_CONFIG
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
     result = testedResource.getExecutionConfigHistory(null, null);
     assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -368,7 +382,9 @@ public class KubernetesTaskExecutionConfigResourceTest
     EasyMock.replay(configManager, auditManager);
 
     testedResource = new KubernetesTaskExecutionConfigResource(
-        configManager, auditManager, DEFAULT_CONFIG
+        configManager,
+        auditManager,
+        DEFAULT_CONFIG
     );
     result = testedResource.getExecutionConfigHistory(null, -1);
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), result.getStatus());
