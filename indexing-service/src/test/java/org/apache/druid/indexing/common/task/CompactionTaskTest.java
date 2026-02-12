@@ -145,6 +145,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -2102,10 +2103,7 @@ public class CompactionTaskTest
 
   private DataSegment createSegmentWithPartition(Interval interval, String version, int partitionNum)
   {
-    return DataSegment.builder()
-        .dataSource(DATA_SOURCE)
-        .interval(interval)
-        .version(version)
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, interval, version, partitionNum))
         .shardSpec(new NumberedShardSpec(partitionNum, 0))
         .size(100)
         .build();

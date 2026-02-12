@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
@@ -154,11 +155,10 @@ public class TaskLockHelperTest
   @Test(expected = IllegalArgumentException.class)
   public void testVerifyDifferentIntervalsFail()
   {
+    final Interval interval1 = Intervals.of("2017-01-01/2017-01-02");
+    final Interval interval2 = Intervals.of("2017-01-02/2017-01-03");
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder()
-            .dataSource(DATA_SOURCE)
-            .interval(Intervals.of("2017-01-01/2017-01-02"))
-            .version(TEST_VERSION)
+        DataSegment.builder(SegmentId.of(DATA_SOURCE, interval1, TEST_VERSION, 0))
             .shardSpec(new NumberedOverwriteShardSpec(
                 PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
                 0,
@@ -168,10 +168,7 @@ public class TaskLockHelperTest
             ))
             .size(0)
             .build(),
-        DataSegment.builder()
-            .dataSource(DATA_SOURCE)
-            .interval(Intervals.of("2017-01-02/2017-01-03")) // Different interval
-            .version(TEST_VERSION)
+        DataSegment.builder(SegmentId.of(DATA_SOURCE, interval2, TEST_VERSION, 0))
             .shardSpec(new NumberedOverwriteShardSpec(
                 PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + 1,
                 1,
@@ -197,10 +194,7 @@ public class TaskLockHelperTest
       short atomicUpdateGroupSize
   )
   {
-    return DataSegment.builder()
-        .dataSource(DATA_SOURCE)
-        .interval(TEST_INTERVAL)
-        .version(TEST_VERSION)
+    return DataSegment.builder(SegmentId.of(DATA_SOURCE, TEST_INTERVAL, TEST_VERSION, partitionId))
         .shardSpec(new NumberedOverwriteShardSpec(
             PartitionIds.NON_ROOT_GEN_START_PARTITION_ID + partitionId,
             startRootPartitionId,
