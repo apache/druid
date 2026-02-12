@@ -27,10 +27,16 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class JvmMonitorTest
 {
+
+  private static final Set<String> VALID_PAUSE_TYPES = Set.of("stw", "concurrent");
 
   @Test(timeout = 60_000L)
   public void testGcCounts() throws InterruptedException
@@ -53,6 +59,109 @@ public class JvmMonitorTest
         return;
       }
       Thread.sleep(10);
+    }
+  }
+
+  @Test
+  public void testGcNotificationMetricsEmitted()
+  {
+    EventCollectingEmitter emitter = new EventCollectingEmitter();
+    final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "localhost", emitter);
+    serviceEmitter.start();
+
+    final JvmMonitor jvmMonitor = new JvmMonitor();
+    jvmMonitor.start();
+    jvmMonitor.doMonitor(serviceEmitter);
+
+    Set<String> metricNames = emitter.events.stream()
+        .map(e -> ((ServiceMetricEvent) e).getMetric())
+        .collect(Collectors.toSet());
+
+    // Rate/gauge metrics should always be emitted (even if zero)
+    Assert.assertTrue("Expected jvm/gc/allocationRate/bytes", metricNames.contains("jvm/gc/allocationRate/bytes"));
+    Assert.assertTrue("Expected jvm/gc/promotionRate/bytes", metricNames.contains("jvm/gc/promotionRate/bytes"));
+    Assert.assertTrue("Expected jvm/gc/liveDataSize/bytes", metricNames.contains("jvm/gc/liveDataSize/bytes"));
+    Assert.assertTrue("Expected jvm/gc/maxDataSize/bytes", metricNames.contains("jvm/gc/maxDataSize/bytes"));
+
+    // Verify jvmVersion dimension on the new metrics
+    for (Event e : emitter.events) {
+      ServiceMetricEvent event = (ServiceMetricEvent) e;
+      String metric = event.getMetric();
+      if (metric.startsWith("jvm/gc/allocationRate")
+          || metric.startsWith("jvm/gc/promotionRate")
+          || metric.startsWith("jvm/gc/liveDataSize")
+          || metric.startsWith("jvm/gc/maxDataSize")) {
+        Map<String, Object> map = event.toMap();
+        Assert.assertNotNull("jvmVersion dimension should be set on " + metric, map.get("jvmVersion"));
+      }
+    }
+
+    jvmMonitor.stop();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testPauseMetricsHaveDimensions() throws InterruptedException
+  {
+    EventCollectingEmitter emitter = new EventCollectingEmitter();
+    final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "localhost", emitter);
+    serviceEmitter.start();
+
+    final JvmMonitor jvmMonitor = new JvmMonitor();
+    jvmMonitor.start();
+
+    // Generate garbage to trigger GC events
+    while (true) {
+      @SuppressWarnings("unused")
+      byte[] b = new byte[1024 * 1024 * 50];
+      emitter.events.clear();
+      jvmMonitor.doMonitor(serviceEmitter);
+
+      boolean hasPauseOrConcurrent = emitter.events.stream()
+          .map(e -> ((ServiceMetricEvent) e).getMetric())
+          .anyMatch(m -> "jvm/gc/pause".equals(m) || "jvm/gc/concurrentPhaseTime".equals(m));
+
+      if (hasPauseOrConcurrent) {
+        // Verify dimensions on pause/concurrentPhaseTime events
+        for (Event e : emitter.events) {
+          ServiceMetricEvent event = (ServiceMetricEvent) e;
+          String metric = event.getMetric();
+          if ("jvm/gc/pause".equals(metric) || "jvm/gc/concurrentPhaseTime".equals(metric)) {
+            Map<String, Object> map = event.toMap();
+            Assert.assertNotNull("gcAction should be set on " + metric, map.get("gcAction"));
+            Assert.assertNotNull("gcCause should be set on " + metric, map.get("gcCause"));
+            Assert.assertNotNull("jvmVersion should be set on " + metric, map.get("jvmVersion"));
+          }
+        }
+        jvmMonitor.stop();
+        return;
+      }
+      Thread.sleep(10);
+    }
+  }
+
+  private static class EventCollectingEmitter implements Emitter
+  {
+    final List<Event> events = new ArrayList<>();
+
+    @Override
+    public void start()
+    {
+    }
+
+    @Override
+    public void emit(Event event)
+    {
+      events.add(event);
+    }
+
+    @Override
+    public void flush()
+    {
+    }
+
+    @Override
+    public void close()
+    {
     }
   }
 
@@ -84,6 +193,14 @@ public class JvmMonitorTest
       String gcGen = null;
       if (event.toMap().get("gcGen") != null) {
         gcGen = ((List) event.toMap().get("gcGen")).get(0).toString();
+      }
+
+      if (event.toMap().get("gcPauseType") != null) {
+        String pauseType = ((List) event.toMap().get("gcPauseType")).get(0).toString();
+        Assert.assertTrue(
+            "expected gcPauseType to be 'stw' or 'concurrent', got: " + pauseType,
+            VALID_PAUSE_TYPES.contains(pauseType)
+        );
       }
 
       switch (event.getMetric() + "/" + gcGen) {
