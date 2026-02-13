@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
-import org.apache.druid.server.compaction.ReindexingMetricsRule;
+import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
@@ -480,23 +480,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY),
             new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule(
-                "metrics-8d", null, Period.days(8),
-                new AggregatorFactory[0]
-            ),
-            new ReindexingMetricsRule(
-                "metrics-14d", null, Period.days(14),
-                new AggregatorFactory[0]
-            ),
-            new ReindexingMetricsRule(
-                "metrics-45d", null, Period.days(45),
-                new AggregatorFactory[0]
-            ),
-            new ReindexingMetricsRule(
-                "metrics-100d", null, Period.days(100),
-                new AggregatorFactory[0]
-            )
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-100d", null, Period.days(100), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -576,10 +564,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
 
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-8d", null, Period.days(8), new AggregatorFactory[0]),
-            new ReindexingMetricsRule("metrics-14d", null, Period.days(14), new AggregatorFactory[0]),
-            new ReindexingMetricsRule("metrics-45d", null, Period.days(45), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -659,10 +647,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH),
             new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-7d", null, Period.days(7), new AggregatorFactory[0]),
-            new ReindexingMetricsRule("metrics-14d", null, Period.days(14), new AggregatorFactory[0]),
-            new ReindexingMetricsRule("metrics-21d", null, Period.days(21), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -751,10 +739,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                                                                       new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.MONTH),
                                                                       new ReindexingSegmentGranularityRule("day-rule", null, Period.days(7), Granularities.DAY)
                                                                   ))
-                                                                  .metricsRules(List.of(
-                                                                      new ReindexingMetricsRule("metrics-7d", null, Period.days(1), new AggregatorFactory[0]),
-                                                                      new ReindexingMetricsRule("metrics-14d", null, Period.days(14), new AggregatorFactory[0]),
-                                                                      new ReindexingMetricsRule("metrics-21d", null, Period.days(45), new AggregatorFactory[0])
+                                                                  .dataSchemaRules(List.of(
+                                                                      new ReindexingDataSchemaRule("metrics-7d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
+                                                                      new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
+                                                                      new ReindexingDataSchemaRule("metrics-21d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
                                                                   ))
                                                                   .build();
 
@@ -874,8 +862,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .segmentGranularityRules(List.of(
             new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-1m", null, Period.months(1), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -937,8 +925,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .segmentGranularityRules(List.of(
             new ReindexingSegmentGranularityRule("day-rule", null, Period.days(1), Granularities.DAY)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-12h", null, Period.hours(12), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -1003,9 +991,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .segmentGranularityRules(List.of(
             new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.DAY)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), new AggregatorFactory[0]),
-            new ReindexingMetricsRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 
@@ -1177,11 +1165,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     // Return a fresh stream on each call to avoid "stream has already been operated upon or closed" errors
     EasyMock.expect(mockProvider.streamAllRules()).andAnswer(() -> segmentGranularityRules.stream().map(r -> (ReindexingRule) r)).anyTimes();
     EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(segmentGranularityRules.get(0)).anyTimes();
-    EasyMock.expect(mockProvider.getQueryGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
-    EasyMock.expect(mockProvider.getMetricsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
-    EasyMock.expect(mockProvider.getDimensionsRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getIOConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
-    EasyMock.expect(mockProvider.getProjectionRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getTuningConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDeletionRules(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(mockProvider);
@@ -1229,8 +1213,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
             new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
         ))
-        .metricsRules(List.of(
-            new ReindexingMetricsRule("metrics-7d", null, Period.days(7), new AggregatorFactory[0])
+        .dataSchemaRules(List.of(
+            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
         ))
         .build();
 

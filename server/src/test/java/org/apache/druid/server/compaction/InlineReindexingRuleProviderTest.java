@@ -63,27 +63,15 @@ public class InlineReindexingRuleProviderTest
         null,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
         null
     );
 
     Assert.assertNotNull(provider.getDeletionRules());
     Assert.assertTrue(provider.getDeletionRules().isEmpty());
-    Assert.assertNotNull(provider.getMetricsRules());
-    Assert.assertTrue(provider.getMetricsRules().isEmpty());
-    Assert.assertNotNull(provider.getDimensionsRules());
-    Assert.assertTrue(provider.getDimensionsRules().isEmpty());
     Assert.assertNotNull(provider.getIOConfigRules());
     Assert.assertTrue(provider.getIOConfigRules().isEmpty());
-    Assert.assertNotNull(provider.getProjectionRules());
-    Assert.assertTrue(provider.getProjectionRules().isEmpty());
     Assert.assertNotNull(provider.getSegmentGranularityRules());
     Assert.assertTrue(provider.getSegmentGranularityRules().isEmpty());
-    Assert.assertNotNull(provider.getQueryGranularityRules());
-    Assert.assertTrue(provider.getQueryGranularityRules().isEmpty());
     Assert.assertNotNull(provider.getTuningConfigRules());
     Assert.assertTrue(provider.getTuningConfigRules().isEmpty());
     Assert.assertTrue(provider.getDataSchemaRules().isEmpty());
@@ -117,22 +105,6 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_allNonAdditiveRules_validateNonAdditivity()
   {
-    // Test metrics rules
-    testNonAdditivity(
-        "metrics",
-        this::createMetricsRule,
-        InlineReindexingRuleProvider.Builder::metricsRules,
-        InlineReindexingRuleProvider::getMetricsRule
-    );
-
-    // Test dimensions rules
-    testNonAdditivity(
-        "dimensions",
-        this::createDimensionsRule,
-        InlineReindexingRuleProvider.Builder::dimensionsRules,
-        InlineReindexingRuleProvider::getDimensionsRule
-    );
-
     // Test IOConfig rules
     testNonAdditivity(
         "ioConfig",
@@ -141,28 +113,12 @@ public class InlineReindexingRuleProviderTest
         InlineReindexingRuleProvider::getIOConfigRule
     );
 
-    // Test projection rules
-    testNonAdditivity(
-        "projection",
-        this::createProjectionRule,
-        InlineReindexingRuleProvider.Builder::projectionRules,
-        InlineReindexingRuleProvider::getProjectionRule
-    );
-
     // Test segment granularity rules
     testNonAdditivity(
         "segmentGranularity",
         this::createSegmentGranularityRule,
         InlineReindexingRuleProvider.Builder::segmentGranularityRules,
         InlineReindexingRuleProvider::getSegmentGranularityRule
-    );
-
-    // Test query granularity rules
-    testNonAdditivity(
-        "queryGranularity",
-        this::createQueryGranularityRule,
-        InlineReindexingRuleProvider.Builder::queryGranularityRules,
-        InlineReindexingRuleProvider::getQueryGranularityRule
     );
 
     // Test tuning config rules
@@ -185,23 +141,15 @@ public class InlineReindexingRuleProviderTest
   public void test_allRuleTypesWireCorrectly_withInterval()
   {
     ReindexingDeletionRule filterRule = createFilterRule("filter", Period.days(30));
-    ReindexingMetricsRule metricsRule = createMetricsRule("metrics", Period.days(30));
-    ReindexingDimensionsRule dimensionsRule = createDimensionsRule("dimensions", Period.days(30));
     ReindexingIOConfigRule ioConfigRule = createIOConfigRule("ioconfig", Period.days(30));
-    ReindexingProjectionRule projectionRule = createProjectionRule("projection", Period.days(30));
     ReindexingSegmentGranularityRule segmentGranularityRule = createSegmentGranularityRule("segmentGranularity", Period.days(30));
-    ReindexingQueryGranularityRule queryGranularityRule = createQueryGranularityRule("queryGranularity", Period.days(30));
     ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
     ReindexingDataSchemaRule dataSchemaRule = createDataSchemaRule("dataSchema", Period.days(30));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .deletionRules(ImmutableList.of(filterRule))
-        .metricsRules(ImmutableList.of(metricsRule))
-        .dimensionsRules(ImmutableList.of(dimensionsRule))
         .ioConfigRules(ImmutableList.of(ioConfigRule))
-        .projectionRules(ImmutableList.of(projectionRule))
         .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
-        .queryGranularityRules(ImmutableList.of(queryGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
         .dataSchemaRules(ImmutableList.of(dataSchemaRule))
         .build();
@@ -209,17 +157,9 @@ public class InlineReindexingRuleProviderTest
     Assert.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
     Assert.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
-    Assert.assertEquals("metrics", provider.getMetricsRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
-
-    Assert.assertEquals("dimensions", provider.getDimensionsRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
-
     Assert.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals("projection", provider.getProjectionRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
-
     Assert.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
-
-    Assert.assertEquals("queryGranularity", provider.getQueryGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assert.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
@@ -290,36 +230,9 @@ public class InlineReindexingRuleProviderTest
     return new ReindexingDeletionRule(id, null, period, new SelectorDimFilter("dim", "val", null), null);
   }
 
-  private ReindexingMetricsRule createMetricsRule(String id, Period period)
-  {
-    return new ReindexingMetricsRule(
-        id,
-        null,
-        period,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-  }
-
-  private ReindexingDimensionsRule createDimensionsRule(String id, Period period)
-  {
-    return new ReindexingDimensionsRule(id, null, period, new UserCompactionTaskDimensionsConfig(null));
-  }
-
   private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
   {
     return new ReindexingIOConfigRule(id, null, period, new UserCompactionTaskIOConfig(null));
-  }
-
-  private ReindexingProjectionRule createProjectionRule(String id, Period period)
-  {
-    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        "test_projection",
-        null,
-        null,
-        null,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-    return new ReindexingProjectionRule(id, null, period, ImmutableList.of(projectionSpec));
   }
 
   private ReindexingSegmentGranularityRule createSegmentGranularityRule(String id, Period period)
@@ -329,17 +242,6 @@ public class InlineReindexingRuleProviderTest
         null,
         period,
         Granularities.DAY
-    );
-  }
-
-  private ReindexingQueryGranularityRule createQueryGranularityRule(String id, Period period)
-  {
-    return new ReindexingQueryGranularityRule(
-        id,
-        null,
-        period,
-        Granularities.DAY,
-        true
     );
   }
 

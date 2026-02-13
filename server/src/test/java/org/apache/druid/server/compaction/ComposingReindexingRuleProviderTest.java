@@ -180,66 +180,6 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
-  public void test_getQueryGranularityRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().queryGranularityRules(rules).build(),
-        ComposingReindexingRuleProvider::getQueryGranularityRules,
-        createQueryGranularityRule("rule1", Period.days(7)),
-        createQueryGranularityRule("rule2", Period.days(30)),
-        ReindexingQueryGranularityRule::getId
-    );
-  }
-
-  @Test
-  public void test_getMetricsRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().metricsRules(rules).build(),
-        ComposingReindexingRuleProvider::getMetricsRules,
-        createMetricsRule("rule1", Period.days(7)),
-        createMetricsRule("rule2", Period.days(30)),
-        ReindexingMetricsRule::getId
-    );
-  }
-
-  @Test
-  public void test_getMetricsRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().metricsRules(rules).build(),
-        (provider, it) -> provider.getMetricsRule(it.interval, it.time),
-        createMetricsRule("rule1", Period.days(7)),
-        createMetricsRule("rule2", Period.days(30)),
-        ReindexingMetricsRule::getId
-    );
-  }
-
-  @Test
-  public void test_getDimensionsRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().dimensionsRules(rules).build(),
-        ComposingReindexingRuleProvider::getDimensionsRules,
-        createDimensionsRule("rule1", Period.days(7)),
-        createDimensionsRule("rule2", Period.days(30)),
-        ReindexingDimensionsRule::getId
-    );
-  }
-
-  @Test
-  public void test_getDimensionsRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().dimensionsRules(rules).build(),
-        (provider, it) -> provider.getDimensionsRule(it.interval, it.time),
-        createDimensionsRule("rule1", Period.days(7)),
-        createDimensionsRule("rule2", Period.days(30)),
-        ReindexingDimensionsRule::getId
-    );
-  }
-
-  @Test
   public void test_getIOConfigRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
@@ -260,30 +200,6 @@ public class ComposingReindexingRuleProviderTest
         createIOConfigRule("rule1", Period.days(7)),
         createIOConfigRule("rule2", Period.days(30)),
         ReindexingIOConfigRule::getId
-    );
-  }
-
-  @Test
-  public void test_getProjectionRules_compositingBehavior()
-  {
-    testComposingBehaviorForRuleType(
-        rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
-        ComposingReindexingRuleProvider::getProjectionRules,
-        createProjectionRule("rule1", Period.days(7)),
-        createProjectionRule("rule2", Period.days(30)),
-        ReindexingProjectionRule::getId
-    );
-  }
-
-  @Test
-  public void test_getProjectionRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().projectionRules(rules).build(),
-        (provider, it) -> provider.getProjectionRule(it.interval, it.time),
-        createProjectionRule("rule1", Period.days(7)),
-        createProjectionRule("rule2", Period.days(30)),
-        ReindexingProjectionRule::getId
     );
   }
 
@@ -320,18 +236,6 @@ public class ComposingReindexingRuleProviderTest
         createSegmentGranularityRule("rule1", Period.days(7)),
         createSegmentGranularityRule("rule2", Period.days(30)),
         ReindexingSegmentGranularityRule::getId
-    );
-  }
-
-  @Test
-  public void test_getQueryGranularityRuleWithInterval_compositingBehavior()
-  {
-    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
-        rules -> InlineReindexingRuleProvider.builder().queryGranularityRules(rules).build(),
-        (provider, it) -> provider.getQueryGranularityRule(it.interval, it.time),
-        createQueryGranularityRule("rule1", Period.days(7)),
-        createQueryGranularityRule("rule2", Period.days(30)),
-        ReindexingQueryGranularityRule::getId
     );
   }
 
@@ -521,7 +425,7 @@ public class ComposingReindexingRuleProviderTest
    */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null, null, null)
+    return new InlineReindexingRuleProvider(null, null, null, null, null)
     {
       @Override
       public boolean isReady()
@@ -552,37 +456,6 @@ public class ComposingReindexingRuleProviderTest
     );
   }
 
-  private ReindexingQueryGranularityRule createQueryGranularityRule(String id, Period period)
-  {
-    return new ReindexingQueryGranularityRule(
-        id,
-        "Test granularity rule",
-        period,
-        Granularities.DAY,
-        false
-    );
-  }
-
-  private ReindexingMetricsRule createMetricsRule(String id, Period period)
-  {
-    return new ReindexingMetricsRule(
-        id,
-        "Test metrics rule",
-        period,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-  }
-
-  private ReindexingDimensionsRule createDimensionsRule(String id, Period period)
-  {
-    return new ReindexingDimensionsRule(
-        id,
-        "Test dimensions rule",
-        period,
-        new UserCompactionTaskDimensionsConfig(null)
-    );
-  }
-
   private ReindexingIOConfigRule createIOConfigRule(String id, Period period)
   {
     return new ReindexingIOConfigRule(
@@ -590,23 +463,6 @@ public class ComposingReindexingRuleProviderTest
         "Test IO config rule",
         period,
         new UserCompactionTaskIOConfig(null)
-    );
-  }
-
-  private ReindexingProjectionRule createProjectionRule(String id, Period period)
-  {
-    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        "test_projection",
-        null,
-        null,
-        null,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-    return new ReindexingProjectionRule(
-        id,
-        "Test projection rule",
-        period,
-        ImmutableList.of(projectionSpec)
     );
   }
 

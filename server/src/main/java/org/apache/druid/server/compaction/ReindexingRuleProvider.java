@@ -88,26 +88,6 @@ public interface ReindexingRuleProvider
   List<ReindexingDeletionRule> getDeletionRules();
 
   /**
-   * Returns the matched reindexing metrics rule that applies to the given interval.
-   * <p>
-   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
-   * implementation and should be clearly documented.
-   * </p>
-   *
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingMetricsRule} rule that applies to the given interval.
-   */
-  @Nullable
-  ReindexingMetricsRule getMetricsRule(Interval interval, DateTime referenceTime);
-
-  /**
-   * Returns ALL reindexing metrics rules.
-   */
-  List<ReindexingMetricsRule> getMetricsRules();
-
-  /**
    * Returns the matched reindexing data schema rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/orpartial overlaps is the responsibility of the provider
@@ -126,26 +106,6 @@ public interface ReindexingRuleProvider
    * Returns ALL reindexing data schema rules.
    */
   List<ReindexingDataSchemaRule> getDataSchemaRules();
-
-  /**
-   * Returns the matched reindexing dimensions rule that applies to the given interval.
-   * <p>
-   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
-   * implementation and should be clearly documented.
-   * </p>
-   *
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingDimensionsRule} rule that applies to the given interval.
-   */
-  @Nullable
-  ReindexingDimensionsRule getDimensionsRule(Interval interval, DateTime referenceTime);
-
-  /**
-   * Returns ALL reindexing dimensions rules.
-   */
-  List<ReindexingDimensionsRule> getDimensionsRules();
 
   /**
    * Returns the matched reindexing IO config rule that applies to the given interval.
@@ -168,26 +128,6 @@ public interface ReindexingRuleProvider
   List<ReindexingIOConfigRule> getIOConfigRules();
 
   /**
-   * Returns the matched reindexing projection rule that applies to the given interval.
-   * <p>
-   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
-   * implementation and should be clearly documented.
-   * </p>
-   *
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingProjectionRule} rule that applies to the given interval.
-   */
-  @Nullable
-  ReindexingProjectionRule getProjectionRule(Interval interval, DateTime referenceTime);
-
-  /**
-   * Returns ALL reindexing projection rules.
-   */
-  List<ReindexingProjectionRule> getProjectionRules();
-
-  /**
    * Returns the matched reindexing segment granularity rule that applies to the given interval.
    * <p>
    * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
@@ -206,26 +146,6 @@ public interface ReindexingRuleProvider
    * Returns ALL reindexing segment granularity rules.
    */
   List<ReindexingSegmentGranularityRule> getSegmentGranularityRules();
-
-  /**
-   * Returns the matched reindexing query granularity rule that applies to the given interval.
-   * <p>
-   * Handling cases of multiple applicable rules and/or partial overlaps is the responsibility of the provider
-   * implementation and should be clearly documented.
-   * </p>
-   *
-   * @param interval      The interval to check applicability against.
-   * @param referenceTime The reference time to use for period calculations while determining rule applicability for an interval.
-   *                      e.g., a rule with period P7D applies to data older than 7 days from the reference time.
-   * @return {@link ReindexingQueryGranularityRule} rule that applies to the given interval.
-   */
-  @Nullable
-  ReindexingQueryGranularityRule getQueryGranularityRule(Interval interval, DateTime referenceTime);
-
-  /**
-   * Returns ALL reindexing query granularity rules.
-   */
-  List<ReindexingQueryGranularityRule> getQueryGranularityRules();
 
   /**
    * Returns the matched reindexing tuning config rule that applies to the given interval.
@@ -258,11 +178,7 @@ public interface ReindexingRuleProvider
   default Stream<ReindexingRule> streamAllRules()
   {
     return Stream.of(
-        getMetricsRules().stream(),
-        getDimensionsRules().stream(),
         getIOConfigRules().stream(),
-        getProjectionRules().stream(),
-        getQueryGranularityRules().stream(),
         getTuningConfigRules().stream(),
         getDeletionRules().stream(),
         getSegmentGranularityRules().stream(),

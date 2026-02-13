@@ -28,7 +28,6 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 

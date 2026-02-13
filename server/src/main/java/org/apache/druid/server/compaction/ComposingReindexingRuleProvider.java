@@ -126,16 +126,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingMetricsRule> getMetricsRules()
-  {
-    return providers.stream()
-                    .map(ReindexingRuleProvider::getMetricsRules)
-                    .filter(rules -> !rules.isEmpty())
-                    .findFirst()
-                    .orElse(Collections.emptyList());
-  }
-
-  @Override
   @Nullable
   public ReindexingDataSchemaRule getDataSchemaRule(Interval interval, DateTime referenceTime)
   {
@@ -154,38 +144,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
-  }
-
-  @Override
-  @Nullable
-  public ReindexingMetricsRule getMetricsRule(Interval interval, DateTime referenceTime)
-  {
-    return providers.stream()
-                    .map(p -> p.getMetricsRule(interval, referenceTime))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-  }
-
-  @Override
-  public List<ReindexingDimensionsRule> getDimensionsRules()
-  {
-    return providers.stream()
-                    .map(ReindexingRuleProvider::getDimensionsRules)
-                    .filter(rules -> !rules.isEmpty())
-                    .findFirst()
-                    .orElse(Collections.emptyList());
-  }
-
-  @Override
-  @Nullable
-  public ReindexingDimensionsRule getDimensionsRule(Interval interval, DateTime referenceTime)
-  {
-    return providers.stream()
-                    .map(p -> p.getDimensionsRule(interval, referenceTime))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
   }
 
   @Override
@@ -210,27 +168,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  public List<ReindexingProjectionRule> getProjectionRules()
-  {
-    return providers.stream()
-                    .map(ReindexingRuleProvider::getProjectionRules)
-                    .filter(rules -> !rules.isEmpty())
-                    .findFirst()
-                    .orElse(Collections.emptyList());
-  }
-
-  @Override
-  @Nullable
-  public ReindexingProjectionRule getProjectionRule(Interval interval, DateTime referenceTime)
-  {
-    return providers.stream()
-                    .map(p -> p.getProjectionRule(interval, referenceTime))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-  }
-
-  @Override
   @Nullable
   public ReindexingSegmentGranularityRule getSegmentGranularityRule(Interval interval, DateTime referenceTime)
   {
@@ -246,27 +183,6 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   {
     return providers.stream()
                     .map(ReindexingRuleProvider::getSegmentGranularityRules)
-                    .filter(rules -> !rules.isEmpty())
-                    .findFirst()
-                    .orElse(Collections.emptyList());
-  }
-
-  @Override
-  @Nullable
-  public ReindexingQueryGranularityRule getQueryGranularityRule(Interval interval, DateTime referenceTime)
-  {
-    return providers.stream()
-                    .map(p -> p.getQueryGranularityRule(interval, referenceTime))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-  }
-
-  @Override
-  public List<ReindexingQueryGranularityRule> getQueryGranularityRules()
-  {
-    return providers.stream()
-                    .map(ReindexingRuleProvider::getQueryGranularityRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
