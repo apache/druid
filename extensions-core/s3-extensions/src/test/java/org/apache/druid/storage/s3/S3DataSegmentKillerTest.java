@@ -23,7 +23,6 @@ import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -39,7 +38,6 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
-import org.easymock.LogicalOperator;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,7 +45,6 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(EasyMockRunner.class)
@@ -482,133 +479,81 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_kill_not_zipped() throws SegmentLoadingException
   {
-    ListObjectsV2Result list = EasyMock.createMock(ListObjectsV2Result.class);
-    S3ObjectSummary objectSummary = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary.getKey()).andReturn(KEY_1 + "/meta.smoosh").anyTimes();
-    S3ObjectSummary objectSummary2 = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary2.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary2.getKey()).andReturn(KEY_1 + "/00000.smoosh").anyTimes();
-    EasyMock.expect(list.getObjectSummaries()).andReturn(List.of(objectSummary, objectSummary2)).once();
-    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject())).andReturn(list).once();
-    s3Client.deleteObject(TEST_BUCKET, KEY_1 + "/00000.smoosh");
-    EasyMock.expectLastCall().andVoid();
-    s3Client.deleteObject(TEST_BUCKET, KEY_1 + "/meta.smoosh");
-    EasyMock.expectLastCall().andVoid();
+    URI segment1Uri = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, KEY_1 + "/"));
+    S3ObjectSummary objectSummary1 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1 + "/00000.smoosh", TIME_0);
+    S3ObjectSummary objectSummary2 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1 + "/meta.smoosh", TIME_0);
 
-    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig, objectSummary, objectSummary2, list);
+    S3TestUtils.expectListObjects(s3Client, segment1Uri, ImmutableList.of(objectSummary1, objectSummary2));
+
+    // With MAX_KEYS=1, deleteObjectsInPath batches deletes one key at a time, so two deleteObjects calls
+    DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(new DeleteObjectsRequest.KeyVersion(KEY_1 + "/00000.smoosh")));
+    DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(new DeleteObjectsRequest.KeyVersion(KEY_1 + "/meta.smoosh")));
+
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1, deleteRequest2),
+        ImmutableMap.of()
+    );
+
+    EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET).anyTimes();
+    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(TEST_PREFIX).anyTimes();
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS).anyTimes();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
     segmentKiller.kill(List.of(DATA_SEGMENT_1_NO_ZIP));
-    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig, objectSummary, objectSummary2, list);
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
   @Test
   public void test_kill_not_zipped_multi() throws SegmentLoadingException
   {
-    ListObjectsV2Result list = EasyMock.createMock(ListObjectsV2Result.class);
-    S3ObjectSummary objectSummary11 = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary11.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary11.getKey()).andReturn(KEY_1 + "/meta.smoosh").anyTimes();
-    S3ObjectSummary objectSummary12 = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary12.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary12.getKey()).andReturn(KEY_1 + "/00000.smoosh").anyTimes();
-    EasyMock.expect(list.getObjectSummaries()).andReturn(List.of(objectSummary11, objectSummary12)).once();
+    URI segment1Uri = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, KEY_1 + "/"));
+    S3ObjectSummary objectSummary11 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1 + "/00000.smoosh", TIME_0);
+    S3ObjectSummary objectSummary12 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_1 + "/meta.smoosh", TIME_0);
 
-    ListObjectsV2Result list2 = EasyMock.createMock(ListObjectsV2Result.class);
-    S3ObjectSummary objectSummary21 = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary21.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary21.getKey()).andReturn(KEY_2 + "/meta.smoosh").anyTimes();
-    S3ObjectSummary objectSummary22 = EasyMock.createMock(S3ObjectSummary.class);
-    EasyMock.expect(objectSummary22.getBucketName()).andReturn(TEST_BUCKET).anyTimes();
-    EasyMock.expect(objectSummary22.getKey()).andReturn(KEY_2 + "/00000.smoosh").anyTimes();
-    EasyMock.expect(list2.getObjectSummaries()).andReturn(List.of(objectSummary21, objectSummary22)).once();
-    EasyMock.expect(
-        s3Client.listObjectsV2(
-            EasyMock.cmp(
-                new ListObjectsV2Request().withBucketName(TEST_BUCKET)
-                                          .withPrefix(KEY_1 + "/"),
-                (o1, o2) -> {
-                  if (!o1.getBucketName().equals(o2.getBucketName())) {
-                    return o1.getBucketName().compareTo(o2.getBucketName());
-                  }
-                  return o1.getPrefix().compareTo(o2.getPrefix());
-                },
-                LogicalOperator.EQUAL
-            )
-        )
-    ).andReturn(list).once();
-    EasyMock.expect(
-        s3Client.listObjectsV2(
-            EasyMock.cmp(
-                new ListObjectsV2Request().withBucketName(TEST_BUCKET)
-                                          .withPrefix(KEY_2 + "/"),
-                (o1, o2) -> {
-                  if (!o1.getBucketName().equals(o2.getBucketName())) {
-                    return o1.getBucketName().compareTo(o2.getBucketName());
-                  }
-                  return o1.getPrefix().compareTo(o2.getPrefix());
-                },
-                LogicalOperator.EQUAL
-            )
-        )
-    ).andReturn(list2).once();
+    // One listObjectsV2 call per segment; no second (empty) page since first result has truncated=false
+    S3TestUtils.expectListObjects(s3Client, segment1Uri, ImmutableList.of(objectSummary11, objectSummary12));
 
-    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
+    URI segment2Uri = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, KEY_2 + "/"));
+    S3ObjectSummary objectSummary21 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2 + "/00000.smoosh", TIME_1);
+    S3ObjectSummary objectSummary22 = S3TestUtils.newS3ObjectSummary(TEST_BUCKET, KEY_2 + "/meta.smoosh", TIME_1);
+    S3TestUtils.expectListObjects(s3Client, segment2Uri, ImmutableList.of(objectSummary21, objectSummary22));
 
-    s3Client.deleteObjects(EasyMock.cmp(
-        new DeleteObjectsRequest(TEST_BUCKET).withKeys(
-            KEY_1 + "/00000.smoosh",
-            KEY_1 + "/meta.smoosh",
-            KEY_2 + "/00000.smoosh",
-            KEY_2 + "/meta.smoosh"
-        ),
-        (o1, o2) -> {
-          if (!o1.getBucketName().equals(o2.getBucketName())) {
-            return o1.getBucketName().compareTo(o2.getBucketName());
-          }
 
-          for (DeleteObjectsRequest.KeyVersion key : o1.getKeys()) {
-            boolean found = false;
-            for (DeleteObjectsRequest.KeyVersion key2 : o2.getKeys()) {
-              if (key.getKey().equals(key2.getKey())) {
-                found = true;
-              }
-            }
-            if (!found) {
-              return -1;
-            }
-          }
-          return 0;
-        },
-        LogicalOperator.EQUAL
-    ));
-    EasyMock.expectLastCall().andVoid().once();
+    DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(
+            new DeleteObjectsRequest.KeyVersion(KEY_1 + "/00000.smoosh")
+        ));
+    DeleteObjectsRequest deleteRequest1Meta = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(
+            new DeleteObjectsRequest.KeyVersion(KEY_1 + "/meta.smoosh")
+        ));
+    DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(
+            new DeleteObjectsRequest.KeyVersion(KEY_2 + "/00000.smoosh")
+        ));
+    DeleteObjectsRequest deleteRequest2Meta = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(ImmutableList.of(
+            new DeleteObjectsRequest.KeyVersion(KEY_2 + "/meta.smoosh")
+        ));
 
-    EasyMock.replay(
+    S3TestUtils.mockS3ClientDeleteObjects(
         s3Client,
-        segmentPusherConfig,
-        inputDataConfig,
-        objectSummary11,
-        objectSummary12,
-        list,
-        objectSummary21,
-        objectSummary22,
-        list2
+        ImmutableList.of(deleteRequest1, deleteRequest1Meta, deleteRequest2, deleteRequest2Meta),
+        ImmutableMap.of()
     );
+
+    EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET).anyTimes();
+    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(TEST_PREFIX).anyTimes();
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS).anyTimes();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
     segmentKiller.kill(List.of(DATA_SEGMENT_1_NO_ZIP, DATA_SEGMENT_2_NO_ZIP));
-    EasyMock.verify(
-        s3Client,
-        segmentPusherConfig,
-        inputDataConfig,
-        objectSummary11,
-        objectSummary12,
-        list,
-        objectSummary21,
-        objectSummary22,
-        list2
-    );
+    EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
   /**
@@ -620,75 +565,61 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   {
     final int firstPageSize = 1000;
     final int secondPageSize = 100;
-    final int totalKeys = firstPageSize + secondPageSize;
-    final String continuationToken = "next-page-token";
 
-    List<S3ObjectSummary> firstPage = new ArrayList<>(firstPageSize);
+    URI segment1Uri = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, KEY_1 + "/"));
+
+    // Create two pages of object summaries to simulate pagination
+    ImmutableList.Builder<S3ObjectSummary> firstPageBuilder = ImmutableList.builder();
+    ImmutableList.Builder<DeleteObjectsRequest.KeyVersion> allKeysBuilder = ImmutableList.builder();
+
     for (int i = 0; i < firstPageSize; i++) {
-      S3ObjectSummary summary = new S3ObjectSummary();
-      summary.setBucketName(TEST_BUCKET);
-      summary.setKey(KEY_1 + "/file_" + i);
-      firstPage.add(summary);
-    }
-    List<S3ObjectSummary> secondPage = new ArrayList<>(secondPageSize);
-    for (int i = firstPageSize; i < totalKeys; i++) {
-      S3ObjectSummary summary = new S3ObjectSummary();
-      summary.setBucketName(TEST_BUCKET);
-      summary.setKey(KEY_1 + "/file_" + i);
-      secondPage.add(summary);
+      String key = KEY_1 + "/file_" + i;
+      firstPageBuilder.add(S3TestUtils.newS3ObjectSummary(TEST_BUCKET, key, TIME_0));
+      allKeysBuilder.add(new DeleteObjectsRequest.KeyVersion(key));
     }
 
-    ListObjectsV2Result firstResult = new ListObjectsV2Result();
-    firstResult.setObjectSummaries(firstPage);
-    firstResult.setTruncated(true);
-    firstResult.setNextContinuationToken(continuationToken);
+    for (int i = 0; i < secondPageSize; i++) {
+      String key = KEY_1 + "/file_" + (firstPageSize + i);
+      allKeysBuilder.add(new DeleteObjectsRequest.KeyVersion(key));
+    }
 
-    ListObjectsV2Result secondResult = new ListObjectsV2Result();
-    secondResult.setObjectSummaries(secondPage);
-    secondResult.setTruncated(false);
-    secondResult.setNextContinuationToken(null);
+    // Mock listObjectsV2 to return results with pagination
+    ListObjectsV2Result firstPage = new ListObjectsV2Result();
+    firstPage.getObjectSummaries().addAll(firstPageBuilder.build());
+    firstPage.setTruncated(true);
+    firstPage.setNextContinuationToken("token");
 
-    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(S3InputDataConfig.MAX_LISTING_LENGTH_MAX);
+    ImmutableList.Builder<S3ObjectSummary> secondPageBuilder = ImmutableList.builder();
+    for (int i = 0; i < secondPageSize; i++) {
+      String key = KEY_1 + "/file_" + (firstPageSize + i);
+      secondPageBuilder.add(S3TestUtils.newS3ObjectSummary(TEST_BUCKET, key, TIME_0));
+    }
 
-    s3Client.listObjectsV2(EasyMock.cmp(
-        new ListObjectsV2Request().withBucketName(TEST_BUCKET).withPrefix(KEY_1 + "/").withMaxKeys(1000),
-        (ListObjectsV2Request o1, ListObjectsV2Request o2) -> {
-          if (!o1.getBucketName().equals(o2.getBucketName())) {
-            return o1.getBucketName().compareTo(o2.getBucketName());
-          }
-          if (!o1.getPrefix().equals(o2.getPrefix())) {
-            return o1.getPrefix().compareTo(o2.getPrefix());
-          }
-          return 0;
-        },
-        LogicalOperator.EQUAL
-    ));
-    EasyMock.expectLastCall().andReturn(firstResult).once();
+    ListObjectsV2Result secondPage = new ListObjectsV2Result();
+    secondPage.getObjectSummaries().addAll(secondPageBuilder.build());
+    secondPage.setTruncated(false);
 
-    s3Client.listObjectsV2(EasyMock.cmp(
-        new ListObjectsV2Request().withBucketName(TEST_BUCKET).withPrefix(KEY_1 + "/").withMaxKeys(1000)
-            .withContinuationToken(continuationToken),
-        (ListObjectsV2Request o1, ListObjectsV2Request o2) -> {
-          if (!o1.getBucketName().equals(o2.getBucketName())) {
-            return o1.getBucketName().compareTo(o2.getBucketName());
-          }
-          if (!o1.getPrefix().equals(o2.getPrefix())) {
-            return o1.getPrefix().compareTo(o2.getPrefix());
-          }
-          String t1 = o1.getContinuationToken();
-          String t2 = o2.getContinuationToken();
-          if (t1 == null ? t2 != null : !t1.equals(t2)) {
-            return t1 == null ? -1 : (t2 == null ? 1 : t1.compareTo(t2));
-          }
-          return 0;
-        },
-        LogicalOperator.EQUAL
-    ));
-    EasyMock.expectLastCall().andReturn(secondResult).once();
+    EasyMock.expect(s3Client.listObjectsV2(S3TestUtils.matchListObjectsRequest(segment1Uri)))
+            .andReturn(firstPage)
+            .once();
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject()))
+            .andReturn(secondPage)
+            .once();
 
-    EasyMock.expect(s3Client.deleteObject(EasyMock.eq(TEST_BUCKET), EasyMock.anyString()))
-            .andVoid()
-            .times(totalKeys);
+    // Mock the delete operation - S3 batches deletes in chunks of 1000, so expect two delete calls
+    ImmutableList<DeleteObjectsRequest.KeyVersion> allKeys = allKeysBuilder.build();
+    DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(allKeys.subList(0, 1000));
+    DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET)
+        .withKeys(allKeys.subList(1000, 1100));
+
+    S3TestUtils.mockS3ClientDeleteObjects(
+        s3Client,
+        ImmutableList.of(deleteRequest1, deleteRequest2),
+        ImmutableMap.of()
+    );
+
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(S3InputDataConfig.MAX_LISTING_LENGTH_MAX).anyTimes();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
