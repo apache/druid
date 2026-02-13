@@ -26,15 +26,21 @@ export interface FillIndicatorProps {
 }
 
 export function FillIndicator({ barValue, labelValue }: FillIndicatorProps) {
-  let formattedValue = (labelValue * 100).toFixed(1);
-  if (formattedValue === '0.0' && labelValue > 0) formattedValue = '~' + formattedValue;
+  let formattedValue: string;
+  if (barValue === labelValue) {
+    formattedValue = (labelValue * 100).toFixed(1);
+    if (formattedValue === '0.0' && labelValue > 0) formattedValue = '~' + formattedValue;
+    formattedValue += '%';
+  } else {
+    formattedValue = `${labelValue.toFixed(2)}×`;
+  }
   return (
     <div
       className="fill-indicator"
       style={{ background: barValue === labelValue ? '#dadada' : '#0a6640' }}
     >
       <div className="bar" style={{ width: `${clamp(barValue, 0, 1) * 100}%` }} />
-      <div className="label">{formattedValue + '%'}</div>
+      <div className="label">{formattedValue}</div>
     </div>
   );
 }
