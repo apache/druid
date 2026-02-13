@@ -383,6 +383,34 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
       return this;
     }
 
+    public Builder withSegmentGranularity(Granularity segmentGranularity)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(segmentGranularity, null, null);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            segmentGranularity,
+            this.granularitySpec.getQueryGranularity(),
+            this.granularitySpec.isRollup()
+        );
+      }
+      return this;
+    }
+
+    public Builder withQueryGranularityAndRollup(Granularity queryGranularity, Boolean rollup)
+    {
+      if (this.granularitySpec == null) {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(null, queryGranularity, rollup);
+      } else {
+        this.granularitySpec = new UserCompactionTaskGranularityConfig(
+            this.granularitySpec.getSegmentGranularity(),
+            queryGranularity,
+            rollup
+        );
+      }
+      return this;
+    }
+
     public Builder withDimensionsSpec(
         UserCompactionTaskDimensionsConfig dimensionsSpec
     )

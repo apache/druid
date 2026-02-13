@@ -58,8 +58,16 @@ public class InlineReindexingRuleProviderTest
   @Test
   public void test_constructor_nullListsDefaultToEmpty()
   {
-    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(null, null, null, null,
-                                                                             null, null, null, null
+    InlineReindexingRuleProvider provider = new InlineReindexingRuleProvider(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
 
     Assert.assertNotNull(provider.getDeletionRules());
@@ -78,6 +86,7 @@ public class InlineReindexingRuleProviderTest
     Assert.assertTrue(provider.getQueryGranularityRules().isEmpty());
     Assert.assertNotNull(provider.getTuningConfigRules());
     Assert.assertTrue(provider.getTuningConfigRules().isEmpty());
+    Assert.assertTrue(provider.getDataSchemaRules().isEmpty());
   }
 
   @Test
@@ -163,6 +172,13 @@ public class InlineReindexingRuleProviderTest
         InlineReindexingRuleProvider.Builder::tuningConfigRules,
         InlineReindexingRuleProvider::getTuningConfigRule
     );
+
+    testNonAdditivity(
+        "dataSchema",
+        this::createDataSchemaRule,
+        InlineReindexingRuleProvider.Builder::dataSchemaRules,
+        InlineReindexingRuleProvider::getDataSchemaRule
+    );
   }
 
   @Test
@@ -176,6 +192,7 @@ public class InlineReindexingRuleProviderTest
     ReindexingSegmentGranularityRule segmentGranularityRule = createSegmentGranularityRule("segmentGranularity", Period.days(30));
     ReindexingQueryGranularityRule queryGranularityRule = createQueryGranularityRule("queryGranularity", Period.days(30));
     ReindexingTuningConfigRule tuningConfigRule = createTuningConfigRule("tuning", Period.days(30));
+    ReindexingDataSchemaRule dataSchemaRule = createDataSchemaRule("dataSchema", Period.days(30));
 
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .deletionRules(ImmutableList.of(filterRule))
@@ -186,6 +203,7 @@ public class InlineReindexingRuleProviderTest
         .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
         .queryGranularityRules(ImmutableList.of(queryGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
+        .dataSchemaRules(ImmutableList.of(dataSchemaRule))
         .build();
 
     Assert.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
@@ -204,6 +222,8 @@ public class InlineReindexingRuleProviderTest
     Assert.assertEquals("queryGranularity", provider.getQueryGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
     Assert.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+
+    Assert.assertEquals("dataSchema", provider.getDataSchemaRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
   }
 
   /**
@@ -332,6 +352,26 @@ public class InlineReindexingRuleProviderTest
         new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
             null, null, null, null, null, null, null, null, null, null, null
         )
+    );
+  }
+
+  private ReindexingDataSchemaRule createDataSchemaRule(String id, Period period)
+  {
+    return new ReindexingDataSchemaRule(
+        id,
+        null,
+        period,
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.DAY,
+        true,
+        ImmutableList.of(new AggregateProjectionSpec(
+            "test_projection",
+            null,
+            null,
+            null,
+            new AggregatorFactory[]{new CountAggregatorFactory("count")}
+        ))
     );
   }
 }

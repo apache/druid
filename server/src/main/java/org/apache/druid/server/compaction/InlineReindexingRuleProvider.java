@@ -96,6 +96,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   private final List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
   private final List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules;
   private final List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
+  private final List<ReindexingDataSchemaRule> reindexingDataSchemaRules;
 
 
   @JsonCreator
@@ -107,7 +108,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       @JsonProperty("reindexingProjectionRules") @Nullable List<ReindexingProjectionRule> reindexingProjectionRules,
       @JsonProperty("reindexingSegmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules,
       @JsonProperty("reindexingQueryGranularityRules") @Nullable List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules,
-      @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules
+      @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules,
+      @JsonProperty("reindexingDataSchemaRules") @Nullable List<ReindexingDataSchemaRule> reindexingDataSchemaRules
   )
   {
     this.reindexingDeletionRules = Configs.valueOrDefault(reindexingDeletionRules, Collections.emptyList());
@@ -118,6 +120,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     this.reindexingSegmentGranularityRules = Configs.valueOrDefault(reindexingSegmentGranularityRules, Collections.emptyList());
     this.reindexingQueryGranularityRules = Configs.valueOrDefault(reindexingQueryGranularityRules, Collections.emptyList());
     this.reindexingTuningConfigRules = Configs.valueOrDefault(reindexingTuningConfigRules, Collections.emptyList());
+    this.reindexingDataSchemaRules = Configs.valueOrDefault(reindexingDataSchemaRules, Collections.emptyList());
   }
 
   public static Builder builder()
@@ -144,6 +147,20 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public List<ReindexingMetricsRule> getMetricsRules()
   {
     return reindexingMetricsRules;
+  }
+
+  @Override
+  @Nullable
+  public ReindexingDataSchemaRule getDataSchemaRule(Interval interval, DateTime referenceTime)
+  {
+    return getApplicableRule(reindexingDataSchemaRules, interval, referenceTime);
+  }
+
+  @Override
+  @JsonProperty("reindexingDataSchemaRules")
+  public List<ReindexingDataSchemaRule> getDataSchemaRules()
+  {
+    return reindexingDataSchemaRules;
   }
 
   @Override
@@ -312,7 +329,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
            && Objects.equals(reindexingProjectionRules, that.reindexingProjectionRules)
            && Objects.equals(reindexingSegmentGranularityRules, that.reindexingSegmentGranularityRules)
            && Objects.equals(reindexingQueryGranularityRules, that.reindexingQueryGranularityRules)
-           && Objects.equals(reindexingTuningConfigRules, that.reindexingTuningConfigRules);
+           && Objects.equals(reindexingTuningConfigRules, that.reindexingTuningConfigRules)
+           && Objects.equals(reindexingDataSchemaRules, that.reindexingDataSchemaRules);
   }
 
   @Override
@@ -326,7 +344,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
         reindexingProjectionRules,
         reindexingSegmentGranularityRules,
         reindexingQueryGranularityRules,
-        reindexingTuningConfigRules
+        reindexingTuningConfigRules,
+        reindexingDataSchemaRules
     );
   }
 
@@ -342,6 +361,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
            + ", reindexingSegmentGranularityRules=" + reindexingSegmentGranularityRules
            + ", reindexingQueryGranularityRules=" + reindexingQueryGranularityRules
            + ", reindexingTuningConfigRules=" + reindexingTuningConfigRules
+           + ", reindexingDataSchemaRules=" + reindexingDataSchemaRules
            + '}';
   }
 
@@ -355,10 +375,17 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
     private List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
     private List<ReindexingQueryGranularityRule> reindexingQueryGranularityRules;
     private List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
+    private List<ReindexingDataSchemaRule> reindexingDataSchemaRules;
 
     public Builder deletionRules(List<ReindexingDeletionRule> reindexingDeletionRules)
     {
       this.reindexingDeletionRules = reindexingDeletionRules;
+      return this;
+    }
+
+    public Builder dataSchemaRules(List<ReindexingDataSchemaRule> reindexingDataSchemaRules)
+    {
+      this.reindexingDataSchemaRules = reindexingDataSchemaRules;
       return this;
     }
 
@@ -414,7 +441,8 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
           reindexingProjectionRules,
           reindexingSegmentGranularityRules,
           reindexingQueryGranularityRules,
-          reindexingTuningConfigRules
+          reindexingTuningConfigRules,
+          reindexingDataSchemaRules
       );
     }
   }

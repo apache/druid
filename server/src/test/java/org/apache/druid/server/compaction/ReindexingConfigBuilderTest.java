@@ -46,6 +46,50 @@ public class ReindexingConfigBuilderTest
   private static final DateTime REFERENCE_TIME = DateTimes.of("2025-01-15");
 
   @Test
+  public void test_applyTo_handlesSynteticSegmentGranularityInsertion()
+  {
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .dataSchemaRules(
+            ImmutableList.of(
+                new ReindexingDataSchemaRule(
+                    "schema-30d",
+                    null,
+                    Period.days(30),
+                    new UserCompactionTaskDimensionsConfig(null),
+                    new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                    Granularities.HOUR,
+                    true,
+                    ImmutableList.of()
+                )
+            )
+        ).build();
+
+    InlineSchemaDataSourceCompactionConfig.Builder builder =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource("test_datasource");
+
+    ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
+        provider,
+        Granularities.DAY,
+        TEST_INTERVAL,
+        REFERENCE_TIME
+    );
+
+    int count = configBuilder.applyTo(builder);
+
+    Assert.assertEquals(1, count);
+
+    InlineSchemaDataSourceCompactionConfig config = builder.build();
+    Assert.assertNotNull(config.getGranularitySpec());
+    Assert.assertNotNull(config.getGranularitySpec().getSegmentGranularity());
+    Assert.assertEquals(Granularities.DAY, config.getGranularitySpec().getSegmentGranularity());
+    Assert.assertNotNull(config.getGranularitySpec().getQueryGranularity());
+    Assert.assertEquals(Granularities.HOUR, config.getGranularitySpec().getQueryGranularity());
+    Assert.assertNotNull(config.getGranularitySpec().isRollup());
+    Assert.assertTrue(config.getGranularitySpec().isRollup());
+  }
+
+  @Test
   public void test_applyTo_allRulesPresent_appliesAllConfigsAndReturnsCorrectCount()
   {
     ReindexingRuleProvider provider = createFullyPopulatedProvider();
@@ -55,13 +99,14 @@ public class ReindexingConfigBuilderTest
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
+        Granularities.DAY,
         TEST_INTERVAL,
         REFERENCE_TIME
     );
 
     int count = configBuilder.applyTo(builder);
 
-    Assert.assertEquals(9, count); // 7 non-additive + 2 filter rules
+    Assert.assertEquals(6, count);
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
@@ -81,7 +126,7 @@ public class ReindexingConfigBuilderTest
     Assert.assertNotNull(config.getIoConfig());
 
     Assert.assertNotNull(config.getProjections());
-    Assert.assertEquals(1, config.getProjections().size()); // 1 from rule2
+    Assert.assertEquals(1, config.getProjections().size()); // only 1 as we match the 2nd dataSchemaRule
 
     Assert.assertNotNull(config.getTransformSpec());
     DimFilter appliedFilter = config.getTransformSpec().getFilter();
@@ -104,6 +149,7 @@ public class ReindexingConfigBuilderTest
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
+        Granularities.DAY,
         TEST_INTERVAL,
         REFERENCE_TIME
     );
@@ -132,14 +178,6 @@ public class ReindexingConfigBuilderTest
         Granularities.DAY
     );
 
-    ReindexingQueryGranularityRule queryGranularityRule = new ReindexingQueryGranularityRule(
-        "query-gran-30d",
-        null,
-        Period.days(30),
-        Granularities.HOUR,
-        true
-    );
-
     ReindexingTuningConfigRule tuningConfigRule = new ReindexingTuningConfigRule(
         "tuning-30d",
         null,
@@ -149,51 +187,6 @@ public class ReindexingConfigBuilderTest
                                                 null, null, null, null, null, null, null)
     );
 
-    ReindexingMetricsRule metricsRule = new ReindexingMetricsRule(
-        "metrics-30d",
-        null,
-        Period.days(30),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
-
-    ReindexingDimensionsRule dimensionsRule = new ReindexingDimensionsRule(
-        "dims-30d",
-        null,
-        Period.days(30),
-        new UserCompactionTaskDimensionsConfig(null)
-    );
-
-    ReindexingIOConfigRule ioConfigRule = new ReindexingIOConfigRule(
-        "io-30d",
-        null,
-        Period.days(30),
-        new UserCompactionTaskIOConfig(null)
-    );
-
-    // Two projection rules (additive)
-    ReindexingProjectionRule projectionRule1 = new ReindexingProjectionRule(
-        "proj-30d",
-        null,
-        Period.days(30),
-        ImmutableList.of(
-            new AggregateProjectionSpec("proj1", null, null, null,
-                                       new AggregatorFactory[]{new CountAggregatorFactory("count1")}),
-            new AggregateProjectionSpec("proj2", null, null, null,
-                                       new AggregatorFactory[]{new CountAggregatorFactory("count2")})
-        )
-    );
-
-    ReindexingProjectionRule projectionRule2 = new ReindexingProjectionRule(
-        "proj-60d",
-        null,
-        Period.days(60),
-        ImmutableList.of(
-            new AggregateProjectionSpec("proj3", null, null, null,
-                                       new AggregatorFactory[]{new CountAggregatorFactory("count3")})
-        )
-    );
-
-    // Two filter rules (additive)
     ReindexingDeletionRule filterRule1 = new ReindexingDeletionRule(
         "filter-30d",
         null,
@@ -210,15 +203,49 @@ public class ReindexingConfigBuilderTest
         null
     );
 
+    ReindexingIOConfigRule ioConfigRule = new ReindexingIOConfigRule(
+        "io-30d",
+        null,
+        Period.days(30),
+        new UserCompactionTaskIOConfig(null)
+    );
+
+    ReindexingDataSchemaRule dataSchemaRule1 = new ReindexingDataSchemaRule(
+        "schema-30d",
+        null,
+        Period.days(30),
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.HOUR,
+        true,
+        ImmutableList.of(
+            new AggregateProjectionSpec("proj1", null, null, null,
+                                        new AggregatorFactory[]{new CountAggregatorFactory("count1")}),
+            new AggregateProjectionSpec("proj2", null, null, null,
+                                        new AggregatorFactory[]{new CountAggregatorFactory("count2")})
+        )
+    );
+
+    ReindexingDataSchemaRule dataSchemaRule2 = new ReindexingDataSchemaRule(
+        "schema-60d",
+        null,
+        Period.days(60),
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.HOUR,
+        true,
+        ImmutableList.of(
+            new AggregateProjectionSpec("proj3", null, null, null,
+                                        new AggregatorFactory[]{new CountAggregatorFactory("count3")})
+        )
+    );
+
     return InlineReindexingRuleProvider.builder()
         .segmentGranularityRules(ImmutableList.of(segmentGranularityRule))
-        .queryGranularityRules(ImmutableList.of(queryGranularityRule))
         .tuningConfigRules(ImmutableList.of(tuningConfigRule))
-        .metricsRules(ImmutableList.of(metricsRule))
-        .dimensionsRules(ImmutableList.of(dimensionsRule))
         .ioConfigRules(ImmutableList.of(ioConfigRule))
-        .projectionRules(ImmutableList.of(projectionRule1, projectionRule2))
         .deletionRules(ImmutableList.of(filterRule1, filterRule2))
+        .dataSchemaRules(ImmutableList.of(dataSchemaRule1, dataSchemaRule2))
         .build();
   }
 }

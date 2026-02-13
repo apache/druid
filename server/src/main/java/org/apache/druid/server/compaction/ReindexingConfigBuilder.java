@@ -48,16 +48,18 @@ public class ReindexingConfigBuilder
   private static final Logger LOG = new Logger(ReindexingConfigBuilder.class);
 
   private final ReindexingRuleProvider provider;
+  private final Granularity defaultGranularity;
   private final Interval interval;
   private final DateTime referenceTime;
 
   public ReindexingConfigBuilder(
       ReindexingRuleProvider provider,
-      Interval interval,
+      Granularity defaultSegmentGranularity, Interval interval,
       DateTime referenceTime
   )
   {
     this.provider = provider;
+    this.defaultGranularity = defaultSegmentGranularity;
     this.interval = interval;
     this.referenceTime = referenceTime;
   }
@@ -78,32 +80,25 @@ public class ReindexingConfigBuilder
     );
 
     count += applyIfPresent(
-        builder::withMetricsSpec,
-        provider.getMetricsRule(interval, referenceTime),
-        ReindexingMetricsRule::getMetricsSpec
-    );
-
-    count += applyIfPresent(
-        builder::withDimensionsSpec,
-        provider.getDimensionsRule(interval, referenceTime),
-        ReindexingDimensionsRule::getDimensionsSpec
-    );
-
-    count += applyIfPresent(
         builder::withIoConfig,
         provider.getIOConfigRule(interval, referenceTime),
         ReindexingIOConfigRule::getIoConfig
     );
 
-    count += applyIfPresent(
-        builder::withProjections,
-        provider.getProjectionRule(interval, referenceTime),
-        ReindexingProjectionRule::getProjections
-    );
+    count += applyDataSchemaRules(builder);
 
-    count += applyGranularityRules(builder);
+    count += applyDeletionRules(builder);
 
-    count += applyFilterRules(builder);
+    ReindexingSegmentGranularityRule segmentGranularityRule = provider.getSegmentGranularityRule(interval, referenceTime);
+    if (segmentGranularityRule == null) {
+      if (count > 0) {
+        // Insert a default segment granularity to the config only if other rules exist for the interval.
+        builder.withSegmentGranularity(defaultGranularity);
+      }
+    } else {
+      count++;
+      builder.withSegmentGranularity(segmentGranularityRule.getSegmentGranularity());
+    }
 
     return count;
   }
@@ -118,56 +113,50 @@ public class ReindexingConfigBuilder
     if (rule != null) {
       C config = configExtractor.apply(rule);
       setter.accept(config);
-      LOG.debug(
-          "Applied rule %s for interval %s",
-          ((ReindexingRule) rule).getId(), interval
-      );
       return 1;
     }
     return 0;
   }
 
-  private int applyGranularityRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  private int applyDataSchemaRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
-    ReindexingSegmentGranularityRule segmentGranularityRule = provider.getSegmentGranularityRule(
+    ReindexingDataSchemaRule dataSchemaRule = provider.getDataSchemaRule(
         interval,
         referenceTime
     );
-    ReindexingQueryGranularityRule queryGranularityRule = provider.getQueryGranularityRule(
-        interval,
-        referenceTime
-    );
-
-    if (segmentGranularityRule == null && queryGranularityRule == null) {
+    if (dataSchemaRule == null) {
       return 0;
     }
 
-    // Extract granularities from rules (null if rule doesn't exist)
-    Granularity segmentGranularity = segmentGranularityRule != null ? segmentGranularityRule.getSegmentGranularity() : null;
+    applyIfPresent(
+        builder::withDimensionsSpec,
+        dataSchemaRule,
+        ReindexingDataSchemaRule::getDimensionsSpec
+    );
 
-    Granularity queryGranularity = queryGranularityRule != null ? queryGranularityRule.getQueryGranularity() : null;
-    Boolean rollup = queryGranularityRule != null ? queryGranularityRule.getRollup() : null;
+    applyIfPresent(
+        builder::withMetricsSpec,
+        dataSchemaRule,
+        ReindexingDataSchemaRule::getMetricsSpec
+    );
 
-    // Build and apply the combined granularity config
-    UserCompactionTaskGranularityConfig granularityConfig =
-        new UserCompactionTaskGranularityConfig(segmentGranularity, queryGranularity, rollup);
+    applyIfPresent(
+        builder::withProjections,
+        dataSchemaRule,
+        ReindexingDataSchemaRule::getProjections
+    );
 
-    builder.withGranularitySpec(granularityConfig);
-
-    int count = 0;
-    if (segmentGranularityRule != null) {
-      LOG.debug("Applied segment granularity rule [%s] for interval [%s]", segmentGranularityRule.getId(), interval);
-      count++;
+    if (dataSchemaRule.getQueryGranularity() != null || dataSchemaRule.getRollup() != null) {
+      builder.withQueryGranularityAndRollup(
+          dataSchemaRule.getQueryGranularity(),
+          dataSchemaRule.getRollup()
+      );
     }
-    if (queryGranularityRule != null) {
-      LOG.debug("Applied query granularity rule [%s] for interval [%s]", queryGranularityRule.getId(), interval);
-      count++;
-    }
 
-    return count;
+    return 1;
   }
 
-  private int applyFilterRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  private int applyDeletionRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
     List<ReindexingDeletionRule> rules = provider.getDeletionRules(interval, referenceTime);
     if (rules.isEmpty()) {

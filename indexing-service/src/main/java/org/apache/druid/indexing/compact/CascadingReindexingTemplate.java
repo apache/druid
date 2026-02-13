@@ -330,7 +330,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
 
-      ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(ruleProvider, reindexingInterval, currentTime);
+      ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
+          ruleProvider,
+          defaultSegmentGranularity,
+          reindexingInterval,
+          currentTime
+      );
       int ruleCount = configBuilder.applyTo(builder);
 
       if (ruleCount > 0) {

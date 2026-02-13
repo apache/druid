@@ -144,6 +144,30 @@ public class ComposingReindexingRuleProviderTest
   }
 
   @Test
+  public void test_getDataSchemaRules_compositingBehavior()
+  {
+    testComposingBehaviorForRuleType(
+        rules -> InlineReindexingRuleProvider.builder().dataSchemaRules(rules).build(),
+        ComposingReindexingRuleProvider::getDataSchemaRules,
+        createDataSchemaRule("rule1", Period.days(7)),
+        createDataSchemaRule("rule2", Period.days(30)),
+        ReindexingDataSchemaRule::getId
+    );
+  }
+
+  @Test
+  public void test_getDataSchemaRulesWithInterval_compositingBehavior()
+  {
+    testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
+        rules -> InlineReindexingRuleProvider.builder().dataSchemaRules(rules).build(),
+        (provider, it) -> provider.getDataSchemaRule(it.interval, it.time),
+        createDataSchemaRule("rule1", Period.days(7)),
+        createDataSchemaRule("rule2", Period.days(30)),
+        ReindexingDataSchemaRule::getId
+    );
+  }
+
+  @Test
   public void test_getSegmentGranularityRules_compositingBehavior()
   {
     testComposingBehaviorForRuleType(
@@ -497,7 +521,7 @@ public class ComposingReindexingRuleProviderTest
    */
   private ReindexingRuleProvider createNotReadyProvider()
   {
-    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null, null)
+    return new InlineReindexingRuleProvider(null, null, null, null, null, null, null, null, null)
     {
       @Override
       public boolean isReady()
@@ -594,6 +618,28 @@ public class ComposingReindexingRuleProviderTest
         period,
         new UserCompactionTaskQueryTuningConfig(null, null, null, null, null, null, null, null,
             null, null, null, null, null, null, null, null, null, null, null
+        )
+    );
+  }
+
+  private ReindexingDataSchemaRule createDataSchemaRule(String id, Period period)
+  {
+    return new ReindexingDataSchemaRule(
+        id,
+        "Test data schema rule",
+        period,
+        new UserCompactionTaskDimensionsConfig(null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        Granularities.DAY,
+        true,
+        ImmutableList.of(
+            new AggregateProjectionSpec(
+                "test_projection",
+                null,
+                null,
+                null,
+                new AggregatorFactory[]{new CountAggregatorFactory("count")}
+            )
         )
     );
   }

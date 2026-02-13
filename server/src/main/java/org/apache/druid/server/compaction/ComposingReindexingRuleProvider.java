@@ -58,35 +58,14 @@ import java.util.Objects;
  *           "segmentGranularity": "HOUR"
  *         }
  *       ]
- *     },
- *     {
- *       "type": "inline",
- *       "segmentGranularityRules": [
- *         {
- *           "id": "default-granularity",
- *           "olderThan": "P1D",
- *           "segmentGranularity": "DAY"
- *         }
- *       ],
- *       "deletionRules": [
- *         {
- *           "id": "remove-bots",
- *           "olderThan": "P30D",
- *           "deleteWhere": {
- *             "type": "selector",
- *             "dimension": "isRobot",
- *             "value": "true"
- *           }
- *         }
- *       ]
  *     }
  *   ]
  * }
  * }</pre>
  * In this example:
  * <ul>
- *   <li>Granularity rules come from the first provider (HOUR segment granularity for recent data)</li>
- *   <li>Deletion rules come from the second provider (first provider with rules)</li>
+ *   <li>Composing rule with a single provider to simply show the inline definition.</li>
+ *   <li>Once multiple provider types exist, this will allow operators to chain them as needed.</li>
  * </ul>
  */
 public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
@@ -151,6 +130,27 @@ public class ComposingReindexingRuleProvider implements ReindexingRuleProvider
   {
     return providers.stream()
                     .map(ReindexingRuleProvider::getMetricsRules)
+                    .filter(rules -> !rules.isEmpty())
+                    .findFirst()
+                    .orElse(Collections.emptyList());
+  }
+
+  @Override
+  @Nullable
+  public ReindexingDataSchemaRule getDataSchemaRule(Interval interval, DateTime referenceTime)
+  {
+    return providers.stream()
+                    .map(p -> p.getDataSchemaRule(interval, referenceTime))
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+  }
+
+  @Override
+  public List<ReindexingDataSchemaRule> getDataSchemaRules()
+  {
+    return providers.stream()
+                    .map(ReindexingRuleProvider::getDataSchemaRules)
                     .filter(rules -> !rules.isEmpty())
                     .findFirst()
                     .orElse(Collections.emptyList());
