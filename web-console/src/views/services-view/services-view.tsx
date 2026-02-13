@@ -643,7 +643,16 @@ ORDER BY
             if (originalRows.some(r => r.service_type === 'historical')) {
               const totalAssignedSize = sum(originalRows, s => Number(s.curr_size));
               const totalEffectiveSize = sum(originalRows, s => Number(s.effective_size));
-              return <FillIndicator value={totalAssignedSize / totalEffectiveSize} />;
+              const totalMaxSize = sum(originalRows, s => Number(s.max_size));
+              // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+              // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+              // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+              // fill capacity
+              const isVsfOverCapacity =
+                totalMaxSize > totalEffectiveSize && totalAssignedSize > totalEffectiveSize;
+              const label = totalAssignedSize / totalEffectiveSize;
+              const usage = isVsfOverCapacity ? totalEffectiveSize / totalAssignedSize : label;
+              return <FillIndicator barValue={usage} labelValue={label} />;
             } else if (
               originalRows.some(
                 r => r.service_type === 'indexer' || r.service_type === 'middle_manager',
@@ -663,13 +672,27 @@ ORDER BY
               return '';
             }
           },
-          Cell: ({ value, aggregated, original }) => {
+          Cell: ({ aggregated, original }) => {
             if (aggregated) return '';
-            const { service_type } = original;
+            const { service_type, curr_size, max_size, effective_size } = original;
 
             switch (service_type) {
-              case 'historical':
-                return <FillIndicator value={value} />;
+              case 'historical': {
+                // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+                // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+                // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+                // fill capacity
+                const isVsfOverCapacity = effective_size < max_size && curr_size > effective_size;
+                const labelValue = Number(curr_size) / Number(effective_size);
+                return (
+                  <FillIndicator
+                    labelValue={labelValue}
+                    barValue={
+                      isVsfOverCapacity ? Number(effective_size) / Number(curr_size) : labelValue
+                    }
+                  />
+                );
+              }
 
               case 'indexer':
               case 'middle_manager': {

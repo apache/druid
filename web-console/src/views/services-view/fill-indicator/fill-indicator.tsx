@@ -21,15 +21,19 @@ import { clamp } from '../../../utils';
 import './fill-indicator.scss';
 
 export interface FillIndicatorProps {
-  value: number;
+  barValue: number;
+  labelValue: number;
 }
 
-export function FillIndicator({ value }: FillIndicatorProps) {
-  let formattedValue = (value * 100).toFixed(1);
-  if (formattedValue === '0.0' && value > 0) formattedValue = '~' + formattedValue;
+export function FillIndicator({ barValue, labelValue }: FillIndicatorProps) {
+  let formattedValue = (labelValue * 100).toFixed(1);
+  if (formattedValue === '0.0' && labelValue > 0) formattedValue = '~' + formattedValue;
   return (
-    <div className="fill-indicator">
-      <div className="bar" style={{ width: `${clamp(value, 0, 1) * 100}%` }} />
+    <div
+      className="fill-indicator"
+      style={{ background: barValue === labelValue ? '#dadada' : '#0a6640' }}
+    >
+      <div className="bar" style={{ width: `${clamp(barValue, 0, 1) * 100}%` }} />
       <div className="label">{formattedValue + '%'}</div>
     </div>
   );
