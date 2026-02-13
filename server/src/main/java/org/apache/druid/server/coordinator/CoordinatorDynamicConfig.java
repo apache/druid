@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -181,7 +180,7 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
-    this.queryBlocklist = queryBlocklist != null ? ImmutableList.copyOf(queryBlocklist) : Defaults.QUERY_BLOCKLIST;
+    this.queryBlocklist = Configs.valueOrDefault(queryBlocklist, Defaults.QUERY_BLOCKLIST);
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -478,7 +477,7 @@ public class CoordinatorDynamicConfig
 
   private static class Defaults
   {
-    static final List<QueryBlocklistRule> QUERY_BLOCKLIST = ImmutableList.of();
+    static final List<QueryBlocklistRule> QUERY_BLOCKLIST = List.of();
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;

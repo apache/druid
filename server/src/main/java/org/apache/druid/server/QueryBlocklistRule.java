@@ -45,6 +45,10 @@ public class QueryBlocklistRule
   @Nullable
   private final Map<String, String> contextMatches;
 
+  private final boolean hasDataSourceCriteria;
+  private final boolean hasQueryTypeCriteria;
+  private final boolean hasContextCriteria;
+
   @JsonCreator
   public QueryBlocklistRule(
       @JsonProperty("ruleName") String ruleName,
@@ -59,12 +63,12 @@ public class QueryBlocklistRule
     );
 
     // At least one criterion must be specified to prevent accidentally blocking all queries
-    boolean hasDataSources = dataSources != null && !dataSources.isEmpty();
-    boolean hasQueryTypes = queryTypes != null && !queryTypes.isEmpty();
-    boolean hasContextMatches = contextMatches != null && !contextMatches.isEmpty();
+    this.hasDataSourceCriteria = dataSources != null && !dataSources.isEmpty();
+    this.hasQueryTypeCriteria = queryTypes != null && !queryTypes.isEmpty();
+    this.hasContextCriteria = contextMatches != null && !contextMatches.isEmpty();
 
     Preconditions.checkArgument(
-        hasDataSources || hasQueryTypes || hasContextMatches,
+        hasDataSourceCriteria || hasQueryTypeCriteria || hasContextCriteria,
         "At least one criterion (dataSources, queryTypes, or contextMatches) must be specified. "
         + "A rule with all null/empty criteria would block ALL queries."
     );
@@ -111,20 +115,20 @@ public class QueryBlocklistRule
    */
   public boolean matches(Query<?> query)
   {
-    if (!isNullOrEmpty(dataSources)) {
+    if (hasDataSourceCriteria) {
       Set<String> queryDatasources = query.getDataSource().getTableNames();
       if (Sets.intersection(dataSources, queryDatasources).isEmpty()) {
         return false;
       }
     }
 
-    if (!isNullOrEmpty(queryTypes)) {
+    if (hasQueryTypeCriteria) {
       if (!queryTypes.contains(query.getType())) {
         return false;
       }
     }
 
-    if (contextMatches != null && !contextMatches.isEmpty()) {
+    if (hasContextCriteria) {
       for (Map.Entry<String, String> entry : contextMatches.entrySet()) {
         Object contextValue = query.getContext().get(entry.getKey());
         if (!entry.getValue().equals(String.valueOf(contextValue))) {
@@ -133,12 +137,7 @@ public class QueryBlocklistRule
       }
     }
 
-    return true; 
-  }
-
-  private static boolean isNullOrEmpty(Set<?> set)
-  {
-    return set == null || set.isEmpty();
+    return true;
   }
 
   @Override

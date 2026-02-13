@@ -865,7 +865,7 @@ public class QueryLifecycleTest
     );
     Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
     Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertTrue(e.getMessage().contains("Query blocked by rule"));
+    Assert.assertTrue(e.getMessage().contains("blocked by rule"));
     Assert.assertTrue(e.getMessage().contains("test-rule"));
 
     EasyMock.verify(mockBrokerViewOfCoordinatorConfig);

@@ -339,7 +339,8 @@ public class QueryLifecycle
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.FORBIDDEN)
                             .build(
-                                "Query blocked by rule[%s]",
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
                                 rule.getRuleName()
                             );
       }
