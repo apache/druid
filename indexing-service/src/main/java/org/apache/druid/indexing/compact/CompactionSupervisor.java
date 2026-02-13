@@ -78,6 +78,22 @@ public class CompactionSupervisor implements Supervisor
     return supervisorSpec.getTemplate().createCompactionJobs(inputSource, jobParams);
   }
 
+  /**
+   * Gets a timeline view of the compaction intervals and their associated configurations.
+   * This is only supported for CascadingReindexingTemplate-based supervisors.
+   *
+   * @param referenceTime the reference time to use for computing rule periods
+   * @return Optional containing the timeline view if this is a cascading reindexing supervisor, empty otherwise
+   */
+  public java.util.Optional<CompactionTimelineView> getCompactionTimelineView(org.joda.time.DateTime referenceTime)
+  {
+    CompactionJobTemplate template = supervisorSpec.getTemplate();
+    if (template instanceof CascadingReindexingTemplate) {
+      return java.util.Optional.of(((CascadingReindexingTemplate) template).getCompactionTimelineView(referenceTime));
+    }
+    return java.util.Optional.empty();
+  }
+
   @Override
   public void start()
   {

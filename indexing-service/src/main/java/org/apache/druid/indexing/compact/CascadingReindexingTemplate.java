@@ -37,9 +37,13 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingConfigBuilder;
+import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -270,6 +274,146 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     DimFilter filter = config.getTransformSpec().getFilter();
     return filter instanceof NotDimFilter;
+  }
+
+  /**
+   * Generates a timeline view showing the search intervals and their associated compaction
+   * configurations. This is useful for operators to understand how rules are applied across
+   * different time periods without actually creating compaction jobs.
+   *
+   * @param referenceTime the reference time to use for computing rule periods (typically DateTime.now())
+   * @return a view of the compaction timeline with intervals and their configs
+   */
+  public CompactionTimelineView getCompactionTimelineView(DateTime referenceTime)
+  {
+    if (!ruleProvider.isReady()) {
+      LOG.info(
+          "Rule provider [%s] is not ready, returning empty timeline for dataSource[%s]",
+          ruleProvider.getType(),
+          dataSource
+      );
+      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
+    }
+
+    List<Interval> searchIntervals;
+    try {
+      searchIntervals = generateAlignedSearchIntervals(referenceTime);
+    }
+    catch (GranularityTimelineValidationException e) {
+      // Validation failed - extract structured error details and return with validation error
+      LOG.warn(e, "Validation failed for compaction timeline of dataSource[%s]", dataSource);
+      CompactionTimelineView.ValidationError validationError = new CompactionTimelineView.ValidationError(
+          "INVALID_GRANULARITY_TIMELINE",
+          e.getMessage(),
+          e.getOlderInterval().toString(),
+          e.getOlderGranularity().toString(),
+          e.getNewerInterval().toString(),
+          e.getNewerGranularity().toString()
+      );
+      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
+    }
+    catch (IAE e) {
+      // Other validation errors (e.g., no rules configured)
+      LOG.warn(e, "Validation failed for compaction timeline of dataSource[%s]", dataSource);
+      CompactionTimelineView.ValidationError validationError = new CompactionTimelineView.ValidationError(
+          "VALIDATION_ERROR",
+          e.getMessage(),
+          null,
+          null,
+          null,
+          null
+      );
+      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
+    }
+
+    if (searchIntervals.isEmpty()) {
+      LOG.warn("No search intervals generated for dataSource[%s]", dataSource);
+      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
+    }
+
+    // Calculate effective end time based on skip offset
+    DateTime effectiveEndTime = referenceTime;
+    CompactionTimelineView.SkipOffsetInfo skipOffsetInfo = null;
+
+    if (skipOffsetFromNow != null) {
+      effectiveEndTime = referenceTime.minus(skipOffsetFromNow);
+      CompactionTimelineView.AppliedSkipOffset applied = new CompactionTimelineView.AppliedSkipOffset(
+          "skipOffsetFromNow",
+          skipOffsetFromNow,
+          effectiveEndTime
+      );
+      skipOffsetInfo = new CompactionTimelineView.SkipOffsetInfo(applied, null);
+    } else if (skipOffsetFromLatest != null) {
+      // skipOffsetFromLatest requires actual timeline data, so we can't apply it in preview mode
+      CompactionTimelineView.NotAppliedSkipOffset notApplied = new CompactionTimelineView.NotAppliedSkipOffset(
+          "skipOffsetFromLatest",
+          skipOffsetFromLatest,
+          "Requires actual segment timeline data"
+      );
+      skipOffsetInfo = new CompactionTimelineView.SkipOffsetInfo(null, notApplied);
+    }
+
+    // Build configs for each interval
+    List<CompactionTimelineView.IntervalConfig> intervalConfigs = new ArrayList<>();
+    for (Interval searchInterval : searchIntervals) {
+      // Clamp interval to effective end time
+      Interval clampedInterval = searchInterval;
+      if (searchInterval.getEnd().isAfter(effectiveEndTime)) {
+        if (searchInterval.getStart().isBefore(effectiveEndTime)) {
+          clampedInterval = new Interval(searchInterval.getStart(), effectiveEndTime);
+        } else {
+          // Entire interval is beyond skip offset, skip it
+          continue;
+        }
+      }
+
+      InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
+      ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
+          ruleProvider,
+          defaultSegmentGranularity,
+          clampedInterval,
+          referenceTime
+      );
+      int ruleCount = configBuilder.applyTo(builder);
+
+      if (ruleCount > 0) {
+        // Collect the ACTUAL rules that were applied (matching ReindexingConfigBuilder logic)
+        List<ReindexingRule> appliedRules = new ArrayList<>();
+
+        ReindexingTuningConfigRule tuningRule = ruleProvider.getTuningConfigRule(clampedInterval, referenceTime);
+        if (tuningRule != null) {
+          appliedRules.add(tuningRule);
+        }
+
+        ReindexingIOConfigRule ioConfigRule = ruleProvider.getIOConfigRule(clampedInterval, referenceTime);
+        if (ioConfigRule != null) {
+          appliedRules.add(ioConfigRule);
+        }
+
+        ReindexingDataSchemaRule dataSchemaRule = ruleProvider.getDataSchemaRule(clampedInterval, referenceTime);
+        if (dataSchemaRule != null) {
+          appliedRules.add(dataSchemaRule);
+        }
+
+        // Deletion rules are additive - collect all that apply
+        List<ReindexingDeletionRule> deletionRules = ruleProvider.getDeletionRules(clampedInterval, referenceTime);
+        appliedRules.addAll(deletionRules);
+
+        ReindexingSegmentGranularityRule segmentGranularityRule = ruleProvider.getSegmentGranularityRule(clampedInterval, referenceTime);
+        if (segmentGranularityRule != null) {
+          appliedRules.add(segmentGranularityRule);
+        }
+
+        intervalConfigs.add(new CompactionTimelineView.IntervalConfig(
+            clampedInterval,
+            ruleCount,
+            builder.build(),
+            appliedRules
+        ));
+      }
+    }
+
+    return new CompactionTimelineView(dataSource, referenceTime, skipOffsetInfo, intervalConfigs, null);
   }
 
   @Override
@@ -675,16 +819,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       // If the older interval's granularity is finer than the newer interval's granularity,
       // that means we're getting coarser as we move toward present, which is invalid.
       if (olderGran.isFinerThan(newerGran)) {
-        throw new IAE(
-            "Invalid segment granularity timeline for dataSource[%s]: "
-            + "Interval[%s] with granularity[%s] is more recent than "
-            + "interval[%s] with granularity[%s], but has a coarser granularity. "
-            + "Segment granularity must stay the same or become finer as data ages from present to past.",
+        throw new GranularityTimelineValidationException(
             dataSource,
-            newerInterval.interval,
-            newerGran,
             olderInterval.interval,
-            olderGran
+            olderGran,
+            newerInterval.interval,
+            newerGran
         );
       }
     }
