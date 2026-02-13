@@ -386,6 +386,33 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
 
     @Override
+    public Iterator<String> getValueIterator()
+    {
+      final Iterator<Integer> localIterator = localDictionary.iterator();
+      return new Iterator<>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return localIterator.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          int globalIndex = localIterator.next();
+          if (globalIndex < adjustLongId) {
+            return StringUtils.fromUtf8Nullable(stringDictionary.get(globalIndex));
+          } else if (globalIndex < adjustDoubleId) {
+            return String.valueOf(longDictionary.get(globalIndex - adjustLongId));
+          } else {
+            return String.valueOf(doubleDictionary.get(globalIndex - adjustDoubleId));
+          }
+        }
+      };
+    }
+
+    @Override
     public ImmutableBitmap getBitmap(int idx)
     {
       return NestedFieldColumnIndexSupplier.this.getBitmap(idx);

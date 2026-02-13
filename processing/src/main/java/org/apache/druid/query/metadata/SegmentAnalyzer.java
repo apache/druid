@@ -54,6 +54,7 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -212,11 +213,14 @@ public class SegmentAnalyzer
     if (valueIndex != null) {
       cardinality = valueIndex.getCardinality();
       if (analyzingSize()) {
-        for (int i = 0; i < cardinality; ++i) {
-          String value = valueIndex.getValue(i);
+        final Iterator<String> valueIterator = valueIndex.getValueIterator();
+        int i = 0;
+        while (valueIterator.hasNext()) {
+          final String value = valueIterator.next();
           if (value != null) {
             size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
           }
+          i++;
         }
       }
       if (analyzingMinMax() && cardinality > 0) {

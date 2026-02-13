@@ -86,7 +86,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.filter.Filters;
@@ -108,6 +107,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -488,21 +488,21 @@ public class DumpSegment extends GuiceRunnable
                 }
                 jg.writeEndArray();
 
-                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getUtf8BytesDictionary();
-                Indexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
-                Indexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                Iterator<ByteBuffer> globalStringIterator = nestedDataColumn.getUtf8BytesDictionary().iterator();
+                Iterator<Long> globalLongIterator = nestedDataColumn.getLongDictionary().iterator();
+                Iterator<Double> globalDoubleIterator = nestedDataColumn.getDoubleDictionary().iterator();
                 jg.writeFieldName("dictionaries");
                 jg.writeStartObject();
                 {
                   int globalId = 0;
                   jg.writeFieldName("strings");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalStringDictionary.size(); i++, globalId++) {
+                  while (globalStringIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
                     jg.writeNumber(globalId);
                     jg.writeFieldName("value");
-                    final ByteBuffer val = globalStringDictionary.get(i);
+                    final ByteBuffer val = globalStringIterator.next();
                     if (val == null) {
                       jg.writeNull();
                     } else {
@@ -514,24 +514,24 @@ public class DumpSegment extends GuiceRunnable
 
                   jg.writeFieldName("longs");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalLongDictionary.size(); i++, globalId++) {
+                  while (globalLongIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
                     jg.writeNumber(globalId);
                     jg.writeFieldName("value");
-                    jg.writeNumber(globalLongDictionary.get(i));
+                    jg.writeNumber(globalLongIterator.next());
                     jg.writeEndObject();
                   }
                   jg.writeEndArray();
 
                   jg.writeFieldName("doubles");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalDoubleDictionary.size(); i++, globalId++) {
+                  while (globalDoubleIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
                     jg.writeNumber(globalId);
                     jg.writeFieldName("value");
-                    jg.writeNumber(globalDoubleDictionary.get(i));
+                    jg.writeNumber(globalDoubleIterator.next());
                     jg.writeEndObject();
                   }
                   jg.writeEndArray();
