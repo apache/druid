@@ -50,7 +50,7 @@ public class AWSClientUtilTest
   @Test
   public void testRecoverableException_500()
   {
-    AwsServiceException ex = (AwsServiceException) AwsServiceException.builder()
+    AwsServiceException ex = AwsServiceException.builder()
         .message("Internal Server Error")
         .statusCode(500)
         .build();
@@ -60,7 +60,7 @@ public class AWSClientUtilTest
   @Test
   public void testRecoverableException_502()
   {
-    AwsServiceException ex = (AwsServiceException) AwsServiceException.builder()
+    AwsServiceException ex = AwsServiceException.builder()
         .message("Bad Gateway")
         .statusCode(502)
         .build();
@@ -70,7 +70,7 @@ public class AWSClientUtilTest
   @Test
   public void testRecoverableException_503()
   {
-    AwsServiceException ex = (AwsServiceException) AwsServiceException.builder()
+    AwsServiceException ex = AwsServiceException.builder()
         .message("Service Unavailable")
         .statusCode(503)
         .build();

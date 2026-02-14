@@ -27,8 +27,8 @@ public class AWSClientConfig
   private static final boolean DEFAULT_CHUNKED_ENCODING_DISABLED = false;
   private static final boolean DEFAULT_PATH_STYLE_ACCESS = false;
   private static final boolean DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED = false;
-  private static final int DEFAULT_CONNECTION_TIMEOUT = 10_000; // 10 seconds
-  private static final int DEFAULT_SOCKET_TIMEOUT = 50_000; // 50 seconds
+  private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 10_000;
+  private static final int DEFAULT_SOCKET_TIMEOUT_MILLIS = 50_000;
   private static final int DEFAULT_MAX_CONNECTIONS = 50;
 
   @JsonProperty
@@ -44,10 +44,10 @@ public class AWSClientConfig
   protected boolean forceGlobalBucketAccessEnabled = DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
 
   @JsonProperty
-  private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+  private int connectionTimeout = DEFAULT_CONNECTION_TIMEOUT_MILLIS;
 
   @JsonProperty
-  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
+  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT_MILLIS;
 
   @JsonProperty
   private int maxConnections = DEFAULT_MAX_CONNECTIONS;

@@ -144,7 +144,7 @@ public class S3StorageDruidModule implements DruidModule
         ? Region.of(endpointConfig.getSigningRegion())
         : null;
 
-    final java.util.function.Supplier<S3Client> s3ClientSupplier = () -> {
+    final Supplier<S3Client> s3ClientSupplier = () -> {
       // Build HTTP client with proxy configuration
       ApacheHttpClient.Builder httpClientBuilder = ApacheHttpClient.builder()
           .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
@@ -180,7 +180,7 @@ public class S3StorageDruidModule implements DruidModule
     };
 
     // Create async client supplier for S3TransferManager
-    final java.util.function.Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
+    final Supplier<S3AsyncClient> s3AsyncClientSupplier = () -> {
       NettyNioAsyncHttpClient.Builder asyncHttpClientBuilder = NettyNioAsyncHttpClient.builder()
           .connectionTimeout(Duration.ofMillis(clientConfig.getConnectionTimeout()))
           .readTimeout(Duration.ofMillis(clientConfig.getSocketTimeout()))
@@ -213,12 +213,7 @@ public class S3StorageDruidModule implements DruidModule
   private static URI buildEndpointOverride(AWSEndpointConfig endpointConfig, boolean useHttps)
   {
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      String endpointUrl = endpointConfig.getUrl();
-      // Ensure endpoint URL has a scheme
-      if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
-        endpointUrl = (useHttps ? "https://" : "http://") + endpointUrl;
-      }
-      return URI.create(endpointUrl);
+      return URI.create(S3Utils.ensureEndpointHasScheme(endpointConfig.getUrl(), useHttps));
     }
     return null;
   }

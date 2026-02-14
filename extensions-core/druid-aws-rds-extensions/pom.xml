@@ -44,6 +44,7 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>rds</artifactId>
+      <version>${aws.sdk.v2.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -58,11 +59,13 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>auth</artifactId>
+      <version>${aws.sdk.v2.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>regions</artifactId>
+      <version>${aws.sdk.v2.version}</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

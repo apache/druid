@@ -207,7 +207,7 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-logs</artifactId>
-            <version>${aws.sdk.version}</version>
+            <version>${aws.sdk.v1.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>

@@ -62,22 +62,25 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-        <!-- AWS SDK v2 -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>auth</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>ec2</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>aws-core</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
           <groupId>software.amazon.awssdk</groupId>
           <artifactId>sdk-core</artifactId>
+          <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
