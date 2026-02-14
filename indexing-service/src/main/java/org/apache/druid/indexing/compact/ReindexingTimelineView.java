@@ -22,7 +22,14 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRule;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -437,6 +444,14 @@ public class ReindexingTimelineView
     }
 
     @JsonProperty
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+    @JsonSubTypes({
+        @JsonSubTypes.Type(value = ReindexingDataSchemaRule.class, name = "dataSchema"),
+        @JsonSubTypes.Type(value = ReindexingDeletionRule.class, name = "deletion"),
+        @JsonSubTypes.Type(value = ReindexingSegmentGranularityRule.class, name = "segmentGranularity"),
+        @JsonSubTypes.Type(value = ReindexingTuningConfigRule.class, name = "tuningConfig"),
+        @JsonSubTypes.Type(value = ReindexingIOConfigRule.class, name = "ioConfig")
+    })
     public List<ReindexingRule> getAppliedRules()
     {
       return appliedRules;

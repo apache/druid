@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Interval;
 
 /**
- * Exception thrown when segment granularity timeline validation fails.
+ * Exception thrown when segment granularity timeline validation fails when using {@link CascadingReindexingTemplate}.
  * Contains structured information about the conflicting intervals.
  */
 public class GranularityTimelineValidationException extends IAE

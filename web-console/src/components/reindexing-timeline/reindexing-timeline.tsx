@@ -509,40 +509,14 @@ function ConfigJsonViewer({ config, isRulesList }: ConfigJsonViewerProps) {
 }
 
 function getRuleTypeName(rule: any): string {
-  // Infer rule type from its properties since there's no explicit type field
+  // Use the explicit type field provided by Jackson serialization
+  const typeMap: Record<string, string> = {
+    'deletion': 'Deletion Rules',
+    'dataSchema': 'Data Schema Rules',
+    'segmentGranularity': 'Segment Granularity Rules',
+    'tuningConfig': 'Tuning Config Rules',
+    'ioConfig': 'IO Config Rules',
+  };
 
-  // DeletionRule has a required 'deleteWhere' field
-  if (rule.deleteWhere) {
-    return 'Deletion Rules';
-  }
-
-  // DataSchemaRule has these fields
-  if (rule.dimensionsSpec || rule.metricsSpec || rule.projections || rule.queryGranularity !== undefined) {
-    return 'Data Schema Rules';
-  }
-
-  // SegmentGranularityRule has segmentGranularity
-  if (rule.segmentGranularity) {
-    return 'Segment Granularity Rules';
-  }
-
-  // TuningConfigRule has tuningConfig
-  if (rule.tuningConfig) {
-    return 'Tuning Config Rules';
-  }
-
-  // IOConfigRule has ioConfig
-  if (rule.ioConfig) {
-    return 'IO Config Rules';
-  }
-
-  // Fallback: use the id to infer type if it contains type info
-  const id = rule.id || '';
-  if (id.toLowerCase().includes('delete')) return 'Deletion Rules';
-  if (id.toLowerCase().includes('dataschema')) return 'Data Schema Rules';
-  if (id.toLowerCase().includes('granularity')) return 'Segment Granularity Rules';
-  if (id.toLowerCase().includes('tuning')) return 'Tuning Config Rules';
-  if (id.toLowerCase().includes('io')) return 'IO Config Rules';
-
-  return 'Other Rules';
+  return typeMap[rule.type] || 'Other Rules';
 }
