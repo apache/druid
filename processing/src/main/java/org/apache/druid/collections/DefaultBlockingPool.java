@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Pool that pre-generates objects up to a limit, then permits possibly-blocking "take" operations.
@@ -59,9 +60,12 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     this.objects = new ArrayDeque<>(limit);
     this.maxSize = limit;
 
-    for (int i = 0; i < limit; i++) {
-      objects.add(generator.get());
-    }
+    objects.addAll(
+        IntStream.range(0, limit)
+                 .parallel()
+                 .mapToObj(i -> generator.get())
+                 .toList()
+    );
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();
