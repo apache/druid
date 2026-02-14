@@ -35,7 +35,10 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.indexing.compact.CompactionTimelineView;
+import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
+import org.apache.druid.indexing.compact.CompactionJobTemplate;
+import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
+import org.apache.druid.indexing.compact.ReindexingTimelineView;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
@@ -355,10 +358,10 @@ public class SupervisorResource
   }
 
   @GET
-  @Path("/{id}/compactionTimeline")
+  @Path("/{id}/reindexingTimeline")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response getCompactionTimeline(
+  public Response getReindexingTimeline(
       @PathParam("id") final String id,
       @QueryParam("referenceTime") @Nullable final String referenceTimeStr
   )
@@ -373,7 +376,7 @@ public class SupervisorResource
           }
 
           SupervisorSpec spec = specOptional.get();
-          if (!(spec instanceof org.apache.druid.indexing.compact.CompactionSupervisorSpec)) {
+          if (!(spec instanceof CompactionSupervisorSpec)) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity(ImmutableMap.of(
                                "error",
@@ -386,8 +389,7 @@ public class SupervisorResource
                            .build();
           }
 
-          org.apache.druid.indexing.compact.CompactionSupervisorSpec compactionSpec =
-              (org.apache.druid.indexing.compact.CompactionSupervisorSpec) spec;
+          CompactionSupervisorSpec compactionSpec = (CompactionSupervisorSpec) spec;
 
           DateTime referenceTime;
           if (referenceTimeStr != null) {
@@ -406,13 +408,13 @@ public class SupervisorResource
             referenceTime = DateTimes.nowUtc();
           }
 
-          org.apache.druid.indexing.compact.CompactionJobTemplate template = compactionSpec.getTemplate();
-          if (!(template instanceof org.apache.druid.indexing.compact.CascadingReindexingTemplate)) {
+          CompactionJobTemplate template = compactionSpec.getTemplate();
+          if (!(template instanceof CascadingReindexingTemplate)) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity(ImmutableMap.of(
                                "error",
                                StringUtils.format(
-                                   "Compaction timeline is only available for cascading reindexing supervisors. " +
+                                   "Reindexing timeline is only available for cascading reindexing supervisors. " +
                                    "Supervisor [%s] uses template type: %s",
                                    id,
                                    template.getClass().getSimpleName()
@@ -421,10 +423,9 @@ public class SupervisorResource
                            .build();
           }
 
-          org.apache.druid.indexing.compact.CascadingReindexingTemplate cascadingTemplate =
-              (org.apache.druid.indexing.compact.CascadingReindexingTemplate) template;
+          CascadingReindexingTemplate cascadingTemplate = (CascadingReindexingTemplate) template;
 
-          CompactionTimelineView timelineView = cascadingTemplate.getCompactionTimelineView(referenceTime);
+          ReindexingTimelineView timelineView = cascadingTemplate.getReindexingTimelineView(referenceTime);
           return Response.ok(timelineView).build();
         }
     );

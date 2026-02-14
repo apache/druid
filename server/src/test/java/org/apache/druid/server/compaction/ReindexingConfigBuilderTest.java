@@ -87,6 +87,25 @@ public class ReindexingConfigBuilderTest
     Assert.assertEquals(Granularities.HOUR, config.getGranularitySpec().getQueryGranularity());
     Assert.assertNotNull(config.getGranularitySpec().isRollup());
     Assert.assertTrue(config.getGranularitySpec().isRollup());
+
+    // Test applyToWithDetails() on a fresh builder
+    InlineSchemaDataSourceCompactionConfig.Builder builderForDetails =
+        InlineSchemaDataSourceCompactionConfig.builder()
+            .forDataSource("test_datasource");
+
+    ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builderForDetails);
+
+    // Verify count matches
+    Assert.assertEquals(count, buildResult.getRuleCount());
+
+    // Verify applied rules - should only contain the data schema rule, not the synthetic segment granularity
+    Assert.assertNotNull(buildResult.getAppliedRules());
+    Assert.assertEquals(1, buildResult.getAppliedRules().size());
+    Assert.assertTrue(buildResult.getAppliedRules().get(0) instanceof ReindexingDataSchemaRule);
+
+    // Verify config matches
+    InlineSchemaDataSourceCompactionConfig configFromDetails = builderForDetails.build();
+    Assert.assertEquals(config.getGranularitySpec(), configFromDetails.getGranularitySpec());
   }
 
   @Test
@@ -137,6 +156,33 @@ public class ReindexingConfigBuilderTest
 
     OrDimFilter orFilter = (OrDimFilter) notFilter.getField();
     Assert.assertEquals(2, orFilter.getFields().size()); // 2 filters combined
+
+    // Now test applyToWithDetails() on a fresh builder
+    InlineSchemaDataSourceCompactionConfig.Builder builderForDetails =
+        InlineSchemaDataSourceCompactionConfig.builder()
+            .forDataSource("test_datasource");
+
+    ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builderForDetails);
+
+    // Verify BuildResult count matches applyTo() count
+    Assert.assertEquals(count, buildResult.getRuleCount());
+
+    // Verify applied rules list
+    Assert.assertNotNull(buildResult.getAppliedRules());
+    Assert.assertEquals(6, buildResult.getAppliedRules().size());
+
+    // Verify rule types in order: tuning, io, dataSchema, 2 deletion rules, segment granularity
+    Assert.assertTrue(buildResult.getAppliedRules().get(0) instanceof ReindexingTuningConfigRule);
+    Assert.assertTrue(buildResult.getAppliedRules().get(1) instanceof ReindexingIOConfigRule);
+    Assert.assertTrue(buildResult.getAppliedRules().get(2) instanceof ReindexingDataSchemaRule);
+    Assert.assertTrue(buildResult.getAppliedRules().get(3) instanceof ReindexingDeletionRule);
+    Assert.assertTrue(buildResult.getAppliedRules().get(4) instanceof ReindexingDeletionRule);
+    Assert.assertTrue(buildResult.getAppliedRules().get(5) instanceof ReindexingSegmentGranularityRule);
+
+    // Verify the config produced by applyToWithDetails() matches the original
+    InlineSchemaDataSourceCompactionConfig configFromDetails = builderForDetails.build();
+    Assert.assertEquals(config.getGranularitySpec(), configFromDetails.getGranularitySpec());
+    Assert.assertEquals(config.getTuningConfig(), configFromDetails.getTuningConfig());
   }
 
   @Test

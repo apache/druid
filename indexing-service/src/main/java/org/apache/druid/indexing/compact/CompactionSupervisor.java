@@ -85,11 +85,11 @@ public class CompactionSupervisor implements Supervisor
    * @param referenceTime the reference time to use for computing rule periods
    * @return Optional containing the timeline view if this is a cascading reindexing supervisor, empty otherwise
    */
-  public java.util.Optional<CompactionTimelineView> getCompactionTimelineView(org.joda.time.DateTime referenceTime)
+  public java.util.Optional<ReindexingTimelineView> getCompactionTimelineView(org.joda.time.DateTime referenceTime)
   {
     CompactionJobTemplate template = supervisorSpec.getTemplate();
     if (template instanceof CascadingReindexingTemplate) {
-      return java.util.Optional.of(((CascadingReindexingTemplate) template).getCompactionTimelineView(referenceTime));
+      return java.util.Optional.of(((CascadingReindexingTemplate) template).getReindexingTimelineView(referenceTime));
     }
     return java.util.Optional.empty();
   }

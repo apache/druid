@@ -18,7 +18,7 @@
 
 import React, { useState } from 'react';
 
-import { CompactionTimeline, ShowJson, SupervisorHistoryPanel } from '../../components';
+import { ReindexingTimeline, ShowJson, SupervisorHistoryPanel } from '../../components';
 import { cleanSpec } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
@@ -104,7 +104,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
         />
       )}
       {activeTab === 'history' && <SupervisorHistoryPanel supervisorId={supervisorId} />}
-      {activeTab === 'timeline' && <CompactionTimeline supervisorId={supervisorId} />}
+      {activeTab === 'timeline' && <ReindexingTimeline supervisorId={supervisorId} />}
     </TableActionDialog>
   );
 });

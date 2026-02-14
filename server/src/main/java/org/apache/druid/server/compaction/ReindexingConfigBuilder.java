@@ -51,6 +51,38 @@ public class ReindexingConfigBuilder
   private final Interval interval;
   private final DateTime referenceTime;
 
+  /**
+   * Result of applying reindexing rules to a config builder.
+   * Contains both the count of rules applied and the actual rules that were applied.
+   */
+  public static class BuildResult
+  {
+    private final int ruleCount;
+    private final List<ReindexingRule> appliedRules;
+
+    public BuildResult(int ruleCount, List<ReindexingRule> appliedRules)
+    {
+      this.ruleCount = ruleCount;
+      this.appliedRules = appliedRules;
+    }
+
+    /**
+     * @return the number of rules that were applied
+     */
+    public int getRuleCount()
+    {
+      return ruleCount;
+    }
+
+    /**
+     * @return immutable list of the actual rules that were applied, in application order
+     */
+    public List<ReindexingRule> getAppliedRules()
+    {
+      return appliedRules;
+    }
+  }
+
   public ReindexingConfigBuilder(
       ReindexingRuleProvider provider,
       Granularity defaultSegmentGranularity, Interval interval,
@@ -70,24 +102,53 @@ public class ReindexingConfigBuilder
    */
   public int applyTo(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
+    return applyToWithDetails(builder).getRuleCount();
+  }
+
+  /**
+   * Applies all applicable rules to the builder and returns detailed information about
+   * which rules were applied.
+   *
+   * @return BuildResult containing the count and list of applied rules
+   */
+  public BuildResult applyToWithDetails(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  {
     int count = 0;
+    List<ReindexingRule> appliedRules = new ArrayList<>();
 
-    count += applyIfPresent(
-        builder::withTuningConfig,
-        provider.getTuningConfigRule(interval, referenceTime),
-        ReindexingTuningConfigRule::getTuningConfig
-    );
+    // Apply tuning config rule
+    ReindexingTuningConfigRule tuningRule = provider.getTuningConfigRule(interval, referenceTime);
+    if (tuningRule != null) {
+      builder.withTuningConfig(tuningRule.getTuningConfig());
+      appliedRules.add(tuningRule);
+      count++;
+    }
 
-    count += applyIfPresent(
-        builder::withIoConfig,
-        provider.getIOConfigRule(interval, referenceTime),
-        ReindexingIOConfigRule::getIoConfig
-    );
+    // Apply IO config rule
+    ReindexingIOConfigRule ioConfigRule = provider.getIOConfigRule(interval, referenceTime);
+    if (ioConfigRule != null) {
+      builder.withIoConfig(ioConfigRule.getIoConfig());
+      appliedRules.add(ioConfigRule);
+      count++;
+    }
 
-    count += applyDataSchemaRules(builder);
+    // Apply data schema rules
+    ReindexingDataSchemaRule dataSchemaRule = provider.getDataSchemaRule(interval, referenceTime);
+    if (dataSchemaRule != null) {
+      applyDataSchemaRule(builder, dataSchemaRule);
+      appliedRules.add(dataSchemaRule);
+      count++;
+    }
 
-    count += applyDeletionRules(builder);
+    // Apply deletion rules (additive)
+    List<ReindexingDeletionRule> deletionRules = provider.getDeletionRules(interval, referenceTime);
+    if (!deletionRules.isEmpty()) {
+      applyDeletionRulesList(builder, deletionRules);
+      appliedRules.addAll(deletionRules);
+      count += deletionRules.size();
+    }
 
+    // Apply segment granularity rule
     ReindexingSegmentGranularityRule segmentGranularityRule = provider.getSegmentGranularityRule(interval, referenceTime);
     if (segmentGranularityRule == null) {
       if (count > 0) {
@@ -95,55 +156,30 @@ public class ReindexingConfigBuilder
         builder.withSegmentGranularity(defaultGranularity);
       }
     } else {
-      count++;
       builder.withSegmentGranularity(segmentGranularityRule.getSegmentGranularity());
+      appliedRules.add(segmentGranularityRule);
+      count++;
     }
 
-    return count;
+    return new BuildResult(count, appliedRules);
   }
 
-  // Generic helper for non-additive rules
-  private <R, C> int applyIfPresent(
-      Consumer<C> setter,
-      @Nullable R rule,
-      Function<R, C> configExtractor
+  private void applyDataSchemaRule(
+      InlineSchemaDataSourceCompactionConfig.Builder builder,
+      ReindexingDataSchemaRule dataSchemaRule
   )
   {
-    if (rule != null) {
-      C config = configExtractor.apply(rule);
-      setter.accept(config);
-      return 1;
-    }
-    return 0;
-  }
-
-  private int applyDataSchemaRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
-  {
-    ReindexingDataSchemaRule dataSchemaRule = provider.getDataSchemaRule(
-        interval,
-        referenceTime
-    );
-    if (dataSchemaRule == null) {
-      return 0;
+    if (dataSchemaRule.getDimensionsSpec() != null) {
+      builder.withDimensionsSpec(dataSchemaRule.getDimensionsSpec());
     }
 
-    applyIfPresent(
-        builder::withDimensionsSpec,
-        dataSchemaRule,
-        ReindexingDataSchemaRule::getDimensionsSpec
-    );
+    if (dataSchemaRule.getMetricsSpec() != null) {
+      builder.withMetricsSpec(dataSchemaRule.getMetricsSpec());
+    }
 
-    applyIfPresent(
-        builder::withMetricsSpec,
-        dataSchemaRule,
-        ReindexingDataSchemaRule::getMetricsSpec
-    );
-
-    applyIfPresent(
-        builder::withProjections,
-        dataSchemaRule,
-        ReindexingDataSchemaRule::getProjections
-    );
+    if (dataSchemaRule.getProjections() != null) {
+      builder.withProjections(dataSchemaRule.getProjections());
+    }
 
     if (dataSchemaRule.getQueryGranularity() != null || dataSchemaRule.getRollup() != null) {
       builder.withQueryGranularityAndRollup(
@@ -151,16 +187,13 @@ public class ReindexingConfigBuilder
           dataSchemaRule.getRollup()
       );
     }
-
-    return 1;
   }
 
-  private int applyDeletionRules(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  private void applyDeletionRulesList(
+      InlineSchemaDataSourceCompactionConfig.Builder builder,
+      List<ReindexingDeletionRule> rules
+  )
   {
-    List<ReindexingDeletionRule> rules = provider.getDeletionRules(interval, referenceTime);
-    if (rules.isEmpty()) {
-      return 0;
-    }
 
     // Collect filters and virtual columns in a single pass
     List<DimFilter> removeConditions = new ArrayList<>();
@@ -188,6 +221,5 @@ public class ReindexingConfigBuilder
     builder.withTransformSpec(new CompactionTransformSpec(finalFilter, virtualColumns));
 
     LOG.debug("Applied [%d] filter rules for interval %s", rules.size(), interval);
-    return rules.size();
   }
 }

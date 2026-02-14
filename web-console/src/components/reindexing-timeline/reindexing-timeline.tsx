@@ -27,9 +27,9 @@ import { Api, AppToaster } from '../../singletons';
 import { downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
-import './compaction-timeline.scss';
+import './reindexing-timeline.scss';
 
-interface CompactionTimelineProps {
+interface ReindexingTimelineProps {
   supervisorId: string;
 }
 
@@ -62,7 +62,7 @@ interface ValidationError {
   newerGranularity?: string;
 }
 
-interface CompactionTimelineData {
+interface ReindexingTimelineData {
   dataSource: string;
   referenceTime: string;
   skipOffset?: SkipOffsetInfo;
@@ -70,17 +70,17 @@ interface CompactionTimelineData {
   validationError?: ValidationError;
 }
 
-export const CompactionTimeline = React.memo(function CompactionTimeline(
-  props: CompactionTimelineProps,
+export const ReindexingTimeline = React.memo(function ReindexingTimeline(
+  props: ReindexingTimelineProps,
 ) {
   const { supervisorId } = props;
   const [selectedIntervalIndex, setSelectedIntervalIndex] = useState<number | undefined>();
 
-  const [timelineState] = useQueryManager<string, CompactionTimelineData>({
+  const [timelineState] = useQueryManager<string, ReindexingTimelineData>({
     query: supervisorId,
     processQuery: async (supervisorId, signal) => {
-      const resp = await Api.instance.get<CompactionTimelineData>(
-        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/compactionTimeline`,
+      const resp = await Api.instance.get<ReindexingTimelineData>(
+        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/reindexingTimeline`,
         { signal },
       );
       return resp.data;
@@ -93,8 +93,8 @@ export const CompactionTimeline = React.memo(function CompactionTimeline(
 
   if (timelineState.error) {
     return (
-      <div className="compaction-timeline">
-        <Callout intent={Intent.DANGER} title="Error loading compaction timeline">
+      <div className="reindexing-timeline">
+        <Callout intent={Intent.DANGER} title="Error loading reindexing timeline">
           {timelineState.getErrorMessage()}
         </Callout>
       </div>
@@ -111,7 +111,7 @@ export const CompactionTimeline = React.memo(function CompactionTimeline(
   // Display validation error if present
   if (validationError) {
     return (
-      <div className="compaction-timeline">
+      <div className="reindexing-timeline">
         <Callout intent={Intent.DANGER} title="Invalid Supervisor Configuration">
           <p>
             <strong>The segment granularity rule definitions have created an illegal segment granularity timeline.</strong>
@@ -148,9 +148,9 @@ export const CompactionTimeline = React.memo(function CompactionTimeline(
 
   if (intervals.length === 0) {
     return (
-      <div className="compaction-timeline">
+      <div className="reindexing-timeline">
         <Callout intent={Intent.WARNING}>
-          No compaction intervals found. This may indicate that the rule provider is not ready or
+          No reindexing intervals found. This may indicate that the rule provider is not ready or
           no rules are configured.
         </Callout>
       </div>
@@ -174,7 +174,7 @@ export const CompactionTimeline = React.memo(function CompactionTimeline(
   };
 
   return (
-    <div className="compaction-timeline">
+    <div className="reindexing-timeline">
       <div className="timeline-header">
         <div className="header-info">
           <strong>DataSource:</strong> {timelineData.dataSource}
@@ -359,7 +359,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
             <span>{formatInterval(interval.interval)}</span>
           </Tooltip>
         }
-        className="compaction-config-dialog"
+        className="reindexing-config-dialog"
         canOutsideClickClose
       >
         <div className="bp5-dialog-body">
@@ -386,7 +386,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               intent={Intent.PRIMARY}
               onClick={() => {
                 const jsonValue = JSONBig.stringify(config, undefined, 2);
-                const downloadFilename = `compaction-config-${interval.interval.replace(/\//g, '-')}.json`;
+                const downloadFilename = `reindexing-config-${interval.interval.replace(/\//g, '-')}.json`;
                 downloadFile(jsonValue, 'json', downloadFilename);
               }}
             />
@@ -402,7 +402,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
             <span>Rules for {formatInterval(interval.interval)}</span>
           </Tooltip>
         }
-        className="compaction-config-dialog"
+        className="reindexing-config-dialog"
         canOutsideClickClose
       >
         <div className="bp5-dialog-body">
@@ -429,7 +429,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               intent={Intent.PRIMARY}
               onClick={() => {
                 const jsonValue = JSONBig.stringify(interval.appliedRules, undefined, 2);
-                const downloadFilename = `compaction-rules-${interval.interval.replace(/\//g, '-')}.json`;
+                const downloadFilename = `reindexing-rules-${interval.interval.replace(/\//g, '-')}.json`;
                 downloadFile(jsonValue, 'json', downloadFilename);
               }}
             />

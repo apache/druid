@@ -33,11 +33,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents the timeline of search intervals and their associated compaction configurations
+ * Represents the timeline of search intervals and their associated reindexing configurations
  * for a cascading reindexing supervisor. This view helps operators understand how different
- * compaction rules are applied across time intervals.
+ * rules are applied across time intervals.
  */
-public class CompactionTimelineView
+public class ReindexingTimelineView
 {
   private final String dataSource;
   private final DateTime referenceTime;
@@ -46,7 +46,7 @@ public class CompactionTimelineView
   private final ValidationError validationError;
 
   @JsonCreator
-  public CompactionTimelineView(
+  public ReindexingTimelineView(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("referenceTime") DateTime referenceTime,
       @JsonProperty("skipOffset") @Nullable SkipOffsetInfo skipOffset,
@@ -104,7 +104,7 @@ public class CompactionTimelineView
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionTimelineView that = (CompactionTimelineView) o;
+    ReindexingTimelineView that = (ReindexingTimelineView) o;
     return Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(referenceTime, that.referenceTime) &&
            Objects.equals(skipOffset, that.skipOffset) &&
@@ -395,7 +395,7 @@ public class CompactionTimelineView
   }
 
   /**
-   * Represents a search interval and its associated compaction configuration.
+   * Represents a search interval and its associated reindexing configuration.
    */
   public static class IntervalConfig
   {

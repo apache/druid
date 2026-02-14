@@ -37,13 +37,9 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingConfigBuilder;
-import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
-import org.apache.druid.server.compaction.ReindexingDeletionRule;
-import org.apache.druid.server.compaction.ReindexingIOConfigRule;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
-import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -277,14 +273,14 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
-   * Generates a timeline view showing the search intervals and their associated compaction
+   * Generates a timeline view showing the search intervals and their associated reindexing
    * configurations. This is useful for operators to understand how rules are applied across
-   * different time periods without actually creating compaction jobs.
+   * different time periods and to preview the effects of rule changes before they are applied.
    *
    * @param referenceTime the reference time to use for computing rule periods (typically DateTime.now())
-   * @return a view of the compaction timeline with intervals and their configs
+   * @return a view of the reindexing timeline with intervals and their configs
    */
-  public CompactionTimelineView getCompactionTimelineView(DateTime referenceTime)
+  public ReindexingTimelineView getReindexingTimelineView(DateTime referenceTime)
   {
     if (!ruleProvider.isReady()) {
       LOG.info(
@@ -292,7 +288,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           ruleProvider.getType(),
           dataSource
       );
-      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
+      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
     }
 
     List<Interval> searchIntervals;
@@ -301,8 +297,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     }
     catch (GranularityTimelineValidationException e) {
       // Validation failed - extract structured error details and return with validation error
-      LOG.warn(e, "Validation failed for compaction timeline of dataSource[%s]", dataSource);
-      CompactionTimelineView.ValidationError validationError = new CompactionTimelineView.ValidationError(
+      LOG.warn(e, "Validation failed for reindexing timeline of dataSource[%s]", dataSource);
+      ReindexingTimelineView.ValidationError validationError = new ReindexingTimelineView.ValidationError(
           "INVALID_GRANULARITY_TIMELINE",
           e.getMessage(),
           e.getOlderInterval().toString(),
@@ -310,12 +306,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           e.getNewerInterval().toString(),
           e.getNewerGranularity().toString()
       );
-      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
+      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
     }
     catch (IAE e) {
       // Other validation errors (e.g., no rules configured)
-      LOG.warn(e, "Validation failed for compaction timeline of dataSource[%s]", dataSource);
-      CompactionTimelineView.ValidationError validationError = new CompactionTimelineView.ValidationError(
+      LOG.warn(e, "Validation failed for reindexing timeline of dataSource[%s]", dataSource);
+      ReindexingTimelineView.ValidationError validationError = new ReindexingTimelineView.ValidationError(
           "VALIDATION_ERROR",
           e.getMessage(),
           null,
@@ -323,38 +319,38 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           null,
           null
       );
-      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
+      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
     }
 
     if (searchIntervals.isEmpty()) {
       LOG.warn("No search intervals generated for dataSource[%s]", dataSource);
-      return new CompactionTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
+      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
     }
 
     // Calculate effective end time based on skip offset
     DateTime effectiveEndTime = referenceTime;
-    CompactionTimelineView.SkipOffsetInfo skipOffsetInfo = null;
+    ReindexingTimelineView.SkipOffsetInfo skipOffsetInfo = null;
 
     if (skipOffsetFromNow != null) {
       effectiveEndTime = referenceTime.minus(skipOffsetFromNow);
-      CompactionTimelineView.AppliedSkipOffset applied = new CompactionTimelineView.AppliedSkipOffset(
+      ReindexingTimelineView.AppliedSkipOffset applied = new ReindexingTimelineView.AppliedSkipOffset(
           "skipOffsetFromNow",
           skipOffsetFromNow,
           effectiveEndTime
       );
-      skipOffsetInfo = new CompactionTimelineView.SkipOffsetInfo(applied, null);
+      skipOffsetInfo = new ReindexingTimelineView.SkipOffsetInfo(applied, null);
     } else if (skipOffsetFromLatest != null) {
       // skipOffsetFromLatest requires actual timeline data, so we can't apply it in preview mode
-      CompactionTimelineView.NotAppliedSkipOffset notApplied = new CompactionTimelineView.NotAppliedSkipOffset(
+      ReindexingTimelineView.NotAppliedSkipOffset notApplied = new ReindexingTimelineView.NotAppliedSkipOffset(
           "skipOffsetFromLatest",
           skipOffsetFromLatest,
           "Requires actual segment timeline data"
       );
-      skipOffsetInfo = new CompactionTimelineView.SkipOffsetInfo(null, notApplied);
+      skipOffsetInfo = new ReindexingTimelineView.SkipOffsetInfo(null, notApplied);
     }
 
     // Build configs for each interval
-    List<CompactionTimelineView.IntervalConfig> intervalConfigs = new ArrayList<>();
+    List<ReindexingTimelineView.IntervalConfig> intervalConfigs = new ArrayList<>();
     for (Interval searchInterval : searchIntervals) {
       // Clamp interval to effective end time
       Interval clampedInterval = searchInterval;
@@ -374,46 +370,19 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           clampedInterval,
           referenceTime
       );
-      int ruleCount = configBuilder.applyTo(builder);
+      ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builder);
 
-      if (ruleCount > 0) {
-        // Collect the ACTUAL rules that were applied (matching ReindexingConfigBuilder logic)
-        List<ReindexingRule> appliedRules = new ArrayList<>();
-
-        ReindexingTuningConfigRule tuningRule = ruleProvider.getTuningConfigRule(clampedInterval, referenceTime);
-        if (tuningRule != null) {
-          appliedRules.add(tuningRule);
-        }
-
-        ReindexingIOConfigRule ioConfigRule = ruleProvider.getIOConfigRule(clampedInterval, referenceTime);
-        if (ioConfigRule != null) {
-          appliedRules.add(ioConfigRule);
-        }
-
-        ReindexingDataSchemaRule dataSchemaRule = ruleProvider.getDataSchemaRule(clampedInterval, referenceTime);
-        if (dataSchemaRule != null) {
-          appliedRules.add(dataSchemaRule);
-        }
-
-        // Deletion rules are additive - collect all that apply
-        List<ReindexingDeletionRule> deletionRules = ruleProvider.getDeletionRules(clampedInterval, referenceTime);
-        appliedRules.addAll(deletionRules);
-
-        ReindexingSegmentGranularityRule segmentGranularityRule = ruleProvider.getSegmentGranularityRule(clampedInterval, referenceTime);
-        if (segmentGranularityRule != null) {
-          appliedRules.add(segmentGranularityRule);
-        }
-
-        intervalConfigs.add(new CompactionTimelineView.IntervalConfig(
+      if (buildResult.getRuleCount() > 0) {
+        intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
             clampedInterval,
-            ruleCount,
+            buildResult.getRuleCount(),
             builder.build(),
-            appliedRules
+            buildResult.getAppliedRules()
         ));
       }
     }
 
-    return new CompactionTimelineView(dataSource, referenceTime, skipOffsetInfo, intervalConfigs, null);
+    return new ReindexingTimelineView(dataSource, referenceTime, skipOffsetInfo, intervalConfigs, null);
   }
 
   @Override
