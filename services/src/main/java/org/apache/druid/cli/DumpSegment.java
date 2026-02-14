@@ -500,7 +500,7 @@ public class DumpSegment extends GuiceRunnable
                   while (globalStringIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
                     final ByteBuffer val = globalStringIterator.next();
                     if (val == null) {
@@ -517,7 +517,7 @@ public class DumpSegment extends GuiceRunnable
                   while (globalLongIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
                     jg.writeNumber(globalLongIterator.next());
                     jg.writeEndObject();
@@ -529,7 +529,7 @@ public class DumpSegment extends GuiceRunnable
                   while (globalDoubleIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
                     jg.writeNumber(globalDoubleIterator.next());
                     jg.writeEndObject();
