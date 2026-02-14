@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.retry.RetryUtils;
 
 import java.io.IOException;
 import java.util.Set;
@@ -78,15 +79,14 @@ public class AWSClientUtil
 
     // Check for service exceptions with specific error codes
     if (exception instanceof AwsServiceException) {
-      AwsServiceException serviceException = (AwsServiceException) exception;
-
-      // Retry on 5xx errors
-      if (serviceException.statusCode() >= 500) {
+      final AwsServiceException serviceException = (AwsServiceException) exception;
+      // AWS SDK v1 behavior allow retries on 5xx: https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/retry/RetryUtils.java
+      // Support backwards-compatible retry behavior; a future change can upgrade to https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/retry-strategy.html.
+      if (serviceException.statusCode() >= 500 || RetryUtils.isRetryableException(serviceException)) {
         return true;
       }
 
-      // Retry on 429 (Too Many Requests)
-      if (serviceException.statusCode() == 429) {
+      if (RetryUtils.isThrottlingException(serviceException)) {
         return true;
       }
 

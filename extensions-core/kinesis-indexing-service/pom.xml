@@ -55,18 +55,22 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>kinesis</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>auth</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sdk-core</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>regions</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -109,6 +113,7 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
 
         <!-- KCL v2 for deaggregation support -->

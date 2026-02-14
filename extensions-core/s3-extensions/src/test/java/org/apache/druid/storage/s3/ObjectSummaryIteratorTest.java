@@ -32,6 +32,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class ObjectSummaryIteratorTest
@@ -154,6 +155,44 @@ public class ObjectSummaryIteratorTest
         ImmutableList.of("s3://b/foo/bar", "s3://b/foo/baz"),
         10
     );
+  }
+
+  @Test
+  public void testFirstValueIsPrefetchedInConstructor()
+  {
+    final AtomicInteger listCalls = new AtomicInteger(0);
+
+    final ServerSideEncryptingAmazonS3 client = new ServerSideEncryptingAmazonS3(null, null, null, new S3TransferConfig())
+    {
+      @Override
+      public ListObjectsV2Response listObjectsV2(final ListObjectsV2Request request)
+      {
+        listCalls.incrementAndGet();
+        return ListObjectsV2Response.builder()
+            .contents(
+                S3Object.builder()
+                    .key("foo/file")
+                    .size(1L)
+                    .build()
+            )
+            .isTruncated(false)
+            .build();
+      }
+    };
+
+    // Construction should trigger the first S3 list call and prefetch the first element.
+    final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
+        client,
+        ImmutableList.of(URI.create("s3://b/foo")),
+        100,
+        1
+    );
+
+    Assert.assertEquals(1, listCalls.get());
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(1, listCalls.get());
+    Assert.assertEquals("foo/file", iterator.next().key());
+    Assert.assertEquals(1, listCalls.get());
   }
 
   private static void test(

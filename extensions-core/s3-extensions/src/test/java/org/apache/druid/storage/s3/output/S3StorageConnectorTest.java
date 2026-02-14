@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
@@ -72,7 +74,7 @@ public class S3StorageConnectorTest
   public static File temporaryFolder;
   private ServerSideEncryptingAmazonS3 s3Client;
 
-  private StorageConnector storageConnector;
+  private S3StorageConnector storageConnector;
 
   @BeforeEach
   public void setup() throws IOException
@@ -192,6 +194,67 @@ public class S3StorageConnectorTest
     try (InputStream inputStream = storageConnector.readRange("readWrite2", 0, 0)) {
       byte[] bytes = inputStream.readAllBytes();
       Assertions.assertEquals("", new String(bytes, StandardCharsets.UTF_8));
+    }
+  }
+
+  @Test
+  public void testBuildInputParams_setsStartEndAndRangeHeader() throws IOException
+  {
+    final String path = "rangeParams";
+    final String data = "abcdefghijklmnopqrstuvwxyz";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    final long start = 10;
+    final long size = 5;
+
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path, start, size);
+
+    Assertions.assertEquals(start, params.getStart());
+    Assertions.assertEquals(start + size, params.getEnd());
+    Assertions.assertEquals(JOINER.join(PREFIX, path), params.getCloudStoragePath());
+
+    final GetObjectRequest request = params.getObjectSupplier().getObject(params.getStart(), params.getEnd()).build();
+    Assertions.assertEquals(BUCKET, request.bucket());
+    Assertions.assertEquals(JOINER.join(PREFIX, path), request.key());
+    Assertions.assertEquals("bytes=10-14", request.range());
+  }
+
+  @Test
+  public void testBuildInputParams_usesMetadataToSetEnd() throws IOException
+  {
+    final String path = "rangeMetadata";
+    final String data = "0123456789";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path);
+    Assertions.assertEquals(0, params.getStart());
+    Assertions.assertEquals(data.length(), params.getEnd());
+  }
+
+  @Test
+  public void testObjectOpenFunction_openWithOffsetShiftsStartAndKeepsEnd() throws IOException
+  {
+    final String path = "rangeOffset";
+    final String data = "abcdefghijklmnopqrstuvwxyz";
+
+    try (OutputStream outputStream = storageConnector.write(path)) {
+      outputStream.write(data.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // Range: bytes=10-19 (exclusive end is 20).
+    ChunkingStorageConnectorParameters<GetObjectRequest.Builder> params = storageConnector.buildInputParams(path, 10, 10);
+    final GetObjectRequest.Builder requestBuilder = params.getObjectSupplier().getObject(params.getStart(), params.getEnd());
+
+    // Offset by 5 bytes -> bytes=15-19.
+    try (InputStream inputStream = params.getObjectOpenFunction().open(requestBuilder, 5)) {
+      byte[] bytes = inputStream.readAllBytes();
+      Assertions.assertEquals(data.substring(15, 20), new String(bytes, StandardCharsets.UTF_8));
     }
   }
 

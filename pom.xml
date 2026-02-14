@@ -119,7 +119,7 @@
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.14.2</mockito.version>
-        <aws.sdk.version>1.12.784</aws.sdk.version>
+        <aws.sdk.v1.version>1.12.784</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.40.0</aws.sdk.v2.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
@@ -355,7 +355,6 @@
                 <artifactId>commons-text</artifactId>
                 <version>1.13.1</version>
             </dependency>
-            <!-- AWS SDK v2 -->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>s3</artifactId>
