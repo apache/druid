@@ -357,7 +357,6 @@
                 <artifactId>commons-text</artifactId>
                 <version>1.13.1</version>
             </dependency>
-            <!-- AWS SDK v2 -->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>s3</artifactId>

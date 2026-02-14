@@ -173,6 +173,7 @@ public class ObjectSummaryWithBucketIterator implements Iterator<S3Utils.S3Objec
     }
 
     // Recognize s3sync.rb directory placeholders by MD5/ETag value.
+    // See https://github.com/mondain/jets3t/blob/master/jets3t/src/main/java/org/jets3t/service/model/StorageObject.java.
     if ("d66759af42f282e1ba19144df2d405d0".equals(objectSummary.eTag())) {
       return true;
     }

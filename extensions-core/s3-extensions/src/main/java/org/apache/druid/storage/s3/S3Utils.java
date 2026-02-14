@@ -484,6 +484,23 @@ public class S3Utils
     return protocol == null || protocol.equalsIgnoreCase("https");
   }
 
+  /**
+   * Ensures an endpoint URL string includes an HTTP scheme.
+   * <p>
+   * Many configs provide endpoints as host:port (no scheme). AWS SDK v2 requires a fully-qualified URI for
+   * endpoint overrides.
+   */
+  public static String ensureEndpointHasScheme(String endpointUrl, boolean useHttps)
+  {
+    if (org.apache.commons.lang3.StringUtils.isEmpty(endpointUrl)) {
+      return endpointUrl;
+    }
+    if (endpointUrl.startsWith("http://") || endpointUrl.startsWith("https://")) {
+      return endpointUrl;
+    }
+    return (useHttps ? "https://" : "http://") + endpointUrl;
+  }
+
   public static ProxyConfiguration buildProxyConfiguration(AWSProxyConfig proxyConfig)
   {
     if (org.apache.commons.lang3.StringUtils.isEmpty(proxyConfig.getHost())) {

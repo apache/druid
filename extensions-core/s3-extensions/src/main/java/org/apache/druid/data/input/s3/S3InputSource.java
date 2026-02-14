@@ -146,7 +146,7 @@ public class S3InputSource extends CloudObjectInputSource
               // Ensure endpoint URL has a scheme
               if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
                 boolean useHttps = S3Utils.useHttps(awsClientConfig, awsEndpointConfig);
-                endpointUrl = (useHttps ? "https://" : "http://") + endpointUrl;
+                endpointUrl = S3Utils.ensureEndpointHasScheme(endpointUrl, useHttps);
               }
               customBuilder.endpointOverride(URI.create(endpointUrl));
               if (awsEndpointConfig.getSigningRegion() != null) {

@@ -52,19 +52,23 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
+            <version>${aws.sdk.v2.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>auth</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>regions</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>aws-core</artifactId>
+            <version>${aws.sdk.v2.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -320,6 +324,7 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
+            <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>

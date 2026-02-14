@@ -61,7 +61,11 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
-  public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, S3UploadManager s3UploadManager)
+  public S3StorageConnector(
+      S3OutputConfig config,
+      ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3,
+      S3UploadManager s3UploadManager
+  )
   {
     this.config = config;
     this.s3Client = serverSideEncryptingAmazonS3;
@@ -111,7 +115,11 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   }
 
   @Override
-  public ChunkingStorageConnectorParameters<GetObjectRequest.Builder> buildInputParams(String path, long from, long size)
+  public ChunkingStorageConnectorParameters<GetObjectRequest.Builder> buildInputParams(
+      String path,
+      long from,
+      long size
+  )
   {
     ChunkingStorageConnectorParameters.Builder<GetObjectRequest.Builder> builder = new ChunkingStorageConnectorParameters.Builder<>();
     builder.start(from);
@@ -121,9 +129,9 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
     builder.objectSupplier((start, end) -> GetObjectRequest.builder()
-        .bucket(config.getBucket())
-        .key(objectPath(path))
-        .range(StringUtils.format("bytes=%d-%d", start, end - 1)));
+                                                           .bucket(config.getBucket())
+                                                           .key(objectPath(path))
+                                                           .range(StringUtils.format("bytes=%d-%d", start, end - 1)));
     builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
@@ -141,27 +149,37 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       }
 
       @Override
-      public InputStream open(GetObjectRequest.Builder object, long offset)
+      public InputStream open(GetObjectRequest.Builder builder, long offset)
       {
-        // For SDK v2, we need to modify the range. Since builders are mutable,
-        // we need to handle the offset by rebuilding the range.
-        // Get the current request to inspect its range
-        GetObjectRequest currentRequest = object.build();
-        String currentRange = currentRequest.range();
+        // We must build to inspect, as AWS SDK v2 builders don't have getters
+        String currentRange = builder.build().range();
+
         if (currentRange != null && currentRange.startsWith("bytes=")) {
-          String[] parts = currentRange.substring(6).split("-");
+          String rangeValues = currentRange.substring(6);
+          int dashIndex = rangeValues.indexOf('-');
+
           try {
-            long oldStart = Long.parseLong(parts[0]);
-            long oldEnd = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : Long.MAX_VALUE;
-            object.range(StringUtils.format("bytes=%d-%d", oldStart + offset, oldEnd));
+            long oldStart = Long.parseLong(rangeValues.substring(0, dashIndex));
+            String endPart = rangeValues.substring(dashIndex + 1);
+
+            if (endPart.isEmpty()) {
+              // Was "bytes=X-", keep it open-ended
+              builder.range("bytes=" + (oldStart + offset) + "-");
+            } else {
+              // Was "bytes=X-Y", keep the original end
+              long oldEnd = Long.parseLong(endPart);
+              builder.range("bytes=" + (oldStart + offset) + "-" + oldEnd);
+            }
           }
-          catch (NumberFormatException e) {
-            throw new RE(e, "Invalid range format in S3 request: [%s]", currentRange);
+          catch (Exception e) {
+            throw new RE(e, "Invalid range format: [%s]", currentRange);
           }
         } else {
-          object.range(StringUtils.format("bytes=%d-", offset));
+          // No range existed, start fresh from offset
+          builder.range("bytes=" + offset + "-");
         }
-        return open(object);
+
+        return open(builder);
       }
     });
     return builder.build();
@@ -180,10 +198,12 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
       final String fullPath = objectPath(path);
       log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
 
-      S3Utils.retryS3Operation(() -> {
-        s3Client.deleteObject(config.getBucket(), fullPath);
-        return null;
-      }, config.getMaxRetry());
+      S3Utils.retryS3Operation(
+          () -> {
+            s3Client.deleteObject(config.getBucket(), fullPath);
+            return null;
+          }, config.getMaxRetry()
+      );
     }
     catch (Exception e) {
       log.error("Error occurred while deleting file at path [%s]. Error: [%s]", path, e.getMessage());
@@ -261,14 +281,17 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
           config.getMaxRetry()
       );
 
-      return Iterators.transform(files, summary -> {
-        String[] size = summary.key().split(prefixBasePath, 2);
-        if (size.length > 1) {
-          return size[1];
-        } else {
-          return "";
-        }
-      });
+      return Iterators.transform(
+          files,
+          summary -> {
+            String[] size = summary.key().split(prefixBasePath, 2);
+            if (size.length > 1) {
+              return size[1];
+            } else {
+              return "";
+            }
+          }
+      );
     }
     catch (Exception e) {
       log.error("Error occoured while listing files at path [%s]. Error: [%s]", dirName, e.getMessage());

@@ -68,7 +68,7 @@ public class S3Entity extends RetryingInputEntity
     GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
         .bucket(object.getBucket())
         .key(object.getPath())
-        .range("bytes=" + offset + "-");
+        .range("bytes=" + offset + "-"); // AWS SDK V2 move to explicit byte range, bytes=300- means byte 300 to EOF
     try {
       final ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(requestBuilder);
       if (s3Object == null) {

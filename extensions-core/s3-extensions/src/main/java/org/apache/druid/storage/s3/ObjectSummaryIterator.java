@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
  * Iterator class used by {@link S3Utils#objectSummaryIterator}.
  *
  * As required by the specification of that method, this iterator is computed incrementally in batches of
- * {@code maxListLength}. The first S3 call is made lazily on the first call to {@link #hasNext()} or {@link #next()}.
+ * {@code maxListLength}. The first S3 call is made at the same time the iterator is constructed.
  */
 public class ObjectSummaryIterator implements Iterator<S3Object>
 {
@@ -50,7 +50,6 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
   private Iterator<S3Object> objectSummaryIterator;
   private S3Object currentObjectSummary;
   private int maxRetries; // this is made available for testing mostly
-  private boolean initialized;
 
   ObjectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
@@ -62,6 +61,8 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     maxRetries = RetryUtils.DEFAULT_MAX_TRIES;
+
+    constructorPostProcessing();
   }
 
   @VisibleForTesting
@@ -76,29 +77,27 @@ public class ObjectSummaryIterator implements Iterator<S3Object>
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
     this.maxRetries = maxRetries;
+
+    constructorPostProcessing();
   }
 
-  private void initialize()
+  // helper to factor out stuff that happens in constructor after members are set
+  private void constructorPostProcessing()
   {
-    if (!initialized) {
-      initialized = true;
-      prepareNextRequest();
-      fetchNextBatch();
-      advanceObjectSummary();
-    }
+    prepareNextRequest();
+    fetchNextBatch();
+    advanceObjectSummary();
   }
 
   @Override
   public boolean hasNext()
   {
-    initialize();
     return currentObjectSummary != null;
   }
 
   @Override
   public S3Object next()
   {
-    initialize();
     if (currentObjectSummary == null) {
       throw new NoSuchElementException();
     }
