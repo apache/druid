@@ -19,6 +19,7 @@
 import { Button, Callout, Card, Dialog, Intent, Tag, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Duration, Timezone } from 'chronoshift';
+import { format as formatDate } from 'date-fns';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
@@ -40,15 +41,58 @@ const TIMELINE_INTERVAL_COLORS = [
   '#2F343C', // darker gray
 ];
 
+const SKIPPED_INTERVAL_COLOR = 'rgba(219, 55, 55, 0.15)';
+const JSON_VIEWER_HEIGHT = '500px';
+
+function getIntervalColor(index: number): string {
+  return TIMELINE_INTERVAL_COLORS[index % TIMELINE_INTERVAL_COLORS.length];
+}
+
 interface ReindexingTimelineProps {
   supervisorId: string;
+}
+
+interface DimFilter {
+  type: string;
+  field?: DimFilter;
+  fields?: DimFilter[];
+}
+
+interface TransformSpec {
+  filter?: DimFilter;
+  virtualColumns?: any;
+}
+
+interface GranularitySpec {
+  segmentGranularity?: string;
+  queryGranularity?: string;
+  rollup?: boolean;
+}
+
+interface CompactionConfig {
+  granularitySpec?: GranularitySpec;
+  metricsSpec?: any[];
+  dimensionsSpec?: {
+    dimensions?: any[];
+  };
+  projections?: any[];
+  transformSpec?: TransformSpec;
+  tuningConfig?: any;
+  ioConfig?: any;
+}
+
+interface ReindexingRule {
+  type: string;
+  id?: string;
+  olderThan?: string;
+  [key: string]: any;
 }
 
 interface IntervalConfig {
   interval: string;
   ruleCount: number;
-  config: any;
-  appliedRules: any[];
+  config: CompactionConfig;
+  appliedRules: ReindexingRule[];
 }
 
 interface SkipOffsetInfo {
@@ -153,8 +197,16 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
   let effectiveEndTime: Date | undefined;
   if (queriedMaxTime && skipOffset?.notApplied) {
     const period = skipOffset.notApplied.period;
-    const duration = new Duration(period);
-    effectiveEndTime = duration.shift(new Date(queriedMaxTime), Timezone.UTC, -1);
+    try {
+      const duration = new Duration(period);
+      effectiveEndTime = duration.shift(new Date(queriedMaxTime), Timezone.UTC, -1);
+    } catch (e) {
+      console.error('Failed to parse skip offset period:', period, e);
+      AppToaster.show({
+        message: `Invalid skip offset period format: ${period}`,
+        intent: Intent.WARNING,
+      });
+    }
   }
 
   // Display validation error if present
@@ -208,11 +260,6 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 
   const selectedInterval = selectedIntervalIndex !== undefined ? intervals[selectedIntervalIndex] : undefined;
 
-  // Generate a color based on interval index using blue/gray scale theme
-  const getIntervalColor = (index: number) => {
-    return TIMELINE_INTERVAL_COLORS[index % TIMELINE_INTERVAL_COLORS.length];
-  };
-
   return (
     <div className="reindexing-timeline">
       <div className="timeline-header">
@@ -227,7 +274,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
               Reference Time:
             </strong>
           </Tooltip>{' '}
-          {new Date(referenceTime).toLocaleString()}
+          {formatDateTimeUTC(referenceTime)}
         </div>
         {skipOffset && (
           <div className="skip-offset-info">
@@ -263,7 +310,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             )}
             {skipOffset.notApplied && queriedMaxTime && effectiveEndTime && (
               <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
-                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest: {new Date(queriedMaxTime).toISOString()})
+                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest: {formatDateTimeUTC(queriedMaxTime)})
               </Tag>
             )}
           </div>
@@ -271,7 +318,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
       </div>
 
       <Card className="timeline-bar-container">
-        <div className="timeline-bar">
+        <div className="timeline-bar" role="toolbar" aria-label="Reindexing timeline intervals">
           {intervals.map((interval, idx) => {
             const [start, end] = interval.interval.split('/');
             const isSelected = selectedIntervalIndex === idx;
@@ -288,12 +335,26 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                 key={idx}
                 className={`timeline-segment ${isSelected ? 'selected' : ''} ${isSkipped ? 'skipped' : ''}`}
                 style={{
-                  backgroundColor: isSkipped ? 'rgba(219, 55, 55, 0.15)' : getIntervalColor(idx),
+                  backgroundColor: isSkipped ? SKIPPED_INTERVAL_COLOR : getIntervalColor(idx),
                   flex: 1,
                   opacity: isSelected ? 1 : 0.7,
                   cursor: isSkipped ? 'default' : 'pointer',
                 }}
+                role={isSkipped ? undefined : 'button'}
+                tabIndex={isSkipped ? undefined : 0}
+                aria-label={
+                  isSkipped
+                    ? `Skipped interval ${interval.interval}`
+                    : `Interval ${interval.interval} with ${interval.ruleCount} rule${interval.ruleCount !== 1 ? 's' : ''}`
+                }
+                aria-selected={isSelected}
                 onClick={() => !isSkipped && setSelectedIntervalIndex(idx)}
+                onKeyDown={(e) => {
+                  if (!isSkipped && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    setSelectedIntervalIndex(idx);
+                  }
+                }}
                 title={isSkipped
                   ? `${interval.interval}\nSkipped (beyond skip offset)`
                   : `${interval.interval}\n${interval.ruleCount} rule(s) applied`}
@@ -332,12 +393,18 @@ function formatDateShort(isoDate: string): string {
     return '-INF';
   }
 
-  const date = new Date(isoDate);
+  // Format: "Feb 15, 2026"
+  return formatDate(new Date(isoDate), 'MMM d, yyyy');
+}
 
-  const month = date.toLocaleString('default', { month: 'short', timeZone: 'UTC' });
-  const day = date.getUTCDate();
-  const year = date.getUTCFullYear();
-  return `${month} ${day}, ${year}`;
+function formatDateTimeUTC(isoDate: string): string {
+  // Handle start of time / very old dates
+  if (isoDate.startsWith('-')) {
+    return '-INF';
+  }
+
+  // Format: "Feb 15, 2026 3:45 PM UTC"
+  return formatDate(new Date(isoDate), "MMM d, yyyy h:mm a 'UTC'");
 }
 
 function formatInterval(interval: string): string {
@@ -345,6 +412,20 @@ function formatInterval(interval: string): string {
   const formattedStart = start.startsWith('-') ? '-INF' : start;
   const formattedEnd = end ? end : 'now';
   return `${formattedStart}/${formattedEnd}`;
+}
+
+function handleCopyToClipboard(data: CompactionConfig | ReindexingRule[], label: string): void {
+  const jsonValue = JSONBig.stringify(data, undefined, 2);
+  navigator.clipboard.writeText(jsonValue);
+  AppToaster.show({
+    message: `${label} copied to clipboard`,
+    intent: Intent.SUCCESS,
+  });
+}
+
+function handleDownloadJson(data: CompactionConfig | ReindexingRule[], filename: string): void {
+  const jsonValue = JSONBig.stringify(data, undefined, 2);
+  downloadFile(jsonValue, 'json', filename);
 }
 
 interface IntervalDetailPanelProps {
@@ -373,7 +454,12 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               {interval.ruleCount} rule{interval.ruleCount !== 1 ? 's' : ''} applied
             </Tag>
           </div>
-          <Button icon={IconNames.CROSS} minimal onClick={onClose} />
+          <Button
+            icon={IconNames.CROSS}
+            minimal
+            onClick={onClose}
+            aria-label="Close interval details"
+          />
         </div>
 
         <div className="detail-content">
@@ -447,24 +533,13 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               text="Copy"
               icon={IconNames.DUPLICATE}
               intent={Intent.PRIMARY}
-              onClick={() => {
-                const jsonValue = JSONBig.stringify(config, undefined, 2);
-                navigator.clipboard.writeText(jsonValue);
-                AppToaster.show({
-                  message: 'Configuration copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
+              onClick={() => handleCopyToClipboard(config, 'Configuration')}
             />
             <Button
               text="Download"
               icon={IconNames.DOWNLOAD}
               intent={Intent.PRIMARY}
-              onClick={() => {
-                const jsonValue = JSONBig.stringify(config, undefined, 2);
-                const downloadFilename = `reindexing-config-${interval.interval.replace(/\//g, '-')}.json`;
-                downloadFile(jsonValue, 'json', downloadFilename);
-              }}
+              onClick={() => handleDownloadJson(config, `reindexing-config-${interval.interval.replace(/\//g, '-')}.json`)}
             />
           </div>
         </div>
@@ -490,24 +565,13 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               text="Copy"
               icon={IconNames.DUPLICATE}
               intent={Intent.PRIMARY}
-              onClick={() => {
-                const jsonValue = JSONBig.stringify(interval.appliedRules, undefined, 2);
-                navigator.clipboard.writeText(jsonValue);
-                AppToaster.show({
-                  message: 'Rules copied to clipboard',
-                  intent: Intent.SUCCESS,
-                });
-              }}
+              onClick={() => handleCopyToClipboard(interval.appliedRules, 'Rules')}
             />
             <Button
               text="Download"
               icon={IconNames.DOWNLOAD}
               intent={Intent.PRIMARY}
-              onClick={() => {
-                const jsonValue = JSONBig.stringify(interval.appliedRules, undefined, 2);
-                const downloadFilename = `reindexing-rules-${interval.interval.replace(/\//g, '-')}.json`;
-                downloadFile(jsonValue, 'json', downloadFilename);
-              }}
+              onClick={() => handleDownloadJson(interval.appliedRules, `reindexing-rules-${interval.interval.replace(/\//g, '-')}.json`)}
             />
           </div>
         </div>
@@ -516,7 +580,7 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
   );
 }
 
-function countDeletionRules(transformSpec: any): number {
+function countDeletionRules(transformSpec?: TransformSpec): number {
   if (!transformSpec || !transformSpec.filter) {
     return 0;
   }
@@ -537,28 +601,25 @@ function countDeletionRules(transformSpec: any): number {
 }
 
 interface ConfigJsonViewerProps {
-  config: any;
+  config: CompactionConfig | ReindexingRule[];
   isRulesList?: boolean;
 }
 
 function ConfigJsonViewer({ config, isRulesList }: ConfigJsonViewerProps) {
-  let displayValue: any;
   let jsonValue: string;
 
   if (isRulesList && Array.isArray(config)) {
     // Group rules by type for better readability
-    const rulesByType: Record<string, any[]> = {};
-    config.forEach((rule: any) => {
+    const rulesByType: Record<string, ReindexingRule[]> = {};
+    config.forEach((rule: ReindexingRule) => {
       const type = getRuleTypeName(rule);
       if (!rulesByType[type]) {
         rulesByType[type] = [];
       }
       rulesByType[type].push(rule);
     });
-    displayValue = rulesByType;
-    jsonValue = JSONBig.stringify(displayValue, undefined, 2);
+    jsonValue = JSONBig.stringify(rulesByType, undefined, 2);
   } else {
-    displayValue = config;
     jsonValue = JSONBig.stringify(config, undefined, 2);
   }
 
@@ -571,7 +632,7 @@ function ConfigJsonViewer({ config, isRulesList }: ConfigJsonViewerProps) {
         value={jsonValue}
         readOnly
         width="100%"
-        height="500px"
+        height={JSON_VIEWER_HEIGHT}
         showPrintMargin={false}
         showGutter
         editorProps={{ $blockScrolling: Infinity }}
@@ -584,7 +645,7 @@ function ConfigJsonViewer({ config, isRulesList }: ConfigJsonViewerProps) {
   );
 }
 
-function getRuleTypeName(rule: any): string {
+function getRuleTypeName(rule: ReindexingRule): string {
   // Use the explicit type field provided by Jackson serialization
   const typeMap: Record<string, string> = {
     'deletion': 'Deletion Rules',
