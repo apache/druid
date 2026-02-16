@@ -20,7 +20,6 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -36,8 +35,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Builds compaction configs by applying reindexing rules.
@@ -48,7 +45,6 @@ public class ReindexingConfigBuilder
   private static final Logger LOG = new Logger(ReindexingConfigBuilder.class);
 
   private final ReindexingRuleProvider provider;
-  private final Granularity defaultGranularity;
   private final Interval interval;
   private final DateTime referenceTime;
   private final List<IntervalGranularityInfo> syntheticTimeline;
@@ -91,14 +87,12 @@ public class ReindexingConfigBuilder
 
   public ReindexingConfigBuilder(
       ReindexingRuleProvider provider,
-      Granularity defaultSegmentGranularity,
       Interval interval,
       DateTime referenceTime,
-      @Nullable List<IntervalGranularityInfo> syntheticTimeline
+      List<IntervalGranularityInfo> syntheticTimeline
   )
   {
     this.provider = provider;
-    this.defaultGranularity = defaultSegmentGranularity;
     this.interval = interval;
     this.referenceTime = referenceTime;
     this.syntheticTimeline = syntheticTimeline;
@@ -174,11 +168,7 @@ public class ReindexingConfigBuilder
       count++;
     }
 
-    if (count == 0) {
-      return new BuildResult(0, List.of());
-    } else {
-      return new BuildResult(count, appliedRules);
-    }
+    return new BuildResult(count, count == 0 ? List.of() : appliedRules);
   }
 
   /**
@@ -188,10 +178,6 @@ public class ReindexingConfigBuilder
   @Nullable
   private IntervalGranularityInfo findMatchingInterval(Interval interval)
   {
-    if (syntheticTimeline == null) {
-      return null;
-    }
-
     for (IntervalGranularityInfo candidate : syntheticTimeline) {
       if (candidate.getInterval().equals(interval)) {
         return candidate;

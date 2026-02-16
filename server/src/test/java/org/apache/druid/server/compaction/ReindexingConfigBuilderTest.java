@@ -75,7 +75,6 @@ public class ReindexingConfigBuilderTest
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
-        Granularities.DAY,
         TEST_INTERVAL,
         REFERENCE_TIME,
         syntheticTimeline
@@ -137,7 +136,6 @@ public class ReindexingConfigBuilderTest
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
-        Granularities.DAY,
         TEST_INTERVAL,
         REFERENCE_TIME,
         syntheticTimeline
@@ -220,7 +218,6 @@ public class ReindexingConfigBuilderTest
 
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
-        Granularities.DAY,
         TEST_INTERVAL,
         REFERENCE_TIME,
         syntheticTimeline
