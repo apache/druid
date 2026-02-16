@@ -130,16 +130,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
       throw new IAE("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
     }
-    if (skipOffsetFromLatest != null) {
-      this.skipOffsetFromLatest = skipOffsetFromLatest;
-      this.skipOffsetFromNow = null;
-    } else if (skipOffsetFromNow != null) {
-      this.skipOffsetFromNow = skipOffsetFromNow;
-      this.skipOffsetFromLatest = null;
-    } else {
-      this.skipOffsetFromLatest = null;
-      this.skipOffsetFromNow = null;
-    }
+    this.skipOffsetFromNow = skipOffsetFromNow;
+    this.skipOffsetFromLatest = skipOffsetFromLatest;
   }
 
   @Override
@@ -406,10 +398,9 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
       ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
           ruleProvider,
-          defaultSegmentGranularity,
           searchInterval,
           referenceTime,
-          searchIntervals  // Pass synthetic timeline
+          searchIntervals
       );
       ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builder);
 
@@ -491,10 +482,9 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
       ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
           ruleProvider,
-          defaultSegmentGranularity,
           reindexingInterval,
           currentTime,
-          searchIntervals  // Pass synthetic timeline
+          searchIntervals
       );
       int ruleCount = configBuilder.applyTo(builder);
 
@@ -559,7 +549,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .withInputSegmentSizeBytes(inputSegmentSizeBytes)
         .withEngine(engine)
         .withTaskContext(taskContext)
-        .withSkipOffsetFromLatest(Period.ZERO);
+        .withSkipOffsetFromLatest(Period.ZERO); // We handle skip offsets at the timeline level, we know we want to cover the entirety of the interval
   }
 
   /**
@@ -581,63 +571,102 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *
    * @param referenceTime the reference time for calculating period thresholds
    * @return list of split and aligned intervals with their granularities and source rules, ordered from oldest to newest
-   * @throws IAE if no segment granularity rules are found
+   * @throws IAE if no reindexing rules are configured
+   * @throws GranularityTimelineValidationException if granularities become coarser over time
    */
   List<IntervalGranularityInfo> generateAlignedSearchIntervals(DateTime referenceTime)
   {
     List<IntervalGranularityInfo> baseTimeline = generateBaseSegmentGranularityAlignedTimeline(referenceTime);
-
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
     List<IntervalGranularityInfo> finalIntervals = new ArrayList<>();
-
     for (IntervalGranularityInfo baseInterval : baseTimeline) {
-      List<DateTime> splitPoints = new ArrayList<>();
-
-      for (DateTime threshold : nonSegmentGranThresholds) {
-        if (threshold.isAfter(baseInterval.getInterval().getStart()) &&
-            threshold.isBefore(baseInterval.getInterval().getEnd())) {
-
-          // Align threshold to this interval's segment granularity
-          DateTime alignedThreshold = baseInterval.getGranularity().bucketStart(threshold);
-
-          // Only add if it's not at the boundaries (would create zero-length interval)
-          if (alignedThreshold.isAfter(baseInterval.getInterval().getStart()) &&
-              alignedThreshold.isBefore(baseInterval.getInterval().getEnd())) {
-            splitPoints.add(alignedThreshold);
-          }
-        }
-      }
-
-      splitPoints = splitPoints.stream()
-          .distinct()
-          .sorted()
-          .collect(Collectors.toList());
-
-      // Split this base interval at the split points, preserving granularity and source rule
-      if (splitPoints.isEmpty()) {
-        LOG.debug("No splits for interval [%s]", baseInterval.getInterval());
-        finalIntervals.add(baseInterval);
-      } else {
-        LOG.debug("Splitting interval [%s] at [%d] points", baseInterval.getInterval(), splitPoints.size());
-        DateTime start = baseInterval.getInterval().getStart();
-        for (DateTime splitPoint : splitPoints) {
-          finalIntervals.add(new IntervalGranularityInfo(
-              new Interval(start, splitPoint),
-              baseInterval.getGranularity(),
-              baseInterval.getSourceRule()  // Preserve source rule from base interval
-          ));
-          start = splitPoint;
-        }
-        finalIntervals.add(new IntervalGranularityInfo(
-            new Interval(start, baseInterval.getInterval().getEnd()),
-            baseInterval.getGranularity(),
-            baseInterval.getSourceRule()  // Preserve source rule from base interval
-        ));
-      }
+      List<DateTime> splitPoints = findGranularityAlignedSplitPoints(baseInterval, nonSegmentGranThresholds);
+      finalIntervals.addAll(splitIntervalAtPoints(baseInterval, splitPoints));
     }
 
     return finalIntervals;
+  }
+
+  /**
+   * Finds split points within a base interval by aligning non-segment-granularity thresholds
+   * to the interval's segment granularity. Only includes thresholds that fall strictly inside
+   * the interval (not at boundaries, which would create zero-length intervals).
+   *
+   * @param baseInterval the interval to find split points for
+   * @param nonSegmentGranThresholds thresholds from non-segment-granularity rules
+   * @return sorted, distinct list of aligned split points that fall inside the interval
+   */
+  private List<DateTime> findGranularityAlignedSplitPoints(
+      IntervalGranularityInfo baseInterval,
+      List<DateTime> nonSegmentGranThresholds
+  )
+  {
+    List<DateTime> splitPoints = new ArrayList<>();
+
+    for (DateTime threshold : nonSegmentGranThresholds) {
+      // Check if threshold falls inside this interval
+      if (threshold.isAfter(baseInterval.getInterval().getStart()) &&
+          threshold.isBefore(baseInterval.getInterval().getEnd())) {
+
+        // Align threshold to this interval's segment granularity
+        DateTime alignedThreshold = baseInterval.getGranularity().bucketStart(threshold);
+
+        // Only add if it's not at the boundaries (would create zero-length interval)
+        if (alignedThreshold.isAfter(baseInterval.getInterval().getStart()) &&
+            alignedThreshold.isBefore(baseInterval.getInterval().getEnd())) {
+          splitPoints.add(alignedThreshold);
+        }
+      }
+    }
+
+    // Remove duplicates and sort
+    return splitPoints.stream()
+        .distinct()
+        .sorted()
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Splits a base interval at the given split points, preserving the interval's granularity
+   * and source rule. If no split points exist, returns the original interval unchanged.
+   *
+   * @param baseInterval the interval to split
+   * @param splitPoints sorted list of points to split at (must be inside the interval)
+   * @return list of split intervals, or singleton list with original interval if no splits
+   */
+  private List<IntervalGranularityInfo> splitIntervalAtPoints(
+      IntervalGranularityInfo baseInterval,
+      List<DateTime> splitPoints
+  )
+  {
+    if (splitPoints.isEmpty()) {
+      LOG.debug("No splits for interval [%s]", baseInterval.getInterval());
+      return Collections.singletonList(baseInterval);
+    }
+
+    LOG.debug("Splitting interval [%s] at [%d] points", baseInterval.getInterval(), splitPoints.size());
+
+    List<IntervalGranularityInfo> result = new ArrayList<>();
+    DateTime start = baseInterval.getInterval().getStart();
+
+    for (DateTime splitPoint : splitPoints) {
+      result.add(new IntervalGranularityInfo(
+          new Interval(start, splitPoint),
+          baseInterval.getGranularity(),
+          baseInterval.getSourceRule()  // Preserve source rule from base interval
+      ));
+      start = splitPoint;
+    }
+
+    // Add final interval from last split point to end
+    result.add(new IntervalGranularityInfo(
+        new Interval(start, baseInterval.getInterval().getEnd()),
+        baseInterval.getGranularity(),
+        baseInterval.getSourceRule()  // Preserve source rule from base interval
+    ));
+
+    return result;
   }
 
   /**
@@ -664,41 +693,80 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *     </ol>
    *   </li>
    * </ol>
+   *
+   * @param referenceTime the reference time for calculating period thresholds
+   * @return base timeline with granularity-aligned intervals, ordered from oldest to newest
+   * @throws IAE if no reindexing rules are configured
+   * @throws GranularityTimelineValidationException if granularities become coarser over time
    */
   private List<IntervalGranularityInfo> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
   {
     List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
+    List<IntervalGranularityInfo> baseTimeline;
+
     if (segmentGranRules.isEmpty()) {
-      // No segment granularity rules - use default granularity with the smallest period from other rules
-      if (nonSegmentGranThresholds.isEmpty()) {
-        throw new IAE(
-            "CascadingReindexingTemplate requires at least one reindexing rule "
-            + "(segment granularity or other type)"
-        );
-      }
-
-      // Find the smallest period (most recent threshold = largest DateTime value)
-      DateTime mostRecentThreshold = Collections.max(nonSegmentGranThresholds);
-      DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentThreshold);
-
-      LOG.debug(
-          "No segment granularity rules found for cascading supervisor[%s]. Creating base interval with "
-          + "default granularity [%s] and threshold [%s] (aligned: [%s])",
-          dataSource,
-          defaultSegmentGranularity,
-          mostRecentThreshold,
-          alignedEnd
-      );
-
-      return Collections.singletonList(new IntervalGranularityInfo(
-          new Interval(DateTimes.MIN, alignedEnd),
-          defaultSegmentGranularity,
-          null  // No source rule when using default granularity
-      ));
+      baseTimeline = createDefaultGranularityTimeline(nonSegmentGranThresholds);
+    } else {
+      baseTimeline = createSegmentGranularityTimeline(segmentGranRules, referenceTime);
+      baseTimeline = maybePrependRecentInterval(baseTimeline, nonSegmentGranThresholds);
     }
 
+    validateSegmentGranularityTimeline(baseTimeline);
+    return baseTimeline;
+  }
+
+  /**
+   * Creates a timeline using the default segment granularity when no segment granularity rules exist.
+   * Uses the most recent threshold from non-segment-granularity rules to determine the end boundary.
+   *
+   * @param nonSegmentGranThresholds thresholds from non-segment-granularity rules
+   * @return single-interval timeline from MIN to most recent threshold, aligned to default granularity
+   * @throws IAE if no non-segment-granularity rules exist either
+   */
+  private List<IntervalGranularityInfo> createDefaultGranularityTimeline(List<DateTime> nonSegmentGranThresholds)
+  {
+    if (nonSegmentGranThresholds.isEmpty()) {
+      throw new IAE(
+          "CascadingReindexingTemplate requires at least one reindexing rule "
+          + "(segment granularity or other type)"
+      );
+    }
+
+    // Find the smallest period (most recent threshold = largest DateTime value)
+    DateTime mostRecentThreshold = Collections.max(nonSegmentGranThresholds);
+    DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentThreshold);
+
+    LOG.debug(
+        "No segment granularity rules found for cascading supervisor[%s]. Creating base interval with "
+        + "default granularity [%s] and threshold [%s] (aligned: [%s])",
+        dataSource,
+        defaultSegmentGranularity,
+        mostRecentThreshold,
+        alignedEnd
+    );
+
+    return Collections.singletonList(new IntervalGranularityInfo(
+        new Interval(DateTimes.MIN, alignedEnd),
+        defaultSegmentGranularity,
+        null  // No source rule when using default granularity
+    ));
+  }
+
+  /**
+   * Creates a timeline by processing segment granularity rules in chronological order (oldest to newest).
+   * Each rule defines an interval with its specific segment granularity, with boundaries aligned to that granularity.
+   *
+   * @param segmentGranRules segment granularity rules to process
+   * @param referenceTime reference time for computing rule thresholds
+   * @return timeline of intervals with their granularities, ordered from oldest to newest
+   */
+  private List<IntervalGranularityInfo> createSegmentGranularityTimeline(
+      List<ReindexingSegmentGranularityRule> segmentGranRules,
+      DateTime referenceTime
+  )
+  {
     // Sort rules by period from longest to shortest (oldest to most recent threshold)
     List<ReindexingSegmentGranularityRule> sortedRules = segmentGranRules.stream()
         .sorted(Comparator.comparingLong(rule -> {
@@ -734,47 +802,65 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       previousAlignedEnd = alignedEnd;
     }
 
-    // Check if we need to prepend an interval for non-segment-gran rules that are more recent
-    // than the most recent segment gran rule
-    if (!nonSegmentGranThresholds.isEmpty()) {
-      DateTime mostRecentNonSegmentGranThreshold = Collections.max(nonSegmentGranThresholds);
-      DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).getInterval().getEnd();
+    return baseTimeline;
+  }
 
-      if (mostRecentNonSegmentGranThreshold.isAfter(mostRecentSegmentGranEnd)) {
-        DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
-
-        if (alignedEnd.isBefore(mostRecentSegmentGranEnd) || alignedEnd.isEqual(mostRecentSegmentGranEnd)) {
-          LOG.debug(
-              "Most recent non-segment-gran threshold [%s] aligns to [%s], which is not after "
-              + "most recent segment granularity rule interval end [%s]. No prepended interval needed.",
-              mostRecentNonSegmentGranThreshold,
-              alignedEnd,
-              mostRecentSegmentGranEnd
-          );
-          return baseTimeline;
-        } else {
-          LOG.debug(
-              "Most recent non-segment-gran threshold [%s] is after most recent segment gran interval end [%s]. "
-              + "Prepending interval with default granularity [%s] (aligned end: [%s])",
-              mostRecentNonSegmentGranThreshold,
-              mostRecentSegmentGranEnd,
-              defaultSegmentGranularity,
-              alignedEnd
-          );
-
-          baseTimeline.add(new IntervalGranularityInfo(
-              new Interval(mostRecentSegmentGranEnd, alignedEnd),
-              defaultSegmentGranularity,
-              null  // No source rule when using default granularity
-          ));
-        }
-      }
+  /**
+   * Checks if non-segment-granularity rules have more recent thresholds than the most recent
+   * segment granularity rule, and if so, prepends an interval with the default granularity.
+   * This ensures that all rules (not just segment granularity rules) are represented in the timeline.
+   *
+   * @param baseTimeline existing timeline built from segment granularity rules
+   * @param nonSegmentGranThresholds thresholds from non-segment-granularity rules
+   * @return updated timeline with prepended interval if needed, otherwise original timeline
+   */
+  private List<IntervalGranularityInfo> maybePrependRecentInterval(
+      List<IntervalGranularityInfo> baseTimeline,
+      List<DateTime> nonSegmentGranThresholds
+  )
+  {
+    if (nonSegmentGranThresholds.isEmpty()) {
+      return baseTimeline;
     }
 
-    // Validate the completed timeline before returning
-    validateSegmentGranularityTimeline(baseTimeline);
+    DateTime mostRecentNonSegmentGranThreshold = Collections.max(nonSegmentGranThresholds);
+    DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).getInterval().getEnd();
 
-    return baseTimeline;
+    if (!mostRecentNonSegmentGranThreshold.isAfter(mostRecentSegmentGranEnd)) {
+      return baseTimeline;
+    }
+
+    DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
+
+    if (alignedEnd.isBefore(mostRecentSegmentGranEnd) || alignedEnd.isEqual(mostRecentSegmentGranEnd)) {
+      LOG.debug(
+          "Most recent non-segment-gran threshold [%s] aligns to [%s], which is not after "
+          + "most recent segment granularity rule interval end [%s]. No prepended interval needed.",
+          mostRecentNonSegmentGranThreshold,
+          alignedEnd,
+          mostRecentSegmentGranEnd
+      );
+      return baseTimeline;
+    }
+
+    LOG.debug(
+        "Most recent non-segment-gran threshold [%s] is after most recent segment gran interval end [%s]. "
+        + "Prepending interval with default granularity [%s] (aligned end: [%s])",
+        mostRecentNonSegmentGranThreshold,
+        mostRecentSegmentGranEnd,
+        defaultSegmentGranularity,
+        alignedEnd
+    );
+
+    // Create new list with prepended interval (don't modify original)
+    List<IntervalGranularityInfo> updatedTimeline = new ArrayList<>(baseTimeline);
+    updatedTimeline.add(new IntervalGranularityInfo(
+        new Interval(mostRecentSegmentGranEnd, alignedEnd),
+        defaultSegmentGranularity,
+        null  // No source rule when using default granularity
+    ));
+
+    return updatedTimeline;
   }
 
   /**
@@ -786,7 +872,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * which is typically undesirable and inefficient.
    *
    * @param timeline the completed base timeline with granularity information
-   * @throws IAE if granularity becomes coarser as we move toward present
+   * @throws GranularityTimelineValidationException if granularity becomes coarser as we move toward present
    */
   private void validateSegmentGranularityTimeline(List<IntervalGranularityInfo> timeline)
   {

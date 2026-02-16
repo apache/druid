@@ -1371,7 +1371,25 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         null,
         Period.days(7),
         new UserCompactionTaskQueryTuningConfig(
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
         )
     );
 
