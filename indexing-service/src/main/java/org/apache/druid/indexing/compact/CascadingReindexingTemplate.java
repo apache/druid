@@ -56,7 +56,6 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -275,6 +274,45 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   /**
+   * Creates a validation error view for timeline generation failures.
+   * Logs the exception and returns a timeline view containing the validation error details.
+   */
+  private ReindexingTimelineView createValidationErrorView(
+      Exception e,
+      DateTime referenceTime,
+      String errorType,
+      @Nullable String olderInterval,
+      @Nullable String olderGranularity,
+      @Nullable String newerInterval,
+      @Nullable String newerGranularity
+  )
+  {
+    LOG.warn(e, "Validation failed for reindexing timeline of dataSource[%s]", dataSource);
+    ReindexingTimelineView.ValidationError validationError = new ReindexingTimelineView.ValidationError(
+        errorType,
+        e.getMessage(),
+        olderInterval,
+        olderGranularity,
+        newerInterval,
+        newerGranularity
+    );
+    return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
+  }
+
+  /**
+   * Checks if the given interval's end time is after the specified boundary.
+   * Used to determine if intervals should be skipped based on skip offset configuration.
+   *
+   * @param interval the interval to check
+   * @param boundary the boundary time to compare against
+   * @return true if the interval ends after the boundary
+   */
+  private static boolean intervalEndsAfter(Interval interval, DateTime boundary)
+  {
+    return interval.getEnd().isAfter(boundary);
+  }
+
+  /**
    * Generates a timeline view showing the search intervals and their associated reindexing
    * configurations. This is useful for operators to understand how rules are applied across
    * different time periods and to preview the effects of rule changes before they are applied.
@@ -298,30 +336,26 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       searchIntervals = generateAlignedSearchIntervals(referenceTime);
     }
     catch (GranularityTimelineValidationException e) {
-      // Validation failed - extract structured error details and return with validation error
-      LOG.warn(e, "Validation failed for reindexing timeline of dataSource[%s]", dataSource);
-      ReindexingTimelineView.ValidationError validationError = new ReindexingTimelineView.ValidationError(
+      return createValidationErrorView(
+          e,
+          referenceTime,
           "INVALID_GRANULARITY_TIMELINE",
-          e.getMessage(),
           e.getOlderInterval().toString(),
           e.getOlderGranularity().toString(),
           e.getNewerInterval().toString(),
           e.getNewerGranularity().toString()
       );
-      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
     }
     catch (IAE e) {
-      // Other validation errors (e.g., no rules configured)
-      LOG.warn(e, "Validation failed for reindexing timeline of dataSource[%s]", dataSource);
-      ReindexingTimelineView.ValidationError validationError = new ReindexingTimelineView.ValidationError(
+      return createValidationErrorView(
+          e,
+          referenceTime,
           "VALIDATION_ERROR",
-          e.getMessage(),
           null,
           null,
           null,
           null
       );
-      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), validationError);
     }
 
     if (searchIntervals.isEmpty()) {
@@ -357,7 +391,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       Interval searchInterval = intervalInfo.getInterval();
 
       // Check if interval extends past skip offset
-      if (searchInterval.getEnd().isAfter(effectiveEndTime)) {
+      if (intervalEndsAfter(searchInterval, effectiveEndTime)) {
         // Include in timeline but mark as skipped (no rules applied)
         intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
             searchInterval,
@@ -447,7 +481,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       // This preserves granularity alignment and ensures intervals exist in synthetic timeline
       // Only apply this when a skip offset is actually configured
       if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
-          reindexingInterval.getEnd().isAfter(adjustedTimelineInterval.getEnd())) {
+          intervalEndsAfter(reindexingInterval, adjustedTimelineInterval.getEnd())) {
         LOG.debug("Search interval[%s] extends past skip offset boundary[%s], skipping to preserve alignment",
                   reindexingInterval, adjustedTimelineInterval.getEnd());
         continue;

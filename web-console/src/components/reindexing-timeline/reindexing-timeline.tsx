@@ -29,6 +29,16 @@ import { Loader } from '../loader/loader';
 
 import './reindexing-timeline.scss';
 
+const TIMELINE_INTERVAL_COLORS = [
+  '#5C7080', // gray
+  '#738694', // light gray
+  '#8A9BA8', // lighter gray
+  '#394B59', // dark gray
+  '#4A5568', // medium dark gray
+  '#6B7E91', // medium gray
+  '#2F343C', // darker gray
+];
+
 interface ReindexingTimelineProps {
   supervisorId: string;
 }
@@ -75,6 +85,8 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 ) {
   const { supervisorId } = props;
   const [selectedIntervalIndex, setSelectedIntervalIndex] = useState<number | undefined>();
+  const [queriedMaxTime, setQueriedMaxTime] = useState<string | undefined>();
+  const [queryingMaxTime, setQueryingMaxTime] = useState(false);
 
   const [timelineState] = useQueryManager<string, ReindexingTimelineData>({
     query: supervisorId,
@@ -107,6 +119,55 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
   }
 
   const { intervals, skipOffset, referenceTime, validationError } = timelineData;
+
+  const handleQueryMaxTime = async () => {
+    setQueryingMaxTime(true);
+    try {
+      const query = {
+        queryType: 'timeBoundary',
+        dataSource: timelineData.dataSource,
+      };
+      const resp = await Api.instance.post('/druid/v2', query);
+      const result = resp.data;
+      if (result && result.length > 0 && result[0].result) {
+        const maxTime = result[0].result.maxTime;
+        setQueriedMaxTime(maxTime);
+      } else {
+        AppToaster.show({
+          message: 'No data found in datasource',
+          intent: Intent.WARNING,
+        });
+      }
+    } catch (e) {
+      AppToaster.show({
+        message: `Failed to query max time: ${e.message}`,
+        intent: Intent.DANGER,
+      });
+    } finally {
+      setQueryingMaxTime(false);
+    }
+  };
+
+  // Calculate effective end time if we have queried max time and skipOffsetFromLatest
+  let effectiveEndTime: Date | undefined;
+  if (queriedMaxTime && skipOffset?.notApplied) {
+    const maxTime = new Date(queriedMaxTime);
+    const period = skipOffset.notApplied.period;
+    effectiveEndTime = new Date(maxTime);
+
+    // Parse ISO 8601 duration format (e.g., "P7D", "P1M", "P1Y", "PT12H", "P1M7D")
+    const yearMatch = period.match(/(\d+)Y/);
+    const monthMatch = period.match(/(\d+)M/);
+    const weekMatch = period.match(/(\d+)W/);
+    const dayMatch = period.match(/(\d+)D/);
+    const hourMatch = period.match(/T.*?(\d+)H/);
+
+    if (yearMatch) effectiveEndTime.setFullYear(effectiveEndTime.getFullYear() - parseInt(yearMatch[1], 10));
+    if (monthMatch) effectiveEndTime.setMonth(effectiveEndTime.getMonth() - parseInt(monthMatch[1], 10));
+    if (weekMatch) effectiveEndTime.setDate(effectiveEndTime.getDate() - parseInt(weekMatch[1], 10) * 7);
+    if (dayMatch) effectiveEndTime.setDate(effectiveEndTime.getDate() - parseInt(dayMatch[1], 10));
+    if (hourMatch) effectiveEndTime.setHours(effectiveEndTime.getHours() - parseInt(hourMatch[1], 10));
+  }
 
   // Display validation error if present
   if (validationError) {
@@ -161,16 +222,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
 
   // Generate a color based on interval index using blue/gray scale theme
   const getIntervalColor = (index: number) => {
-    const colors = [
-      '#5C7080', // gray
-      '#738694', // light gray
-      '#8A9BA8', // lighter gray
-      '#394B59', // dark gray
-      '#4A5568', // medium dark gray
-      '#6B7E91', // medium gray
-      '#2F343C', // darker gray
-    ];
-    return colors[index % colors.length];
+    return TIMELINE_INTERVAL_COLORS[index % TIMELINE_INTERVAL_COLORS.length];
   };
 
   return (
@@ -196,20 +248,35 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                 Skip Offset: {skipOffset.applied.type} ({skipOffset.applied.period})
               </Tag>
             )}
-            {skipOffset.notApplied && (
-              <Tooltip
-                content={
-                  `This supervisor is configured to skip compaction of any search interval that is covered by ` +
-                  `or overlaps the threshold of the latest timestamp in the data minus ${skipOffset.notApplied.period}. ` +
-                  `However, the underlying segment data is not available in this preview, so the timeline does not ` +
-                  `reflect which intervals will be skipped during actual compaction.`
-                }
-                position="bottom"
-              >
-                <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
-                  {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in this preview
-                </Tag>
-              </Tooltip>
+            {skipOffset.notApplied && !queriedMaxTime && (
+              <>
+                <Tooltip
+                  content={
+                    `This supervisor is configured to skip compaction of any search interval that is covered by ` +
+                    `or overlaps the threshold of the latest timestamp in the data minus ${skipOffset.notApplied.period}. ` +
+                    `However, the underlying segment data is not available in this preview, so the timeline does not ` +
+                    `reflect which intervals will be skipped during actual compaction.`
+                  }
+                  position="bottom"
+                >
+                  <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
+                    {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in this preview
+                  </Tag>
+                </Tooltip>
+                <Button
+                  text="Query latest timestamp"
+                  icon={IconNames.REFRESH}
+                  small
+                  onClick={handleQueryMaxTime}
+                  loading={queryingMaxTime}
+                  style={{ marginLeft: '10px' }}
+                />
+              </>
+            )}
+            {skipOffset.notApplied && queriedMaxTime && effectiveEndTime && (
+              <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
+                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest: {new Date(queriedMaxTime).toISOString()})
+              </Tag>
             )}
           </div>
         )}
@@ -220,7 +287,14 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
           {intervals.map((interval, idx) => {
             const [start, end] = interval.interval.split('/');
             const isSelected = selectedIntervalIndex === idx;
-            const isSkipped = interval.ruleCount === 0;
+
+            // Check if interval is skipped due to skip offset (either from API or from queried max time)
+            let isSkipped = interval.ruleCount === 0;
+            if (!isSkipped && effectiveEndTime) {
+              const intervalEnd = new Date(end);
+              isSkipped = intervalEnd > effectiveEndTime;
+            }
+
             return (
               <div
                 key={idx}

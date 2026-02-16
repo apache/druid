@@ -69,7 +69,11 @@ public class ReindexingConfigBuilder
     }
 
     /**
-     * @return the number of rules that were applied
+     * Returns the count of rules that were actually applied to this specific interval.
+     * This is NOT the total number of rules in the provider, but rather the count
+     * of rules that matched and were applied during config building.
+     *
+     * @return the number of rules that were applied to the builder
      */
     public int getRuleCount()
     {
@@ -222,6 +226,28 @@ public class ReindexingConfigBuilder
     }
   }
 
+  /**
+   * Applies deletion rules by combining their filters into a single transform filter.
+   * <p>
+   * Each deletion rule specifies rows that should be deleted. To implement deletion during
+   * compaction, we need to keep only rows that do NOT match any deletion rule.
+   * <p>
+   * Filter construction logic:
+   * <ul>
+   *   <li>Collect all deletion filters (one per rule)</li>
+   *   <li>OR them together: (filter1 OR filter2 OR ...)</li>
+   *   <li>Wrap in NOT: NOT(filter1 OR filter2 OR ...)</li>
+   * </ul>
+   * <p>
+   * Result: Rows matching ANY deletion rule are filtered out, all other rows are kept.
+   * <p>
+   * Example: With rules "delete country=US" and "delete device=mobile":
+   * Final filter: NOT((country=US) OR (device=mobile))
+   * This keeps all rows except those where country=US OR device=mobile.
+   *
+   * @param builder the config builder to apply the deletion filter to
+   * @param rules the deletion rules to combine
+   */
   private void applyDeletionRulesList(
       InlineSchemaDataSourceCompactionConfig.Builder builder,
       List<ReindexingDeletionRule> rules
