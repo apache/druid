@@ -215,30 +215,39 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
       <div className="reindexing-timeline">
         <Callout intent={Intent.DANGER} title="Invalid Supervisor Configuration">
           <p>
-            <strong>The segment granularity rule definitions have created an illegal segment granularity timeline.</strong>
+            <strong>
+              The segment granularity rule definitions have created an illegal segment granularity
+              timeline.
+            </strong>
           </p>
-          {validationError.errorType === 'INVALID_GRANULARITY_TIMELINE' && validationError.olderInterval && (
-            <>
-              <p>
-                Segment granularity must stay the same or become <strong>coarser</strong> as data ages from present to past.
-                Your configuration violates this constraint:
-              </p>
-              <ul>
-                <li>
-                  <strong>Older interval</strong> (further in the past): <code>{formatInterval(validationError.olderInterval)}</code>
-                  {' '}has <strong>finer</strong> granularity: <Tag intent={Intent.PRIMARY}>{validationError.olderGranularity}</Tag>
-                </li>
-                <li>
-                  <strong>Newer interval</strong> (more recent): <code>{formatInterval(validationError.newerInterval!)}</code>
-                  {' '}has <strong>coarser</strong> granularity: <Tag intent={Intent.WARNING}>{validationError.newerGranularity}</Tag>
-                </li>
-              </ul>
-              <p>
-                <strong>To fix this:</strong> Adjust your segment granularity rules so that as time moves from present to past,
-                the granularity either stays the same or gets coarser (e.g., HOUR → DAY → MONTH → YEAR).
-              </p>
-            </>
-          )}
+          {validationError.errorType === 'INVALID_GRANULARITY_TIMELINE' &&
+            validationError.olderInterval && (
+              <>
+                <p>
+                  Segment granularity must stay the same or become <strong>coarser</strong> as data
+                  ages from present to past. Your configuration violates this constraint:
+                </p>
+                <ul>
+                  <li>
+                    <strong>Older interval</strong> (further in the past):{' '}
+                    <code>{formatInterval(validationError.olderInterval)}</code> has{' '}
+                    <strong>finer</strong> granularity:{' '}
+                    <Tag intent={Intent.PRIMARY}>{validationError.olderGranularity}</Tag>
+                  </li>
+                  <li>
+                    <strong>Newer interval</strong> (more recent):{' '}
+                    <code>{formatInterval(validationError.newerInterval!)}</code> has{' '}
+                    <strong>coarser</strong> granularity:{' '}
+                    <Tag intent={Intent.WARNING}>{validationError.newerGranularity}</Tag>
+                  </li>
+                </ul>
+                <p>
+                  <strong>To fix this:</strong> Adjust your segment granularity rules so that as
+                  time moves from present to past, the granularity either stays the same or gets
+                  coarser (e.g., HOUR → DAY → MONTH → YEAR).
+                </p>
+              </>
+            )}
           {validationError.errorType !== 'INVALID_GRANULARITY_TIMELINE' && (
             <p>{validationError.message}</p>
           )}
@@ -251,14 +260,15 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
     return (
       <div className="reindexing-timeline">
         <Callout intent={Intent.WARNING}>
-          No reindexing intervals found. This may indicate that the rule provider is not ready or
-          no rules are configured.
+          No reindexing intervals found. This may indicate that the rule provider is not ready or no
+          rules are configured.
         </Callout>
       </div>
     );
   }
 
-  const selectedInterval = selectedIntervalIndex !== undefined ? intervals[selectedIntervalIndex] : undefined;
+  const selectedInterval =
+    selectedIntervalIndex !== undefined ? intervals[selectedIntervalIndex] : undefined;
 
   return (
     <div className="reindexing-timeline">
@@ -295,14 +305,15 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                   position="bottom"
                 >
                   <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
-                    {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in this preview
+                    {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in
+                    this preview
                   </Tag>
                 </Tooltip>
                 <Button
                   text="Query latest timestamp"
                   icon={IconNames.REFRESH}
                   small
-                  onClick={handleQueryMaxTime}
+                  onClick={() => void handleQueryMaxTime()}
                   loading={queryingMaxTime}
                   style={{ marginLeft: '10px' }}
                 />
@@ -310,7 +321,8 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             )}
             {skipOffset.notApplied && queriedMaxTime && effectiveEndTime && (
               <Tag intent={Intent.SUCCESS} icon={IconNames.TICK}>
-                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest: {formatDateTimeUTC(queriedMaxTime)})
+                {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Applied (latest:{' '}
+                {formatDateTimeUTC(queriedMaxTime)})
               </Tag>
             )}
           </div>
@@ -333,7 +345,9 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             return (
               <div
                 key={idx}
-                className={`timeline-segment ${isSelected ? 'selected' : ''} ${isSkipped ? 'skipped' : ''}`}
+                className={`timeline-segment ${isSelected ? 'selected' : ''} ${
+                  isSkipped ? 'skipped' : ''
+                }`}
                 style={{
                   backgroundColor: isSkipped ? SKIPPED_INTERVAL_COLOR : getIntervalColor(idx),
                   flex: 1,
@@ -345,26 +359,32 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
                 aria-label={
                   isSkipped
                     ? `Skipped interval ${interval.interval}`
-                    : `Interval ${interval.interval} with ${interval.ruleCount} rule${interval.ruleCount !== 1 ? 's' : ''}`
+                    : `Interval ${interval.interval} with ${interval.ruleCount} rule${
+                        interval.ruleCount !== 1 ? 's' : ''
+                      }`
                 }
                 aria-selected={isSelected}
                 onClick={() => !isSkipped && setSelectedIntervalIndex(idx)}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (!isSkipped && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
                     setSelectedIntervalIndex(idx);
                   }
                 }}
-                title={isSkipped
-                  ? `${interval.interval}\nSkipped (beyond skip offset)`
-                  : `${interval.interval}\n${interval.ruleCount} rule(s) applied`}
+                title={
+                  isSkipped
+                    ? `${interval.interval}\nSkipped (beyond skip offset)`
+                    : `${interval.interval}\n${interval.ruleCount} rule(s) applied`
+                }
               >
                 <div className="segment-label">
                   <div className="segment-date">{formatDateShort(start)}</div>
                   <div className="segment-date">{formatDateShort(end)}</div>
                   <div className="segment-rules">
                     <Tag minimal intent={isSkipped ? Intent.DANGER : undefined}>
-                      {isSkipped ? 'skipped' : `${interval.ruleCount} rule${interval.ruleCount !== 1 ? 's' : ''}`}
+                      {isSkipped
+                        ? 'skipped'
+                        : `${interval.ruleCount} rule${interval.ruleCount !== 1 ? 's' : ''}`}
                     </Tag>
                   </div>
                 </div>
@@ -372,9 +392,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
             );
           })}
         </div>
-        <div className="timeline-hint">
-          Click on an interval to view its configuration details
-        </div>
+        <div className="timeline-hint">Click on an interval to view its configuration details</div>
       </Card>
 
       {selectedInterval && selectedInterval.ruleCount > 0 && (
@@ -416,7 +434,7 @@ function formatInterval(interval: string): string {
 
 function handleCopyToClipboard(data: CompactionConfig | ReindexingRule[], label: string): void {
   const jsonValue = JSONBig.stringify(data, undefined, 2);
-  navigator.clipboard.writeText(jsonValue);
+  void navigator.clipboard.writeText(jsonValue);
   AppToaster.show({
     message: `${label} copied to clipboard`,
     intent: Intent.SUCCESS,
@@ -539,7 +557,12 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               text="Download"
               icon={IconNames.DOWNLOAD}
               intent={Intent.PRIMARY}
-              onClick={() => handleDownloadJson(config, `reindexing-config-${interval.interval.replace(/\//g, '-')}.json`)}
+              onClick={() =>
+                handleDownloadJson(
+                  config,
+                  `reindexing-config-${interval.interval.replace(/\//g, '-')}.json`,
+                )
+              }
             />
           </div>
         </div>
@@ -549,7 +572,10 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
         isOpen={showRawRules}
         onClose={() => setShowRawRules(false)}
         title={
-          <Tooltip content={`${interval.appliedRules.length} rules for ${interval.interval}`} position="bottom">
+          <Tooltip
+            content={`${interval.appliedRules.length} rules for ${interval.interval}`}
+            position="bottom"
+          >
             <span>Rules for {formatInterval(interval.interval)}</span>
           </Tooltip>
         }
@@ -571,7 +597,12 @@ function IntervalDetailPanel({ interval, onClose }: IntervalDetailPanelProps) {
               text="Download"
               icon={IconNames.DOWNLOAD}
               intent={Intent.PRIMARY}
-              onClick={() => handleDownloadJson(interval.appliedRules, `reindexing-rules-${interval.interval.replace(/\//g, '-')}.json`)}
+              onClick={() =>
+                handleDownloadJson(
+                  interval.appliedRules,
+                  `reindexing-rules-${interval.interval.replace(/\//g, '-')}.json`,
+                )
+              }
             />
           </div>
         </div>
@@ -648,11 +679,11 @@ function ConfigJsonViewer({ config, isRulesList }: ConfigJsonViewerProps) {
 function getRuleTypeName(rule: ReindexingRule): string {
   // Use the explicit type field provided by Jackson serialization
   const typeMap: Record<string, string> = {
-    'deletion': 'Deletion Rules',
-    'dataSchema': 'Data Schema Rules',
-    'segmentGranularity': 'Segment Granularity Rules',
-    'tuningConfig': 'Tuning Config Rules',
-    'ioConfig': 'IO Config Rules',
+    deletion: 'Deletion Rules',
+    dataSchema: 'Data Schema Rules',
+    segmentGranularity: 'Segment Granularity Rules',
+    tuningConfig: 'Tuning Config Rules',
+    ioConfig: 'IO Config Rules',
   };
 
   return typeMap[rule.type] || 'Other Rules';

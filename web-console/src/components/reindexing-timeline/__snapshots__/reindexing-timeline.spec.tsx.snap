@@ -1,0 +1,694 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ReindexingTimeline component rendering matches snapshot for empty intervals 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="bp5-callout bp5-intent-warning bp5-callout-has-body-content bp5-callout-icon"
+  >
+    <span
+      aria-hidden="true"
+      class="bp5-icon bp5-icon-warning-sign"
+      tabindex="-1"
+    >
+      <svg
+        data-icon="warning-sign"
+        height="16"
+        role="img"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <path
+          d="M316.8 50L317 50.2L177 290.2L176.8 290C173.4 296 167.2 300 159.8 300S146.4 296 142.8 290C142.8 290 142.6 290.2 142.6 290.2L2.6 50.2L2.8 50C1 47 -0.2 43.8 -0.2 40C-0.2 29 8.8 20 19.8 20H299.8C310.8 20 319.8 29 319.8 40C319.8 43.8 318.6 47 316.8 50zM179.8 60.2H139.8V100.2H179.8V60.2zM179.8 120.2H139.8V220.2H179.8V120.2z"
+          fill-rule="evenodd"
+          style="transform-origin: center;"
+          transform="scale(0.05, -0.05) translate(-160, -160)"
+        />
+      </svg>
+    </span>
+    No reindexing intervals found. This may indicate that the rule provider is not ready or no rules are configured.
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot for error state 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="bp5-callout bp5-intent-danger bp5-callout-has-body-content bp5-callout-icon"
+  >
+    <span
+      aria-hidden="true"
+      class="bp5-icon bp5-icon-error"
+      tabindex="-1"
+    >
+      <svg
+        data-icon="error"
+        height="16"
+        role="img"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <path
+          d="M159.8 320.2C71.4 320.2 -0.2 248.6 -0.2 160.2S71.4 0.2 159.8 0.2S319.8 71.8 319.8 160.2S248.2 320.2 159.8 320.2zM179.8 60.2H139.8V100.2H179.8V60.2zM179.8 120.2H139.8V260.2H179.8V120.2z"
+          fill-rule="evenodd"
+          style="transform-origin: center;"
+          transform="scale(0.05, -0.05) translate(-160, -160)"
+        />
+      </svg>
+    </span>
+    <h5
+      class="bp5-heading"
+    >
+      Error loading reindexing timeline
+    </h5>
+    Failed to load timeline
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot for loading state 1`] = `
+<div
+  class="loader"
+>
+  <div
+    class="loader-logo"
+  >
+    <svg
+      viewBox="0 0 100 100"
+    >
+      <path
+        class="one"
+        d="M54.2,69.8h-2.7c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h2.7c11.5,0,23.8-7.4,23.8-23.7
+          c0-9.1-6.9-15.8-16.4-15.8H38c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h23.6c5.3,0,10.1,1.9,13.6,5.3c3.5,3.4,5.4,8,5.4,13.1
+          c0,6.6-2.3,13-6.3,17.7C69.5,66.8,62.5,69.8,54.2,69.8z"
+      />
+      <path
+        class="two"
+        d="M55.7,59.5h-26c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h26c7.5,0,11.5-5.8,11.5-11.5
+            c0-4.2-3.2-7.3-7.7-7.3h-26c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h26c5.9,0,10.3,4.3,10.3,9.9c0,3.7-1.3,7.2-3.7,9.8
+            C63.5,58,59.9,59.5,55.7,59.5z"
+      />
+      <path
+        class="three"
+        d="M27.2,38h-6.3c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h6.3c0.7,0,1.3,0.6,1.3,1.3S27.9,38,27.2,38z"
+      />
+      <path
+        class="four"
+        d="M45.1,69.8h-5.8c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h5.8c0.7,0,1.3,0.6,1.3,1.3
+            C46.4,69.2,45.8,69.8,45.1,69.8z"
+      />
+    </svg>
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot with normal intervals 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="timeline-header"
+  >
+    <div
+      class="header-info"
+    >
+      <strong>
+        DataSource:
+      </strong>
+       
+      test-datasource
+      <span
+        class="spacer"
+      >
+        |
+      </span>
+      <span
+        class="bp5-popover-target"
+      >
+        <strong
+          class=""
+          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          tabindex="0"
+        >
+          Reference Time:
+        </strong>
+      </span>
+       
+      Nov 15, 2024 12:00 PM UTC
+    </div>
+  </div>
+  <div
+    class="timeline-bar-container bp5-card bp5-elevation-0"
+  >
+    <div
+      aria-label="Reindexing timeline intervals"
+      class="timeline-bar"
+      role="toolbar"
+    >
+      <div
+        aria-label="Interval 2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z with 3 rules"
+        aria-selected="false"
+        class="timeline-segment  "
+        role="button"
+        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        tabindex="0"
+        title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
+3 rule(s) applied"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 1, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                3 rules
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
+        aria-selected="false"
+        class="timeline-segment  skipped"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
+Skipped (beyond skip offset)"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 15, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-intent-danger bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                skipped
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="timeline-hint"
+    >
+      Click on an interval to view its configuration details
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot with skip offset applied 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="timeline-header"
+  >
+    <div
+      class="header-info"
+    >
+      <strong>
+        DataSource:
+      </strong>
+       
+      test-datasource
+      <span
+        class="spacer"
+      >
+        |
+      </span>
+      <span
+        class="bp5-popover-target"
+      >
+        <strong
+          class=""
+          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          tabindex="0"
+        >
+          Reference Time:
+        </strong>
+      </span>
+       
+      Nov 15, 2024 12:00 PM UTC
+    </div>
+    <div
+      class="skip-offset-info"
+    >
+      <span
+        class="bp5-tag bp5-intent-success"
+      >
+        <span
+          aria-hidden="true"
+          class="bp5-icon bp5-icon-tick"
+        >
+          <svg
+            data-icon="tick"
+            height="16"
+            role="img"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <path
+              d="M14 3c-.28 0-.53.11-.71.29L6 10.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l8-8A1.003 1.003 0 0014 3z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
+        <span
+          class="bp5-text-overflow-ellipsis bp5-fill"
+        >
+          Skip Offset: 
+          skipOffsetFromNow
+           (
+          P7D
+          )
+        </span>
+      </span>
+    </div>
+  </div>
+  <div
+    class="timeline-bar-container bp5-card bp5-elevation-0"
+  >
+    <div
+      aria-label="Reindexing timeline intervals"
+      class="timeline-bar"
+      role="toolbar"
+    >
+      <div
+        aria-label="Interval 2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z with 3 rules"
+        aria-selected="false"
+        class="timeline-segment  "
+        role="button"
+        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        tabindex="0"
+        title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
+3 rule(s) applied"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 1, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                3 rules
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
+        aria-selected="false"
+        class="timeline-segment  skipped"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
+Skipped (beyond skip offset)"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 15, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-intent-danger bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                skipped
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="timeline-hint"
+    >
+      Click on an interval to view its configuration details
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot with skip offset not applied 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="timeline-header"
+  >
+    <div
+      class="header-info"
+    >
+      <strong>
+        DataSource:
+      </strong>
+       
+      test-datasource
+      <span
+        class="spacer"
+      >
+        |
+      </span>
+      <span
+        class="bp5-popover-target"
+      >
+        <strong
+          class=""
+          style="border-bottom: 1px dotted #5c7080; cursor: help;"
+          tabindex="0"
+        >
+          Reference Time:
+        </strong>
+      </span>
+       
+      Nov 15, 2024 12:00 PM UTC
+    </div>
+    <div
+      class="skip-offset-info"
+    >
+      <span
+        class="bp5-popover-target"
+      >
+        <span
+          class="bp5-tag bp5-intent-warning"
+        >
+          <span
+            aria-hidden="true"
+            class="bp5-icon bp5-icon-warning-sign"
+          >
+            <svg
+              data-icon="warning-sign"
+              height="16"
+              role="img"
+              viewBox="0 0 16 16"
+              width="16"
+            >
+              <path
+                d="M15.84 13.5l.01-.01-7-12-.01.01c-.17-.3-.48-.5-.85-.5s-.67.2-.85.5l-.01-.01-7 12 .01.01c-.09.15-.15.31-.15.5 0 .55.45 1 1 1h14c.55 0 1-.45 1-1 0-.19-.06-.35-.15-.5zm-6.85-.51h-2v-2h2v2zm0-3h-2v-5h2v5z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <span
+            class="bp5-text-overflow-ellipsis bp5-fill"
+          >
+            skipOffsetFromLatest
+             (
+            P7D
+            ): Not reflected in this preview
+          </span>
+        </span>
+      </span>
+      <button
+        class="bp5-button bp5-small"
+        style="margin-left: 10px;"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          class="bp5-icon bp5-icon-refresh"
+        >
+          <svg
+            data-icon="refresh"
+            height="16"
+            role="img"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <path
+              d="M8 3a5 5 0 00-5 5 1 1 0 01-2 0 7 7 0 017-7c1.72 0 3.62.416 5 1.567V2a1 1 0 112 0v3a1 1 0 01-1 1h-3a1 1 0 110-2h.586C10.702 3.334 9.417 3 8 3zM8 13a5 5 0 005-5 1 1 0 112 0 7 7 0 01-7 7c-1.72 0-3.62-.416-5-1.568V14a1 1 0 11-2 0v-3a1 1 0 011-1h3a1 1 0 110 2h-.586c.884.666 2.169 1 3.586 1z"
+              fill-rule="evenodd"
+            />
+          </svg>
+        </span>
+        <span
+          class="bp5-button-text"
+        >
+          Query latest timestamp
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="timeline-bar-container bp5-card bp5-elevation-0"
+  >
+    <div
+      aria-label="Reindexing timeline intervals"
+      class="timeline-bar"
+      role="toolbar"
+    >
+      <div
+        aria-label="Interval 2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z with 3 rules"
+        aria-selected="false"
+        class="timeline-segment  "
+        role="button"
+        style="background-color: rgb(92, 112, 128); flex: 1; opacity: 0.7; cursor: pointer;"
+        tabindex="0"
+        title="2024-11-01T00:00:00.000Z/2024-11-08T00:00:00.000Z
+3 rule(s) applied"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 1, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                3 rules
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        aria-label="Skipped interval 2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z"
+        aria-selected="false"
+        class="timeline-segment  skipped"
+        style="background-color: rgba(219, 55, 55, 0.15); flex: 1; opacity: 0.7; cursor: default;"
+        title="2024-11-08T00:00:00.000Z/2024-11-15T00:00:00.000Z
+Skipped (beyond skip offset)"
+      >
+        <div
+          class="segment-label"
+        >
+          <div
+            class="segment-date"
+          >
+            Nov 8, 2024
+          </div>
+          <div
+            class="segment-date"
+          >
+            Nov 15, 2024
+          </div>
+          <div
+            class="segment-rules"
+          >
+            <span
+              class="bp5-tag bp5-intent-danger bp5-minimal"
+            >
+              <span
+                class="bp5-text-overflow-ellipsis bp5-fill"
+              >
+                skipped
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="timeline-hint"
+    >
+      Click on an interval to view its configuration details
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ReindexingTimeline component rendering matches snapshot with validation error 1`] = `
+<div
+  class="reindexing-timeline"
+>
+  <div
+    class="bp5-callout bp5-intent-danger bp5-callout-has-body-content bp5-callout-icon"
+  >
+    <span
+      aria-hidden="true"
+      class="bp5-icon bp5-icon-error"
+      tabindex="-1"
+    >
+      <svg
+        data-icon="error"
+        height="16"
+        role="img"
+        viewBox="0 0 16 16"
+        width="16"
+      >
+        <path
+          d="M159.8 320.2C71.4 320.2 -0.2 248.6 -0.2 160.2S71.4 0.2 159.8 0.2S319.8 71.8 319.8 160.2S248.2 320.2 159.8 320.2zM179.8 60.2H139.8V100.2H179.8V60.2zM179.8 120.2H139.8V260.2H179.8V120.2z"
+          fill-rule="evenodd"
+          style="transform-origin: center;"
+          transform="scale(0.05, -0.05) translate(-160, -160)"
+        />
+      </svg>
+    </span>
+    <h5
+      class="bp5-heading"
+    >
+      Invalid Supervisor Configuration
+    </h5>
+    <p>
+      <strong>
+        The segment granularity rule definitions have created an illegal segment granularity timeline.
+      </strong>
+    </p>
+    <p>
+      Segment granularity must stay the same or become 
+      <strong>
+        coarser
+      </strong>
+       as data ages from present to past. Your configuration violates this constraint:
+    </p>
+    <ul>
+      <li>
+        <strong>
+          Older interval
+        </strong>
+         (further in the past):
+         
+        <code>
+          2024-01-01/2024-02-01
+        </code>
+         has
+         
+        <strong>
+          finer
+        </strong>
+         granularity:
+         
+        <span
+          class="bp5-tag bp5-intent-primary"
+        >
+          <span
+            class="bp5-text-overflow-ellipsis bp5-fill"
+          >
+            HOUR
+          </span>
+        </span>
+      </li>
+      <li>
+        <strong>
+          Newer interval
+        </strong>
+         (more recent):
+         
+        <code>
+          2024-02-01/2024-03-01
+        </code>
+         has
+         
+        <strong>
+          coarser
+        </strong>
+         granularity:
+         
+        <span
+          class="bp5-tag bp5-intent-warning"
+        >
+          <span
+            class="bp5-text-overflow-ellipsis bp5-fill"
+          >
+            DAY
+          </span>
+        </span>
+      </li>
+    </ul>
+    <p>
+      <strong>
+        To fix this:
+      </strong>
+       Adjust your segment granularity rules so that as time moves from present to past, the granularity either stays the same or gets coarser (e.g., HOUR → DAY → MONTH → YEAR).
+    </p>
+  </div>
+</div>
+`;
