@@ -197,9 +197,19 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
               </Tag>
             )}
             {skipOffset.notApplied && (
-              <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
-                {skipOffset.notApplied.type} not applied: {skipOffset.notApplied.reason}
-              </Tag>
+              <Tooltip
+                content={
+                  `This supervisor is configured to skip compaction of any search interval that is covered by ` +
+                  `or overlaps the threshold of the latest timestamp in the data minus ${skipOffset.notApplied.period}. ` +
+                  `However, the underlying segment data is not available in this preview, so the timeline does not ` +
+                  `reflect which intervals will be skipped during actual compaction.`
+                }
+                position="bottom"
+              >
+                <Tag intent={Intent.WARNING} icon={IconNames.WARNING_SIGN}>
+                  {skipOffset.notApplied.type} ({skipOffset.notApplied.period}): Not reflected in this preview
+                </Tag>
+              </Tooltip>
             )}
           </div>
         )}
@@ -210,24 +220,28 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
           {intervals.map((interval, idx) => {
             const [start, end] = interval.interval.split('/');
             const isSelected = selectedIntervalIndex === idx;
+            const isSkipped = interval.ruleCount === 0;
             return (
               <div
                 key={idx}
-                className={`timeline-segment ${isSelected ? 'selected' : ''}`}
+                className={`timeline-segment ${isSelected ? 'selected' : ''} ${isSkipped ? 'skipped' : ''}`}
                 style={{
-                  backgroundColor: getIntervalColor(idx),
+                  backgroundColor: isSkipped ? 'rgba(219, 55, 55, 0.15)' : getIntervalColor(idx),
                   flex: 1,
                   opacity: isSelected ? 1 : 0.7,
+                  cursor: isSkipped ? 'default' : 'pointer',
                 }}
-                onClick={() => setSelectedIntervalIndex(idx)}
-                title={`${interval.interval}\n${interval.ruleCount} rule(s) applied`}
+                onClick={() => !isSkipped && setSelectedIntervalIndex(idx)}
+                title={isSkipped
+                  ? `${interval.interval}\nSkipped (beyond skip offset)`
+                  : `${interval.interval}\n${interval.ruleCount} rule(s) applied`}
               >
                 <div className="segment-label">
                   <div className="segment-date">{formatDateShort(start)}</div>
                   <div className="segment-date">{formatDateShort(end)}</div>
                   <div className="segment-rules">
-                    <Tag minimal>
-                      {interval.ruleCount} rule{interval.ruleCount !== 1 ? 's' : ''}
+                    <Tag minimal intent={isSkipped ? Intent.DANGER : undefined}>
+                      {isSkipped ? 'skipped' : `${interval.ruleCount} rule${interval.ruleCount !== 1 ? 's' : ''}`}
                     </Tag>
                   </div>
                 </div>
@@ -240,7 +254,7 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
         </div>
       </Card>
 
-      {selectedInterval && (
+      {selectedInterval && selectedInterval.ruleCount > 0 && (
         <IntervalDetailPanel
           interval={selectedInterval}
           onClose={() => setSelectedIntervalIndex(undefined)}
@@ -258,9 +272,9 @@ function formatDateShort(isoDate: string): string {
 
   const date = new Date(isoDate);
 
-  const month = date.toLocaleString('default', { month: 'short' });
-  const day = date.getDate();
-  const year = date.getFullYear();
+  const month = date.toLocaleString('default', { month: 'short', timeZone: 'UTC' });
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear();
   return `${month} ${day}, ${year}`;
 }
 

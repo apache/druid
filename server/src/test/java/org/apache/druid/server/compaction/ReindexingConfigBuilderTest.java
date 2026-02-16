@@ -68,11 +68,17 @@ public class ReindexingConfigBuilderTest
         InlineSchemaDataSourceCompactionConfig.builder()
                                               .forDataSource("test_datasource");
 
+    // Create synthetic timeline with default granularity (no source rule since it's default)
+    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, null)
+    );
+
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         Granularities.DAY,
         TEST_INTERVAL,
-        REFERENCE_TIME
+        REFERENCE_TIME,
+        syntheticTimeline
     );
 
     int count = configBuilder.applyTo(builder);
@@ -116,11 +122,25 @@ public class ReindexingConfigBuilderTest
         InlineSchemaDataSourceCompactionConfig.builder()
             .forDataSource("test_datasource");
 
+    // Create the segment granularity rule used in the provider
+    ReindexingSegmentGranularityRule segmentGranularityRule = new ReindexingSegmentGranularityRule(
+        "gran-30d",
+        null,
+        Period.days(30),
+        Granularities.DAY
+    );
+
+    // Create synthetic timeline with granularity from the rule
+    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, segmentGranularityRule)
+    );
+
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         Granularities.DAY,
         TEST_INTERVAL,
-        REFERENCE_TIME
+        REFERENCE_TIME,
+        syntheticTimeline
     );
 
     int count = configBuilder.applyTo(builder);
@@ -193,11 +213,17 @@ public class ReindexingConfigBuilderTest
         InlineSchemaDataSourceCompactionConfig.builder()
             .forDataSource("test_datasource");
 
+    // Create synthetic timeline with default granularity (no source rule)
+    ImmutableList<IntervalGranularityInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalGranularityInfo(TEST_INTERVAL, Granularities.DAY, null)
+    );
+
     ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
         provider,
         Granularities.DAY,
         TEST_INTERVAL,
-        REFERENCE_TIME
+        REFERENCE_TIME,
+        syntheticTimeline
     );
 
     int count = configBuilder.applyTo(builder);
@@ -206,7 +232,6 @@ public class ReindexingConfigBuilderTest
 
     InlineSchemaDataSourceCompactionConfig config = builder.build();
 
-    Assert.assertNull(config.getGranularitySpec());
     Assert.assertNull(config.getTuningConfig());
     Assert.assertNull(config.getMetricsSpec());
     Assert.assertNull(config.getDimensionsSpec());

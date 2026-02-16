@@ -36,6 +36,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingConfigBuilder;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
@@ -54,6 +55,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -291,7 +293,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
     }
 
-    List<Interval> searchIntervals;
+    List<IntervalGranularityInfo> searchIntervals;
     try {
       searchIntervals = generateAlignedSearchIntervals(referenceTime);
     }
@@ -351,30 +353,35 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
     // Build configs for each interval
     List<ReindexingTimelineView.IntervalConfig> intervalConfigs = new ArrayList<>();
-    for (Interval searchInterval : searchIntervals) {
-      // Clamp interval to effective end time
-      Interval clampedInterval = searchInterval;
+    for (IntervalGranularityInfo intervalInfo : searchIntervals) {
+      Interval searchInterval = intervalInfo.getInterval();
+
+      // Check if interval extends past skip offset
       if (searchInterval.getEnd().isAfter(effectiveEndTime)) {
-        if (searchInterval.getStart().isBefore(effectiveEndTime)) {
-          clampedInterval = new Interval(searchInterval.getStart(), effectiveEndTime);
-        } else {
-          // Entire interval is beyond skip offset, skip it
-          continue;
-        }
+        // Include in timeline but mark as skipped (no rules applied)
+        intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
+            searchInterval,
+            0,  // ruleCount = 0 indicates no rules applied (skipped due to skip offset)
+            null,  // no config
+            Collections.emptyList()  // no applied rules
+        ));
+        continue;
       }
 
+      // Process intervals within skip offset normally
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
       ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
           ruleProvider,
           defaultSegmentGranularity,
-          clampedInterval,
-          referenceTime
+          searchInterval,
+          referenceTime,
+          searchIntervals  // Pass synthetic timeline
       );
       ReindexingConfigBuilder.BuildResult buildResult = configBuilder.applyToWithDetails(builder);
 
       if (buildResult.getRuleCount() > 0) {
         intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
-            clampedInterval,
+            searchInterval,
             buildResult.getRuleCount(),
             builder.build(),
             buildResult.getAppliedRules()
@@ -411,7 +418,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    List<Interval> searchIntervals = generateAlignedSearchIntervals(currentTime);
+    List<IntervalGranularityInfo> searchIntervals = generateAlignedSearchIntervals(currentTime);
     if (searchIntervals.isEmpty()) {
       LOG.warn("No search intervals generated for dataSource[%s], no reindexing jobs will be created", dataSource);
       return Collections.emptyList();
@@ -427,7 +434,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       return Collections.emptyList();
     }
 
-    for (Interval reindexingInterval : searchIntervals) {
+    for (IntervalGranularityInfo intervalInfo : searchIntervals) {
+      Interval reindexingInterval = intervalInfo.getInterval();
 
       if (!reindexingInterval.overlaps(adjustedTimelineInterval)) {
         // No underlying data exists to reindex for this interval
@@ -435,9 +443,13 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         continue;
       }
 
-      reindexingInterval = clampIntervalToBounds(reindexingInterval, adjustedTimelineInterval);
-      if (reindexingInterval == null) {
-        LOG.warn("Clamped reindexing interval is invalid or empty after applying bounds, meaning no search interval exists. Skipping.");
+      // Skip intervals that extend past the skip offset boundary (not just data boundary)
+      // This preserves granularity alignment and ensures intervals exist in synthetic timeline
+      // Only apply this when a skip offset is actually configured
+      if ((skipOffsetFromNow != null || skipOffsetFromLatest != null) &&
+          reindexingInterval.getEnd().isAfter(adjustedTimelineInterval.getEnd())) {
+        LOG.debug("Search interval[%s] extends past skip offset boundary[%s], skipping to preserve alignment",
+                  reindexingInterval, adjustedTimelineInterval.getEnd());
         continue;
       }
 
@@ -447,7 +459,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           ruleProvider,
           defaultSegmentGranularity,
           reindexingInterval,
-          currentTime
+          currentTime,
+          searchIntervals  // Pass synthetic timeline
       );
       int ruleCount = configBuilder.applyTo(builder);
 
@@ -474,46 +487,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   )
   {
     return new CompactionConfigBasedJobTemplate(config, createCascadingFinalizer());
-  }
-
-  /**
-   * Clamps an interval to fit within the specified bounds by adjusting start and/or end times.
-   * If the interval extends beyond the bounds, it is trimmed to fit. Returns null if the
-   * resulting interval would be invalid (end before start).
-   *
-   * @param interval the interval to clamp
-   * @param bounds the bounds to clamp to
-   * @return the clamped interval, or null if the result would be invalid or empty
-   */
-  @Nullable
-  private Interval clampIntervalToBounds(Interval interval, Interval bounds)
-  {
-    DateTime start = interval.getStart();
-    DateTime end = interval.getEnd();
-
-    if (start.isBefore(bounds.getStart())) {
-      LOG.debug(
-          "Adjusting start of search interval[%s] to match bounds start[%s]",
-          interval,
-          bounds.getStart()
-      );
-      start = bounds.getStart();
-    }
-
-    if (end.isAfter(bounds.getEnd())) {
-      LOG.debug(
-          "Adjusting end of search interval[%s] to match bounds end[%s]",
-          interval,
-          bounds.getEnd()
-      );
-      end = bounds.getEnd();
-    }
-
-    if (end.isBefore(start) || end.isEqual(start)) {
-      return null;
-    }
-
-    return new Interval(start, end);
   }
 
   /**
@@ -573,30 +546,30 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * </ol>
    *
    * @param referenceTime the reference time for calculating period thresholds
-   * @return list of split and aligned intervals, ordered from oldest to newest
+   * @return list of split and aligned intervals with their granularities and source rules, ordered from oldest to newest
    * @throws IAE if no segment granularity rules are found
    */
-  List<Interval> generateAlignedSearchIntervals(DateTime referenceTime)
+  List<IntervalGranularityInfo> generateAlignedSearchIntervals(DateTime referenceTime)
   {
-    List<IntervalWithGranularity> baseTimeline = generateBaseSegmentGranularityAlignedTimeline(referenceTime);
+    List<IntervalGranularityInfo> baseTimeline = generateBaseSegmentGranularityAlignedTimeline(referenceTime);
 
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
 
-    List<Interval> finalIntervals = new ArrayList<>();
+    List<IntervalGranularityInfo> finalIntervals = new ArrayList<>();
 
-    for (IntervalWithGranularity baseInterval : baseTimeline) {
+    for (IntervalGranularityInfo baseInterval : baseTimeline) {
       List<DateTime> splitPoints = new ArrayList<>();
 
       for (DateTime threshold : nonSegmentGranThresholds) {
-        if (threshold.isAfter(baseInterval.interval.getStart()) &&
-            threshold.isBefore(baseInterval.interval.getEnd())) {
+        if (threshold.isAfter(baseInterval.getInterval().getStart()) &&
+            threshold.isBefore(baseInterval.getInterval().getEnd())) {
 
           // Align threshold to this interval's segment granularity
-          DateTime alignedThreshold = baseInterval.granularity.bucketStart(threshold);
+          DateTime alignedThreshold = baseInterval.getGranularity().bucketStart(threshold);
 
           // Only add if it's not at the boundaries (would create zero-length interval)
-          if (alignedThreshold.isAfter(baseInterval.interval.getStart()) &&
-              alignedThreshold.isBefore(baseInterval.interval.getEnd())) {
+          if (alignedThreshold.isAfter(baseInterval.getInterval().getStart()) &&
+              alignedThreshold.isBefore(baseInterval.getInterval().getEnd())) {
             splitPoints.add(alignedThreshold);
           }
         }
@@ -607,18 +580,26 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           .sorted()
           .collect(Collectors.toList());
 
-      // Split this base interval at the split points
+      // Split this base interval at the split points, preserving granularity and source rule
       if (splitPoints.isEmpty()) {
-        LOG.debug("No splits for interval [%s]", baseInterval.interval);
-        finalIntervals.add(baseInterval.interval);
+        LOG.debug("No splits for interval [%s]", baseInterval.getInterval());
+        finalIntervals.add(baseInterval);
       } else {
-        LOG.debug("Splitting interval [%s] at [%d] points", baseInterval.interval, splitPoints.size());
-        DateTime start = baseInterval.interval.getStart();
+        LOG.debug("Splitting interval [%s] at [%d] points", baseInterval.getInterval(), splitPoints.size());
+        DateTime start = baseInterval.getInterval().getStart();
         for (DateTime splitPoint : splitPoints) {
-          finalIntervals.add(new Interval(start, splitPoint));
+          finalIntervals.add(new IntervalGranularityInfo(
+              new Interval(start, splitPoint),
+              baseInterval.getGranularity(),
+              baseInterval.getSourceRule()  // Preserve source rule from base interval
+          ));
           start = splitPoint;
         }
-        finalIntervals.add(new Interval(start, baseInterval.interval.getEnd()));
+        finalIntervals.add(new IntervalGranularityInfo(
+            new Interval(start, baseInterval.getInterval().getEnd()),
+            baseInterval.getGranularity(),
+            baseInterval.getSourceRule()  // Preserve source rule from base interval
+        ));
       }
     }
 
@@ -650,7 +631,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    *   </li>
    * </ol>
    */
-  private List<IntervalWithGranularity> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
+  private List<IntervalGranularityInfo> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
   {
     List<ReindexingSegmentGranularityRule> segmentGranRules = ruleProvider.getSegmentGranularityRules();
     List<DateTime> nonSegmentGranThresholds = collectNonSegmentGranularityThresholds(referenceTime);
@@ -677,9 +658,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           alignedEnd
       );
 
-      return Collections.singletonList(new IntervalWithGranularity(
+      return Collections.singletonList(new IntervalGranularityInfo(
           new Interval(DateTimes.MIN, alignedEnd),
-          defaultSegmentGranularity
+          defaultSegmentGranularity,
+          null  // No source rule when using default granularity
       ));
     }
 
@@ -692,7 +674,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .collect(Collectors.toList());
 
     // Build base timeline with granularities tracked
-    List<IntervalWithGranularity> baseTimeline = new ArrayList<>();
+    List<IntervalGranularityInfo> baseTimeline = new ArrayList<>();
     DateTime previousAlignedEnd = null;
 
     for (ReindexingSegmentGranularityRule rule : sortedRules) {
@@ -709,9 +691,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
           rule.getSegmentGranularity()
       );
 
-      baseTimeline.add(new IntervalWithGranularity(
+      baseTimeline.add(new IntervalGranularityInfo(
           new Interval(alignedStart, alignedEnd),
-          rule.getSegmentGranularity()
+          rule.getSegmentGranularity(),
+          rule  // Track the source rule
       ));
 
       previousAlignedEnd = alignedEnd;
@@ -721,7 +704,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     // than the most recent segment gran rule
     if (!nonSegmentGranThresholds.isEmpty()) {
       DateTime mostRecentNonSegmentGranThreshold = Collections.max(nonSegmentGranThresholds);
-      DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).interval.getEnd();
+      DateTime mostRecentSegmentGranEnd = baseTimeline.get(baseTimeline.size() - 1).getInterval().getEnd();
 
       if (mostRecentNonSegmentGranThreshold.isAfter(mostRecentSegmentGranEnd)) {
         DateTime alignedEnd = defaultSegmentGranularity.bucketStart(mostRecentNonSegmentGranThreshold);
@@ -745,9 +728,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
               alignedEnd
           );
 
-          baseTimeline.add(new IntervalWithGranularity(
+          baseTimeline.add(new IntervalGranularityInfo(
               new Interval(mostRecentSegmentGranEnd, alignedEnd),
-              defaultSegmentGranularity
+              defaultSegmentGranularity,
+              null  // No source rule when using default granularity
           ));
         }
       }
@@ -770,18 +754,18 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * @param timeline the completed base timeline with granularity information
    * @throws IAE if granularity becomes coarser as we move toward present
    */
-  private void validateSegmentGranularityTimeline(List<IntervalWithGranularity> timeline)
+  private void validateSegmentGranularityTimeline(List<IntervalGranularityInfo> timeline)
   {
     if (timeline.size() <= 1) {
       return; // Nothing to validate
     }
 
     for (int i = 1; i < timeline.size(); i++) {
-      IntervalWithGranularity olderInterval = timeline.get(i - 1);
-      IntervalWithGranularity newerInterval = timeline.get(i);
+      IntervalGranularityInfo olderInterval = timeline.get(i - 1);
+      IntervalGranularityInfo newerInterval = timeline.get(i);
 
-      Granularity olderGran = olderInterval.granularity;
-      Granularity newerGran = newerInterval.granularity;
+      Granularity olderGran = olderInterval.getGranularity();
+      Granularity newerGran = newerInterval.getGranularity();
 
       // As we move from past (older intervals) to present (newer intervals),
       // granularity should stay the same or get finer.
@@ -790,9 +774,9 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       if (olderGran.isFinerThan(newerGran)) {
         throw new GranularityTimelineValidationException(
             dataSource,
-            olderInterval.interval,
+            olderInterval.getInterval(),
             olderGran,
-            newerInterval.interval,
+            newerInterval.getInterval(),
             newerGran
         );
       }
@@ -835,20 +819,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     throw new UnsupportedOperationException("CascadingReindexingTemplate cannot be transformed to a CompactionState object");
   }
 
-  /**
-   * Helper class to track an interval with its associated segment granularity.
-   */
-  private static class IntervalWithGranularity
-  {
-    final Interval interval;
-    final Granularity granularity;
-
-    IntervalWithGranularity(Interval interval, Granularity granularity)
-    {
-      this.interval = interval;
-      this.granularity = granularity;
-    }
-  }
 
   // Legacy fields from DataSourceCompactionConfig that are not used by this template
 

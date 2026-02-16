@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
@@ -50,6 +51,7 @@ public class ReindexingConfigBuilder
   private final Granularity defaultGranularity;
   private final Interval interval;
   private final DateTime referenceTime;
+  private final List<IntervalGranularityInfo> syntheticTimeline;
 
   /**
    * Result of applying reindexing rules to a config builder.
@@ -85,14 +87,17 @@ public class ReindexingConfigBuilder
 
   public ReindexingConfigBuilder(
       ReindexingRuleProvider provider,
-      Granularity defaultSegmentGranularity, Interval interval,
-      DateTime referenceTime
+      Granularity defaultSegmentGranularity,
+      Interval interval,
+      DateTime referenceTime,
+      @Nullable List<IntervalGranularityInfo> syntheticTimeline
   )
   {
     this.provider = provider;
     this.defaultGranularity = defaultSegmentGranularity;
     this.interval = interval;
     this.referenceTime = referenceTime;
+    this.syntheticTimeline = syntheticTimeline;
   }
 
   /**
@@ -149,19 +154,47 @@ public class ReindexingConfigBuilder
     }
 
     // Apply segment granularity rule
-    ReindexingSegmentGranularityRule segmentGranularityRule = provider.getSegmentGranularityRule(interval, referenceTime);
-    if (segmentGranularityRule == null) {
-      if (count > 0) {
-        // Insert a default segment granularity to the config only if other rules exist for the interval.
-        builder.withSegmentGranularity(defaultGranularity);
-      }
-    } else {
-      builder.withSegmentGranularity(segmentGranularityRule.getSegmentGranularity());
-      appliedRules.add(segmentGranularityRule);
+    // Use granularity from synthetic timeline
+    IntervalGranularityInfo granularityInfo = findMatchingInterval(interval);
+    if (granularityInfo == null) {
+      throw DruidException.defensive(
+          "No matching interval found in synthetic timeline for interval[%s]. This should never happen.",
+          interval
+      );
+    }
+
+    builder.withSegmentGranularity(granularityInfo.getGranularity());
+    if (granularityInfo.getSourceRule() != null) {
+      // Only count and track the rule if it came from an actual rule (not default)
+      appliedRules.add(granularityInfo.getSourceRule());
       count++;
     }
 
-    return new BuildResult(count, appliedRules);
+    if (count == 0) {
+      return new BuildResult(0, List.of());
+    } else {
+      return new BuildResult(count, appliedRules);
+    }
+  }
+
+  /**
+   * Finds the matching interval granularity info from the synthetic timeline.
+   * Returns null if no synthetic timeline was provided or no match is found.
+   */
+  @Nullable
+  private IntervalGranularityInfo findMatchingInterval(Interval interval)
+  {
+    if (syntheticTimeline == null) {
+      return null;
+    }
+
+    for (IntervalGranularityInfo candidate : syntheticTimeline) {
+      if (candidate.getInterval().equals(interval)) {
+        return candidate;
+      }
+    }
+
+    return null;
   }
 
   private void applyDataSchemaRule(

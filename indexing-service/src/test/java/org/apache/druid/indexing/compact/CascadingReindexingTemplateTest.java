@@ -33,6 +33,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
 import org.apache.druid.server.compaction.ReindexingIOConfigRule;
@@ -222,10 +223,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, processedIntervals.size());
     // Intervals are now in chronological order (oldest first)
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
     Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(10), processedIntervals.get(1).getEnd());
+    Assert.assertEquals(referenceTime.minusDays(7), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -252,7 +253,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromLatest_trimsIntervalEnd()
+  public void test_createCompactionJobs_withSkipOffsetFromLatest_skipsIntervalsExtendingPastOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -267,12 +268,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assert.assertEquals(2, processedIntervals.size());
-    // Intervals are now in chronological order (oldest first)
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(1, processedIntervals.size());
+    Assert.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -287,15 +285,15 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, Period.days(30), null
+        "testDS", null, null, mockProvider, null, null, Period.days(15), null
     );
 
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
     Assert.assertEquals(1, processedIntervals.size());
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
-    Assert.assertEquals(referenceTime.minusDays(40), processedIntervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -322,7 +320,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromNow_trimsIntervalEnd()
+  public void test_createCompactionJobs_withSkipOffsetFromNow_skipsIntervalsExtendingPastOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -337,12 +335,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assert.assertEquals(2, processedIntervals.size());
-    // Intervals are now in chronological order (oldest first)
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
+    Assert.assertEquals(1, processedIntervals.size());
+    Assert.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
-    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
-    Assert.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -357,15 +352,15 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DruidInputSource mockSource = createMockSource();
 
     TestCascadingReindexingTemplate template = new TestCascadingReindexingTemplate(
-        "testDS", null, null, mockProvider, null, null, null, Period.days(40)
+        "testDS", null, null, mockProvider, null, null, null, Period.days(20)
     );
 
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
     Assert.assertEquals(1, processedIntervals.size());
-    Assert.assertEquals(referenceTime.minusDays(90), processedIntervals.get(0).getStart());
-    Assert.assertEquals(referenceTime.minusDays(40), processedIntervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
+    Assert.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -427,18 +422,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(3, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(2).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(2).getInterval().getEnd());
   }
 
   /**
@@ -509,30 +504,30 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(7, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(1).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(2).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(2).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(2).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(2).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(3).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(3).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(3).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(3).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(4).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(4).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(5).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(5).getEnd());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(5).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(5).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(6).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(6).getEnd());
+    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(6).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(6).getInterval().getEnd());
   }
 
   /**
@@ -592,18 +587,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(3, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(1).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(2).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-21T00:00:00Z"), intervals.get(2).getEnd());
+    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(2).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-21T00:00:00Z"), intervals.get(2).getInterval().getEnd());
   }
 
   /**
@@ -675,24 +670,24 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.HOUR
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(5, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(2).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(2).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(3).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(3).getEnd());
+    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(3).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(3).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(4).getEnd());
+    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(4).getInterval().getEnd());
   }
 
   /**
@@ -767,27 +762,27 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.HOUR
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(6, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(1).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(2).getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(2).getEnd());
+    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(2).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(2).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(3).getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(3).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(3).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(3).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(4).getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00Z"), intervals.get(4).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(4).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00Z"), intervals.get(4).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00"), intervals.get(5).getStart());
-    Assert.assertEquals(DateTimes.of("2024-02-03T22:00:00"), intervals.get(5).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00"), intervals.get(5).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-02-03T22:00:00"), intervals.get(5).getInterval().getEnd());
   }
 
   /**
@@ -888,12 +883,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(1, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2025-01-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
   }
 
   /**
@@ -951,12 +946,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(1, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-31T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-31T00:00:00Z"), intervals.get(0).getInterval().getEnd());
   }
 
   /**
@@ -1018,15 +1013,15 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(2, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(0).getInterval().getEnd());
 
-    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(1).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getEnd());
+    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(1).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getInterval().getEnd());
   }
 
   /**
@@ -1076,12 +1071,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<Interval> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
 
     Assert.assertEquals(1, intervals.size());
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-01T00:00:00Z"), intervals.get(0).getEnd());
+    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
+    Assert.assertEquals(DateTimes.of("2024-12-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
   }
 
   private static class TestCascadingReindexingTemplate extends CascadingReindexingTemplate
@@ -1176,6 +1171,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     EasyMock.expect(mockProvider.getSegmentGranularityRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(segmentGranularityRules.get(0)).anyTimes();
     EasyMock.expect(mockProvider.getIOConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getTuningConfigRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(mockProvider.getDataSchemaRule(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(mockProvider.getDeletionRules(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(mockProvider);
     return mockProvider;
@@ -1455,10 +1451,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Test that skipOffsetFromNow correctly clamps intervals and populates skipOffset.applied
+   * Test that skipOffsetFromNow correctly skips intervals and populates skipOffset.applied
    */
   @Test
-  public void test_getReindexingTimelineView_skipOffsetFromNow_clampsIntervals()
+  public void test_getReindexingTimelineView_skipOffsetFromNow_skipsProperIntervals()
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T00:00:00Z");
     Period skipOffset = Period.days(10);
@@ -1498,26 +1494,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     DateTime expectedEffectiveEndTime = referenceTime.minus(skipOffset);
     Assert.assertEquals(expectedEffectiveEndTime, applied.getEffectiveEndTime());
 
-    // Verify all intervals are clamped to effectiveEndTime
     for (ReindexingTimelineView.IntervalConfig intervalConfig : timeline.getIntervals()) {
-      Assert.assertTrue(
-          "Interval end should not exceed effective end time: " + intervalConfig.getInterval(),
-          !intervalConfig.getInterval().getEnd().isAfter(expectedEffectiveEndTime)
-      );
-    }
-
-    // Verify most recent interval ends exactly at effectiveEndTime (it gets clamped)
-    if (!timeline.getIntervals().isEmpty()) {
-      ReindexingTimelineView.IntervalConfig mostRecentInterval =
-          timeline.getIntervals().get(timeline.getIntervals().size() - 1);
-
-      // The 3-day rule would normally create an interval ending at (referenceTime - 3 days),
-      // but since that's after effectiveEndTime, it gets clamped to effectiveEndTime
-      Assert.assertEquals(
-          "Most recent interval should be clamped to effective end time",
-          expectedEffectiveEndTime,
-          mostRecentInterval.getInterval().getEnd()
-      );
+      if (intervalConfig.getInterval().getEnd().isAfter(expectedEffectiveEndTime)) {
+        Assert.assertEquals(0, intervalConfig.getRuleCount());
+      }
     }
   }
 
