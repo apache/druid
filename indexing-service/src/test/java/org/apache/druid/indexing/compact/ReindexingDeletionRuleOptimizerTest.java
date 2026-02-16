@@ -39,6 +39,7 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -362,7 +363,8 @@ public class ReindexingDeletionRuleOptimizerTest
     List<DataSegment> segments = Arrays.stream(fingerprints)
                                        .map(fp -> DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(fp).build())
                                        .collect(Collectors.toList());
-    return CompactionCandidate.from(segments, null);
+    return CompactionCandidate.from(segments, null)
+        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
   }
 
   private CompactionCandidate createCandidateWithNullFingerprints(int count)
@@ -371,7 +373,8 @@ public class ReindexingDeletionRuleOptimizerTest
     for (int i = 0; i < count; i++) {
       segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
     }
-    return CompactionCandidate.from(segments, null);
+    return CompactionCandidate.from(segments, null)
+        .withCurrentStatus(CompactionStatus.pending("segments need compaction"));
   }
 
   private CompactionState createStateWithFilters(DimFilter... filters)
@@ -496,7 +499,11 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(filterA);
 
     // Candidate with NEVER_COMPACTED status
-    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
+    List<DataSegment> segments = new ArrayList<>();
+    segments.add(DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(null).build());
+    CompactionCandidate candidate = CompactionCandidate.from(segments, null)
+        .withCurrentStatus(CompactionStatus.pending(CompactionStatus.NEVER_COMPACTED_REASON));
+
     InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
     CompactionJobParams params = createParams();
 

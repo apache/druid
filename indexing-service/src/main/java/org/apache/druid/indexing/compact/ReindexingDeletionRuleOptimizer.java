@@ -70,7 +70,7 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
     NotDimFilter reducedFilter = computeRequiredSetOfFilterRulesForCandidate(
         candidate,
         (NotDimFilter) config.getTransformSpec().getFilter(),
-        params.getFingerprintMapper()  // Available from params!
+        params.getFingerprintMapper()
     );
 
     VirtualColumns reducedVirtualColumns = filterVirtualColumnsForFilter(
@@ -78,9 +78,13 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
         config.getTransformSpec().getVirtualColumns()
     );
 
+    CompactionTransformSpec transformSpec = (reducedFilter == null && reducedVirtualColumns == null)
+        ? null
+        : new CompactionTransformSpec(reducedFilter, reducedVirtualColumns);
+
     return ((InlineSchemaDataSourceCompactionConfig) config)
         .toBuilder()
-        .withTransformSpec(new CompactionTransformSpec(reducedFilter, reducedVirtualColumns))
+        .withTransformSpec(transformSpec)
         .build();
   }
 
