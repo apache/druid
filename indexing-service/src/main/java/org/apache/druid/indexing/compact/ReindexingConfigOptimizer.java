@@ -31,7 +31,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
  * the candidate's indexing state, while simpler templates can use the identity finalizer.
  */
 @FunctionalInterface
-public interface ReindexingConfigFinalizer
+public interface ReindexingConfigOptimizer
 {
   /**
    * Customize the reindexing config for a specific candidate.
@@ -41,7 +41,7 @@ public interface ReindexingConfigFinalizer
    * @param params the reindexing job parameters
    * @return the finalized config to use for this candidate (this may be the same as input or a modified version)
    */
-  DataSourceCompactionConfig finalizeConfig(
+  DataSourceCompactionConfig optimizeConfig(
       DataSourceCompactionConfig config,
       CompactionCandidate candidate,
       CompactionJobParams params
@@ -51,5 +51,5 @@ public interface ReindexingConfigFinalizer
    * Identity finalizer that returns the config unchanged.
    * Use this for templates that don't need per-candidate customization.
    */
-  ReindexingConfigFinalizer IDENTITY = (config, candidate, params) -> config;
+  ReindexingConfigOptimizer IDENTITY = (config, candidate, params) -> config;
 }

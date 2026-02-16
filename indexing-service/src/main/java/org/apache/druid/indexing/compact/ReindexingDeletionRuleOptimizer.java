@@ -26,8 +26,12 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 
@@ -48,9 +52,37 @@ import java.util.stream.Collectors;
  * be wasteful and redundant. This class provides funcionality to optimize the set of rules to be applied by
  * any given reindexing task.
  */
-public class ReindexingDeletionRuleOptimizer
+public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimizer
 {
   private static final Logger LOG = new Logger(ReindexingDeletionRuleOptimizer.class);
+
+  @Override
+  public DataSourceCompactionConfig optimizeConfig(
+      DataSourceCompactionConfig config,
+      CompactionCandidate candidate,
+      CompactionJobParams params
+  )
+  {
+    if (!shouldOptimizeFilterRules(candidate, config)) {
+      return config;
+    }
+
+    NotDimFilter reducedFilter = computeRequiredSetOfFilterRulesForCandidate(
+        candidate,
+        (NotDimFilter) config.getTransformSpec().getFilter(),
+        params.getFingerprintMapper()  // Available from params!
+    );
+
+    VirtualColumns reducedVirtualColumns = filterVirtualColumnsForFilter(
+        reducedFilter,
+        config.getTransformSpec().getVirtualColumns()
+    );
+
+    return ((InlineSchemaDataSourceCompactionConfig) config)
+        .toBuilder()
+        .withTransformSpec(new CompactionTransformSpec(reducedFilter, reducedVirtualColumns))
+        .build();
+  }
 
   /**
    * Computes the required set of deletion rules to be applied for the given {@link CompactionCandidate}.
@@ -65,7 +97,7 @@ public class ReindexingDeletionRuleOptimizer
    * @return the set of unapplied deletion rules wrapped in a NotDimFilter, or null if all rules have been applied
    */
   @Nullable
-  public static NotDimFilter computeRequiredSetOfFilterRulesForCandidate(
+  private NotDimFilter computeRequiredSetOfFilterRulesForCandidate(
       CompactionCandidate candidateSegments,
       NotDimFilter expectedFilter,
       IndexingStateFingerprintMapper fingerprintMapper
@@ -133,7 +165,7 @@ public class ReindexingDeletionRuleOptimizer
    * @return filtered VirtualColumns with only referenced columns, or null if none are referenced
    */
   @Nullable
-  public static VirtualColumns filterVirtualColumnsForFilter(
+  private VirtualColumns filterVirtualColumnsForFilter(
       @Nullable DimFilter filter,
       @Nullable VirtualColumns virtualColumns
   )
@@ -186,5 +218,30 @@ public class ReindexingDeletionRuleOptimizer
     } else {
       return Collections.singleton(inner);
     }
+  }
+
+  /**
+   * Determines if we should optimize filter rules for this candidate.
+   * Returns true only if the candidate has been compacted before and has a NotDimFilter.
+   */
+  private boolean shouldOptimizeFilterRules(
+      CompactionCandidate candidate,
+      DataSourceCompactionConfig config
+  )
+  {
+    if (candidate.getCurrentStatus() == null) {
+      return false;
+    }
+
+    if (candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON)) {
+      return false;
+    }
+
+    if (config.getTransformSpec() == null) {
+      return false;
+    }
+
+    DimFilter filter = config.getTransformSpec().getFilter();
+    return filter instanceof NotDimFilter;
   }
 }

@@ -39,14 +39,18 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -64,6 +68,7 @@ public class ReindexingDeletionRuleOptimizerTest
   private HeapMemoryIndexingStateStorage indexingStateStorage;
   private IndexingStateCache indexingStateCache;
   private IndexingStateFingerprintMapper fingerprintMapper;
+  private ReindexingDeletionRuleOptimizer optimizer;
 
   @Before
   public void setUp()
@@ -74,46 +79,46 @@ public class ReindexingDeletionRuleOptimizerTest
         indexingStateCache,
         new DefaultObjectMapper()
     );
+    optimizer = new ReindexingDeletionRuleOptimizer();
   }
 
   @Test
-  public void testComputeRequiredFilters_SingleFilter_NotOrFilter_ReturnsAsIs()
+  public void testOptimize_SingleFilter_NotOrFilter_NoFingerprints_ReturnsUnchanged()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     NotDimFilter expectedFilter = new NotDimFilter(filterA);
 
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertEquals(expectedFilter, result);
+    // No state for fp1, so config should be unchanged
+    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
   @Test
-  public void test_computeRequiredSetOfFilterRulesForCandidate_oneFilter_nothingToApply()
+  public void testOptimize_SingleFilter_AlreadyApplied_RemovesTransformSpec()
   {
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
-    CompactionState state = createStateWithFilters(filterB);
+    CompactionState state = createStateWithSingleFilter(filterB);
     indexingStateStorage.upsertIndexingState(TestDataSource.WIKI, "fp1", state, DateTimes.nowUtc());
     syncCacheFromManager();
+
     NotDimFilter expectedFilter = new NotDimFilter(filterB);
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertNull(result);
+    // All filters optimized away, transform spec should be null
+    Assert.assertNull(result.getTransformSpec());
   }
 
   @Test
-  public void testComputeRequiredFilters_AllFiltersAlreadyApplied_ReturnsNull()
+  public void testOptimize_AllFiltersAlreadyApplied_RemovesTransformSpec()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -125,18 +130,17 @@ public class ReindexingDeletionRuleOptimizerTest
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertNull(result);
+    // All filters already applied, transform spec should be removed
+    Assert.assertNull(result.getTransformSpec());
   }
 
   @Test
-  public void testComputeRequiredFilters_NoFiltersApplied_ReturnsAllExpected()
+  public void testOptimize_NoFiltersApplied_ReturnsAllExpected()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -148,20 +152,20 @@ public class ReindexingDeletionRuleOptimizerTest
 
     NotDimFilter expectedFilter = new NotDimFilter(new OrDimFilter(Arrays.asList(filterA, filterB, filterC)));
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    OrDimFilter innerOr = (OrDimFilter) result.getField();
+    // No filters were applied, so all should remain
+    NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
+    OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Assert.assertEquals(3, innerOr.getFields().size());
     Assert.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterA, filterB, filterC)));
   }
 
   @Test
-  public void testComputeRequiredFilters_PartiallyApplied_ReturnsDelta()
+  public void testOptimize_PartiallyApplied_ReturnsDelta()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -176,14 +180,14 @@ public class ReindexingDeletionRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC, filterD))
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    OrDimFilter innerOr = (OrDimFilter) result.getField();
+    // Only C and D should remain (A and B were already applied)
+    NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
+    OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
     Set<DimFilter> expectedSet = new HashSet<>(Arrays.asList(filterC, filterD));
 
@@ -191,7 +195,7 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
-  public void testComputeRequiredFilters_MultipleFingerprints_UnionOfMissing()
+  public void testOptimize_MultipleFingerprints_UnionOfMissing()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -209,14 +213,15 @@ public class ReindexingDeletionRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC, filterD))
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    OrDimFilter innerOr = (OrDimFilter) result.getField();
+    // fp1 has A,B applied; fp2 has A,C applied
+    // Union of missing: B (missing from fp2), C (missing from fp1), D (missing from both)
+    NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
+    OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
     Set<DimFilter> expectedSet = new HashSet<>(Arrays.asList(filterB, filterC, filterD));
 
@@ -224,7 +229,7 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
-  public void testComputeRequiredFilters_MultipleFingerprints_NoDuplicates()
+  public void testOptimize_MultipleFingerprints_NoDuplicates()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -241,14 +246,14 @@ public class ReindexingDeletionRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1", "fp2");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    OrDimFilter innerOr = (OrDimFilter) result.getField();
+    // Both fingerprints have A applied, so only B and C remain
+    NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
+    OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
 
     Assert.assertEquals(2, resultSet.size());
@@ -256,7 +261,7 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
-  public void testComputeRequiredFilters_MissingCompactionState_ReturnsAllFilters()
+  public void testOptimize_MissingCompactionState_ReturnsAllFilters()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -267,18 +272,17 @@ public class ReindexingDeletionRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertEquals(expectedFilter, result);
+    // No state available, all filters should remain
+    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
   @Test
-  public void testComputeRequiredFilters_TransformSpecWithSingleFilter()
+  public void testOptimize_TransformSpecWithSingleFilter()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -292,20 +296,20 @@ public class ReindexingDeletionRuleOptimizerTest
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
     CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    OrDimFilter innerOr = (OrDimFilter) result.getField();
+    // A was already applied, only B and C should remain
+    NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
+    OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Assert.assertEquals(2, innerOr.getFields().size());
     Assert.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterB, filterC)));
   }
 
   @Test
-  public void testComputeRequiredFilters_SegmentsWithNoFingerprints()
+  public void testOptimize_SegmentsWithNoFingerprints()
   {
     DimFilter filterA = new SelectorDimFilter("country", "US", null);
     DimFilter filterB = new SelectorDimFilter("country", "UK", null);
@@ -316,20 +320,42 @@ public class ReindexingDeletionRuleOptimizerTest
     NotDimFilter expectedFilter = new NotDimFilter(
         new OrDimFilter(Arrays.asList(filterA, filterB, filterC))
     );
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
 
-    NotDimFilter result = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-        candidate,
-        expectedFilter,
-        fingerprintMapper
-    );
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertEquals(expectedFilter, result);
+    // No fingerprints, all filters should remain
+    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
 
 
 
-  // Helper methods for filter tests
+  // Helper methods
+
+  private InlineSchemaDataSourceCompactionConfig createConfigWithFilter(
+      @Nullable NotDimFilter filter,
+      @Nullable VirtualColumns virtualColumns
+  )
+  {
+    CompactionTransformSpec transformSpec = filter == null && virtualColumns == null
+                                            ? null
+                                            : new CompactionTransformSpec(filter, virtualColumns);
+
+    return InlineSchemaDataSourceCompactionConfig.builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withTransformSpec(transformSpec)
+        .build();
+  }
+
+  private CompactionJobParams createParams()
+  {
+    CompactionJobParams mockParams = EasyMock.createMock(CompactionJobParams.class);
+    EasyMock.expect(mockParams.getFingerprintMapper()).andReturn(fingerprintMapper).anyTimes();
+    EasyMock.replay(mockParams);
+    return mockParams;
+  }
 
   private CompactionCandidate createCandidateWithFingerprints(String... fingerprints)
   {
@@ -395,50 +421,40 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
-  public void testFilterVirtualColumnsForFilter_someColumnsReferenced()
+  public void testOptimize_FilterVirtualColumns_SomeColumnsReferenced()
   {
-    // Create virtual columns
+    // Create virtual columns vc1, vc2, vc3
     VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "vc1",
-                "col1 + 1",
-                ColumnType.LONG,
-                TestExprMacroTable.INSTANCE
-            ),
-            new ExpressionVirtualColumn(
-                "vc2",
-                "col2 + 2",
-                ColumnType.LONG,
-                TestExprMacroTable.INSTANCE
-            ),
-            new ExpressionVirtualColumn(
-                "vc3",
-                "col3 + 3",
-                ColumnType.LONG,
-                TestExprMacroTable.INSTANCE
-            )
+            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("vc3", "col3 + 3", ColumnType.LONG, TestExprMacroTable.INSTANCE)
         )
     );
 
-    // Create a filter that only references vc1 and vc3
+    // Create a filter that only references vc1 and vc3 (vc2 is unreferenced)
     DimFilter filter = new OrDimFilter(
         Arrays.asList(
             new SelectorDimFilter("vc1", "value1", null),
             new SelectorDimFilter("vc3", "value3", null)
         )
     );
+    NotDimFilter notFilter = new NotDimFilter(filter);
 
-    VirtualColumns filtered = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
-        filter,
-        virtualColumns
-    );
+    // Candidate has no filters applied, so all filters remain
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionJobParams params = createParams();
 
-    Assert.assertNotNull(filtered);
-    Assert.assertEquals(2, filtered.getVirtualColumns().length);
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // Filter remains, but vc2 should be filtered out
+    VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
+    Assert.assertNotNull(resultVCs);
+    Assert.assertEquals(2, resultVCs.getVirtualColumns().length);
 
     Set<String> outputNames = new HashSet<>();
-    for (org.apache.druid.segment.VirtualColumn vc : filtered.getVirtualColumns()) {
+    for (org.apache.druid.segment.VirtualColumn vc : resultVCs.getVirtualColumns()) {
       outputNames.add(vc.getOutputName());
     }
 
@@ -448,36 +464,63 @@ public class ReindexingDeletionRuleOptimizerTest
   }
 
   @Test
-  public void testFilterVirtualColumnsForFilter_noColumnsReferenced()
+  public void testOptimize_FilterVirtualColumns_NoColumnsReferenced()
   {
     // Create virtual columns
     VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "vc1",
-                "col1 + 1",
-                ColumnType.LONG,
-                TestExprMacroTable.INSTANCE
-            ),
-            new ExpressionVirtualColumn(
-                "vc2",
-                "col2 + 2",
-                ColumnType.LONG,
-                TestExprMacroTable.INSTANCE
-            )
+            new ExpressionVirtualColumn("vc1", "col1 + 1", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("vc2", "col2 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE)
         )
     );
 
     // Create a filter that references a physical column, not virtual columns
     DimFilter filter = new SelectorDimFilter("regularColumn", "value", null);
+    NotDimFilter notFilter = new NotDimFilter(filter);
 
-    VirtualColumns filtered = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
-        filter,
-        virtualColumns
-    );
+    // Candidate has no filters applied
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(notFilter, virtualColumns);
+    CompactionJobParams params = createParams();
 
-    // Should return null when no virtual columns are referenced so all are filtered out
-    Assert.assertNull(filtered);
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // Virtual columns should be null when no virtual columns are referenced
+    Assert.assertNull(result.getTransformSpec().getVirtualColumns());
+  }
+
+  @Test
+  public void testOptimize_CandidateNeverCompacted_NoOptimization()
+  {
+    DimFilter filterA = new SelectorDimFilter("country", "US", null);
+    NotDimFilter expectedFilter = new NotDimFilter(filterA);
+
+    // Candidate with NEVER_COMPACTED status
+    CompactionCandidate candidate = createCandidateWithNullFingerprints(1);
+    InlineSchemaDataSourceCompactionConfig config = createConfigWithFilter(expectedFilter, null);
+    CompactionJobParams params = createParams();
+
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // Should return config unchanged since candidate was never compacted
+    Assert.assertSame(config, result);
+  }
+
+  @Test
+  public void testOptimize_NoTransformSpec_NoOptimization()
+  {
+    // Config without transform spec
+    InlineSchemaDataSourceCompactionConfig config = InlineSchemaDataSourceCompactionConfig.builder()
+        .forDataSource(TestDataSource.WIKI)
+        .build();
+
+    CompactionCandidate candidate = createCandidateWithFingerprints("fp1");
+    CompactionJobParams params = createParams();
+
+    DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
+
+    // Should return config unchanged
+    Assert.assertSame(config, result);
   }
 
   /**

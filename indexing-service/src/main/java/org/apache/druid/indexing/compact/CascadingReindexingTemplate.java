@@ -30,12 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.server.compaction.CompactionCandidate;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
 import org.apache.druid.server.compaction.ReindexingConfigBuilder;
 import org.apache.druid.server.compaction.ReindexingRule;
@@ -88,6 +83,8 @@ import java.util.stream.Collectors;
 public class CascadingReindexingTemplate implements CompactionJobTemplate, DataSourceCompactionConfig
 {
   private static final Logger LOG = new Logger(CascadingReindexingTemplate.class);
+  private static final ReindexingConfigOptimizer DELETION_RULE_OPTIMIZER = new ReindexingDeletionRuleOptimizer();
+
 
   public static final String TYPE = "reindexCascade";
 
@@ -202,67 +199,6 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public Granularity getDefaultSegmentGranularity()
   {
     return defaultSegmentGranularity;
-  }
-
-  /**
-   * Creates a config finalizer that optimizes filter rules for cascading reindexing.
-   * When a candidate segment has already been reindexed with a subset of filter rules,
-   * this finalizer computes the minimal set of additional filter rules needed.
-   * This optimization reduces bitmap operations during reindexing.
-   */
-  private static ReindexingConfigFinalizer createCascadingFinalizer()
-  {
-    return (config, candidate, params) -> {
-      // Only optimize if candidate has been reindexed before and config has a NotDimFilter
-      if (shouldOptimizeFilterRules(candidate, config)) {
-
-        // Compute the minimal set of filter rules needed for this candidate
-        NotDimFilter reducedTransformSpecFilter = ReindexingDeletionRuleOptimizer.computeRequiredSetOfFilterRulesForCandidate(
-            candidate,
-            (NotDimFilter) config.getTransformSpec().getFilter(),
-            params.getFingerprintMapper()
-        );
-
-        // Filter virtual columns to only include ones referenced by the reduced filter
-        VirtualColumns reducedVirtualColumns = ReindexingDeletionRuleOptimizer.filterVirtualColumnsForFilter(
-            reducedTransformSpecFilter,
-            config.getTransformSpec().getVirtualColumns()
-        );
-
-        // Safe cast: we know this is InlineSchemaDataSourceCompactionConfig because we just built it
-        return ((InlineSchemaDataSourceCompactionConfig) config)
-            .toBuilder()
-            .withTransformSpec(new CompactionTransformSpec(reducedTransformSpecFilter, reducedVirtualColumns))
-            .build();
-      }
-
-      return config; // No optimization needed, return original config
-    };
-  }
-
-  /**
-   * Determines if we should optimize filter rules for this candidate.
-   * Returns true only if the candidate has been compacted before and has a NotDimFilter.
-   */
-  private static boolean shouldOptimizeFilterRules(
-      CompactionCandidate candidate,
-      DataSourceCompactionConfig config
-  )
-  {
-    if (candidate.getCurrentStatus() == null) {
-      return false;
-    }
-
-    if (candidate.getCurrentStatus().getReason().equals(CompactionStatus.NEVER_COMPACTED_REASON)) {
-      return false;
-    }
-
-    if (config.getTransformSpec() == null) {
-      return false;
-    }
-
-    DimFilter filter = config.getTransformSpec().getFilter();
-    return filter instanceof NotDimFilter;
   }
 
   /**
@@ -509,7 +445,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       InlineSchemaDataSourceCompactionConfig config
   )
   {
-    return new CompactionConfigBasedJobTemplate(config, createCascadingFinalizer());
+    return new CompactionConfigBasedJobTemplate(config, DELETION_RULE_OPTIMIZER);
   }
 
   /**

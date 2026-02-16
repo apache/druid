@@ -48,16 +48,16 @@ import java.util.Objects;
 public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
   private final DataSourceCompactionConfig config;
-  private final ReindexingConfigFinalizer configFinalizer;
+  private final ReindexingConfigOptimizer configFinalizer;
 
   public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
   {
-    this(config, ReindexingConfigFinalizer.IDENTITY);
+    this(config, ReindexingConfigOptimizer.IDENTITY);
   }
 
   public CompactionConfigBasedJobTemplate(
       DataSourceCompactionConfig config,
-      ReindexingConfigFinalizer configFinalizer
+      ReindexingConfigOptimizer configFinalizer
   )
   {
     this.config = config;
@@ -93,7 +93,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       final CompactionCandidate candidate = segmentIterator.next();
 
       // Allow template-specific customization of the config per candidate
-      DataSourceCompactionConfig finalConfig = configFinalizer.finalizeConfig(config, candidate, params);
+      DataSourceCompactionConfig finalConfig = configFinalizer.optimizeConfig(config, candidate, params);
 
       ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
           candidate,
