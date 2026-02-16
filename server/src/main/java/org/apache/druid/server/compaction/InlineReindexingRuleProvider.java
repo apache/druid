@@ -88,27 +88,27 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
 {
   public static final String TYPE = "inline";
 
-  private final List<ReindexingDeletionRule> reindexingDeletionRules;
-  private final List<ReindexingIOConfigRule> reindexingIOConfigRules;
-  private final List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
-  private final List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
-  private final List<ReindexingDataSchemaRule> reindexingDataSchemaRules;
+  private final List<ReindexingDeletionRule> deletionRules;
+  private final List<ReindexingIOConfigRule> ioConfigRules;
+  private final List<ReindexingSegmentGranularityRule> segmentGranularityRules;
+  private final List<ReindexingTuningConfigRule> tuningConfigRules;
+  private final List<ReindexingDataSchemaRule> dataSchemaRules;
 
 
   @JsonCreator
   public InlineReindexingRuleProvider(
-      @JsonProperty("reindexingDeletionRules") @Nullable List<ReindexingDeletionRule> reindexingDeletionRules,
-      @JsonProperty("reindexingIOConfigRules") @Nullable List<ReindexingIOConfigRule> reindexingIOConfigRules,
-      @JsonProperty("reindexingSegmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules,
-      @JsonProperty("reindexingTuningConfigRules") @Nullable List<ReindexingTuningConfigRule> reindexingTuningConfigRules,
-      @JsonProperty("reindexingDataSchemaRules") @Nullable List<ReindexingDataSchemaRule> reindexingDataSchemaRules
+      @JsonProperty("deletionRules") @Nullable List<ReindexingDeletionRule> deletionRules,
+      @JsonProperty("ioConfigRules") @Nullable List<ReindexingIOConfigRule> ioConfigRules,
+      @JsonProperty("segmentGranularityRules") @Nullable List<ReindexingSegmentGranularityRule> segmentGranularityRules,
+      @JsonProperty("tuningConfigRules") @Nullable List<ReindexingTuningConfigRule> tuningConfigRules,
+      @JsonProperty("dataSchemaRules") @Nullable List<ReindexingDataSchemaRule> dataSchemaRules
   )
   {
-    this.reindexingDeletionRules = Configs.valueOrDefault(reindexingDeletionRules, Collections.emptyList());
-    this.reindexingIOConfigRules = Configs.valueOrDefault(reindexingIOConfigRules, Collections.emptyList());
-    this.reindexingSegmentGranularityRules = Configs.valueOrDefault(reindexingSegmentGranularityRules, Collections.emptyList());
-    this.reindexingTuningConfigRules = Configs.valueOrDefault(reindexingTuningConfigRules, Collections.emptyList());
-    this.reindexingDataSchemaRules = Configs.valueOrDefault(reindexingDataSchemaRules, Collections.emptyList());
+    this.deletionRules = Configs.valueOrDefault(deletionRules, Collections.emptyList());
+    this.ioConfigRules = Configs.valueOrDefault(ioConfigRules, Collections.emptyList());
+    this.segmentGranularityRules = Configs.valueOrDefault(segmentGranularityRules, Collections.emptyList());
+    this.tuningConfigRules = Configs.valueOrDefault(tuningConfigRules, Collections.emptyList());
+    this.dataSchemaRules = Configs.valueOrDefault(dataSchemaRules, Collections.emptyList());
   }
 
   public static Builder builder()
@@ -124,58 +124,58 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty("reindexingDeletionRules")
+  @JsonProperty
   public List<ReindexingDeletionRule> getDeletionRules()
   {
-    return reindexingDeletionRules;
+    return deletionRules;
   }
 
   @Override
   @Nullable
   public ReindexingDataSchemaRule getDataSchemaRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRule(reindexingDataSchemaRules, interval, referenceTime);
+    return getApplicableRule(dataSchemaRules, interval, referenceTime);
   }
 
   @Override
-  @JsonProperty("reindexingDataSchemaRules")
+  @JsonProperty
   public List<ReindexingDataSchemaRule> getDataSchemaRules()
   {
-    return reindexingDataSchemaRules;
+    return dataSchemaRules;
   }
 
   @Override
-  @JsonProperty("reindexingIOConfigRules")
+  @JsonProperty
   public List<ReindexingIOConfigRule> getIOConfigRules()
   {
-    return reindexingIOConfigRules;
+    return ioConfigRules;
   }
 
   @Override
-  @JsonProperty("reindexingSegmentGranularityRules")
+  @JsonProperty
   public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
   {
-    return reindexingSegmentGranularityRules;
+    return segmentGranularityRules;
   }
 
   @Override
-  @JsonProperty("reindexingTuningConfigRules")
+  @JsonProperty
   public List<ReindexingTuningConfigRule> getTuningConfigRules()
   {
-    return reindexingTuningConfigRules;
+    return tuningConfigRules;
   }
 
   @Override
   public List<ReindexingDeletionRule> getDeletionRules(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRules(reindexingDeletionRules, interval, referenceTime);
+    return getApplicableRules(deletionRules, interval, referenceTime);
   }
 
   @Override
   @Nullable
   public ReindexingIOConfigRule getIOConfigRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRule(reindexingIOConfigRules, interval, referenceTime);
+    return getApplicableRule(ioConfigRules, interval, referenceTime);
   }
 
   @Override
@@ -185,14 +185,14 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       DateTime referenceTime
   )
   {
-    return getApplicableRule(reindexingSegmentGranularityRules, interval, referenceTime);
+    return getApplicableRule(segmentGranularityRules, interval, referenceTime);
   }
 
   @Override
   @Nullable
   public ReindexingTuningConfigRule getTuningConfigRule(Interval interval, DateTime referenceTime)
   {
-    return getApplicableRule(reindexingTuningConfigRules, interval, referenceTime);
+    return getApplicableRule(tuningConfigRules, interval, referenceTime);
   }
 
   /**
@@ -251,22 +251,22 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
       return false;
     }
     InlineReindexingRuleProvider that = (InlineReindexingRuleProvider) o;
-    return Objects.equals(reindexingDeletionRules, that.reindexingDeletionRules)
-           && Objects.equals(reindexingIOConfigRules, that.reindexingIOConfigRules)
-           && Objects.equals(reindexingSegmentGranularityRules, that.reindexingSegmentGranularityRules)
-           && Objects.equals(reindexingTuningConfigRules, that.reindexingTuningConfigRules)
-           && Objects.equals(reindexingDataSchemaRules, that.reindexingDataSchemaRules);
+    return Objects.equals(deletionRules, that.deletionRules)
+           && Objects.equals(ioConfigRules, that.ioConfigRules)
+           && Objects.equals(segmentGranularityRules, that.segmentGranularityRules)
+           && Objects.equals(tuningConfigRules, that.tuningConfigRules)
+           && Objects.equals(dataSchemaRules, that.dataSchemaRules);
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        reindexingDeletionRules,
-        reindexingIOConfigRules,
-        reindexingSegmentGranularityRules,
-        reindexingTuningConfigRules,
-        reindexingDataSchemaRules
+        deletionRules,
+        ioConfigRules,
+        segmentGranularityRules,
+        tuningConfigRules,
+        dataSchemaRules
     );
   }
 
@@ -274,60 +274,60 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   public String toString()
   {
     return "InlineReindexingRuleProvider{"
-           + "reindexingDeletionRules=" + reindexingDeletionRules
-           + ", reindexingIOConfigRules=" + reindexingIOConfigRules
-           + ", reindexingSegmentGranularityRules=" + reindexingSegmentGranularityRules
-           + ", reindexingTuningConfigRules=" + reindexingTuningConfigRules
-           + ", reindexingDataSchemaRules=" + reindexingDataSchemaRules
+           + "deletionRules=" + deletionRules
+           + ", ioConfigRules=" + ioConfigRules
+           + ", segmentGranularityRules=" + segmentGranularityRules
+           + ", tuningConfigRules=" + tuningConfigRules
+           + ", dataSchemaRules=" + dataSchemaRules
            + '}';
   }
 
   public static class Builder
   {
-    private List<ReindexingDeletionRule> reindexingDeletionRules;
-    private List<ReindexingIOConfigRule> reindexingIOConfigRules;
-    private List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules;
-    private List<ReindexingTuningConfigRule> reindexingTuningConfigRules;
-    private List<ReindexingDataSchemaRule> reindexingDataSchemaRules;
+    private List<ReindexingDeletionRule> deletionRules;
+    private List<ReindexingIOConfigRule> ioConfigRules;
+    private List<ReindexingSegmentGranularityRule> segmentGranularityRules;
+    private List<ReindexingTuningConfigRule> tuningConfigRules;
+    private List<ReindexingDataSchemaRule> dataSchemaRules;
 
-    public Builder deletionRules(List<ReindexingDeletionRule> reindexingDeletionRules)
+    public Builder deletionRules(List<ReindexingDeletionRule> deletionRules)
     {
-      this.reindexingDeletionRules = reindexingDeletionRules;
+      this.deletionRules = deletionRules;
       return this;
     }
 
-    public Builder dataSchemaRules(List<ReindexingDataSchemaRule> reindexingDataSchemaRules)
+    public Builder dataSchemaRules(List<ReindexingDataSchemaRule> dataSchemaRules)
     {
-      this.reindexingDataSchemaRules = reindexingDataSchemaRules;
+      this.dataSchemaRules = dataSchemaRules;
       return this;
     }
 
-    public Builder ioConfigRules(List<ReindexingIOConfigRule> reindexingIOConfigRules)
+    public Builder ioConfigRules(List<ReindexingIOConfigRule> ioConfigRules)
     {
-      this.reindexingIOConfigRules = reindexingIOConfigRules;
+      this.ioConfigRules = ioConfigRules;
       return this;
     }
 
-    public Builder segmentGranularityRules(List<ReindexingSegmentGranularityRule> reindexingSegmentGranularityRules)
+    public Builder segmentGranularityRules(List<ReindexingSegmentGranularityRule> segmentGranularityRules)
     {
-      this.reindexingSegmentGranularityRules = reindexingSegmentGranularityRules;
+      this.segmentGranularityRules = segmentGranularityRules;
       return this;
     }
 
-    public Builder tuningConfigRules(List<ReindexingTuningConfigRule> reindexingTuningConfigRules)
+    public Builder tuningConfigRules(List<ReindexingTuningConfigRule> tuningConfigRules)
     {
-      this.reindexingTuningConfigRules = reindexingTuningConfigRules;
+      this.tuningConfigRules = tuningConfigRules;
       return this;
     }
 
     public InlineReindexingRuleProvider build()
     {
       return new InlineReindexingRuleProvider(
-          reindexingDeletionRules,
-          reindexingIOConfigRules,
-          reindexingSegmentGranularityRules,
-          reindexingTuningConfigRules,
-          reindexingDataSchemaRules
+          deletionRules,
+          ioConfigRules,
+          segmentGranularityRules,
+          tuningConfigRules,
+          dataSchemaRules
       );
     }
   }
