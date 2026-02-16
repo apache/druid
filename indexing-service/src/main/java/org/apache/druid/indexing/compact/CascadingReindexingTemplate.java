@@ -384,17 +384,16 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
 
       // Check if interval extends past skip offset
       if (intervalEndsAfter(searchInterval, effectiveEndTime)) {
-        // Include in timeline but mark as skipped (no rules applied)
+        // Include in timeline, but indicate skipped by applying no rules.
         intervalConfigs.add(new ReindexingTimelineView.IntervalConfig(
             searchInterval,
-            0,  // ruleCount = 0 indicates no rules applied (skipped due to skip offset)
-            null,  // no config
-            Collections.emptyList()  // no applied rules
+            0,
+            null,
+            Collections.emptyList()
         ));
         continue;
       }
 
-      // Process intervals within skip offset normally
       InlineSchemaDataSourceCompactionConfig.Builder builder = createBaseBuilder();
       ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
           ruleProvider,

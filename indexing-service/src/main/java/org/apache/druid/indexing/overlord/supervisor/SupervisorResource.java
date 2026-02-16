@@ -394,7 +394,7 @@ public class SupervisorResource
           DateTime referenceTime;
           if (referenceTimeStr != null) {
             try {
-              referenceTime = DateTime.parse(referenceTimeStr);
+              referenceTime = DateTimes.of(referenceTimeStr);
             }
             catch (IllegalArgumentException e) {
               return Response.status(Response.Status.BAD_REQUEST)
