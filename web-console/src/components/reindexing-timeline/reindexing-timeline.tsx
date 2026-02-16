@@ -18,6 +18,7 @@
 
 import { Button, Callout, Card, Dialog, Intent, Tag, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { Duration, Timezone } from 'chronoshift';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
@@ -151,22 +152,9 @@ export const ReindexingTimeline = React.memo(function ReindexingTimeline(
   // Calculate effective end time if we have queried max time and skipOffsetFromLatest
   let effectiveEndTime: Date | undefined;
   if (queriedMaxTime && skipOffset?.notApplied) {
-    const maxTime = new Date(queriedMaxTime);
     const period = skipOffset.notApplied.period;
-    effectiveEndTime = new Date(maxTime);
-
-    // Parse ISO 8601 duration format (e.g., "P7D", "P1M", "P1Y", "PT12H", "P1M7D")
-    const yearMatch = period.match(/(\d+)Y/);
-    const monthMatch = period.match(/(\d+)M/);
-    const weekMatch = period.match(/(\d+)W/);
-    const dayMatch = period.match(/(\d+)D/);
-    const hourMatch = period.match(/T.*?(\d+)H/);
-
-    if (yearMatch) effectiveEndTime.setFullYear(effectiveEndTime.getFullYear() - parseInt(yearMatch[1], 10));
-    if (monthMatch) effectiveEndTime.setMonth(effectiveEndTime.getMonth() - parseInt(monthMatch[1], 10));
-    if (weekMatch) effectiveEndTime.setDate(effectiveEndTime.getDate() - parseInt(weekMatch[1], 10) * 7);
-    if (dayMatch) effectiveEndTime.setDate(effectiveEndTime.getDate() - parseInt(dayMatch[1], 10));
-    if (hourMatch) effectiveEndTime.setHours(effectiveEndTime.getHours() - parseInt(hourMatch[1], 10));
+    const duration = new Duration(period);
+    effectiveEndTime = duration.shift(new Date(queriedMaxTime), Timezone.UTC, -1);
   }
 
   // Display validation error if present
