@@ -124,7 +124,7 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("deletionRules")
   public List<ReindexingDeletionRule> getDeletionRules()
   {
     return deletionRules;
@@ -138,28 +138,28 @@ public class InlineReindexingRuleProvider implements ReindexingRuleProvider
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("dataSchemaRules")
   public List<ReindexingDataSchemaRule> getDataSchemaRules()
   {
     return dataSchemaRules;
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("ioConfigRules")
   public List<ReindexingIOConfigRule> getIOConfigRules()
   {
     return ioConfigRules;
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("segmentGranularityRules")
   public List<ReindexingSegmentGranularityRule> getSegmentGranularityRules()
   {
     return segmentGranularityRules;
   }
 
   @Override
-  @JsonProperty
+  @JsonProperty("tuningConfigRules")
   public List<ReindexingTuningConfigRule> getTuningConfigRules()
   {
     return tuningConfigRules;
