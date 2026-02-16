@@ -50,10 +50,24 @@ public interface ReindexingRule
     NONE
   }
 
+  /**
+   * Provides an identifier for the rule, which can be used for referencing, logging, or management purposes.
+   * <p>
+   * Note that there is no inherent contract for uniqueness across rule sets provided by this interface.
+   */
   String getId();
 
+  /**
+   * Provides a human-readable description of the rule, which can be used for logging, debugging, or user interfaces to explain the purpose and behavior of the rule.
+   */
   String getDescription();
 
+  /**
+   * Defines the age threshold for rule applicability. The rule applies to data older than a reference time minus this period.
+   * <p>
+   * For example, if the period is "P30D" (30 days) and the reference time is "2024-01-31T00:00:00Z", the rule applies to data older than "2024-01-01T00:00:00Z".
+   * @return The period representing the age threshold for rule applicability.
+   */
   Period getOlderThan();
 
   /**
