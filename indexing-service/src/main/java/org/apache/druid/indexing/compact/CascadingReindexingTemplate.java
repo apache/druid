@@ -327,7 +327,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     try {
       searchIntervals = generateAlignedSearchIntervals(referenceTime);
     }
-    catch (GranularityTimelineValidationException e) {
+    catch (SegmentGranularityTimelineValidationException e) {
       return createValidationErrorView(
           e,
           referenceTime,
@@ -571,7 +571,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * @param referenceTime the reference time for calculating period thresholds
    * @return list of split and aligned intervals with their granularities and source rules, ordered from oldest to newest
    * @throws IAE if no reindexing rules are configured
-   * @throws GranularityTimelineValidationException if granularities become coarser over time
+   * @throws SegmentGranularityTimelineValidationException if granularities become coarser over time
    */
   List<IntervalGranularityInfo> generateAlignedSearchIntervals(DateTime referenceTime)
   {
@@ -696,7 +696,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * @param referenceTime the reference time for calculating period thresholds
    * @return base timeline with granularity-aligned intervals, ordered from oldest to newest
    * @throws IAE if no reindexing rules are configured
-   * @throws GranularityTimelineValidationException if granularities become coarser over time
+   * @throws SegmentGranularityTimelineValidationException if granularities become coarser over time
    */
   private List<IntervalGranularityInfo> generateBaseSegmentGranularityAlignedTimeline(DateTime referenceTime)
   {
@@ -871,7 +871,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
    * which is typically undesirable and inefficient.
    *
    * @param timeline the completed base timeline with granularity information
-   * @throws GranularityTimelineValidationException if granularity becomes coarser as we move toward present
+   * @throws SegmentGranularityTimelineValidationException if granularity becomes coarser as we move toward present
    */
   private void validateSegmentGranularityTimeline(List<IntervalGranularityInfo> timeline)
   {
@@ -891,7 +891,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       // If the older interval's granularity is finer than the newer interval's granularity,
       // that means we're getting coarser as we move toward present, which is invalid.
       if (olderGran.isFinerThan(newerGran)) {
-        throw new GranularityTimelineValidationException(
+        throw new SegmentGranularityTimelineValidationException(
             dataSource,
             olderInterval.getInterval(),
             olderGran,

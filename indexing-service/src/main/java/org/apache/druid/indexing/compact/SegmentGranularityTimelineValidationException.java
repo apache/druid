@@ -27,14 +27,14 @@ import org.joda.time.Interval;
  * Exception thrown when segment granularity timeline validation fails when using {@link CascadingReindexingTemplate}.
  * Contains structured information about the conflicting intervals.
  */
-public class GranularityTimelineValidationException extends IAE
+public class SegmentGranularityTimelineValidationException extends IAE
 {
   private final Interval olderInterval;
   private final Granularity olderGranularity;
   private final Interval newerInterval;
   private final Granularity newerGranularity;
 
-  public GranularityTimelineValidationException(
+  public SegmentGranularityTimelineValidationException(
       String dataSource,
       Interval olderInterval,
       Granularity olderGranularity,

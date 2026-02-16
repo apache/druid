@@ -20,6 +20,7 @@
 package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
@@ -71,6 +72,7 @@ public class CompactionTransformSpec
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   public VirtualColumns getVirtualColumns()
   {
