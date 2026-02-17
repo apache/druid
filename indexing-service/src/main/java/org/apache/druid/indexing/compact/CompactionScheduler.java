@@ -20,12 +20,14 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,6 +80,11 @@ public interface CompactionScheduler
    * @return Non-null snapshot of the current status of compaction for the datasource.
    */
   AutoCompactionSnapshot getCompactionSnapshot(String dataSource);
+
+  /**
+   * Gets the current status of all the known compaction jobs for this datasource.
+   */
+  Map<CompactionStatus.State, List<CompactionJobStatus>> getJobsByStatus(String dataSource);
 
   /**
    * Simulates a compaction run with the given cluster config.

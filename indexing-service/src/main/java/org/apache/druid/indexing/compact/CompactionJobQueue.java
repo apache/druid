@@ -261,6 +261,39 @@ public class CompactionJobQueue
   }
 
   /**
+   * List of all jobs currently in queue. The order of the jobs is not guaranteed.
+   */
+  public List<CompactionJob> getQueuedJobs()
+  {
+    return List.copyOf(queue);
+  }
+
+  /**
+   * Intervals for the given datasource that are already fully compacted.
+   */
+  public List<CompactionCandidate> getFullyCompactedIntervals(String dataSource)
+  {
+    return snapshotBuilder.getFullyCompactedIntervals(dataSource);
+  }
+
+  /**
+   * Intervals that were skipped from compaction. Some of the segments in these
+   * intervals may already be compacted.
+   */
+  public List<CompactionCandidate> getSkippedIntervals(String dataSource)
+  {
+    return snapshotBuilder.getSkippedIntervals(dataSource);
+  }
+
+  /**
+   * Search policy used to build this queue.
+   */
+  public CompactionCandidateSearchPolicy getSearchPolicy()
+  {
+    return searchPolicy;
+  }
+
+  /**
    * Starts a job if it is ready and is not already in progress.
    *
    * @return true if the job was submitted successfully for execution
@@ -380,10 +413,7 @@ public class CompactionJobQueue
 
   public CompactionStatus getCurrentStatusForJob(CompactionJob job, CompactionCandidateSearchPolicy policy)
   {
-    final CompactionStatus compactionStatus = statusTracker.computeCompactionStatus(job.getCandidate(), policy);
-    final CompactionCandidate candidatesWithStatus = job.getCandidate().withCurrentStatus(null);
-    statusTracker.onCompactionStatusComputed(candidatesWithStatus, null);
-    return compactionStatus;
+    return statusTracker.computeCompactionStatus(job.getCandidate(), policy);
   }
 
   public static CompactionConfigValidationResult validateCompactionJob(BatchIndexingJob job)

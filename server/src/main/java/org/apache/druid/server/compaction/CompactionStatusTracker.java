@@ -85,10 +85,18 @@ public class CompactionStatusTracker
       CompactionCandidateSearchPolicy searchPolicy
   )
   {
+    final CompactionStatus precomputedStatus = candidate.getCurrentStatus();
+    if (precomputedStatus.getState() != CompactionStatus.State.PENDING) {
+      return precomputedStatus;
+    }
+
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionStatus.running("Task for interval is already running");
+      return precomputedStatus.withStateAndMessage(
+          CompactionStatus.State.RUNNING,
+          "Task for interval is already running"
+      );
     }
 
     // Skip intervals that have been recently compacted if segment timeline is not updated yet
@@ -96,7 +104,8 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.skipped(
+      return precomputedStatus.withStateAndMessage(
+          CompactionStatus.State.SKIPPED,
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
@@ -105,9 +114,13 @@ public class CompactionStatusTracker
     final CompactionCandidateSearchPolicy.Eligibility eligibility
         = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
     if (eligibility.isEligible()) {
-      return CompactionStatus.pending("Not compacted yet");
+      return precomputedStatus;
     } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
+      return precomputedStatus.withStateAndMessage(
+          CompactionStatus.State.SKIPPED,
+          "Rejected by search policy: %s",
+          eligibility.getReason()
+      );
     }
   }
 
@@ -196,12 +209,13 @@ public class CompactionStatusTracker
 
       final CompactionTaskStatus updatedStatus;
       if (taskStatus.isSuccess()) {
-        updatedStatus = new CompactionTaskStatus(TaskState.SUCCESS, now, 0);
+        updatedStatus = new CompactionTaskStatus(taskStatus.getId(), TaskState.SUCCESS, now, 0);
       } else if (lastKnownStatus == null || lastKnownStatus.getState().isSuccess()) {
         // This is the first failure
-        updatedStatus = new CompactionTaskStatus(TaskState.FAILED, now, 1);
+        updatedStatus = new CompactionTaskStatus(taskStatus.getId(), TaskState.FAILED, now, 1);
       } else {
         updatedStatus = new CompactionTaskStatus(
+            taskStatus.getId(),
             TaskState.FAILED,
             now,
             lastKnownStatus.getNumConsecutiveFailures() + 1
@@ -217,11 +231,11 @@ public class CompactionStatusTracker
 
       final DateTime now = DateTimes.nowUtc();
       if (lastStatus == null || !lastStatus.getState().isFailure()) {
-        intervalToTaskStatus.put(interval, new CompactionTaskStatus(TaskState.RUNNING, now, 0));
+        intervalToTaskStatus.put(interval, new CompactionTaskStatus("", TaskState.RUNNING, now, 0));
       } else {
         intervalToTaskStatus.put(
             interval,
-            new CompactionTaskStatus(TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
+            new CompactionTaskStatus("", TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
         );
       }
     }

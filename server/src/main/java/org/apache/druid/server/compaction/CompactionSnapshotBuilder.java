@@ -25,7 +25,9 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,50 +37,67 @@ import java.util.Map;
 public class CompactionSnapshotBuilder
 {
   private final CoordinatorRunStats stats;
-  private final Map<String, AutoCompactionSnapshot.Builder> datasourceToBuilder = new HashMap<>();
+  private final Map<String, DatasourceSnapshotBuilder> datasourceToBuilder = new HashMap<>();
 
   public CompactionSnapshotBuilder(CoordinatorRunStats runStats)
   {
     this.stats = runStats;
   }
 
+  public List<CompactionCandidate> getFullyCompactedIntervals(String dataSource)
+  {
+    return datasourceToBuilder.getOrDefault(dataSource, DatasourceSnapshotBuilder.EMPTY).completed;
+  }
+
+  public List<CompactionCandidate> getSkippedIntervals(String dataSource)
+  {
+    return datasourceToBuilder.getOrDefault(dataSource, DatasourceSnapshotBuilder.EMPTY).skipped;
+  }
+
   public void addToComplete(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .incrementCompactedStats(candidate.getStats());
+    final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
+    builder.stats.incrementCompactedStats(candidate.getStats());
+    builder.completed.add(candidate);
   }
 
   public void addToPending(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .incrementWaitingStats(candidate.getStats());
+    final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
+    builder.stats.incrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getCompactedStats());
   }
 
   public void addToSkipped(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .incrementSkippedStats(candidate.getStats());
+    final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
+    builder.stats.incrementSkippedStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getCompactedStats());
+    builder.skipped.add(candidate);
   }
 
   public void moveFromPendingToSkipped(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .decrementWaitingStats(candidate.getStats());
-    addToSkipped(candidate);
+    final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
+    builder.stats.decrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementSkippedStats(candidate.getUncompactedStats());
+    builder.skipped.add(candidate);
   }
 
   public void moveFromPendingToCompleted(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .decrementWaitingStats(candidate.getStats());
-    addToComplete(candidate);
+    final DatasourceSnapshotBuilder builder = getBuilderForDatasource(candidate.getDataSource());
+    builder.stats.decrementWaitingStats(candidate.getUncompactedStats());
+    builder.stats.incrementCompactedStats(candidate.getUncompactedStats());
+    // these stats might be incorrect since the number of segments and bytes would have changed
+    builder.completed.add(candidate);
   }
 
   public Map<String, AutoCompactionSnapshot> build()
   {
     final Map<String, AutoCompactionSnapshot> datasourceToSnapshot = new HashMap<>();
     datasourceToBuilder.forEach((dataSource, builder) -> {
-      final AutoCompactionSnapshot autoCompactionSnapshot = builder.build();
+      final AutoCompactionSnapshot autoCompactionSnapshot = builder.stats.build();
       datasourceToSnapshot.put(dataSource, autoCompactionSnapshot);
       collectSnapshotStats(autoCompactionSnapshot);
     });
@@ -86,9 +105,9 @@ public class CompactionSnapshotBuilder
     return datasourceToSnapshot;
   }
 
-  private AutoCompactionSnapshot.Builder getBuilderForDatasource(String dataSource)
+  private DatasourceSnapshotBuilder getBuilderForDatasource(String dataSource)
   {
-    return datasourceToBuilder.computeIfAbsent(dataSource, AutoCompactionSnapshot::builder);
+    return datasourceToBuilder.computeIfAbsent(dataSource, DatasourceSnapshotBuilder::new);
   }
 
   private void collectSnapshotStats(AutoCompactionSnapshot autoCompactionSnapshot)
@@ -104,5 +123,23 @@ public class CompactionSnapshotBuilder
     stats.add(Stats.Compaction.SKIPPED_BYTES, rowKey, autoCompactionSnapshot.getBytesSkipped());
     stats.add(Stats.Compaction.SKIPPED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountSkipped());
     stats.add(Stats.Compaction.SKIPPED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountSkipped());
+  }
+
+  /**
+   * Wrapper around AutoCompactionSnapshot.Builder to track list of completed
+   * and skipped candidates.
+   */
+  private static class DatasourceSnapshotBuilder
+  {
+    static final DatasourceSnapshotBuilder EMPTY = new DatasourceSnapshotBuilder(".");
+
+    final AutoCompactionSnapshot.Builder stats;
+    final List<CompactionCandidate> completed = new ArrayList<>();
+    final List<CompactionCandidate> skipped = new ArrayList<>();
+
+    DatasourceSnapshotBuilder(String dataSource)
+    {
+      this.stats = AutoCompactionSnapshot.builder(dataSource);
+    }
   }
 }
