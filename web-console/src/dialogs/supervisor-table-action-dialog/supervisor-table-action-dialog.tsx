@@ -66,7 +66,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       text: 'History',
       active: activeTab === 'history',
       onClick: () => setActiveTab('history'),
-    }
+    },
   ];
 
   const supervisorEndpointBase = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`;
