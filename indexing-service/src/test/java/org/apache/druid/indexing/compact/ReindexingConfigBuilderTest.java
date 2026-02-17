@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
+package org.apache.druid.indexing.compact;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -30,6 +30,14 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.IntervalGranularityInfo;
+import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
+import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;

@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.IntervalGranularityInfo;
-import org.apache.druid.server.compaction.ReindexingConfigBuilder;
 import org.apache.druid.server.compaction.ReindexingRule;
 import org.apache.druid.server.compaction.ReindexingRuleProvider;
 import org.apache.druid.server.compaction.ReindexingSegmentGranularityRule;

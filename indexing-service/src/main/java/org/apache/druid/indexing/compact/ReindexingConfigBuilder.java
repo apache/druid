@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
+package org.apache.druid.indexing.compact;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -27,6 +27,13 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.IntervalGranularityInfo;
+import org.apache.druid.server.compaction.ReindexingDataSchemaRule;
+import org.apache.druid.server.compaction.ReindexingDeletionRule;
+import org.apache.druid.server.compaction.ReindexingIOConfigRule;
+import org.apache.druid.server.compaction.ReindexingRule;
+import org.apache.druid.server.compaction.ReindexingRuleProvider;
+import org.apache.druid.server.compaction.ReindexingTuningConfigRule;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -37,10 +44,13 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Builds compaction configs by applying reindexing rules.
- * Encapsulates the logic for combining additive rules and applying all rule types.
+ * Builds compaction configs for cascading reindexing by applying reindexing rules.
+ * This is an implementation detail of {@link CascadingReindexingTemplate} and encapsulates
+ * the logic for combining additive rules and applying all rule types.
+ * <p>
+ * Package-private as this is only used internally by CascadingReindexingTemplate.
  */
-public class ReindexingConfigBuilder
+class ReindexingConfigBuilder
 {
   private static final Logger LOG = new Logger(ReindexingConfigBuilder.class);
 
@@ -53,12 +63,12 @@ public class ReindexingConfigBuilder
    * Result of applying reindexing rules to a config builder.
    * Contains both the count of rules applied and the actual rules that were applied.
    */
-  public static class BuildResult
+  static class BuildResult
   {
     private final int ruleCount;
     private final List<ReindexingRule> appliedRules;
 
-    public BuildResult(int ruleCount, List<ReindexingRule> appliedRules)
+    BuildResult(int ruleCount, List<ReindexingRule> appliedRules)
     {
       this.ruleCount = ruleCount;
       this.appliedRules = appliedRules;
@@ -71,7 +81,7 @@ public class ReindexingConfigBuilder
      *
      * @return the number of rules that were applied to the builder
      */
-    public int getRuleCount()
+    int getRuleCount()
     {
       return ruleCount;
     }
@@ -79,13 +89,13 @@ public class ReindexingConfigBuilder
     /**
      * @return immutable list of the actual rules that were applied, in application order
      */
-    public List<ReindexingRule> getAppliedRules()
+    List<ReindexingRule> getAppliedRules()
     {
       return appliedRules;
     }
   }
 
-  public ReindexingConfigBuilder(
+  ReindexingConfigBuilder(
       ReindexingRuleProvider provider,
       Interval interval,
       DateTime referenceTime,
@@ -103,7 +113,7 @@ public class ReindexingConfigBuilder
    *
    * @return number of rules applied
    */
-  public int applyTo(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  int applyTo(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
     return applyToWithDetails(builder).getRuleCount();
   }
@@ -114,7 +124,7 @@ public class ReindexingConfigBuilder
    *
    * @return BuildResult containing the count and list of applied rules
    */
-  public BuildResult applyToWithDetails(InlineSchemaDataSourceCompactionConfig.Builder builder)
+  BuildResult applyToWithDetails(InlineSchemaDataSourceCompactionConfig.Builder builder)
   {
     int count = 0;
     List<ReindexingRule> appliedRules = new ArrayList<>();
