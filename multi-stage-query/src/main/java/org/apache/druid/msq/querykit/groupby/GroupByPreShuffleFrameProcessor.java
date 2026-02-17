@@ -184,14 +184,22 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         closer.register(() -> segmentHolder.getInputCounters().addFile(rowCount, 0));
       }
 
-      final Sequence<ResultRow> rowSequence =
-          groupingEngine.process(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
-              Objects.requireNonNull(segment.as(CursorFactory.class)),
-              segment.as(TimeBoundaryInspector.class),
-              bufferPool,
-              null
-          );
+      final TimeBoundaryInspector tbi = segment.as(TimeBoundaryInspector.class);
+
+      final Sequence<ResultRow> rowSequence;
+      if (GroupByTimeBoundaryUtils.canUseTimeBoundaryInspector(query, tbi, segmentHolder.getDescriptor())) {
+        // Resolve this query using the TimeBoundaryInspector, no need for a cursor.
+        rowSequence = Sequences.simple(List.of(GroupByTimeBoundaryUtils.computeTimeBoundaryResult(query, tbi)));
+      } else {
+        // Resolve this query using a cursor.
+        rowSequence = groupingEngine.process(
+            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+            Objects.requireNonNull(segment.as(CursorFactory.class)),
+            tbi,
+            bufferPool,
+            null
+        );
+      }
 
       resultYielder = Yielders.each(rowSequence);
     }

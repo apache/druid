@@ -51,6 +51,7 @@ import {
   clamp,
   deepGet,
   filterMap,
+  formatByteRate,
   formatBytesCompact,
   formatDurationWithMs,
   formatDurationWithMsIfNeeded,
@@ -96,6 +97,23 @@ const formatFileOfTotal = (files: number, totalFiles: number) =>
 
 const formatFileOfTotalForBrace = (files: number, totalFiles: number) =>
   `(${formatInteger(files)} /GB ${formatInteger(totalFiles)})`;
+
+function formatLoadTooltip(
+  loadFiles: number,
+  loadBytes?: number,
+  loadTime?: number,
+  loadWait?: number,
+): string {
+  return assemble(
+    `Loaded files: ${formatInteger(loadFiles)}`,
+    loadBytes != null && `Loaded bytes: ${formatBytesCompact(loadBytes)}`,
+    loadTime != null && loadTime > 0 && `Load time: ${formatDurationWithMs(loadTime)}`,
+    loadTime && loadBytes
+      ? `Load rate: ${formatByteRate(loadBytes / (loadTime / 1000))}`
+      : undefined,
+    loadWait != null && loadWait > 0 && `Load wait: ${formatDurationWithMs(loadWait)}`,
+  ).join('\n');
+}
 
 function inputLabelContent(stage: StageDefinition, inputIndex: number) {
   const { input, broadcast } = stage.definition;
@@ -337,6 +355,22 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                         />
                       </>
                     )}
+                    {Boolean(c.loadFiles) && (
+                      <>
+                        {' '}
+                        &nbsp;{' '}
+                        <Icon
+                          className="load-indicator"
+                          icon={IconNames.IMPORT}
+                          data-tooltip={formatLoadTooltip(
+                            c.loadFiles,
+                            c.loadBytes,
+                            c.loadTime,
+                            c.loadWait,
+                          )}
+                        />
+                      </>
+                    )}
                   </>
                 );
               },
@@ -505,6 +539,10 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
+    const loadFiles = stages.getTotalCounterForStage(stage, inputCounter, 'loadFiles');
+    const loadBytes = stages.getTotalCounterForStage(stage, inputCounter, 'loadBytes');
+    const loadTime = stages.getTotalCounterForStage(stage, inputCounter, 'loadTime');
+    const loadWait = stages.getTotalCounterForStage(stage, inputCounter, 'loadWait');
     const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
@@ -524,7 +562,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
           }
           braces={rowsValues}
         />
-        {inputFileCount ? (
+        {Boolean(inputFileCount) && (
           <>
             {' '}
             &nbsp;{' '}
@@ -536,7 +574,18 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               braces={filesValues}
             />
           </>
-        ) : undefined}
+        )}
+        {Boolean(loadFiles) && (
+          <>
+            {' '}
+            &nbsp;{' '}
+            <Icon
+              className="load-indicator"
+              icon={IconNames.IMPORT}
+              data-tooltip={formatLoadTooltip(loadFiles, loadBytes, loadTime, loadWait)}
+            />
+          </>
+        )}
       </div>
     );
   }

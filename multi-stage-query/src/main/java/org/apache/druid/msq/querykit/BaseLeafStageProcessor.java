@@ -224,6 +224,15 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
   );
 
   /**
+   * Filters the physical input slices before they are used to create a {@link ReadableInputQueue}.
+   * Subclasses can override this to reduce the set of segments that need to be read.
+   */
+  protected List<PhysicalInputSlice> filterBaseInput(final List<PhysicalInputSlice> slices)
+  {
+    return slices;
+  }
+
+  /**
    * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
    * that drives query processing.
    *
@@ -231,7 +240,7 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
    * segments. Once {@link ReadableInputQueue#nextInput()} or {@link ReadableInputQueue#start()} is called,
    * the queue must be closed when done being used.
    */
-  private static ReadableInputQueue makeBaseInputQueue(
+  private ReadableInputQueue makeBaseInputQueue(
       final List<InputSlice> inputSlices,
       final ExecutionContext context
   )
@@ -252,12 +261,13 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
       }
     }
 
+    final List<PhysicalInputSlice> filteredSlices = filterBaseInput(physicalInputSlices);
     final Integer segmentLoadAheadCount =
         MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
     return new ReadableInputQueue(
         stageDef.getId().getQueryId(),
         new StandardPartitionReader(context),
-        physicalInputSlices,
+        filteredSlices,
         segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
     );
   }

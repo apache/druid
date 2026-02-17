@@ -85,8 +85,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Start time',
     'Version',
@@ -101,8 +101,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Detail',
   ],
@@ -112,8 +112,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Tier',
     'Host',
     'Port',
-    'Current size',
-    'Max size',
+    'Assigned size',
+    'Effective size',
     'Usage',
     'Start time',
     'Version',
@@ -153,6 +153,8 @@ interface ServiceResultRow {
   readonly host: string;
   readonly curr_size: NumberLike;
   readonly max_size: NumberLike;
+  readonly storage_size: NumberLike;
+  readonly effective_size: NumberLike;
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
@@ -259,6 +261,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "tls_port",
   "curr_size",
   "max_size",
+  "storage_size",
+  CASE WHEN "storage_size" < "max_size" THEN "storage_size" ELSE "max_size" END AS "effective_size",
   "is_leader",
   "start_time",
   "version",
@@ -316,6 +320,8 @@ ORDER BY
                 tls_port: port < 9000 ? -1 : port,
                 curr_size: s.currSize,
                 max_size: s.maxSize,
+                storage_size: s.maxSize,
+                effective_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
@@ -568,8 +574,8 @@ ORDER BY
           Aggregated: () => '',
         },
         {
-          Header: 'Current size',
-          show: visibleColumns.shown('Current size'),
+          Header: 'Assigned size',
+          show: visibleColumns.shown('Assigned size'),
           id: 'curr_size',
           width: 100,
           filterable: false,
@@ -588,23 +594,27 @@ ORDER BY
           },
         },
         {
-          Header: 'Max size',
-          show: visibleColumns.shown('Max size'),
-          id: 'max_size',
+          Header: 'Effective size',
+          show: visibleColumns.shown('Effective size'),
+          id: 'effective_size',
           width: 100,
           filterable: false,
-          accessor: 'max_size',
+          accessor: 'effective_size',
           className: 'padded',
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalMax = sum(originalRows, s => s.max_size);
-            return formatBytes(totalMax);
+            const totalEffectiveSize = sum(originalRows, s => s.effective_size);
+            return formatBytes(totalEffectiveSize);
           },
           Cell: ({ value, aggregated, original }) => {
             if (aggregated || original.service_type !== 'historical') return '';
             if (value === null) return '';
-            return formatBytes(value);
+            return (
+              <div data-tooltip={`Max size: ${formatBytes(original.max_size)}`}>
+                {formatBytes(value)}
+              </div>
+            );
           },
         },
         {
@@ -621,17 +631,28 @@ ORDER BY
               return (
                 (Number(workerInfo.currCapacityUsed) || 0) / Number(workerInfo.worker?.capacity)
               );
+            } else if (row.effective_size) {
+              return Number(row.curr_size) / Number(row.effective_size);
             } else {
-              return row.max_size ? Number(row.curr_size) / Number(row.max_size) : null;
+              return null;
             }
           },
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
 
             if (originalRows.some(r => r.service_type === 'historical')) {
-              const totalCurr = sum(originalRows, s => Number(s.curr_size));
-              const totalMax = sum(originalRows, s => Number(s.max_size));
-              return <FillIndicator value={totalCurr / totalMax} />;
+              const totalAssignedSize = sum(originalRows, s => Number(s.curr_size));
+              const totalEffectiveSize = sum(originalRows, s => Number(s.effective_size));
+              const totalMaxSize = sum(originalRows, s => Number(s.max_size));
+              // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+              // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+              // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+              // fill capacity
+              const isVsfOverCapacity =
+                totalMaxSize > totalEffectiveSize && totalAssignedSize > totalEffectiveSize;
+              const label = totalAssignedSize / totalEffectiveSize;
+              const usage = isVsfOverCapacity ? totalEffectiveSize / totalAssignedSize : label;
+              return <FillIndicator barValue={usage} labelValue={label} />;
             } else if (
               originalRows.some(
                 r => r.service_type === 'indexer' || r.service_type === 'middle_manager',
@@ -651,13 +672,27 @@ ORDER BY
               return '';
             }
           },
-          Cell: ({ value, aggregated, original }) => {
+          Cell: ({ aggregated, original }) => {
             if (aggregated) return '';
-            const { service_type } = original;
+            const { service_type, curr_size, max_size, effective_size } = original;
 
             switch (service_type) {
-              case 'historical':
-                return <FillIndicator value={value} />;
+              case 'historical': {
+                // if max_size is greater than effective_size (which is indicative of vsf mode), and assigned size is
+                // greater than effective_size (meaning the node is assigned more segments than it has capacity for),
+                // switch the bar value to show how much capacity is exceeded instead of the normal amount remaining to
+                // fill capacity
+                const isVsfOverCapacity = effective_size < max_size && curr_size > effective_size;
+                const labelValue = Number(curr_size) / Number(effective_size);
+                return (
+                  <FillIndicator
+                    labelValue={labelValue}
+                    barValue={
+                      isVsfOverCapacity ? Number(effective_size) / Number(curr_size) : labelValue
+                    }
+                  />
+                );
+              }
 
               case 'indexer':
               case 'middle_manager': {
