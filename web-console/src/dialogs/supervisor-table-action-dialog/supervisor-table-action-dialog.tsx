@@ -18,7 +18,7 @@
 
 import React, { useState } from 'react';
 
-import { ReindexingTimeline, ShowJson, SupervisorHistoryPanel } from '../../components';
+import { ShowJson, SupervisorHistoryPanel } from '../../components';
 import { cleanSpec } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
@@ -28,7 +28,7 @@ import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
 import { SupervisorStatisticsTable } from './supervisor-statistics-table/supervisor-statistics-table';
 
-type SupervisorTableActionDialogTab = 'status' | 'stats' | 'spec' | 'history' | 'timeline';
+type SupervisorTableActionDialogTab = 'status' | 'stats' | 'spec' | 'history';
 
 interface SupervisorTableActionDialogProps {
   supervisorId: string;
@@ -66,13 +66,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       text: 'History',
       active: activeTab === 'history',
       onClick: () => setActiveTab('history'),
-    },
-    {
-      icon: 'timeline-events',
-      text: 'Timeline',
-      active: activeTab === 'timeline',
-      onClick: () => setActiveTab('timeline'),
-    },
+    }
   ];
 
   const supervisorEndpointBase = `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}`;
@@ -104,7 +98,6 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
         />
       )}
       {activeTab === 'history' && <SupervisorHistoryPanel supervisorId={supervisorId} />}
-      {activeTab === 'timeline' && <ReindexingTimeline supervisorId={supervisorId} />}
     </TableActionDialog>
   );
 });

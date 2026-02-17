@@ -48,7 +48,6 @@ export * from './portal-bubble/portal-bubble';
 export * from './query-error-pane/query-error-pane';
 export * from './record-table-pane/record-table-pane';
 export * from './refresh-button/refresh-button';
-export * from './reindexing-timeline/reindexing-timeline';
 export * from './rule-editor/rule-editor';
 export * from './segment-timeline/segment-timeline';
 export * from './show-json/show-json';
