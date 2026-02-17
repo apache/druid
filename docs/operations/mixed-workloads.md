@@ -191,6 +191,26 @@ druid.broker.select.tier=highestPriority
 
 See [Broker configuration](../configuration/index.md#broker-process-configs) for more details on these properties.
 
+#### Restrict Broker visibility to specific tiers
+
+By default, a Broker watches all Historical tiers for segment availability. Use `druid.broker.segment.watchedTiers` to restrict a Broker to only see segments on specific tiers. This provides strict query isolation—segments on unwatched tiers are invisible to the Broker and cannot be queried through it.
+
+Example config for a Broker that only queries hot tier Historicals:
+```
+druid.broker.segment.watchedTiers=["hot"]
+```
+
+Example config for a Broker that queries both hot and cold tiers:
+```
+druid.broker.segment.watchedTiers=["hot","_default_tier"]
+```
+
+Note the difference between `druid.broker.select.tier` and `druid.broker.segment.watchedTiers`:
+- `druid.broker.select.tier` controls **preference** among visible tiers (which tier to query first)
+- `druid.broker.segment.watchedTiers` controls **visibility** (which tiers the Broker can see at all)
+
+If a segment only exists on a tier not in `watchedTiers`, the Broker will not be aware of that segment and queries for that data will return partial or no results.
+
 #### Configure query routing
 
 Direct the Router to route queries appropriately by setting the default Broker tier and the map of Historical tier to Broker tier in the `router/runtime.properties` file.
