@@ -339,6 +339,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.FIFTEEN_MINUTE));
     Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
@@ -536,6 +537,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     runCompactionWithSpec(compactionConfig);
     waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     int finalSegmentCount = getNumSegmentsWith(Granularities.DAY);
     Assertions.assertEquals(
