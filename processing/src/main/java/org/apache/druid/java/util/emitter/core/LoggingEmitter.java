@@ -237,7 +237,7 @@ public class LoggingEmitter implements Emitter
     }
   }
 
-  private static InputStream openAllowlistFile(String metricAllowlistPath) throws IOException
+  private static InputStream openAllowlistFile(String metricAllowlistPath)
   {
     if (Strings.isNullOrEmpty(metricAllowlistPath)) {
       return openDefaultAllowlistFile();
