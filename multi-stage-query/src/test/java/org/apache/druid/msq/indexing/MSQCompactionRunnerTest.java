@@ -684,7 +684,7 @@ public class MSQCompactionRunnerTest
     context.putAll(contextParams);
 
     builder
-        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
+        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null), true)
         .tuningConfig(createTuningConfig(
             indexSpec,
             partitionsSpec == null ? new DynamicPartitionsSpec(100, null) : partitionsSpec
@@ -758,7 +758,7 @@ public class MSQCompactionRunnerTest
   {
     return new MSQTuningConfig(
         1,
-        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
+        MultiStageQueryContext.DEFAULT_MAX_ROWS_IN_MEMORY,
         MAX_ROWS_PER_SEGMENT,
         null,
         createIndexSpec()

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -260,11 +261,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
-          .create()
+          .create(jsonMapper)
           .tmpDir(tempDirProducer.newTempFolder())
           .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(

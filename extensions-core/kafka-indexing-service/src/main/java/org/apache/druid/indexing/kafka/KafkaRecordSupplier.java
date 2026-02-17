@@ -235,6 +235,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
+  public double getPollIdleRatioMetric()
+  {
+    return monitor.getPollIdleRatioAvg();
+  }
+
+  @Override
   public Set<KafkaTopicPartition> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {

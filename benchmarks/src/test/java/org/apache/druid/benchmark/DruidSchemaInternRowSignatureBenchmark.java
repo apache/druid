@@ -189,7 +189,8 @@ public class DruidSchemaInternRowSignatureBenchmark
         "dummy",
         "dummy",
         "dummy",
-        42,
+        42L,
+        null,
         ServerType.HISTORICAL,
         "tier-0",
         0

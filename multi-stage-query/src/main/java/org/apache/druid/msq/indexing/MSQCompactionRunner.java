@@ -339,7 +339,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     // We don't consider maxRowsInMemory coming via CompactionTuningConfig since it always sets a default value if no
     // value specified by user.
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(compactionTaskContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getMaxRowsInMemory(compactionTaskContext);
     final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(compactionTaskContext);
 
     Integer rowsPerSegment = getRowsPerSegment(compactionTask);
@@ -411,12 +411,19 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
 
-    if (isQueryGranularityEmptyOrNone(dataSchema)) {
-      // Dimensions in group-by aren't allowed to have time column name as the output name.
-      dimensionSpecs.add(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
-    } else {
-      // The changed granularity would result in a new virtual column that needs to be aggregated upon.
-      dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+    // if schema is not time-sorted, the time column mapping would already be in inputColToVirtualCol
+    if (!dataSchema.getDimensionsSpec().getDimensionNames().contains(ColumnHolder.TIME_COLUMN_NAME)) {
+      if (isQueryGranularityEmptyOrNone(dataSchema)) {
+        // Dimensions in group-by aren't allowed to have time column name as the output name.
+        dimensionSpecs.add(new DefaultDimensionSpec(
+            ColumnHolder.TIME_COLUMN_NAME,
+            TIME_VIRTUAL_COLUMN,
+            ColumnType.LONG
+        ));
+      } else {
+        // The changed granularity would result in a new virtual column that needs to be aggregated upon.
+        dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
+      }
     }
     // If virtual columns are created from dimensions, replace dimension columns names with virtual column names.
     dimensionSpecs.addAll(
@@ -717,40 +724,57 @@ public class MSQCompactionRunner implements CompactionRunner
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] MSQControllerTask specs", totalNumSpecs);
 
+    TaskStatus firstFailure = null;
     int failCnt = 0;
 
-    for (MSQControllerTask eachTask : tasks) {
-      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachTask);
-      if (!currentSubTaskHolder.setTask(eachTask)) {
+    for (int taskCnt = 0; taskCnt < tasks.size(); taskCnt++) {
+      final MSQControllerTask task = tasks.get(taskCnt);
+      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task);
+      if (!currentSubTaskHolder.setTask(task)) {
         String errMsg = "Task was asked to stop. Finish as failed.";
-        log.info(errMsg);
+        log.info("%s", errMsg);
         return TaskStatus.failure(compactionTaskId, errMsg);
       }
       try {
-        if (eachTask.isReady(toolbox.getTaskActionClient())) {
-          log.info("Running MSQControllerTask: " + json);
-          final TaskStatus eachResult = eachTask.run(toolbox);
-          if (!eachResult.isSuccess()) {
+        if (task.isReady(toolbox.getTaskActionClient())) {
+          log.info("Running MSQControllerTask number[%d]: %s", taskCnt, json);
+          final TaskStatus taskStatus = task.run(toolbox);
+          if (!taskStatus.isSuccess()) {
             failCnt++;
-            log.warn("Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+            log.warn("Failed to run MSQControllerTask number[%d]: %s", taskCnt, taskStatus.getErrorMsg());
+            if (firstFailure == null) {
+              firstFailure = taskStatus;
+            }
           }
         } else {
           failCnt++;
-          log.warn("MSQControllerTask is not ready: [%s].\nTrying the next MSQControllerTask.", json);
+          log.warn("MSQControllerTask number[%d] is not ready.", taskCnt);
         }
       }
       catch (Exception e) {
         failCnt++;
-        log.warn(e, "Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+        log.warn(e, "Failed to run MSQControllerTask number[%d].", taskCnt);
       }
     }
-    String msg = StringUtils.format(
+
+    log.info(
         "Ran [%d] MSQControllerTasks, [%d] succeeded, [%d] failed",
         totalNumSpecs,
         totalNumSpecs - failCnt,
         failCnt
     );
-    log.info(msg);
-    return failCnt == 0 ? TaskStatus.success(compactionTaskId) : TaskStatus.failure(compactionTaskId, msg);
+
+    if (failCnt == 0) {
+      return TaskStatus.success(compactionTaskId);
+    } else if (firstFailure != null && failCnt == 1) {
+      return TaskStatus.failure(compactionTaskId, firstFailure.getErrorMsg());
+    } else {
+      final StringBuilder msgBuilder =
+          new StringBuilder().append(failCnt).append("/").append(totalNumSpecs).append(" jobs failed");
+      if (firstFailure != null) {
+        msgBuilder.append("; first failure was: ").append(firstFailure.getErrorMsg());
+      }
+      return TaskStatus.failure(compactionTaskId, msgBuilder.toString());
+    }
   }
 }

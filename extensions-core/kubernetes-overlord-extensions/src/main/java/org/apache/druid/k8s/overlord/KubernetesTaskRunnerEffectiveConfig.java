@@ -177,6 +177,18 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
     return dynamicConfigSupplier.get().getCapacity();
   }
 
+  @Override
+  public boolean isUseK8sSharedInformers()
+  {
+    return staticConfig.isUseK8sSharedInformers();
+  }
+
+  @Override
+  public Period getK8sSharedInformerResyncPeriod()
+  {
+    return staticConfig.getK8sSharedInformerResyncPeriod();
+  }
+
   public PodTemplateSelectStrategy getPodTemplateSelectStrategy()
   {
     if (dynamicConfigSupplier == null || dynamicConfigSupplier.get() == null || dynamicConfigSupplier.get().getPodTemplateSelectStrategy() == null) {

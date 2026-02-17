@@ -255,7 +255,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(20, localStorageFolder, interval, segmentsToLoad);
@@ -281,7 +281,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   @Test
   public void testAcquireSegmentBulkFailTooManySegments() throws IOException
   {
-    final File localStorageFolder = new File("local_storage_folder");
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(30, localStorageFolder, interval, segmentsToLoad);
@@ -319,7 +319,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, false, sleepy, false);
+      testWeakLoad(iterations, segmentCount, concurrentReads, false, sleepy, false, false);
     }
   }
 
@@ -337,7 +337,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true, false);
     }
   }
 
@@ -355,7 +355,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true, false);
     }
   }
 
@@ -373,7 +373,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     for (boolean sleepy : new boolean[]{true, false}) {
       // use different segments for each run, otherwise the 2nd run is all cache hits
-      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true, true);
     }
   }
 
@@ -489,7 +489,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
     assertNoLooseEnds();
   }
 
@@ -565,7 +567,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     // expect at least some empties from the segment not being cached
     Assertions.assertTrue(totalEmpty > 0);
     Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     assertNoLooseEnds();
   }
@@ -576,7 +580,8 @@ class SegmentLocalCacheManagerConcurrencyTest
       int concurrentReads,
       boolean random,
       boolean sleepy,
-      boolean expectHits
+      boolean expectHits,
+      boolean expectNoFailures
   )
   {
     int totalSuccess = 0;
@@ -634,6 +639,10 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertTrue(totalFailures <= location.getWeakStats().getRejectCount() + location2.getWeakStats()
                                                                                                .getRejectCount());
 
+    if (expectNoFailures) {
+      Assertions.assertEquals(0, totalFailures);
+      Assertions.assertEquals(iterations, totalSuccess);
+    }
     if (expectHits) {
       Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
       Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
@@ -708,7 +717,84 @@ class SegmentLocalCacheManagerConcurrencyTest
     return new BatchResult(exceptions, success, rows);
   }
 
+  @Test
+  public void testAcquireSegmentOnDemandRandomSegmentWithInterrupt() throws IOException, InterruptedException
+  {
+    final int segmentCount = 8;
+    final int iterations = 2000;
+    final int concurrentReads = 10;
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
+    final Interval interval = Intervals.of("2019-01-01/P1D");
+
+    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
+
+    final List<DataSegment> currentBatch = new ArrayList<>();
+    for (int i = 0; i < iterations; i++) {
+      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
+      // process batches of 10 requests at a time
+      if (currentBatch.size() == concurrentReads) {
+        final List<InterruptedLoad> weakLoads = currentBatch
+            .stream()
+            .map(segment -> new InterruptedLoad(virtualStorageManager, segment))
+            .collect(Collectors.toList());
+        final List<Future<Integer>> futures = new ArrayList<>();
+        for (InterruptedLoad weakLoad : weakLoads) {
+          futures.add(executorService.submit(weakLoad));
+        }
+        for (Future<Integer> future : futures) {
+          try {
+            future.get(20L, TimeUnit.MILLISECONDS);
+          }
+          catch (Throwable t) {
+          }
+        }
+        while (true) {
+          boolean allDone = true;
+          for (Future<?> f : futures) {
+            allDone = allDone && f.isDone();
+          }
+          if (allDone) {
+            break;
+          }
+          Thread.sleep(5);
+        }
+        Assertions.assertEquals(0, location.getActiveWeakHolds());
+        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+        currentBatch.clear();
+      }
+    }
+
+    Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
+
+    // now ensure that we can successfully do stuff after all those interrupts
+    int totalSuccess = 0;
+    int totalFailures = 0;
+    for (int i = 0; i < iterations; i++) {
+      int segment = ThreadLocalRandom.current().nextInt(segmentCount);
+      currentBatch.add(segmentsToWeakLoad.get(segment));
+      // process batches of 10 requests at a time
+      if (currentBatch.size() == concurrentReads) {
+
+        BatchResult result = testWeakBatch(i, currentBatch, false);
+        totalSuccess += result.success;
+        totalFailures += result.exceptions.size();
+        currentBatch.clear();
+      }
+    }
+    Assertions.assertEquals(iterations, totalSuccess);
+    Assertions.assertEquals(0, totalFailures);
+    Assertions.assertEquals(0, location.getActiveWeakHolds());
+    Assertions.assertEquals(0, location2.getActiveWeakHolds());
+    Assertions.assertTrue(4 >= location.getWeakEntryCount());
+    Assertions.assertTrue(4 >= location2.getWeakEntryCount());
+    // 5 because __drop path
+    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
+  }
 
   private void assertNoLooseEnds()
   {
@@ -923,6 +1009,43 @@ class SegmentLocalCacheManagerConcurrencyTest
       finally {
         CloseableUtils.closeAndWrapExceptions(closer);
       }
+    }
+  }
+
+  private static class InterruptedLoad implements Callable<Integer>
+  {
+    private final SegmentLocalCacheManager segmentManager;
+    private final DataSegment segment;
+
+    private InterruptedLoad(
+        SegmentLocalCacheManager segmentManager,
+        DataSegment segment
+    )
+    {
+      this.segmentManager = segmentManager;
+      this.segment = segment;
+    }
+
+    @Override
+    public Integer call() throws SegmentLoadingException
+    {
+      final Closer closer = Closer.create();
+      final AcquireSegmentAction action = closer.register(
+          segmentManager.acquireSegment(segment)
+      );
+      try {
+        final Future<AcquireSegmentResult> result = action.getSegmentFuture();
+        Thread.sleep(ThreadLocalRandom.current().nextInt(50));
+        result.cancel(true);
+        Thread.currentThread().interrupt();
+      }
+      catch (Throwable t) {
+        throw new RuntimeException(t);
+      }
+      finally {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+      return null;
     }
   }
 }

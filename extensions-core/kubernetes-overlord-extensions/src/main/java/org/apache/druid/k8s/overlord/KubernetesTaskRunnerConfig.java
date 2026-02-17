@@ -72,6 +72,25 @@ public interface KubernetesTaskRunnerConfig
 
   Integer getCapacity();
 
+  /**
+   * Whether to use caching for Kubernetes resources tied to indexing tasks.
+   * <p>
+   * Enabling shared informers can significantly reduce the number of API calls made to the Kubernetes API server,
+   * improving performance and reducing load on the server. However, it also increases memory usage as informers
+   * maintain local caches of resources.
+   * </p>
+   */
+  boolean isUseK8sSharedInformers();
+
+  /**
+   * The resync period for the Kubernetes shared informers, if enabled.
+   * <p>
+   * Periodic resyncs ensure that the informer's local cache is kept up to date with the remote Kubernetes API server
+   * state. This helps handle missed events or transient errors.
+   * </p>
+   */
+  Period getK8sSharedInformerResyncPeriod();
+
   static Builder builder()
   {
     return new Builder();
@@ -100,6 +119,8 @@ public interface KubernetesTaskRunnerConfig
     private Integer capacity;
     private Period taskJoinTimeout;
     private Period logSaveTimeout;
+    private boolean useK8sSharedInformers;
+    private Period k8sSharedInformerResyncPeriod;
 
     public Builder()
     {
@@ -232,6 +253,18 @@ public interface KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withUseK8sSharedInformers(boolean useK8sSharedInformers)
+    {
+      this.useK8sSharedInformers = useK8sSharedInformers;
+      return this;
+    }
+
+    public Builder withK8sSharedInformerResyncPeriod(Period k8sSharedInformerResyncPeriod)
+    {
+      this.k8sSharedInformerResyncPeriod = k8sSharedInformerResyncPeriod;
+      return this;
+    }
+
     public KubernetesTaskRunnerStaticConfig build()
     {
       return new KubernetesTaskRunnerStaticConfig(
@@ -255,7 +288,9 @@ public interface KubernetesTaskRunnerConfig
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout
+          this.taskJoinTimeout,
+          this.useK8sSharedInformers,
+          this.k8sSharedInformerResyncPeriod
       );
     }
   }

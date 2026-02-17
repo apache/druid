@@ -104,6 +104,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
@@ -127,6 +128,8 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -1599,7 +1602,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     final CompactionTask compactionTask = builder.build();
     // granularitySpec=null should assume a possible rollup
@@ -1613,7 +1616,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
                                             .withForceGuaranteedRollup(true)
@@ -1637,7 +1640,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
 
@@ -1655,7 +1658,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
 
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
@@ -1682,7 +1685,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)), true);
     builder.compactionRunner(new TestMSQCompactionRunner());
 
     DimensionSchema stringDim = new AutoTypeColumnSchema("string_dim_1", ColumnType.STRING, null);
@@ -1973,6 +1976,18 @@ public class CompactionTaskTest
       {
         return Optional.of(
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
+      }
+
+      @Override
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+      {
+        final Segment segment =
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
+        final ReferenceCountedSegmentProvider provider = ReferenceCountedSegmentProvider.of(segment);
+        return new AcquireSegmentAction(
+            () -> Futures.immediateFuture(AcquireSegmentResult.cached(provider)),
+            null
         );
       }
 

@@ -33,7 +33,7 @@ import org.testcontainers.redpanda.RedpandaContainer;
  */
 public class KafkaSchemaRegistryResource extends TestcontainerResource<RedpandaContainer>
 {
-  private static final String SCHEMA_REGISTRY_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v25.2.2";
+  private static final String SCHEMA_REGISTRY_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v25.3.5";
   private static final int SCHEMA_REGISTRY_PORT = 8081;
 
   private final KafkaResource kafkaResource;

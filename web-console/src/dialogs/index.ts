@@ -31,6 +31,7 @@ export * from './lookup-edit-dialog/lookup-edit-dialog';
 export * from './numeric-input-dialog/numeric-input-dialog';
 export * from './overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
 export * from './retention-dialog/retention-dialog';
+export * from './service-table-action-dialog/service-table-action-dialog';
 export * from './snitch-dialog/snitch-dialog';
 export * from './spec-dialog/spec-dialog';
 export * from './string-input-dialog/string-input-dialog';

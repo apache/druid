@@ -30,7 +30,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
-import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.TestLoadSpecHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -300,20 +300,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new LoadSpecHolder()
-        {
-          @Override
-          public LookupLoadingSpec getLookupLoadingSpec()
-          {
-            return LookupLoadingSpec.ALL;
-          }
-
-          @Override
-          public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
-          {
-            return BroadcastDatasourceLoadingSpec.NONE;
-          }
-        }
+        new TestLoadSpecHolder(LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -362,20 +349,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new LoadSpecHolder()
-        {
-          @Override
-          public LookupLoadingSpec getLookupLoadingSpec()
-          {
-            return LookupLoadingSpec.NONE;
-          }
-
-          @Override
-          public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
-          {
-            return BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1"));
-          }
-        }
+        new TestLoadSpecHolder(LookupLoadingSpec.NONE, BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1")))
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());

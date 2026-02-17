@@ -37,6 +37,7 @@ public class TaskConfigBuilder
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
   private boolean allowHadoopTaskExecution;
+  private boolean buildV10;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
   {
@@ -104,6 +105,12 @@ public class TaskConfigBuilder
     return this;
   }
 
+  public TaskConfigBuilder setBuildV10(boolean buildV10)
+  {
+    this.buildV10 = buildV10;
+    return this;
+  }
+
   public TaskConfig build()
   {
     return new TaskConfig(
@@ -117,7 +124,8 @@ public class TaskConfigBuilder
         storeEmptyColumns,
         enableTaskLevelLogPush,
         tmpStorageBytesPerTask,
-        allowHadoopTaskExecution
+        allowHadoopTaskExecution,
+        buildV10
     );
   }
 }

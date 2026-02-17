@@ -23,9 +23,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Emits metrics from {@link SegmentGenerationMetrics} and {@link RowIngestionMeters}.
@@ -51,7 +56,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.rowIngestionMeters = rowIngestionMeters;
     this.builder = metricEventBuilder;
     previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
-    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
+    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, Map.of(), 0);
   }
 
   @Override
@@ -60,14 +65,30 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     SegmentGenerationMetrics metrics = segmentGenerationMetrics.snapshot();
     RowIngestionMetersTotals rowIngestionMetersTotals = rowIngestionMeters.getTotals();
 
-    final long thrownAway = rowIngestionMetersTotals.getThrownAway() - previousRowIngestionMetersTotals.getThrownAway();
-    if (thrownAway > 0) {
+    // Emit per-reason metrics with the reason dimension
+    final Map<String, Long> currentThrownAwayByReason = rowIngestionMetersTotals.getThrownAwayByReason();
+    final Map<String, Long> previousThrownAwayByReason = previousRowIngestionMetersTotals.getThrownAwayByReason();
+    final Map<String, Long> deltaThrownAwayByReason = new HashMap<>();
+    for (InputRowFilterResult reason : InputRowFilterResult.rejectedValues()) {
+      final long currentCount = currentThrownAwayByReason.getOrDefault(reason.getReason(), 0L);
+      final long previousCount = previousThrownAwayByReason.getOrDefault(reason.getReason(), 0L);
+      final long delta = currentCount - previousCount;
+      if (delta > 0) {
+        deltaThrownAwayByReason.put(reason.getReason(), delta);
+        emitter.emit(
+            builder.setDimension(DruidMetrics.REASON, reason.getReason())
+                   .setMetric("ingest/events/thrownAway", delta)
+        );
+      }
+    }
+    final long totalThrownAway = deltaThrownAwayByReason.values().stream().reduce(0L, Long::sum);
+    if (totalThrownAway > 0) {
       log.warn(
-          "[%,d] events thrown away. Possible causes: null events, events filtered out by transformSpec, or events outside earlyMessageRejectionPeriod / lateMessageRejectionPeriod.",
-          thrownAway
+          "[%,d] events thrown away. Breakdown: [%s]",
+          totalThrownAway,
+          deltaThrownAwayByReason
       );
     }
-    emitter.emit(builder.setMetric("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()
                              - previousRowIngestionMetersTotals.getUnparseable();

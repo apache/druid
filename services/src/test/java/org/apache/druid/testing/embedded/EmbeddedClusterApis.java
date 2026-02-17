@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
@@ -35,13 +36,13 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.http.ResultFormat;
@@ -53,12 +54,14 @@ import org.junit.jupiter.api.Assertions;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Contains various utility methods to interact with an {@link EmbeddedDruidCluster}.
@@ -121,6 +124,19 @@ public class EmbeddedClusterApis implements EmbeddedResource
   public <T> T onAnyBroker(Function<BrokerClient, ListenableFuture<T>> brokerApi)
   {
     return client.onAnyBroker(brokerApi);
+  }
+
+  public <T> T onTargetBroker(EmbeddedBroker targetBroker, Function<BrokerClient, ListenableFuture<T>> brokerApi)
+  {
+    return client.onTargetBroker(targetBroker, brokerApi);
+  }
+
+  public <T> ListenableFuture<T> onTargetBrokerAsync(
+      EmbeddedBroker targetBroker,
+      Function<BrokerClient, ListenableFuture<T>> brokerApi
+  )
+  {
+    return client.onTargetBrokerAsync(targetBroker, brokerApi);
   }
 
   /**
@@ -231,6 +247,26 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
+   * Gets the count of tasks with the given status for the specified datasource.
+   */
+  public int getTaskCount(String status, String dataSource)
+  {
+    return getTasks(dataSource, status).size();
+  }
+
+  /**
+   * Gets the details of tasks with the given state for the specified datasource.
+   * Valid task states are "pending", "waiting", "running", "complete".
+   */
+  public List<TaskStatusPlus> getTasks(String dataSource, String taskState)
+  {
+    return ImmutableList.copyOf(
+        (Iterator<? extends TaskStatusPlus>)
+            onLeaderOverlord(o -> o.taskStatuses(taskState, dataSource, 100))
+    );
+  }
+
+  /**
    * Retrieves all used segments from the metadata store (or cache if applicable).
    */
   public Set<DataSegment> getVisibleUsedSegments(String dataSource, EmbeddedOverlord overlord)
@@ -334,6 +370,22 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
+   * Creates a waiter that can wait for a result to match a matcher. Make sure to call {@link ResultWaiter#go()}
+   * or else the waiter will not do anything.
+   *
+   * In general, you should prefer using {@link LatchableEmitter} rather than this method, because it doesn't need
+   * retry loops and is therefore both more responsive, and better at catching race conditions. Use this method
+   * when there is no metric to wait on, and you believe that adding one would be overkill.
+   */
+  public <T> ResultWaiter<T> waitForResult(
+      final ExceptionalSupplier<T> resultSupplier,
+      final Predicate<T> resultMatcher
+  )
+  {
+    return new ResultWaiter<>(resultSupplier, resultMatcher);
+  }
+
+  /**
    * Returns a {@link Closeable} that deletes all the data for the given datasource
    * on {@link Closeable#close()}.
    */
@@ -412,11 +464,11 @@ public class EmbeddedClusterApis implements EmbeddedResource
   // STATIC UTILITY METHODS
 
   /**
-   * Creates a random datasource name prefixed with {@link TestDataSource#WIKI}.
+   * Creates a random datasource name prefixed with {@code datasource_}.
    */
   public static String createTestDatasourceName()
   {
-    return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
+    return "datasource_" + IdUtils.getRandomId();
   }
 
   /**
@@ -463,9 +515,75 @@ public class EmbeddedClusterApis implements EmbeddedResource
     return alignedIntervals;
   }
 
+  /**
+   * Waiter returned by {@link #waitForResult}.
+   */
+  public static class ResultWaiter<T>
+  {
+    private final ExceptionalSupplier<T> resultSupplier;
+    private final Predicate<T> resultMatcher;
+    private long timeoutMillis = 10_000;
+    private long retryMillis = 250;
+
+    private ResultWaiter(ExceptionalSupplier<T> resultSupplier, Predicate<T> resultMatcher)
+    {
+      this.resultSupplier = resultSupplier;
+      this.resultMatcher = resultMatcher;
+    }
+
+    public ResultWaiter<T> withTimeoutMillis(final long timeoutMillis)
+    {
+      this.timeoutMillis = timeoutMillis;
+      return this;
+    }
+
+    public ResultWaiter<T> withRetryMillis(final long retryMillis)
+    {
+      this.retryMillis = retryMillis;
+      return this;
+    }
+
+    /**
+     * Start checking for the result and return it when it's available.
+     */
+    public T go()
+    {
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+
+      try {
+        T t = resultSupplier.get();
+        boolean matches;
+        while (!(matches = resultMatcher.test(t)) && stopwatch.millisElapsed() < timeoutMillis) {
+          Thread.sleep(retryMillis);
+          t = resultSupplier.get();
+        }
+
+        if (matches) {
+          return t;
+        } else {
+          throw new ISE("Condition not met after [%,d] ms. Final object was [%s].", stopwatch.millisElapsed(), t);
+        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      catch (Throwable e) {
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
   @FunctionalInterface
   public interface TaskBuilder
   {
     Object build(String dataSource, String taskId);
+  }
+
+  @FunctionalInterface
+  public interface ExceptionalSupplier<T>
+  {
+    T get() throws Throwable;
   }
 }

@@ -172,7 +172,7 @@ public class ReservoirSegmentSamplerTest
     final ServerHolder historical = createHistorical("hist1", segments.get(0), segments.get(1));
 
     final ServerHolder broker = new ServerHolder(
-        new DruidServer("broker1", "broker1", null, 1000, ServerType.BROKER, null, 1)
+        new DruidServer("broker1", "broker1", null, 1000, null, ServerType.BROKER, null, 1)
             .addDataSegment(segments.get(2))
             .addDataSegment(segments.get(3))
             .toImmutableDruidServer(),
@@ -377,7 +377,7 @@ public class ReservoirSegmentSamplerTest
   private ServerHolder createHistorical(String serverName, DataSegment... loadedSegments)
   {
     final DruidServer server =
-        new DruidServer(serverName, serverName, null, 100000, ServerType.HISTORICAL, "normal", 1);
+        new DruidServer(serverName, serverName, null, 100000, null, ServerType.HISTORICAL, "normal", 1);
     for (DataSegment segment : loadedSegments) {
       server.addDataSegment(segment);
     }

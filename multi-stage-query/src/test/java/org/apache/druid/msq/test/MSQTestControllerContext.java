@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -72,6 +73,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -84,6 +87,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 public class MSQTestControllerContext implements ControllerContext, DartControllerContextFactory
@@ -93,10 +98,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   private final TaskActionClient taskActionClient;
   private final ConcurrentHashMap<String, WorkerRunRef> inMemoryWorkers = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-      NUM_WORKERS,
-      "MultiStageQuery-test-controller-client"
-  ));
+  public static final ExecutorService POOL = Execs.multiThreaded(NUM_WORKERS, "MSQTestControllerContext-worker-%d");
+  public static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(POOL);
   private final File tempDir = FileUtils.createTempDir();
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
@@ -124,10 +127,10 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
       Injector injector,
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
-      List<ImmutableSegmentLoadInfo> loadedSegments,
       TaskLockType taskLockType,
       QueryContext queryContext,
-      ServiceEmitter serviceEmitter
+      ServiceEmitter serviceEmitter,
+      CoordinatorClient coordinatorClient
   )
   {
     this.queryId = queryId;
@@ -135,8 +138,35 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     this.serviceEmitter = serviceEmitter;
-    coordinatorClient = Mockito.mock(CoordinatorClient.class);
+    this.coordinatorClient = coordinatorClient;
+    this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
+    this.queryContext = queryContext;
+  }
 
+  public MSQTestControllerContext(
+      String queryId,
+      ObjectMapper mapper,
+      Injector injector,
+      TaskActionClient taskActionClient,
+      WorkerMemoryParameters workerMemoryParameters,
+      List<ImmutableSegmentLoadInfo> loadedSegments,
+      TaskLockType taskLockType,
+      QueryContext queryContext,
+      ServiceEmitter serviceEmitter
+  )
+  {
+    this(
+        queryId,
+        mapper,
+        injector,
+        taskActionClient,
+        workerMemoryParameters,
+        taskLockType,
+        queryContext,
+        serviceEmitter,
+        Mockito.mock(CoordinatorClient.class)
+    );
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                      ArgumentMatchers.anyString(),
                      ArgumentMatchers.any()
@@ -148,9 +178,58 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
                                                                                  .equals(invocation.getArguments()[0]))
                                              .collect(Collectors.toList())
     );
-    this.workerMemoryParameters = workerMemoryParameters;
-    this.taskLockType = taskLockType;
-    this.queryContext = queryContext;
+
+    Mockito.when(
+        coordinatorClient.fetchSegment(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.anyBoolean()
+        )
+    ).thenAnswer(invocation -> {
+      final SegmentId segmentId = SegmentId.tryParse(invocation.getArgument(0), invocation.getArgument(1));
+      final DataSegment found =
+          loadedSegments.stream()
+                        .map(ImmutableSegmentLoadInfo::getSegment)
+                        .filter(segment -> segment.getId().equals(segmentId))
+                        .findFirst()
+                        .orElse(null);
+
+      if (found != null) {
+        return Futures.immediateFuture(found);
+      } else {
+        return Futures.immediateFailedFuture(new ISE("Segment[%s] not found", segmentId));
+      }
+    });
+  }
+
+  /**
+   * Waits for all tasks in {@link #POOL}, which workers run in, to exit. Throws an exception if they do
+   * not exit within 10 seconds.
+   */
+  public static void waitForWorkersToExit()
+  {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    int activeCount;
+
+    do {
+      activeCount = ((ThreadPoolExecutor) POOL).getActiveCount();
+      if (activeCount > 0) {
+        try {
+          Thread.sleep(100);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    } while (activeCount > 0 && stopwatch.millisElapsed() < 10_000);
+
+    if (activeCount > 0) {
+      throw new ISE(
+          "Worker executor still had [%,d] workers running after [%,d] ms",
+          activeCount,
+          stopwatch.millisElapsed()
+      );
+    }
   }
 
   OverlordClient overlordClient = new NoopOverlordClient()
@@ -181,12 +260,13 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
               injector,
               workerMemoryParameters,
               workerStorageParameters,
-              serviceEmitter
+              serviceEmitter,
+              coordinatorClient
           )
       );
       final WorkerRunRef workerRunRef = new WorkerRunRef();
-      ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
       inMemoryWorkers.put(task.getId(), workerRunRef);
+      ListenableFuture<?> future = workerRunRef.run(worker, EXECUTOR);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
       Futures.addCallback(future, new FutureCallback<Object>()

@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocator;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -63,7 +62,7 @@ public class OutputChannel
     this.readableChannelSupplier = readableChannelSupplier;
     this.partitionNumber = partitionNumber;
 
-    if (partitionNumber < 0 && partitionNumber != FrameWithPartition.NO_PARTITION) {
+    if (partitionNumber < 0 && partitionNumber != WritableFrameChannel.NO_PARTITION) {
       throw new IAE("Invalid partition number [%d]", partitionNumber);
     }
   }
@@ -75,7 +74,7 @@ public class OutputChannel
    * @param frameMemoryAllocator    memory allocator for producer to use while writing frames to the channel
    * @param readableChannelSupplier readable channel for consumer. May be called multiple times, so you should wrap this
    *                                in {@link Suppliers#memoize} if needed.
-   * @param partitionNumber         partition number, if any; may be {@link FrameWithPartition#NO_PARTITION} if unknown
+   * @param partitionNumber         partition number, if any; may be {@link WritableFrameChannel#NO_PARTITION} if unknown
    */
   public static OutputChannel pair(
       final WritableFrameChannel writableChannel,
@@ -98,7 +97,7 @@ public class OutputChannel
    * @param writableChannel      writable channel for producer
    * @param frameMemoryAllocator memory allocator for producer to use while writing frames to the channel
    * @param readableChannel      readable channel for consumer
-   * @param partitionNumber      partition number, if any; may be {@link FrameWithPartition#NO_PARTITION} if unknown
+   * @param partitionNumber      partition number, if any; may be {@link WritableFrameChannel#NO_PARTITION} if unknown
    */
   public static OutputChannel immediatelyReadablePair(
       final WritableFrameChannel writableChannel,
@@ -119,7 +118,7 @@ public class OutputChannel
    * Creates a read-only output channel.
    *
    * @param readableChannel readable channel for consumer.
-   * @param partitionNumber partition number, if any; may be {@link FrameWithPartition#NO_PARTITION} if unknown
+   * @param partitionNumber partition number, if any; may be {@link WritableFrameChannel#NO_PARTITION} if unknown
    */
   public static OutputChannel readOnly(
       final ReadableFrameChannel readableChannel,
@@ -134,7 +133,7 @@ public class OutputChannel
    *
    * @param readableChannelSupplier readable channel for consumer. May be called multiple times, so you should wrap this
    *                                in {@link Suppliers#memoize} if needed.
-   * @param partitionNumber         partition number, if any; may be {@link FrameWithPartition#NO_PARTITION} if unknown
+   * @param partitionNumber         partition number, if any; may be {@link WritableFrameChannel#NO_PARTITION} if unknown
    */
   public static OutputChannel readOnly(
       final Supplier<ReadableFrameChannel> readableChannelSupplier,

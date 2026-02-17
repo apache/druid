@@ -125,6 +125,6 @@ If you face difficulty grasping why access is denied to certain elements, and th
 ```xml
 <!-- Set level="debug" to see access requests to Apache Ranger -->
 <Logger name="org.apache.druid.security" level="debug" additivity="false">
-  <Appender-ref ref="Console"/>
+  <AppenderRef ref="Console"/>
 </Logger>
 ```

@@ -2132,7 +2132,7 @@ public class MSQWindowTest extends MSQTestBase
 
         // Stage 4, Worker 0
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(337).frames(1),
+            CounterSnapshotMatcher.with().rows(3).bytes(405).frames(3),
             4, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -2146,7 +2146,7 @@ public class MSQWindowTest extends MSQTestBase
 
         // Stage 4, Worker 1
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 2).bytes(0, 235).frames(0, 1),
+            CounterSnapshotMatcher.with().rows(0, 2).bytes(0, 269).frames(0, 2),
             4, 1, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -2160,7 +2160,7 @@ public class MSQWindowTest extends MSQTestBase
 
         // Stage 4, Worker 2
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 0, 4).bytes(0, 0, 418).frames(0, 0, 1),
+            CounterSnapshotMatcher.with().rows(0, 0, 4).bytes(0, 0, 452).frames(0, 0, 2),
             4, 2, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -2174,7 +2174,7 @@ public class MSQWindowTest extends MSQTestBase
 
         // Stage 4, Worker 3
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 0, 0, 4).bytes(0, 0, 0, 439).frames(0, 0, 0, 1),
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 4).bytes(0, 0, 0, 473).frames(0, 0, 0, 2),
             4, 3, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(

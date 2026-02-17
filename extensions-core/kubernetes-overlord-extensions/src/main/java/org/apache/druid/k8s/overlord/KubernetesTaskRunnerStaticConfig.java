@@ -144,6 +144,13 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
+  @JsonProperty
+  // enable using kubernetes informer cache for peon client operations
+  private boolean useK8sSharedInformers = false;
+
+  @JsonProperty
+  private Period k8sSharedInformerResyncPeriod = new Period("PT5M");
+
   public KubernetesTaskRunnerStaticConfig()
   {
   }
@@ -169,7 +176,9 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity,
-      Period taskJoinTimeout
+      Period taskJoinTimeout,
+      boolean useK8sSharedInformers,
+      Period k8sSharedInformerResyncPeriod
   )
   {
     this.namespace = namespace;
@@ -246,6 +255,14 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
     this.capacity = ObjectUtils.getIfNull(
         capacity,
         this.capacity
+    );
+    this.useK8sSharedInformers = ObjectUtils.getIfNull(
+        useK8sSharedInformers,
+        this.useK8sSharedInformers
+    );
+    this.k8sSharedInformerResyncPeriod = ObjectUtils.getIfNull(
+        k8sSharedInformerResyncPeriod,
+        this.k8sSharedInformerResyncPeriod
     );
   }
 
@@ -375,5 +392,17 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   public Integer getCapacity()
   {
     return capacity;
+  }
+
+  @Override
+  public boolean isUseK8sSharedInformers()
+  {
+    return useK8sSharedInformers;
+  }
+
+  @Override
+  public Period getK8sSharedInformerResyncPeriod()
+  {
+    return k8sSharedInformerResyncPeriod;
   }
 }

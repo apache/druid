@@ -84,6 +84,8 @@ The following table outlines the configuration properties for `autoScalerConfig`
 
 ##### Autoscaler strategy
 
+**1. Lag-based autoscaler strategy**
+
 :::info
 Unlike the Kafka indexing service, Kinesis reports lag metrics as the time difference in milliseconds between the current sequence number and the latest sequence number, rather than message count.
 :::
@@ -186,6 +188,55 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 }
 ```
 </details>
+
+**2. Cost-based autoscaler strategy (experimental)**
+
+An autoscaler which computes the required supervisor task count via cost function based on ingestion lag and poll-to-idle ratio.
+Task counts are selected from a bounded range derived from the current partitions-per-task ratio,
+not strictly from factors/divisors of the partition count. This bounded partitions-per-task window enables gradual scaling while
+voiding large jumps and still allowing non-divisor task counts when needed.
+
+**It is experimental and the implementation details as well as cost function parameters are subject to change.**
+
+Note: Kinesis is not supported yet, support is in progress.
+
+The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
+
+| Property|Description|Required|Default|
+|---------|-----------|--------|-------|
+|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered. | No | 600000 |
+|`lagWeight`|The weight of extracted lag value in cost function.| No| 0.25 |
+|`idleWeight`|The weight of extracted poll idle value in cost function. | No | 0.75 |
+|`defaultProcessingRate`|A planned processing rate per task, required for first cost estimations. | No | 1000 |
+|`useTaskCountBoundaries`|Enables the bounded partitions-per-task window when selecting task counts.|No| `false` |
+|`highLagThreshold`|Per-partition lag threshold that triggers burst scale-up when set to a value greater than `0`. Set to a negative value to disable burst scale-up.|No|-1|
+|`minScaleDownDelay`|Minimum duration between successful scale actions, specified as an ISO-8601 duration string.|No|`PT30M`|
+|`scaleDownDuringTaskRolloverOnly`|Indicates whether task scaling down is limited to periods during task rollovers only.|No|`false`|
+
+The following example shows a supervisor spec with `lagBased` autoscaler:
+
+<details>
+  <summary>Click to view the example</summary>
+
+```json
+{
+  "ioConfig": {
+    "stream": "metrics",
+    "autoScalerConfig": {
+      "enableTaskAutoScaler": true,
+      "autoScalerStrategy": "costBased",
+      "taskCountMin": 1,
+      "taskCountMax": 10,
+      "minTriggerScaleActionFrequencyMillis": 600000,
+      "lagWeight": 0.1,
+      "idleWeight": 0.9,
+      "defaultProcessingRate": 100
+    }
+  }
+}
+```
+</details>
+
 
 #### `stopTaskCount`
 
@@ -423,7 +474,7 @@ This value is for the ideal situation in which there is at most one set of tasks
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
 time-to-publish (generate segment, push to deep storage, load on Historical) is greater than `taskDuration`. This is a valid and correct scenario but requires additional worker capacity to support. In general, it is a good idea to have `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
-## Multi-Supervisor Support (Experimental)
+## Multi-Supervisor Support
 Druid supports multiple stream supervisors ingesting into the same datasource. This means you can have any number of stream supervisors (Kafka, Kinesis, etc.) ingesting into the same datasource at the same time.
 In order to ensure proper synchronization between ingestion tasks with multiple supervisors, it's important to set `useConcurrentLocks=true` in the `context` field of the supervisor spec. Read more [here](concurrent-append-replace.md).
 

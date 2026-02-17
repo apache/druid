@@ -77,7 +77,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   @Test
   public void test_fullFile()
   {
-    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile);
+    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, null);
     Assert.assertTrue(channel.isEntireFile());
 
     FrameTestUtil.assertRowsEqual(
@@ -91,7 +91,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   @Test
   public void test_partialFile()
   {
-    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, 1, 2);
+    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, 1, 2, null);
     Assert.assertFalse(channel.isEntireFile());
 
     FrameTestUtil.assertRowsEqual(

@@ -23,21 +23,21 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.MariaDBContainer;
+import org.testcontainers.mariadb.MariaDBContainer;
 
 /**
  * Resource that creates a MariaDB metadata store.
  */
-public class MariaDBMetadataResource extends TestcontainerResource<MariaDBContainer<?>>
+public class MariaDBMetadataResource extends TestcontainerResource<MariaDBContainer>
 {
   private static final String DATABASE_NAME = "druid_test";
   private static final String USERNAME = "sally";
   private static final String PASSWORD = "diurd";
 
   @Override
-  protected MariaDBContainer<?> createContainer()
+  protected MariaDBContainer createContainer()
   {
-    return new MariaDBContainer<>("mariadb:11.8")
+    return new MariaDBContainer("mariadb:11")
         .withDatabaseName(DATABASE_NAME)
         .withUsername(USERNAME)
         .withPassword(PASSWORD);

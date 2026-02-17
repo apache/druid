@@ -28,10 +28,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -59,9 +57,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.StandardRetryPolicy;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -265,18 +260,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
-    final ServiceClientFactory clientFactory =
-        injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
-    final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
-                                                  .withRetryPolicy(StandardRetryPolicy.unlimited());
-    final ControllerContext context = new IndexerControllerContext(
-        this,
-        toolbox,
-        injector,
-        clientFactory,
-        overlordClient
-    );
-
+    final ControllerContext context = injector.getInstance(IndexerControllerContextFactory.class)
+                                              .buildWithTask(this, toolbox);
     controller = new ControllerImpl(
         querySpec,
         new ResultsContext(getSqlTypeNames(), getSqlResultsContext()),
@@ -285,11 +270,11 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     );
 
     final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-        querySpec.getDestination(),
         () -> toolbox.getTaskReportFileWriter().openReportOutputStream(getId()),
         toolbox.getJsonMapper(),
         getId(),
-        getContext()
+        getContext(),
+        querySpec.getDestination().getRowsInTaskReport()
     );
 
     controller.run(queryListener);
