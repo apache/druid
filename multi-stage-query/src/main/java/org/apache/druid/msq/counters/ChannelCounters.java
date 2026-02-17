@@ -365,7 +365,7 @@ public class ChannelCounters implements QueryCounter
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public long[] getLoadWait()
     {
-      return loadTime;
+      return loadWait;
     }
 
     @JsonProperty
@@ -392,6 +392,7 @@ public class ChannelCounters implements QueryCounter
              && Arrays.equals(totalFiles, snapshot.totalFiles)
              && Arrays.equals(loadBytes, snapshot.loadBytes)
              && Arrays.equals(loadTime, snapshot.loadTime)
+             && Arrays.equals(loadWait, snapshot.loadWait)
              && Arrays.equals(loadFiles, snapshot.loadFiles);
     }
 
@@ -405,6 +406,7 @@ public class ChannelCounters implements QueryCounter
       result = 31 * result + Arrays.hashCode(totalFiles);
       result = 31 * result + Arrays.hashCode(loadBytes);
       result = 31 * result + Arrays.hashCode(loadTime);
+      result = 31 * result + Arrays.hashCode(loadWait);
       result = 31 * result + Arrays.hashCode(loadFiles);
       return result;
     }
@@ -420,6 +422,7 @@ public class ChannelCounters implements QueryCounter
              ", totalFiles=" + Arrays.toString(totalFiles) +
              ", loadBytes=" + Arrays.toString(loadBytes) +
              ", loadTime=" + Arrays.toString(loadTime) +
+             ", loadWait=" + Arrays.toString(loadWait) +
              ", loadFiles=" + Arrays.toString(loadFiles) +
              '}';
     }
