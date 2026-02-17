@@ -25,6 +25,8 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -87,36 +89,80 @@ public class CompactionRunSimulator
     // account for the active tasks
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker()
     {
-      @Override
-      public CompactionStatus computeCompactionStatus(
-          CompactionCandidate candidate,
-          CompactionCandidateSearchPolicy searchPolicy
-      )
-      {
-        return statusTracker.computeCompactionStatus(candidate, searchPolicy);
-      }
 
       @Override
-      public void onCompactionStatusComputed(
+      public void onSkippedCandidate(
           CompactionCandidate candidateSegments,
           DataSourceCompactionConfig config
       )
       {
-        final CompactionStatus status = candidateSegments.getCurrentStatus();
-        if (status == null) {
-          // do nothing
-        } else if (status.getState() == CompactionStatus.State.COMPLETE) {
-          compactedIntervals.addRow(
-              createRow(candidateSegments, null, null)
-          );
-        } else if (status.getState() == CompactionStatus.State.RUNNING) {
-          runningIntervals.addRow(
-              createRow(candidateSegments, ClientCompactionTaskQueryTuningConfig.from(config), status.getReason())
-          );
-        } else if (status.getState() == CompactionStatus.State.SKIPPED) {
-          skippedIntervals.addRow(
-              createRow(candidateSegments, null, status.getReason())
-          );
+        skippedIntervals.addRow(createRow(
+            candidateSegments,
+            null,
+            GuavaUtils.firstNonNull(
+                candidateSegments.getPolicyNote(),
+                candidateSegments.getEligibility().getReason()
+            )
+        ));
+      }
+
+      @Override
+      public void onCompactionCandidates(
+          CompactionCandidate candidateSegments,
+          DataSourceCompactionConfig config
+      )
+      {
+        switch (candidateSegments.getMode()) {
+          case NOT_APPLICABLE:
+            skippedIntervals.addRow(createRow(
+                candidateSegments,
+                null,
+                GuavaUtils.firstNonNull(
+                    candidateSegments.getPolicyNote(),
+                    candidateSegments.getEligibility().getReason()
+                )
+            ));
+            break;
+          case FULL_COMPACTION:
+            queuedIntervals.addRow(createRow(
+                candidateSegments,
+                ClientCompactionTaskQueryTuningConfig.from(config),
+                GuavaUtils.firstNonNull(
+                    candidateSegments.getPolicyNote(),
+                    candidateSegments.getEligibility().getReason()
+                )
+            ));
+            break;
+          default:
+            throw DruidException.defensive("unexpected compaction mode[%s]", candidateSegments.getMode());
+        }
+      }
+
+      @Override
+      public void onCompactionTaskStateComputed(
+          CompactionCandidate candidateSegments,
+          CompactionCandidate.TaskState taskState,
+          DataSourceCompactionConfig config
+      )
+      {
+        switch (taskState) {
+          case RECENTLY_COMPLETED:
+            compactedIntervals.addRow(createRow(candidateSegments, null, null));
+            break;
+          case TASK_IN_PROGRESS:
+            runningIntervals.addRow(createRow(
+                candidateSegments,
+                ClientCompactionTaskQueryTuningConfig.from(config),
+                GuavaUtils.firstNonNull(
+                    candidateSegments.getPolicyNote(),
+                    candidateSegments.getEligibility().getReason()
+                )
+            ));
+            break;
+          case READY:
+            break;
+          default:
+            throw DruidException.defensive("unknown compaction task state[%s]", taskState);
         }
       }
 
@@ -124,10 +170,11 @@ public class CompactionRunSimulator
       public void onTaskSubmitted(String taskId, CompactionCandidate candidateSegments)
       {
         // Add a row for each task in order of submission
-        final CompactionStatus status = candidateSegments.getCurrentStatus();
-        queuedIntervals.addRow(
-            createRow(candidateSegments, null, status == null ? "" : status.getReason())
+        final String reason = GuavaUtils.firstNonNull(
+            candidateSegments.getPolicyNote(),
+            candidateSegments.getEligibility().getReason()
         );
+        queuedIntervals.addRow(createRow(candidateSegments, null, reason));
       }
     };
 
@@ -150,21 +197,18 @@ public class CompactionRunSimulator
         stats
     );
 
-    final Map<CompactionStatus.State, Table> compactionStates = new HashMap<>();
+    final Map<CompactionCandidate.TaskState, Table> compactionStates = new HashMap<>();
     if (!compactedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.COMPLETE, compactedIntervals);
+      compactionStates.put(CompactionCandidate.TaskState.RECENTLY_COMPLETED, compactedIntervals);
     }
     if (!runningIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.RUNNING, runningIntervals);
+      compactionStates.put(CompactionCandidate.TaskState.TASK_IN_PROGRESS, runningIntervals);
     }
     if (!queuedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.PENDING, queuedIntervals);
-    }
-    if (!skippedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.SKIPPED, skippedIntervals);
+      compactionStates.put(CompactionCandidate.TaskState.READY, queuedIntervals);
     }
 
-    return new CompactionSimulateResult(compactionStates);
+    return new CompactionSimulateResult(compactionStates, skippedIntervals);
   }
 
   private Object[] createRow(

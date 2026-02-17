@@ -66,9 +66,9 @@ import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
-import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -451,7 +451,7 @@ public class OverlordCompactionSchedulerTest
         new ClusterCompactionConfig(null, null, null, null, null, null)
     );
     Assert.assertEquals(1, simulateResult.getCompactionStates().size());
-    final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionStatus.State.PENDING);
+    final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionCandidate.TaskState.READY);
     Assert.assertEquals(
         Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
         pendingCompactionTable.getColumnNames()
