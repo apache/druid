@@ -35,14 +35,9 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
-import org.apache.druid.indexing.compact.CompactionJobTemplate;
-import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
-import org.apache.druid.indexing.compact.ReindexingTimelineView;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -56,7 +51,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CollectionUtils;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -353,80 +347,6 @@ public class SupervisorResource
           }
 
           return Response.ok(stats.get()).build();
-        }
-    );
-  }
-
-  @GET
-  @Path("/{id}/reindexingTimeline")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(SupervisorResourceFilter.class)
-  public Response getReindexingTimeline(
-      @PathParam("id") final String id,
-      @QueryParam("referenceTime") @Nullable final String referenceTimeStr
-  )
-  {
-    return asLeaderWithSupervisorManager(
-        manager -> {
-          Optional<SupervisorSpec> specOptional = manager.getSupervisorSpec(id);
-          if (!specOptional.isPresent()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
-                           .build();
-          }
-
-          SupervisorSpec spec = specOptional.get();
-          if (!(spec instanceof CompactionSupervisorSpec)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(ImmutableMap.of(
-                               "error",
-                               StringUtils.format(
-                                   "[%s] is not a compaction supervisor (type: %s)",
-                                   id,
-                                   spec.getClass().getSimpleName()
-                               )
-                           ))
-                           .build();
-          }
-
-          CompactionSupervisorSpec compactionSpec = (CompactionSupervisorSpec) spec;
-
-          DateTime referenceTime;
-          if (referenceTimeStr != null) {
-            try {
-              referenceTime = DateTimes.of(referenceTimeStr);
-            }
-            catch (IllegalArgumentException e) {
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(ImmutableMap.of(
-                                 "error",
-                                 StringUtils.format("Invalid referenceTime format: %s", referenceTimeStr)
-                             ))
-                             .build();
-            }
-          } else {
-            referenceTime = DateTimes.nowUtc();
-          }
-
-          CompactionJobTemplate template = compactionSpec.getTemplate();
-          if (!(template instanceof CascadingReindexingTemplate)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity(ImmutableMap.of(
-                               "error",
-                               StringUtils.format(
-                                   "Reindexing timeline is only available for cascading reindexing supervisors. " +
-                                   "Supervisor [%s] uses template type: %s",
-                                   id,
-                                   template.getClass().getSimpleName()
-                               )
-                           ))
-                           .build();
-          }
-
-          CascadingReindexingTemplate cascadingTemplate = (CascadingReindexingTemplate) template;
-
-          ReindexingTimelineView timelineView = cascadingTemplate.getReindexingTimelineView(referenceTime);
-          return Response.ok(timelineView).build();
         }
     );
   }
