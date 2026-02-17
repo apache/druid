@@ -142,6 +142,8 @@ public class QueryContexts
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
 
   public static final String CTX_PREPLANNED = "prePlanned";
+  public static final String CTX_MAX_VIRTUAL_COLUMNS_FOR_BITMAP = "maxVirtualColumnsForBitmapIndexing";
+
   public static final boolean DEFAULT_PREPLANNED = true;
 
   // Defaults
@@ -177,6 +179,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
+  public static final int DEFAULT_MAX_VIRTUAL_COLUMNS_FOR_BITMAP = Integer.MAX_VALUE;
 
 
   @SuppressWarnings("unused") // Used by Jackson serialization

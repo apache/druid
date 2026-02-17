@@ -84,6 +84,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private final QueryContext queryContext;
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
+  private final boolean disableVirtualColumnBitmapIndexes;
 
   public QueryableIndexCursorHolder(
       QueryableIndex index,
@@ -108,6 +109,8 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
+    this.disableVirtualColumnBitmapIndexes = queryContext.getMaxVirtualColumnsForBitmapIndexing()
+                                             < virtualColumns.getColumnNames().size();
     this.resourcesSupplier = Suppliers.memoize(
         () -> new CursorResources(
             index,
@@ -117,7 +120,8 @@ public class QueryableIndexCursorHolder implements CursorHolder
             interval,
             filter,
             cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
-            metrics
+            metrics,
+            disableVirtualColumnBitmapIndexes
         )
     );
   }
@@ -672,7 +676,8 @@ public class QueryableIndexCursorHolder implements CursorHolder
         Interval interval,
         @Nullable Filter filter,
         boolean cursorAutoArrangeFilters,
-        @Nullable QueryMetrics<? extends Query<?>> metrics
+        @Nullable QueryMetrics<? extends Query<?>> metrics,
+        boolean disableVirtualColumnBitmapIndexes
     )
     {
       this.closer = Closer.create();
@@ -680,6 +685,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
       this.timeBoundaryInspector = timeBoundaryInspector;
       try {
         this.numRows = index.getNumRows();
+        final ColumnIndexSelector indexSelectorForFilters =
+            disableVirtualColumnBitmapIndexes
+            ? new VirtualColumnBitmapDisablingIndexSelector(columnCache, virtualColumns)
+            : columnCache;
         this.filterBundle = makeFilterBundle(
             computeFilterWithIntervalIfNeeded(
                 timeBoundaryInspector,
@@ -688,7 +697,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
                 filter
             ),
             cursorAutoArrangeFilters,
-            columnCache,
+            indexSelectorForFilters,
             numRows,
             metrics
         );

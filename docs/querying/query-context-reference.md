@@ -72,6 +72,7 @@ Unless otherwise noted, the following parameters apply to all query types, and t
 |`sqlPlannerBloat`|`1000`|Calcite parameter which controls whether to merge two Project operators when inlining expressions causes complexity to increase. Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting the merge of two projects.|
 |`cloneQueryMode`|`excludeClones`| Indicates whether clone Historicals should be queried by brokers. Clone servers are created by the `cloneServers` Coordinator dynamic configuration. Possible values are `excludeClones`, `includeClones` and `preferClones`. `excludeClones` means that clone Historicals are not queried by the broker. `preferClones` indicates that when given a choice between the clone Historical and the original Historical which is being cloned, the broker chooses the clones. Historicals which are not involved in the cloning process will still be queried. `includeClones` means that broker queries any Historical without regarding clone status. This parameter only affects native queries. MSQ does not query Historicals directly.|
 |`realtimeSegmentsOnly` |`false`| When set to true, only query realtime segments. Historical segments are excluded. |
+|`maxVirtualColumnsForBitmapIndexing`|`Integer.MAX_VALUE`| Sets the virtual-column count threshold beyond which Druid stops using bitmap indexes for filters on virtual columns.|
 
 ## Parameters by query type
 
