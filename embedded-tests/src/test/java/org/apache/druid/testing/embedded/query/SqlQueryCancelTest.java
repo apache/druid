@@ -61,7 +61,7 @@ public class SqlQueryCancelTest extends QueryTestBase
     ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, query);
 
     // Wait until the sqlLifecycle is authorized and registered
-    Thread.sleep(300L);
+    Thread.sleep(1000L);
     StatusResponseHolder queryCancellationResponse = cancelQuery(routerEndpoint, queryId);
 
     StatusResponseHolder queryResponce = f.get();

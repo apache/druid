@@ -22,9 +22,9 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import junit.framework.Assert;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -86,5 +86,97 @@ public class DimensionsSpecSerdeTest
 
     Assert.assertEquals(expected, actual);
     Assert.assertEquals(expectedSpatials, actual.getSpatialDimensions());
+  }
+
+  @Test
+  public void testToBuilder()
+  {
+    DimensionsSpec original = DimensionsSpec
+        .builder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("dim1"),
+                new LongDimensionSchema("dim2"),
+                new FloatDimensionSchema("dim3")
+            )
+        )
+        .setDimensionExclusions(Arrays.asList("ex1", "ex2"))
+        .setIncludeAllDimensions(true)
+        .useSchemaDiscovery(false)
+        .setForceSegmentSortByTime(true)
+        .build();
+
+    DimensionsSpec rebuilt = original.toBuilder().build();
+
+    Assert.assertEquals(original, rebuilt);
+    Assert.assertEquals(original.getDimensions(), rebuilt.getDimensions());
+    Assert.assertEquals(original.getDimensionExclusions(), rebuilt.getDimensionExclusions());
+    Assert.assertEquals(original.isIncludeAllDimensions(), rebuilt.isIncludeAllDimensions());
+    Assert.assertEquals(original.useSchemaDiscovery(), rebuilt.useSchemaDiscovery());
+    Assert.assertEquals(original.isForceSegmentSortByTimeConfigured(), rebuilt.isForceSegmentSortByTimeConfigured());
+  }
+
+  @Test
+  public void testToBuilderWithModifications()
+  {
+    DimensionsSpec original = DimensionsSpec
+        .builder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("dim1"),
+                new LongDimensionSchema("dim2")
+            )
+        )
+        .setDimensionExclusions(List.of("ex1"))
+        .setIncludeAllDimensions(false)
+        .useSchemaDiscovery(false)
+        .setForceSegmentSortByTime(true)
+        .build();
+
+    DimensionsSpec modified = original.toBuilder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("dim1"),
+                new LongDimensionSchema("dim2"),
+                new FloatDimensionSchema("dim3")
+            )
+        )
+        .setDimensionExclusions(Arrays.asList("ex1", "ex2"))
+        .setForceSegmentSortByTime(false)
+        .build();
+
+    Assert.assertNotEquals(original, modified);
+    Assert.assertNotEquals(original.getDimensions().size(), modified.getDimensions().size());
+    Assert.assertEquals(3, modified.getDimensions().size());
+    Assert.assertNotEquals(original.getDimensionExclusions().size(), modified.getDimensionExclusions().size());
+    Assert.assertEquals(2, modified.getDimensionExclusions().size());
+    Assert.assertNotEquals(original.isForceSegmentSortByTimeConfigured(), modified.isForceSegmentSortByTimeConfigured());
+  }
+
+  @Test
+  public void testToBuilderPreservesAllFields()
+  {
+    DimensionsSpec original = DimensionsSpec
+        .builder()
+        .setDimensions(
+            Arrays.asList(
+                new StringDimensionSchema("dim1"),
+                new NewSpatialDimensionSchema("spatial1", Arrays.asList("x", "y"))
+            )
+        )
+        .setDimensionExclusions(Arrays.asList("ex1", "ex2", "ex3"))
+        .setIncludeAllDimensions(true)
+        .useSchemaDiscovery(true)
+        .setForceSegmentSortByTime(false)
+        .build();
+
+    DimensionsSpec rebuilt = original.toBuilder().build();
+
+    Assert.assertEquals(original.getDimensions(), rebuilt.getDimensions());
+    Assert.assertEquals(original.getDimensionExclusions(), rebuilt.getDimensionExclusions());
+    Assert.assertEquals(original.isIncludeAllDimensions(), rebuilt.isIncludeAllDimensions());
+    Assert.assertEquals(original.useSchemaDiscovery(), rebuilt.useSchemaDiscovery());
+    Assert.assertEquals(original.isForceSegmentSortByTimeConfigured(), rebuilt.isForceSegmentSortByTimeConfigured());
+    Assert.assertEquals(original.getSpatialDimensions(), rebuilt.getSpatialDimensions());
   }
 }
