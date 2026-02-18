@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -356,7 +355,12 @@ public class CostBasedAutoScalerMockTest
     );
   }
 
-  private void setupMocksForMetricsCollection(CostBasedAutoScaler autoScaler, int taskCount, double avgLag, double pollIdleRatio)
+  private void setupMocksForMetricsCollection(
+      CostBasedAutoScaler autoScaler,
+      int taskCount,
+      double avgLag,
+      double pollIdleRatio
+  )
   {
     CostMetrics metrics = new CostMetrics(
         avgLag,
