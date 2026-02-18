@@ -19,6 +19,9 @@
 
 package org.apache.druid.java.util.emitter.core;
 
+/**
+ */
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -42,6 +45,8 @@ import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ */
 public class LoggingEmitter implements Emitter
 {
   private static final Logger LOGGER = new Logger(LoggingEmitter.class);
