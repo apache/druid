@@ -41,7 +41,7 @@ import static org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeter
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.computeValidTaskCounts;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings({"SameParameterValue", "InstantiationOfUtilityClass"})
+@SuppressWarnings({"SameParameterValue"})
 public class CostBasedAutoScalerTest
 {
   private CostBasedAutoScaler autoScaler;
@@ -69,7 +69,6 @@ public class CostBasedAutoScalerTest
     autoScaler = new CostBasedAutoScaler(mockSupervisor, config, mockSupervisorSpec, mockEmitter);
   }
 
-  @SuppressWarnings("InstantiationOfUtilityClass")
   @Test
   public void testComputeValidTaskCounts()
   {
@@ -139,7 +138,15 @@ public class CostBasedAutoScalerTest
     Assert.assertFalse("High lag should not jump straight to max (30) from 3", contains(highLagCounts, 30));
 
     // Respects taskCountMax
-    int[] cappedCounts = computeValidTaskCounts(30, 4, highAggregateLag, 1, 3, useTaskCountBoundaries, highLagThreshold);
+    int[] cappedCounts = computeValidTaskCounts(
+        30,
+        4,
+        highAggregateLag,
+        1,
+        3,
+        useTaskCountBoundaries,
+        highLagThreshold
+    );
     Assert.assertTrue("Should include taskCountMax when within bounds", contains(cappedCounts, 3));
     Assert.assertFalse("Should not exceed taskCountMax", contains(cappedCounts, 4));
 
@@ -186,9 +193,14 @@ public class CostBasedAutoScalerTest
   public void testExtractPollIdleRatio()
   {
     // Null and empty return 0
-    Assert.assertEquals("Null stats should yield 0 idle ratio", 0., CostBasedAutoScaler.extractPollIdleRatio(null), 0.0001);
     Assert.assertEquals(
-        "Empty stats should yield 0 idle ratio",
+        "Null stats should yield 0 idle ratios",
+        0.,
+        CostBasedAutoScaler.extractPollIdleRatio(null),
+        0.0001
+    );
+    Assert.assertEquals(
+        "Empty stats should yield 0 idle ratios",
         0.,
         CostBasedAutoScaler.extractPollIdleRatio(Collections.emptyMap()),
         0.0001
@@ -198,7 +210,7 @@ public class CostBasedAutoScalerTest
     Map<String, Map<String, Object>> missingMetrics = new HashMap<>();
     missingMetrics.put("0", Collections.singletonMap("task-0", new HashMap<>()));
     Assert.assertEquals(
-        "Missing autoscaler metrics should yield 0 idle ratio",
+        "Missing autoscaler metrics should yield 0 idle ratios",
         0.,
         CostBasedAutoScaler.extractPollIdleRatio(missingMetrics),
         0.0001
@@ -233,7 +245,7 @@ public class CostBasedAutoScalerTest
     taskStats1.put(SeekableStreamIndexTaskRunner.AUTOSCALER_METRICS_KEY, new HashMap<>());
     emptyAutoscaler.put("0", Collections.singletonMap("task-0", taskStats1));
     Assert.assertEquals(
-        "Empty autoscaler metrics should yield 0 idle ratio",
+        "Empty autoscaler metrics should yield 0 idle ratios",
         0.,
         CostBasedAutoScaler.extractPollIdleRatio(emptyAutoscaler),
         0.0001
@@ -270,7 +282,12 @@ public class CostBasedAutoScalerTest
   public void testExtractMovingAverage()
   {
     // Null and empty return -1
-    Assert.assertEquals("Null stats should yield -1 moving average", -1., CostBasedAutoScaler.extractMovingAverage(null), 0.0001);
+    Assert.assertEquals(
+        "Null stats should yield -1 moving average",
+        -1.,
+        CostBasedAutoScaler.extractMovingAverage(null),
+        0.0001
+    );
     Assert.assertEquals(
         "Empty stats should yield -1 moving average",
         -1.,
@@ -418,7 +435,6 @@ public class CostBasedAutoScalerTest
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("stream");
 
-    // Test config defaults for minScaleDownDelay, defaultProcessingRate, scaleDownDuringTaskRolloverOnly
     CostBasedAutoScalerConfig cfgWithDefaults = CostBasedAutoScalerConfig.builder()
                                                                          .taskCountMax(10)
                                                                          .taskCountMin(1)
@@ -428,7 +444,6 @@ public class CostBasedAutoScalerTest
         CostBasedAutoScalerConfig.DEFAULT_MIN_SCALE_DELAY,
         cfgWithDefaults.getMinScaleDownDelay()
     );
-    Assert.assertEquals(1000.0, cfgWithDefaults.getDefaultProcessingRate(), 0.001);
     Assert.assertFalse(cfgWithDefaults.isScaleDownOnTaskRolloverOnly());
 
     // Test custom config values
@@ -437,11 +452,9 @@ public class CostBasedAutoScalerTest
                                                                        .taskCountMin(1)
                                                                        .enableTaskAutoScaler(true)
                                                                        .minScaleDownDelay(Duration.standardMinutes(10))
-                                                                       .defaultProcessingRate(5000.0)
                                                                        .scaleDownDuringTaskRolloverOnly(true)
                                                                        .build();
     Assert.assertEquals(Duration.standardMinutes(10), cfgWithCustom.getMinScaleDownDelay());
-    Assert.assertEquals(5000.0, cfgWithCustom.getDefaultProcessingRate(), 0.001);
     Assert.assertTrue(cfgWithCustom.isScaleDownOnTaskRolloverOnly());
 
     // computeTaskCountForRollover returns -1 when scaleDownDuringTaskRolloverOnly=false (default)
@@ -468,24 +481,6 @@ public class CostBasedAutoScalerTest
         pollIdleRatio,
         3600,
         1000.0
-    );
-  }
-
-  private CostMetrics createMetricsWithRate(
-      double avgPartitionLag,
-      int currentTaskCount,
-      int partitionCount,
-      double pollIdleRatio,
-      double avgProcessingRate
-  )
-  {
-    return new CostMetrics(
-        avgPartitionLag,
-        currentTaskCount,
-        partitionCount,
-        pollIdleRatio,
-        3600,
-        avgProcessingRate
     );
   }
 
