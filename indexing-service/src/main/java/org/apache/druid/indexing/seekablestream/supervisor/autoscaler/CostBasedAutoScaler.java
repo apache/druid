@@ -112,10 +112,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void start()
   {
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(
-            this::computeTaskCountForScaleAction, () -> {
-            }, emitter
-        ),
+        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
