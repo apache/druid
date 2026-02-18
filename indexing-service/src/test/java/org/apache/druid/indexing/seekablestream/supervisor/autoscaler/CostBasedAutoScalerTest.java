@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -465,6 +466,35 @@ public class CostBasedAutoScalerTest
     // computeTaskCountForRollover returns -1 when lastKnownMetrics is null (even with scaleDownDuringTaskRolloverOnly=true)
     CostBasedAutoScaler scalerWithRolloverOnly = new CostBasedAutoScaler(supervisor, cfgWithCustom, spec, emitter);
     Assert.assertEquals(-1, scalerWithRolloverOnly.computeTaskCountForRollover());
+  }
+
+  @Test
+  public void testCollectMetricsReturnsNullWhenMovingAvgRateNegative()
+  {
+    SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
+    SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
+    ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    SeekableStreamSupervisorIOConfig ioConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(spec.getId()).thenReturn("test-supervisor");
+    when(spec.isSuspended()).thenReturn(false);
+    when(supervisor.getIoConfig()).thenReturn(ioConfig);
+    when(ioConfig.getStream()).thenReturn("test-stream");
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(0, 0, 0));
+    // Empty stats cause extractMovingAverage to return -1
+    when(supervisor.getStats()).thenReturn(Collections.emptyMap());
+
+    CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
+                                                                .taskCountMax(10)
+                                                                .taskCountMin(1)
+                                                                .enableTaskAutoScaler(true)
+                                                                .build();
+    CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, config, spec, emitter);
+
+    Assert.assertNull(
+        "collectMetrics should return null when moving average rate is negative (metrics unavailable)",
+        scaler.collectMetrics()
+    );
   }
 
   private CostMetrics createMetrics(
