@@ -35,8 +35,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -112,7 +112,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public void start()
   {
     autoscalerExecutor.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(this::computeTaskCountForScaleAction, () -> {}, emitter),
+        supervisor.buildDynamicAllocationTask(
+            this::computeTaskCountForScaleAction, () -> {
+            }, emitter
+        ),
         config.getScaleActionPeriodMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
@@ -450,7 +453,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     return count > 0 ? sum / count : -1;
   }
 
-  @Nullable CostMetrics collectMetrics()
+  @Nullable
+  CostMetrics collectMetrics()
   {
     if (spec.isSuspended()) {
       log.debug("Supervisor [%s] is suspended, skipping a metrics collection", supervisorId);
