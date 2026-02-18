@@ -209,7 +209,7 @@ Note the difference between `druid.broker.select.tier` and `druid.broker.segment
 - `druid.broker.select.tier` controls **preference** among visible tiers (which tier to query first)
 - `druid.broker.segment.watchedTiers` controls **visibility** (which tiers the Broker can see at all)
 
-If a segment only exists on a tier not in `watchedTiers`, the Broker will not be aware of that segment and queries for that data will return partial or no results.
+If a segment does not exist on the tiers watched by a Broker, it will not be aware of that segment and queries for that data will return partial or no results.
 
 #### Configure query routing
 
