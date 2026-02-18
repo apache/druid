@@ -45,7 +45,7 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
-      @JsonProperty("rolloup") @Nullable Boolean rollup,
+      @JsonProperty("rollup") @Nullable Boolean rollup,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
   )
   {
