@@ -469,7 +469,7 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testCollectMetricsReturnsNullWhenMovingAvgRateNegative()
+  public void testScalingActionSkippedWhenMovingAverageRateUnavailable()
   {
     SupervisorSpec spec = Mockito.mock(SupervisorSpec.class);
     SeekableStreamSupervisor supervisor = Mockito.mock(SeekableStreamSupervisor.class);
@@ -480,8 +480,8 @@ public class CostBasedAutoScalerTest
     when(spec.isSuspended()).thenReturn(false);
     when(supervisor.getIoConfig()).thenReturn(ioConfig);
     when(ioConfig.getStream()).thenReturn("test-stream");
-    when(supervisor.computeLagStats()).thenReturn(new LagStats(0, 0, 0));
-    // Empty stats cause extractMovingAverage to return -1
+    when(supervisor.computeLagStats()).thenReturn(new LagStats(100, 100, 100));
+    // No task stats means the moving average rate is unavailable
     when(supervisor.getStats()).thenReturn(Collections.emptyMap());
 
     CostBasedAutoScalerConfig config = CostBasedAutoScalerConfig.builder()
@@ -491,9 +491,10 @@ public class CostBasedAutoScalerTest
                                                                 .build();
     CostBasedAutoScaler scaler = new CostBasedAutoScaler(supervisor, config, spec, emitter);
 
-    Assert.assertNull(
-        "collectMetrics should return null when moving average rate is negative (metrics unavailable)",
-        scaler.collectMetrics()
+    Assert.assertEquals(
+        "No scaling action should be requested when the moving average rate is unavailable",
+        -1,
+        scaler.computeTaskCountForScaleAction()
     );
   }
 

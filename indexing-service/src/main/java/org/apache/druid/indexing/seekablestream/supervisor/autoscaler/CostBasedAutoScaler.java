@@ -151,6 +151,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public int computeTaskCountForScaleAction()
   {
     lastKnownMetrics = collectMetrics();
+    if (lastKnownMetrics == null) {
+      log.debug("Metrics not available for supervisorId [%s], skipping scaling action", supervisorId);
+      return -1;
+    }
+
     final int optimalTaskCount = computeOptimalTaskCount(lastKnownMetrics);
     final int currentTaskCount = lastKnownMetrics.getCurrentTaskCount();
 
