@@ -195,7 +195,7 @@ See [Broker configuration](../configuration/index.md#broker-process-configs) for
 
 By default, a Broker watches all Historical tiers for segment availability. Use `druid.broker.segment.watchedTiers` to restrict a Broker to only see segments on specific tiers. This provides strict query isolation - segments on unwatched tiers are invisible to the Broker and cannot be queried by it.
 
-Example config for a Broker that only queries hot tier Historicals:
+Example config for a Broker that only queries Historicals in a tier named "hot":
 ```
 druid.broker.segment.watchedTiers=["hot"]
 ```
