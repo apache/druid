@@ -200,7 +200,7 @@ Example config for a Broker that only queries Historicals in a tier named "hot":
 druid.broker.segment.watchedTiers=["hot"]
 ```
 
-Example config for a Broker that queries both hot and cold tiers:
+Example config for a Broker that queries multiple tiers:
 ```
 druid.broker.segment.watchedTiers=["hot","_default_tier"]
 ```
