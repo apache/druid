@@ -93,6 +93,11 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         value: 'turboLoadingNodes',
         documentation: 'List of Historical servers to place in turbo loading mode (experimental)',
       },
+      {
+        value: 'queryBlocklist',
+        documentation:
+          'List of rules to block queries on brokers. Each rule can match by datasource, query type, and/or context parameters.',
+      },
     ],
   },
   // Properties only available when smartSegmentLoading is false
@@ -249,5 +254,57 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
   {
     path: '$.turboLoadingNodes.[]',
     completions: [{ value: 'historical-server:8083', documentation: 'Example historical server' }],
+  },
+  // Query blocklist rule properties
+  {
+    path: '$.queryBlocklist.[*]',
+    isObject: true,
+    completions: [
+      {
+        value: 'ruleName',
+        documentation: 'Unique name for this blocklist rule (required)',
+      },
+      {
+        value: 'dataSources',
+        documentation: 'List of datasources to block (optional)',
+      },
+      {
+        value: 'queryTypes',
+        documentation: 'List of query types to block (optional)',
+      },
+      {
+        value: 'contextMatches',
+        documentation: 'Map of query context parameters to match (optional)',
+      },
+    ],
+  },
+  // Query type suggestions
+  {
+    path: '$.queryBlocklist.[*].queryTypes.[]',
+    completions: [
+      { value: 'scan', documentation: 'Scan queries' },
+      { value: 'timeseries', documentation: 'Timeseries queries' },
+      { value: 'groupBy', documentation: 'GroupBy queries' },
+      { value: 'topN', documentation: 'TopN queries' },
+      { value: 'search', documentation: 'Search queries' },
+      { value: 'timeBoundary', documentation: 'TimeBoundary queries' },
+      { value: 'segmentMetadata', documentation: 'SegmentMetadata queries' },
+      { value: 'dataSourceMetadata', documentation: 'DataSourceMetadata queries' },
+    ],
+  },
+  // Datasource array
+  {
+    path: '$.queryBlocklist.[*].dataSources.[]',
+    completions: [{ value: 'example_datasource', documentation: 'Datasource name to block' }],
+  },
+  // Context matches example
+  {
+    path: '$.queryBlocklist.[*].contextMatches',
+    isObject: true,
+    completions: [
+      { value: 'debug', documentation: 'Example: match debug context parameter' },
+      { value: 'priority', documentation: 'Example: match priority context parameter' },
+      { value: 'queryId', documentation: 'Example: match specific query ID' },
+    ],
   },
 ];

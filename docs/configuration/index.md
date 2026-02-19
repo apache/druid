@@ -838,6 +838,71 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the Coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow Historicals in the cluster. However, the slow Historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
 |`turboLoadingNodes`| Experimental. List of Historical servers to place in turbo loading mode. These servers use a larger thread-pool to load segments faster but at the cost of query performance. For servers specified in `turboLoadingNodes`, `druid.coordinator.loadqueuepeon.http.batchSize` is ignored and the coordinator uses the value of the respective `numLoadingThreads` instead.<br/>Please use this config with caution. All servers should eventually be removed from this list once the segment loading on the respective historicals is finished. |none|
 |`cloneServers`| Experimental. Map from target Historical server to source Historical server which should be cloned by the target. The target Historical does not participate in regular segment assignment or balancing. Instead, the Coordinator mirrors any segment assignment made to the source Historical onto the target Historical, so that the target becomes an exact copy of the source. Segments on the target Historical do not count towards replica counts either. If the source disappears, the target remains in the last known state of the source server until removed from the configuration. <br/>Use this config with caution. All servers should eventually be removed from this list once the desired state on the respective Historicals is achieved. |none|
+|`queryBlocklist`| List of rules to block queries based on datasource, query type, and/or query context parameters. Each rule defines criteria that are combined with AND logic. Blocked queries return an HTTP 403 error. See [Query blocklist rules](#query-blocklist-rules) for details.|none|
+
+##### Query blocklist rules
+
+Query blocklist rules allow you to block specific queries based on datasource, query type, and/or query context parameters. This feature is useful for preventing expensive or problematic queries from impacting cluster performance.
+
+Each rule in the `queryBlocklist` array is a JSON object with the following properties:
+
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
+|`ruleName`|Unique name identifying this blocklist rule. Used in error messages when queries are blocked.|Yes|N/A|
+|`dataSources`|List of datasource names to match. A query matches if it references any datasource in this list.|No|Matches all datasources|
+|`queryTypes`|List of query types to match (e.g., `scan`, `timeseries`, `groupBy`, `topN`). A query matches if its type is in this list.|No|Matches all query types|
+|`contextMatches`|Map of query context parameter key-value pairs to match. A query matches if all specified context parameters match the provided values (case-sensitive string comparison).|No|Matches all contexts|
+
+- A query must match ALL specified criteria within a rule (AND logic) to be blocked by that rule
+- If any criterion is omitted or empty, it matches everything (e.g., omitting `queryTypes` matches all query types)
+- At least one criterion must be specified per rule to prevent accidentally blocking all queries
+- A query is blocked if it matches ANY rule in the blocklist (OR logic between rules)
+
+**Example configuration:**
+
+```json
+{
+  "queryBlocklist": [
+    {
+      "ruleName": "block-expensive-scans",
+      "dataSources": ["large_table", "huge_dataset"],
+      "queryTypes": ["scan"]
+    },
+    {
+      "ruleName": "block-debug-queries",
+      "contextMatches": {
+        "debug": "true"
+      }
+    },
+    {
+      "ruleName": "block-specific-user-scans",
+      "dataSources": ["sensitive_data"],
+      "queryTypes": ["scan"],
+      "contextMatches": {
+        "userId": "blocked_user"
+      }
+    }
+  ]
+}
+```
+
+In this example:
+- The first rule blocks all `scan` queries against `large_table` or `huge_dataset` datasources
+- The second rule blocks any query with context parameter `debug=true` (regardless of datasource or query type)
+- The third rule blocks only `scan` queries against `sensitive_data` datasource when submitted by `blocked_user`
+
+**Error response:**
+
+When a query is blocked, the Broker returns an HTTP 403 error with a message indicating the query ID and the rule that blocked it:
+
+```json
+{
+  "error": "Forbidden",
+  "errorMessage": "Query[abc-123-def] blocked by rule[block-expensive-scans]",
+  "persona": "USER",
+  "category": "FORBIDDEN"
+}
+```
 
 ##### Smart segment loading
 
