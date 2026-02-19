@@ -73,4 +73,63 @@ public class CompactionTransformSpecTest
     );
     Assert.assertEquals(expected, fromJson);
   }
+
+  @Test
+  public void testSerde_emptyVirtualColumns_notSerializedForFingerprintConsistency() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    // Spec with VirtualColumns.EMPTY (new code path)
+    final CompactionTransformSpec withEmpty = new CompactionTransformSpec(
+        new SelectorDimFilter("dim1", "foo", null),
+        VirtualColumns.EMPTY
+    );
+
+    // Spec with null (old code path before VirtualColumns support)
+    final CompactionTransformSpec withNull = new CompactionTransformSpec(
+        new SelectorDimFilter("dim1", "foo", null),
+        null
+    );
+
+    // Serialize both
+    final String jsonWithEmpty = mapper.writeValueAsString(withEmpty);
+    final String jsonWithNull = mapper.writeValueAsString(withNull);
+
+    // Both should produce identical JSON (no virtualColumns field)
+    // This ensures fingerprint consistency: old segments (no VC) match new segments (EMPTY VC)
+    Assert.assertEquals(
+        "VirtualColumns.EMPTY should serialize identically to null for fingerprint consistency",
+        jsonWithNull,
+        jsonWithEmpty
+    );
+
+    // Verify virtualColumns field is not present in either JSON
+    Assert.assertFalse(
+        "virtualColumns field should not appear in JSON when empty",
+        jsonWithEmpty.contains("virtualColumns")
+    );
+    Assert.assertFalse(
+        "virtualColumns field should not appear in JSON when null",
+        jsonWithNull.contains("virtualColumns")
+    );
+  }
+
+  @Test
+  public void testSerde_emptyVirtualColumns_deserializesToEmptyNotNull() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+
+    // JSON without virtualColumns field (like old data)
+    final String jsonWithoutField = "{\"filter\":{\"type\":\"selector\",\"dimension\":\"dim1\",\"value\":\"foo\"}}";
+
+    final CompactionTransformSpec deserialized = mapper.readValue(
+        jsonWithoutField,
+        CompactionTransformSpec.class
+    );
+
+    // Should deserialize to VirtualColumns.EMPTY, not null
+    Assert.assertNotNull("virtualColumns should not be null after deserialization", deserialized.getVirtualColumns());
+    Assert.assertEquals("virtualColumns should be EMPTY", VirtualColumns.EMPTY, deserialized.getVirtualColumns());
+    Assert.assertTrue("virtualColumns should be empty", deserialized.getVirtualColumns().isEmpty());
+  }
 }
