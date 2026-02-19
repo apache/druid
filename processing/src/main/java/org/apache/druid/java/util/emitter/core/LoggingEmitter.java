@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -47,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class LoggingEmitter implements Emitter
 {
-  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = "defaultLoggingMetricNames.json";
+  private static final String DEFAULT_METRIC_ALLOWLIST_PATH = "defaultLoggingMetrics.json";
 
   private final Logger log;
   private final Level level;
@@ -71,6 +72,23 @@ public class LoggingEmitter implements Emitter
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper)
   {
     this(log, level, jsonMapper, false, ImmutableSet.of());
+  }
+
+  public LoggingEmitter(
+      Logger log,
+      Level level,
+      ObjectMapper jsonMapper,
+      boolean shouldFilterMetrics,
+      String allowedMetricsPath
+  )
+  {
+    this(
+        log,
+        level,
+        jsonMapper,
+        shouldFilterMetrics,
+        shouldFilterMetrics ? loadMetricAllowlist(jsonMapper, allowedMetricsPath) : ImmutableSet.of()
+    );
   }
 
   public LoggingEmitter(Logger log, Level level, ObjectMapper jsonMapper, boolean filterMetrics, Set<String> metricAllowlist)
@@ -219,18 +237,12 @@ public class LoggingEmitter implements Emitter
     final String source = Strings.isNullOrEmpty(metricAllowlistPath) ? DEFAULT_METRIC_ALLOWLIST_PATH : metricAllowlistPath;
     try (final InputStream is = openAllowlistFile(metricAllowlistPath)) {
       final JsonNode metricConfig = mapper.readTree(is);
-      if (metricConfig.isArray()) {
-        final ImmutableSet.Builder<String> metricNames = ImmutableSet.builder();
-        for (JsonNode metric : metricConfig) {
-          if (!metric.isTextual()) {
-            throw new ISE("Metric allowlist file [%s] contains a non-string metric name", source);
-          }
-          metricNames.add(metric.asText());
-        }
-        return metricNames.build();
-      } else {
-        throw new ISE("Metric allowlist file [%s] must be a JSON array of metric names", source);
+      if (!metricConfig.isObject()) {
+        throw new ISE("Metric allowlist file [%s] must be a JSON object of metric names", source);
       }
+      final ImmutableSet.Builder<String> metricNames = ImmutableSet.builder();
+      metricConfig.fieldNames().forEachRemaining(metricNames::add);
+      return metricNames.build();
     }
     catch (IOException e) {
       throw new ISE(e, "Failed to parse metric allowlist file [%s]", source);
@@ -246,7 +258,8 @@ public class LoggingEmitter implements Emitter
       return new FileInputStream(metricAllowlistPath);
     }
     catch (FileNotFoundException e) {
-      return openDefaultAllowlistFile();
+      throw new IAE(e, "Metric allowlist file [%s] not found", metricAllowlistPath);
+
     }
   }
 
