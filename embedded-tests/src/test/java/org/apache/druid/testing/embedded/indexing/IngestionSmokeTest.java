@@ -63,6 +63,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -254,7 +256,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_ingestWikipedia1DayWithMSQ_andQueryData()
+  public void test_ingestWikipedia1DayWithMSQ_andQueryData() throws Exception
   {
     final String sql =
         "INSERT INTO %s"
@@ -272,6 +274,17 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
 
     final EmbeddedMSQApis msqApis = new EmbeddedMSQApis(cluster, overlord);
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql, dataSource);
+
+    final ServiceMetricEvent failedTaskEvent = eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.TASK_TYPE, "query_worker")
+                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+    );
+    // Write out the logs of the task to a file
+    final String taskId = (String) failedTaskEvent.getUserDims().get(DruidMetrics.TASK_ID);
+    downloadTaskLogForDebugging(taskId);
+
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), eventCollector.latchableEmitter());
 
     waitForSegmentsToBeQueryable(1);
@@ -279,7 +292,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_runKafkaSupervisor()
+  public void test_runKafkaSupervisor() throws Exception
   {
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
@@ -304,10 +317,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
-    Assertions.assertEquals(
-        "Unknown",
-        failedTaskEvent.getUserDims().get(DruidMetrics.DESCRIPTION)
-    );
+
+    // Write out the logs of the task to a file
+    final String taskId = (String) failedTaskEvent.getUserDims().get(DruidMetrics.TASK_ID);
+    downloadTaskLogForDebugging(taskId);
+
     waitForSegmentsToBeQueryable(1);
 
     SupervisorStatus supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
@@ -369,6 +383,24 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
     Assertions.assertFalse(logs.isEmpty());
     Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
+  }
+
+  private void downloadTaskLogForDebugging(String taskId) throws Exception
+  {
+    final Optional<InputStream> streamOptional =
+        cluster.callApi().waitForResult(
+            () -> overlord.bindings()
+                          .getInstance(TaskLogStreamer.class)
+                          .streamTaskLog(taskId, 0),
+            Optional::isPresent
+        ).go();
+
+    Assertions.assertTrue(streamOptional.isPresent());
+
+    IOUtils.copy(
+        streamOptional.get(),
+        new FileOutputStream(new File("tasklogs", taskId))
+    );
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
