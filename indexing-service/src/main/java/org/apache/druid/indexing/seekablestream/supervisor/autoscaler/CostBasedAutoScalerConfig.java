@@ -48,7 +48,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 5 * 60 * 1000; // 5 minutes
   static final double DEFAULT_LAG_WEIGHT = 0.25;
   static final double DEFAULT_IDLE_WEIGHT = 0.75;
-  static final double DEFAULT_PROCESSING_RATE = 1000.0; // 1000 records/sec per task as default
   static final Duration DEFAULT_MIN_SCALE_DELAY = Duration.millis(DEFAULT_SCALE_ACTION_PERIOD_MILLIS * 3);
 
   private final boolean enableTaskAutoScaler;
@@ -61,7 +60,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   private final double lagWeight;
   private final double idleWeight;
-  private final double defaultProcessingRate;
   private final boolean useTaskCountBoundaries;
   private final int highLagThreshold;
   private final Duration minScaleDownDelay;
@@ -78,7 +76,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
       @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("defaultProcessingRate") Double defaultProcessingRate,
       @Nullable @JsonProperty("useTaskCountBoundaries") Boolean useTaskCountBoundaries,
       @Nullable @JsonProperty("highLagThreshold") Integer highLagThreshold,
       @Nullable @JsonProperty("minScaleDownDelay") Duration minScaleDownDelay,
@@ -99,7 +96,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Cost function weights with defaults
     this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
     this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
-    this.defaultProcessingRate = Configs.valueOrDefault(defaultProcessingRate, DEFAULT_PROCESSING_RATE);
     this.useTaskCountBoundaries = Configs.valueOrDefault(useTaskCountBoundaries, false);
     this.highLagThreshold = Configs.valueOrDefault(highLagThreshold, -1);
     this.minScaleDownDelay = Configs.valueOrDefault(minScaleDownDelay, DEFAULT_MIN_SCALE_DELAY);
@@ -129,7 +125,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
-    Preconditions.checkArgument(this.defaultProcessingRate > 0, "defaultProcessingRate must be > 0");
     Preconditions.checkArgument(this.minScaleDownDelay.getMillis() >= 0, "minScaleDownDelay must be >= 0");
   }
 
@@ -203,12 +198,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return idleWeight;
   }
 
-  @JsonProperty
-  public double getDefaultProcessingRate()
-  {
-    return defaultProcessingRate;
-  }
-
   /**
    * Enables or disables the use of task count boundaries derived from the current partitions-per-task (PPT) ratio.
    */
@@ -273,7 +262,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
-           && Double.compare(that.defaultProcessingRate, defaultProcessingRate) == 0
            && useTaskCountBoundaries == that.useTaskCountBoundaries
            && Objects.equals(minScaleDownDelay, that.minScaleDownDelay)
            && scaleDownDuringTaskRolloverOnly == that.scaleDownDuringTaskRolloverOnly
@@ -295,7 +283,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         scaleActionPeriodMillis,
         lagWeight,
         idleWeight,
-        defaultProcessingRate,
         useTaskCountBoundaries,
         highLagThreshold,
         minScaleDownDelay,
@@ -316,7 +303,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
-           ", defaultProcessingRate=" + defaultProcessingRate +
            ", useTaskCountBoundaries=" + useTaskCountBoundaries +
            ", highLagThreshold=" + highLagThreshold +
            ", minScaleDownDelay=" + minScaleDownDelay +
@@ -339,7 +325,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
     private Double idleWeight;
-    private Double defaultProcessingRate;
     private Boolean useTaskCountBoundaries;
     private Integer highLagThreshold;
     private Duration minScaleDownDelay;
@@ -403,12 +388,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder defaultProcessingRate(double defaultProcessingRate)
-    {
-      this.defaultProcessingRate = defaultProcessingRate;
-      return this;
-    }
-
     public Builder minScaleDownDelay(Duration minScaleDownDelay)
     {
       this.minScaleDownDelay = minScaleDownDelay;
@@ -445,7 +424,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionPeriodMillis,
           lagWeight,
           idleWeight,
-          defaultProcessingRate,
           useTaskCountBoundaries,
           highLagThreshold,
           minScaleDownDelay,
