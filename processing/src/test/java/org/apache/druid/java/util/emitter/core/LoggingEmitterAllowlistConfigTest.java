@@ -37,7 +37,6 @@ public class LoggingEmitterAllowlistConfigTest
   {
     final Map<String, Object> configMap = new HashMap<>();
     configMap.put("filterMetrics", true);
-    configMap.put("metricAllowlistPath", "/tmp/missing-" + UUID.randomUUID() + ".json");
     final LoggingEmitterConfig config = new ObjectMapper().convertValue(configMap, LoggingEmitterConfig.class);
 
     final LoggingEmitter emitter = new LoggingEmitter(config, new ObjectMapper());
