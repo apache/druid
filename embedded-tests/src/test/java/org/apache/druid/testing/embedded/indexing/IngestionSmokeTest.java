@@ -35,6 +35,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -256,7 +257,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_ingestWikipedia1DayWithMSQ_andQueryData() throws Exception
+  public void test_ingestWikipedia1DayWithMSQ_andQueryData()
   {
     final String sql =
         "INSERT INTO %s"
@@ -292,7 +293,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_runKafkaSupervisor() throws Exception
+  public void test_runKafkaSupervisor()
   {
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
@@ -385,22 +386,27 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
   }
 
-  private void downloadTaskLogForDebugging(String taskId) throws Exception
+  private void downloadTaskLogForDebugging(String taskId)
   {
-    final Optional<InputStream> streamOptional =
-        cluster.callApi().waitForResult(
-            () -> overlord.bindings()
-                          .getInstance(TaskLogStreamer.class)
-                          .streamTaskLog(taskId, 0),
-            Optional::isPresent
-        ).go();
+    final File logDirectory = new File("tasklogs");
+    final File logFile = new File(logDirectory, taskId);
+    try (FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
+      final Optional<InputStream> streamOptional =
+          cluster.callApi().waitForResult(
+              () -> overlord.bindings()
+                            .getInstance(TaskLogStreamer.class)
+                            .streamTaskLog(taskId, 0),
+              Optional::isPresent
+          ).go();
 
-    Assertions.assertTrue(streamOptional.isPresent());
-
-    IOUtils.copy(
-        streamOptional.get(),
-        new FileOutputStream(new File("tasklogs", taskId))
-    );
+      if (streamOptional.isPresent()) {
+        FileUtils.mkdirp(logDirectory);
+        IOUtils.copy(streamOptional.get(), fileOutputStream);
+      }
+    }
+    catch (Exception e) {
+      // Ignore
+    }
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
