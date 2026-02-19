@@ -107,7 +107,7 @@ jobs:
           job_summary: false
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: ${{ failure() || inputs.artifact_prefix != '' }}
         with:
           name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
