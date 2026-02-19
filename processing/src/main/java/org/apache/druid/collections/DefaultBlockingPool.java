@@ -57,15 +57,31 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       int limit
   )
   {
+    this(generator, limit, false);
+  }
+
+  public DefaultBlockingPool(
+      Supplier<T> generator,
+      int limit,
+      boolean parallelInit
+  )
+  {
     this.objects = new ArrayDeque<>(limit);
     this.maxSize = limit;
 
-    objects.addAll(
-        IntStream.range(0, limit)
-                 .parallel()
-                 .mapToObj(i -> generator.get())
-                 .toList()
-    );
+    // Parallize allocations can significantly speed up node boot times
+    if (parallelInit) {
+      objects.addAll(
+          IntStream.range(0, limit)
+                   .parallel()
+                   .mapToObj(i -> generator.get())
+                   .collect(Collectors.toCollection(ArrayList::new))
+      );
+    } else {
+      for (int i = 0; i < limit; i++) {
+        objects.add(generator.get());
+      }
+    }
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();

@@ -109,7 +109,8 @@ public class BrokerProcessingModule implements Module
     verifyDirectMemory(config, runtimeInfo);
     return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
-        config.getNumMergeBuffers()
+        config.getNumMergeBuffers(),
+        config.isParallelPoolInit()
     );
   }
 

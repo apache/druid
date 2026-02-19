@@ -1883,6 +1883,7 @@ minTopNThreshold
 parallelMergeInitialYieldRows
 parallelMergeParallelism
 parallelMergeSmallBatchRows
+parallelPoolInit
 populateCache
 populateResultLevelCache
 queryId

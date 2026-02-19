@@ -198,6 +198,7 @@ public class SeekableStreamAppenderatorConfigTest
           null,
           new DruidProcessingBufferConfig(HumanReadableBytes.valueOf(bufferSize), null, null),
           null,
+          null,
           JvmUtils.getRuntimeInfo()
       );
     }
