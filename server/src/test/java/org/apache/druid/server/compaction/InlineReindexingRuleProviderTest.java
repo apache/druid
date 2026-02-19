@@ -33,8 +33,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.function.BiFunction;
@@ -66,15 +66,15 @@ public class InlineReindexingRuleProviderTest
         null
     );
 
-    Assert.assertNotNull(provider.getDeletionRules());
-    Assert.assertTrue(provider.getDeletionRules().isEmpty());
-    Assert.assertNotNull(provider.getIOConfigRules());
-    Assert.assertTrue(provider.getIOConfigRules().isEmpty());
-    Assert.assertNotNull(provider.getSegmentGranularityRules());
-    Assert.assertTrue(provider.getSegmentGranularityRules().isEmpty());
-    Assert.assertNotNull(provider.getTuningConfigRules());
-    Assert.assertTrue(provider.getTuningConfigRules().isEmpty());
-    Assert.assertTrue(provider.getDataSchemaRules().isEmpty());
+    Assertions.assertNotNull(provider.getDeletionRules());
+    Assertions.assertTrue(provider.getDeletionRules().isEmpty());
+    Assertions.assertNotNull(provider.getIOConfigRules());
+    Assertions.assertTrue(provider.getIOConfigRules().isEmpty());
+    Assertions.assertNotNull(provider.getSegmentGranularityRules());
+    Assertions.assertTrue(provider.getSegmentGranularityRules().isEmpty());
+    Assertions.assertNotNull(provider.getTuningConfigRules());
+    Assertions.assertTrue(provider.getTuningConfigRules().isEmpty());
+    Assertions.assertTrue(provider.getDataSchemaRules().isEmpty());
   }
 
   @Test
@@ -89,17 +89,17 @@ public class InlineReindexingRuleProviderTest
         .build();
 
     List<ReindexingDeletionRule> noMatch = provider.getDeletionRules(INTERVAL_20_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertTrue("No rules should match interval that's too recent", noMatch.isEmpty());
+    Assertions.assertTrue(noMatch.isEmpty(), "No rules should match interval that's too recent");
 
     List<ReindexingDeletionRule> oneMatch = provider.getDeletionRules(INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals("Only rule30d should match", 1, oneMatch.size());
-    Assert.assertEquals("filter-30d", oneMatch.get(0).getId());
+    Assertions.assertEquals(1, oneMatch.size(), "Only rule30d should match");
+    Assertions.assertEquals("filter-30d", oneMatch.get(0).getId());
 
     List<ReindexingDeletionRule> multiMatch = provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals("All 3 additive rules should be returned", 3, multiMatch.size());
-    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-30d")));
-    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-60d")));
-    Assert.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-90d")));
+    Assertions.assertEquals(3, multiMatch.size(), "All 3 additive rules should be returned");
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-30d")));
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-60d")));
+    Assertions.assertTrue(multiMatch.stream().anyMatch(r -> r.getId().equals("filter-90d")));
   }
 
   @Test
@@ -154,16 +154,16 @@ public class InlineReindexingRuleProviderTest
         .dataSchemaRules(ImmutableList.of(dataSchemaRule))
         .build();
 
-    Assert.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
-    Assert.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
+    Assertions.assertEquals(1, provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).size());
+    Assertions.assertEquals("filter", provider.getDeletionRules(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).get(0).getId());
 
-    Assert.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("ioconfig", provider.getIOConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("segmentGranularity", provider.getSegmentGranularityRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("tuning", provider.getTuningConfigRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
 
-    Assert.assertEquals("dataSchema", provider.getDataSchemaRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
+    Assertions.assertEquals("dataSchema", provider.getDataSchemaRule(INTERVAL_100_DAYS_OLD, REFERENCE_TIME).getId());
   }
 
   /**
@@ -192,23 +192,23 @@ public class InlineReindexingRuleProviderTest
     builder = builderSetter.apply(builder, ImmutableList.of(rule30d, rule60d, rule90d));
     InlineReindexingRuleProvider provider = builder.build();
 
-    Assert.assertNull(
-        ruleTypeName + ": No rule should match interval that's too recent",
-        ruleGetter.apply(provider, INTERVAL_20_DAYS_OLD, REFERENCE_TIME)
+    Assertions.assertNull(
+        ruleGetter.apply(provider, INTERVAL_20_DAYS_OLD, REFERENCE_TIME),
+        ruleTypeName + ": No rule should match interval that's too recent"
     );
 
     T oneMatch = ruleGetter.apply(provider, INTERVAL_50_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals(
-        ruleTypeName + ": Only 30d rule should match",
+    Assertions.assertEquals(
         ruleTypeName + "-30d",
-        oneMatch.getId()
+        oneMatch.getId(),
+        ruleTypeName + ": Only 30d rule should match"
     );
 
     T multiMatch = ruleGetter.apply(provider, INTERVAL_100_DAYS_OLD, REFERENCE_TIME);
-    Assert.assertEquals(
-        ruleTypeName + ": Should return rule with oldest threshold (P90D)",
+    Assertions.assertEquals(
         ruleTypeName + "-90d",
-        multiMatch.getId()
+        multiMatch.getId(),
+        ruleTypeName + ": Should return rule with oldest threshold (P90D)"
     );
   }
 
@@ -222,7 +222,7 @@ public class InlineReindexingRuleProviderTest
   public void test_getType_returnsInline()
   {
     InlineReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
-    Assert.assertEquals("inline", provider.getType());
+    Assertions.assertEquals("inline", provider.getType());
   }
 
   private ReindexingDeletionRule createFilterRule(String id, Period period)

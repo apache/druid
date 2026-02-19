@@ -33,8 +33,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,7 +49,7 @@ public class ComposingReindexingRuleProviderTest
   @Test
   public void test_constructor_nullProviders_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ComposingReindexingRuleProvider(null)
     );
@@ -62,12 +62,12 @@ public class ComposingReindexingRuleProviderTest
     providers.add(InlineReindexingRuleProvider.builder().build());
     providers.add(null); // Null provider
 
-    NullPointerException exception = Assert.assertThrows(
+    NullPointerException exception = Assertions.assertThrows(
         NullPointerException.class,
         () -> new ComposingReindexingRuleProvider(providers)
     );
 
-    Assert.assertTrue(exception.getMessage().contains("providers list contains null element"));
+    Assertions.assertTrue(exception.getMessage().contains("providers list contains null element"));
   }
 
   @Test
@@ -77,9 +77,9 @@ public class ComposingReindexingRuleProviderTest
         Collections.emptyList()
     );
 
-    Assert.assertEquals("composing", composing.getType());
-    Assert.assertTrue(composing.isReady());
-    Assert.assertTrue(composing.getDeletionRules().isEmpty());
+    Assertions.assertEquals("composing", composing.getType());
+    Assertions.assertTrue(composing.isReady());
+    Assertions.assertTrue(composing.getDeletionRules().isEmpty());
   }
 
 
@@ -93,7 +93,7 @@ public class ComposingReindexingRuleProviderTest
         ImmutableList.of(provider1, provider2)
     );
 
-    Assert.assertTrue(composing.isReady());
+    Assertions.assertTrue(composing.isReady());
   }
 
   @Test
@@ -106,7 +106,7 @@ public class ComposingReindexingRuleProviderTest
         ImmutableList.of(readyProvider, notReadyProvider)
     );
 
-    Assert.assertFalse(composing.isReady());
+    Assertions.assertFalse(composing.isReady());
   }
 
   @Test
@@ -116,7 +116,7 @@ public class ComposingReindexingRuleProviderTest
         Collections.emptyList()
     );
 
-    Assert.assertTrue(composing.isReady());
+    Assertions.assertTrue(composing.isReady());
   }
 
   @Test
@@ -254,8 +254,8 @@ public class ComposingReindexingRuleProviderTest
         ImmutableList.of(provider1, provider2)
     );
 
-    Assert.assertEquals(composing1, composing2);
-    Assert.assertEquals(composing1.hashCode(), composing2.hashCode());
+    Assertions.assertEquals(composing1, composing2);
+    Assertions.assertEquals(composing1.hashCode(), composing2.hashCode());
   }
 
   @Test
@@ -273,7 +273,7 @@ public class ComposingReindexingRuleProviderTest
         ImmutableList.of(provider1, provider2)
     );
 
-    Assert.assertNotEquals(composing1, composing2);
+    Assertions.assertNotEquals(composing1, composing2);
   }
 
 
@@ -315,8 +315,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     List<T> result = ruleGetter.apply(composing);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", idExtractor.apply(result.get(0)));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("rule1", idExtractor.apply(result.get(0)));
 
     ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -324,8 +324,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule2", idExtractor.apply(result.get(0)));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("rule2", idExtractor.apply(result.get(0)));
 
     ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -333,7 +333,7 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing);
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertTrue(result.isEmpty());
   }
 
   private <T> void testComposingBehaviorForNonAdditiveRuleTypeWithInterval(
@@ -354,8 +354,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     T result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertNotNull(result);
-    Assert.assertEquals("rule1", idExtractor.apply(result));
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals("rule1", idExtractor.apply(result));
 
     ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -363,8 +363,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertNotNull(result);
-    Assert.assertEquals("rule2", idExtractor.apply(result));
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals("rule2", idExtractor.apply(result));
 
     ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -372,7 +372,7 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   /**
@@ -399,8 +399,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     List<T> result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule1", idExtractor.apply(result.get(0)));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("rule1", idExtractor.apply(result.get(0)));
 
     ReindexingRuleProvider emptyProvider = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -408,8 +408,8 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("rule2", idExtractor.apply(result.get(0)));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("rule2", idExtractor.apply(result.get(0)));
 
     ReindexingRuleProvider emptyProvider2 = InlineReindexingRuleProvider.builder().build();
     composing = new ComposingReindexingRuleProvider(
@@ -417,7 +417,7 @@ public class ComposingReindexingRuleProviderTest
     );
 
     result = ruleGetter.apply(composing, new IntervalAndTime(interval, REFERENCE_TIME));
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertTrue(result.isEmpty());
   }
 
   /**
