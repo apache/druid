@@ -26,8 +26,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ReindexingTuningConfigRuleTest
 {
@@ -51,7 +51,7 @@ public class ReindexingTuningConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -63,7 +63,7 @@ public class ReindexingTuningConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class ReindexingTuningConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -87,7 +87,7 @@ public class ReindexingTuningConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -95,32 +95,32 @@ public class ReindexingTuningConfigRuleTest
   {
     UserCompactionTaskQueryTuningConfig config = rule.getTuningConfig();
 
-    Assert.assertNotNull(config);
-    Assert.assertNotNull(config.getPartitionsSpec());
+    Assertions.assertNotNull(config);
+    Assertions.assertNotNull(config.getPartitionsSpec());
   }
 
   @Test
   public void test_getId_returnsConfiguredId()
   {
-    Assert.assertEquals("test-tuning-rule", rule.getId());
+    Assertions.assertEquals("test-tuning-rule", rule.getId());
   }
 
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assert.assertEquals("Custom tuning config", rule.getDescription());
+    Assertions.assertEquals("Custom tuning config", rule.getDescription());
   }
 
   @Test
   public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_21_DAYS, rule.getOlderThan());
+    Assertions.assertEquals(PERIOD_21_DAYS, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_nullId_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingTuningConfigRule(null, "description", PERIOD_21_DAYS, createTestTuningConfig())
     );
@@ -129,7 +129,7 @@ public class ReindexingTuningConfigRuleTest
   @Test
   public void test_constructor_nullPeriod_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingTuningConfigRule("test-id", "description", null, createTestTuningConfig())
     );
@@ -146,14 +146,14 @@ public class ReindexingTuningConfigRuleTest
         zeroPeriod,
         createTestTuningConfig()
     );
-    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
+    Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_negativePeriod_throwsIllegalArgumentException()
   {
     Period negativePeriod = Period.days(-21);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ReindexingTuningConfigRule("test-id", "description", negativePeriod, createTestTuningConfig())
     );
@@ -162,7 +162,7 @@ public class ReindexingTuningConfigRuleTest
   @Test
   public void test_constructor_nullTuningConfig_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingTuningConfigRule("test-id", "description", PERIOD_21_DAYS, null)
     );

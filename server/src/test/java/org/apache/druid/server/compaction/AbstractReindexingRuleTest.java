@@ -21,35 +21,42 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.joda.time.Period;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AbstractReindexingRuleTest
 {
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void test_constructor_positiveMonthsNegativeDays_throwsException()
   {
     Period period = Period.months(1).withDays(-40);
 
-    new ReindexingDeletionRule(
-        "test-rule",
-        null,
-        period,
-        new SelectorDimFilter("dim", "val", null),
-        null
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new ReindexingDeletionRule(
+            "test-rule",
+            null,
+            period,
+            new SelectorDimFilter("dim", "val", null),
+            null
+        )
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void test_constructor_positiveYearsNegativeMonths_throwsException()
   {
     Period period = new Period(1, -13, 0, 0, 0, 0, 0, 0);
 
-    new ReindexingDeletionRule(
-        "test-rule",
-        null,
-        period,
-        new SelectorDimFilter("dim", "val", null),
-        null
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new ReindexingDeletionRule(
+            "test-rule",
+            null,
+            period,
+            new SelectorDimFilter("dim", "val", null),
+            null
+        )
     );
   }
 }

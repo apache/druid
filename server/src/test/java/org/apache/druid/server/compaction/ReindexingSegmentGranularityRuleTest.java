@@ -29,8 +29,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ReindexingSegmentGranularityRuleTest
 {
@@ -53,7 +53,7 @@ public class ReindexingSegmentGranularityRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -65,7 +65,7 @@ public class ReindexingSegmentGranularityRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -77,7 +77,7 @@ public class ReindexingSegmentGranularityRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -89,7 +89,7 @@ public class ReindexingSegmentGranularityRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -97,32 +97,32 @@ public class ReindexingSegmentGranularityRuleTest
   {
     Granularity granularity = rule.getSegmentGranularity();
 
-    Assert.assertNotNull(granularity);
-    Assert.assertEquals(Granularities.HOUR, granularity);
+    Assertions.assertNotNull(granularity);
+    Assertions.assertEquals(Granularities.HOUR, granularity);
   }
 
   @Test
   public void test_getId_returnsConfiguredId()
   {
-    Assert.assertEquals("test-rule", rule.getId());
+    Assertions.assertEquals("test-rule", rule.getId());
   }
 
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assert.assertEquals("Test segment granularity rule", rule.getDescription());
+    Assertions.assertEquals("Test segment granularity rule", rule.getDescription());
   }
 
   @Test
   public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_7_DAYS, rule.getOlderThan());
+    Assertions.assertEquals(PERIOD_7_DAYS, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_nullId_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingSegmentGranularityRule(null, "description", PERIOD_7_DAYS, Granularities.HOUR)
     );
@@ -131,7 +131,7 @@ public class ReindexingSegmentGranularityRuleTest
   @Test
   public void test_constructor_nullPeriod_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingSegmentGranularityRule("test-id", "description", null, Granularities.HOUR)
     );
@@ -148,14 +148,14 @@ public class ReindexingSegmentGranularityRuleTest
         zeroPeriod,
         Granularities.HOUR
     );
-    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
+    Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_negativePeriod_throwsIllegalArgumentException()
   {
     Period negativePeriod = Period.days(-7);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ReindexingSegmentGranularityRule("test-id", "description", negativePeriod, Granularities.HOUR)
     );
@@ -164,7 +164,7 @@ public class ReindexingSegmentGranularityRuleTest
   @Test
   public void test_constructor_nullGranularity_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingSegmentGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
     );
@@ -190,7 +190,7 @@ public class ReindexingSegmentGranularityRuleTest
           PERIOD_7_DAYS,
           granularity
       );
-      Assert.assertEquals(granularity, rule.getSegmentGranularity());
+      Assertions.assertEquals(granularity, rule.getSegmentGranularity());
     }
   }
 
@@ -207,13 +207,13 @@ public class ReindexingSegmentGranularityRuleTest
     };
 
     for (Granularity granularity : unsupportedGranularities) {
-      DruidException exception = Assert.assertThrows(
+      DruidException exception = Assertions.assertThrows(
           DruidException.class,
           () -> new ReindexingSegmentGranularityRule("test-id", "description", PERIOD_7_DAYS, granularity)
       );
-      Assert.assertTrue(
-          "Expected exception message to contain 'Unsupported segment granularity' but got: " + exception.getMessage(),
-          exception.getMessage().contains("Unsupported segment granularity")
+      Assertions.assertTrue(
+          exception.getMessage().contains("Unsupported segment granularity"),
+          "Expected exception message to contain 'Unsupported segment granularity' but got: " + exception.getMessage()
       );
     }
   }

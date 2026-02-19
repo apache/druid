@@ -25,8 +25,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ReindexingIOConfigRuleTest
 {
@@ -49,7 +49,7 @@ public class ReindexingIOConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -61,7 +61,7 @@ public class ReindexingIOConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -73,7 +73,7 @@ public class ReindexingIOConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -85,7 +85,7 @@ public class ReindexingIOConfigRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -93,32 +93,32 @@ public class ReindexingIOConfigRuleTest
   {
     UserCompactionTaskIOConfig config = rule.getIoConfig();
 
-    Assert.assertNotNull(config);
+    Assertions.assertNotNull(config);
   }
 
   @Test
   public void test_getId_returnsConfiguredId()
   {
-    Assert.assertEquals("test-ioconfig-rule", rule.getId());
+    Assertions.assertEquals("test-ioconfig-rule", rule.getId());
   }
 
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assert.assertEquals("Custom IO config", rule.getDescription());
+    Assertions.assertEquals("Custom IO config", rule.getDescription());
   }
 
   @Test
   public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_60_DAYS, rule.getOlderThan());
+    Assertions.assertEquals(PERIOD_60_DAYS, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_nullId_throwsNullPointerException()
   {
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingIOConfigRule(null, "description", PERIOD_60_DAYS, config)
     );
@@ -128,7 +128,7 @@ public class ReindexingIOConfigRuleTest
   public void test_constructor_nullPeriod_throwsNullPointerException()
   {
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingIOConfigRule("test-id", "description", null, config)
     );
@@ -146,7 +146,7 @@ public class ReindexingIOConfigRuleTest
         zeroPeriod,
         config
     );
-    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
+    Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
@@ -154,7 +154,7 @@ public class ReindexingIOConfigRuleTest
   {
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
     Period negativePeriod = Period.days(-60);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ReindexingIOConfigRule("test-id", "description", negativePeriod, config)
     );
@@ -163,7 +163,7 @@ public class ReindexingIOConfigRuleTest
   @Test
   public void test_constructor_nullIOConfig_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingIOConfigRule("test-id", "description", PERIOD_60_DAYS, null)
     );

@@ -31,8 +31,9 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 
 public class ReindexingDeletionRuleTest
 {
@@ -69,7 +70,7 @@ public class ReindexingDeletionRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -81,7 +82,7 @@ public class ReindexingDeletionRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.FULL, result);
   }
 
   @Test
@@ -93,7 +94,7 @@ public class ReindexingDeletionRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.PARTIAL, result);
   }
 
   @Test
@@ -105,7 +106,7 @@ public class ReindexingDeletionRuleTest
 
     ReindexingRule.AppliesToMode result = rule.appliesTo(interval, REFERENCE_TIME);
 
-    Assert.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
+    Assertions.assertEquals(ReindexingRule.AppliesToMode.NONE, result);
   }
 
   @Test
@@ -113,8 +114,8 @@ public class ReindexingDeletionRuleTest
   {
     VirtualColumns vCols = rule.getVirtualColumns();
 
-    Assert.assertNotNull(vCols);
-    Assert.assertEquals(virtualColumns, vCols);
+    Assertions.assertNotNull(vCols);
+    Assertions.assertEquals(virtualColumns, vCols);
   }
 
   @Test
@@ -122,32 +123,32 @@ public class ReindexingDeletionRuleTest
   {
     DimFilter filter = rule.getDeleteWhere();
 
-    Assert.assertNotNull(filter);
-    Assert.assertEquals(testFilter, filter);
+    Assertions.assertNotNull(filter);
+    Assertions.assertEquals(testFilter, filter);
   }
 
   @Test
   public void test_getId_returnsConfiguredId()
   {
-    Assert.assertEquals("test-filter-rule", rule.getId());
+    Assertions.assertEquals("test-filter-rule", rule.getId());
   }
 
   @Test
   public void test_getDescription_returnsConfiguredDescription()
   {
-    Assert.assertEquals("Remove robot traffic", rule.getDescription());
+    Assertions.assertEquals("Remove robot traffic", rule.getDescription());
   }
 
   @Test
   public void test_getOlderThan_returnsConfiguredPeriod()
   {
-    Assert.assertEquals(PERIOD_30_DAYS, rule.getOlderThan());
+    Assertions.assertEquals(PERIOD_30_DAYS, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_nullId_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingDeletionRule(null, "description", PERIOD_30_DAYS, testFilter, null)
     );
@@ -156,7 +157,7 @@ public class ReindexingDeletionRuleTest
   @Test
   public void test_constructor_nullPeriod_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingDeletionRule("test-id", "description", null, testFilter, null)
     );
@@ -174,14 +175,14 @@ public class ReindexingDeletionRuleTest
         testFilter,
         null
     );
-    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
+    Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
   public void test_constructor_negativePeriod_throwsIllegalArgumentException()
   {
     Period negativePeriod = Period.days(-30);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ReindexingDeletionRule("test-id", "description", negativePeriod, testFilter, null)
     );
@@ -190,7 +191,7 @@ public class ReindexingDeletionRuleTest
   @Test
   public void test_constructor_nullDeleteWhere_throwsNullPointerException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new ReindexingDeletionRule("test-id", "description", PERIOD_30_DAYS, null, null)
     );
@@ -211,7 +212,7 @@ public class ReindexingDeletionRuleTest
         null
     );
 
-    Assert.assertEquals(period, rule.getOlderThan());
+    Assertions.assertEquals(period, rule.getOlderThan());
   }
 
   @Test
@@ -227,7 +228,7 @@ public class ReindexingDeletionRuleTest
         null
     );
 
-    Assert.assertEquals(period, rule.getOlderThan());
+    Assertions.assertEquals(period, rule.getOlderThan());
   }
 
   @Test
@@ -243,7 +244,7 @@ public class ReindexingDeletionRuleTest
         null
     );
 
-    Assert.assertEquals(period, rule.getOlderThan());
+    Assertions.assertEquals(period, rule.getOlderThan());
   }
 
   @Test
@@ -259,7 +260,7 @@ public class ReindexingDeletionRuleTest
         null
     );
 
-    Assert.assertEquals(period, rule.getOlderThan());
+    Assertions.assertEquals(period, rule.getOlderThan());
   }
 
   @Test
@@ -274,7 +275,7 @@ public class ReindexingDeletionRuleTest
         testFilter,
         null
     );
-    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
+    Assertions.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
@@ -282,7 +283,7 @@ public class ReindexingDeletionRuleTest
   {
     // P-6M should fail - negative months
     Period negativePeriod = Period.months(-6);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ReindexingDeletionRule("test-id", "description", negativePeriod, testFilter, null)
     );
@@ -307,21 +308,21 @@ public class ReindexingDeletionRuleTest
 
     // Interval ending before 6-month threshold - should be FULL
     Interval beforeThreshold = Intervals.of("2025-06-01T00:00:00Z/2025-06-15T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.FULL,
         monthRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 6-month threshold - should be PARTIAL
     Interval spanningThreshold = Intervals.of("2025-06-15T00:00:00Z/2025-07-15T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.PARTIAL,
         monthRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 6-month threshold - should be NONE
     Interval afterThreshold = Intervals.of("2025-07-01T00:00:00Z/2025-07-15T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.NONE,
         monthRule.appliesTo(afterThreshold, REFERENCE_TIME)
     );
@@ -346,21 +347,21 @@ public class ReindexingDeletionRuleTest
 
     // Interval ending before 1-year threshold - should be FULL
     Interval beforeThreshold = Intervals.of("2024-11-01T00:00:00Z/2024-12-01T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.FULL,
         yearRule.appliesTo(beforeThreshold, REFERENCE_TIME)
     );
 
     // Interval spanning the 1-year threshold - should be PARTIAL
     Interval spanningThreshold = Intervals.of("2024-12-01T00:00:00Z/2025-01-01T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.PARTIAL,
         yearRule.appliesTo(spanningThreshold, REFERENCE_TIME)
     );
 
     // Interval starting after 1-year threshold - should be NONE
     Interval afterThreshold = Intervals.of("2025-01-01T00:00:00Z/2025-02-01T00:00:00Z");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReindexingRule.AppliesToMode.NONE,
         yearRule.appliesTo(afterThreshold, REFERENCE_TIME)
     );
