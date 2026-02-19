@@ -632,8 +632,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * where the previous tasks had left off.
    * <p>
    * Since both of these are in-memory structures, a change in Overlord leadership
-   * might cause duplicate scaling actions and/or intermittent task failures due
-   * to {@code "Inconsistency between stored metadata and target"}.
+   * might cause duplicate scaling actions and/or intermittent task failures if
+   * the new generation tasks start with stale offsets.
    */
   @VisibleForTesting
   public void clearPartitionAssignmentsForScaling()
