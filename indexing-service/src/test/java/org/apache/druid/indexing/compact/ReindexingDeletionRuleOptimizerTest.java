@@ -47,9 +47,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -71,7 +71,7 @@ public class ReindexingDeletionRuleOptimizerTest
   private IndexingStateFingerprintMapper fingerprintMapper;
   private ReindexingDeletionRuleOptimizer optimizer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     indexingStateStorage = new HeapMemoryIndexingStateStorage();
@@ -96,7 +96,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // No state for fp1, so config should be unchanged
-    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
+    Assertions.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
   @Test
@@ -115,7 +115,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // All filters optimized away, transform spec should be null
-    Assert.assertNull(result.getTransformSpec());
+    Assertions.assertNull(result.getTransformSpec());
   }
 
   @Test
@@ -137,7 +137,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // All filters already applied, transform spec should be removed
-    Assert.assertNull(result.getTransformSpec());
+    Assertions.assertNull(result.getTransformSpec());
   }
 
   @Test
@@ -161,8 +161,8 @@ public class ReindexingDeletionRuleOptimizerTest
     // No filters were applied, so all should remain
     NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
     OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
-    Assert.assertEquals(3, innerOr.getFields().size());
-    Assert.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterA, filterB, filterC)));
+    Assertions.assertEquals(3, innerOr.getFields().size());
+    Assertions.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterA, filterB, filterC)));
   }
 
   @Test
@@ -192,7 +192,7 @@ public class ReindexingDeletionRuleOptimizerTest
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
     Set<DimFilter> expectedSet = new HashSet<>(Arrays.asList(filterC, filterD));
 
-    Assert.assertEquals(expectedSet, resultSet);
+    Assertions.assertEquals(expectedSet, resultSet);
   }
 
   @Test
@@ -226,7 +226,7 @@ public class ReindexingDeletionRuleOptimizerTest
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
     Set<DimFilter> expectedSet = new HashSet<>(Arrays.asList(filterB, filterC, filterD));
 
-    Assert.assertEquals(expectedSet, resultSet);
+    Assertions.assertEquals(expectedSet, resultSet);
   }
 
   @Test
@@ -257,8 +257,8 @@ public class ReindexingDeletionRuleOptimizerTest
     OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
     Set<DimFilter> resultSet = new HashSet<>(innerOr.getFields());
 
-    Assert.assertEquals(2, resultSet.size());
-    Assert.assertTrue(resultSet.containsAll(Arrays.asList(filterB, filterC)));
+    Assertions.assertEquals(2, resultSet.size());
+    Assertions.assertTrue(resultSet.containsAll(Arrays.asList(filterB, filterC)));
   }
 
   @Test
@@ -279,7 +279,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // No state available, all filters should remain
-    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
+    Assertions.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
   @Test
@@ -305,8 +305,8 @@ public class ReindexingDeletionRuleOptimizerTest
     // A was already applied, only B and C should remain
     NotDimFilter resultFilter = (NotDimFilter) result.getTransformSpec().getFilter();
     OrDimFilter innerOr = (OrDimFilter) resultFilter.getField();
-    Assert.assertEquals(2, innerOr.getFields().size());
-    Assert.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterB, filterC)));
+    Assertions.assertEquals(2, innerOr.getFields().size());
+    Assertions.assertTrue(innerOr.getFields().containsAll(Arrays.asList(filterB, filterC)));
   }
 
   @Test
@@ -327,7 +327,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // No fingerprints, all filters should remain
-    Assert.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
+    Assertions.assertEquals(expectedFilter, result.getTransformSpec().getFilter());
   }
 
 
@@ -453,17 +453,17 @@ public class ReindexingDeletionRuleOptimizerTest
 
     // Filter remains, but vc2 should be filtered out
     VirtualColumns resultVCs = result.getTransformSpec().getVirtualColumns();
-    Assert.assertNotNull(resultVCs);
-    Assert.assertEquals(2, resultVCs.getVirtualColumns().length);
+    Assertions.assertNotNull(resultVCs);
+    Assertions.assertEquals(2, resultVCs.getVirtualColumns().length);
 
     Set<String> outputNames = new HashSet<>();
     for (org.apache.druid.segment.VirtualColumn vc : resultVCs.getVirtualColumns()) {
       outputNames.add(vc.getOutputName());
     }
 
-    Assert.assertTrue(outputNames.contains("vc1"));
-    Assert.assertFalse(outputNames.contains("vc2")); // vc2 should be filtered out
-    Assert.assertTrue(outputNames.contains("vc3"));
+    Assertions.assertTrue(outputNames.contains("vc1"));
+    Assertions.assertFalse(outputNames.contains("vc2")); // vc2 should be filtered out
+    Assertions.assertTrue(outputNames.contains("vc3"));
   }
 
   @Test
@@ -488,7 +488,7 @@ public class ReindexingDeletionRuleOptimizerTest
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    Assert.assertEquals(VirtualColumns.EMPTY, result.getTransformSpec().getVirtualColumns());
+    Assertions.assertEquals(VirtualColumns.EMPTY, result.getTransformSpec().getVirtualColumns());
   }
 
   @Test
@@ -509,7 +509,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // Should return config unchanged since candidate was never compacted
-    Assert.assertSame(config, result);
+    Assertions.assertSame(config, result);
   }
 
   @Test
@@ -526,7 +526,7 @@ public class ReindexingDeletionRuleOptimizerTest
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
     // Should return config unchanged
-    Assert.assertSame(config, result);
+    Assertions.assertSame(config, result);
   }
 
   /**
