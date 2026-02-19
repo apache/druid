@@ -635,7 +635,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * might cause duplicate scaling actions and/or intermittent task failures due
    * to {@code "Inconsistency between stored metadata and target"}.
    */
-  private void clearPartitionAssignmentsForScaling()
+  @VisibleForTesting
+  public void clearPartitionAssignmentsForScaling()
   {
     // All previous tasks should now be publishing and not actively reading anymore
     activelyReadingTaskGroups.clear();
