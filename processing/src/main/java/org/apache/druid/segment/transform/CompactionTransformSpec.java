@@ -48,20 +48,20 @@ public class CompactionTransformSpec
       return null;
     }
 
-    return new CompactionTransformSpec(transformSpec.getFilter(), null);
+    return new CompactionTransformSpec(transformSpec.getFilter(), VirtualColumns.EMPTY);
   }
 
   @Nullable private final DimFilter filter;
-  @Nullable private final VirtualColumns virtualColumns;
+  private final VirtualColumns virtualColumns;
 
   @JsonCreator
   public CompactionTransformSpec(
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("virtualColumns") final VirtualColumns virtualColumns
+      @JsonProperty("virtualColumns") @Nullable final VirtualColumns virtualColumns
   )
   {
     this.filter = filter;
-    this.virtualColumns = virtualColumns;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @JsonProperty
@@ -72,8 +72,7 @@ public class CompactionTransformSpec
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;

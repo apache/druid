@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.DateTimes;
@@ -112,19 +113,22 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity
   )
   {
-    this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
-    this.ruleProvider = Objects.requireNonNull(ruleProvider, "'ruleProvider' cannot be null");
+    InvalidInput.conditionalException(dataSource != null, "'dataSource' cannot be null");
+    this.dataSource = dataSource;
+
+    InvalidInput.conditionalException(ruleProvider != null, "'ruleProvider' cannot be null");
+    this.ruleProvider = ruleProvider;
+
     this.engine = engine;
     this.taskContext = taskContext;
     this.taskPriority = Objects.requireNonNullElse(taskPriority, DEFAULT_COMPACTION_TASK_PRIORITY);
     this.inputSegmentSizeBytes = Objects.requireNonNullElse(inputSegmentSizeBytes, DEFAULT_INPUT_SEGMENT_SIZE_BYTES);
-    this.defaultSegmentGranularity = Objects.requireNonNull(
-        defaultSegmentGranularity,
-        "'defaultSegmentGranularity' cannot be null"
-    );
+
+    InvalidInput.conditionalException(defaultSegmentGranularity != null, "'defaultSegmentGranularity' cannot be null");
+    this.defaultSegmentGranularity = defaultSegmentGranularity;
 
     if (skipOffsetFromNow != null && skipOffsetFromLatest != null) {
-      throw new IAE("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
+      throw InvalidInput.exception("Cannot set both skipOffsetFromNow and skipOffsetFromLatest");
     }
     this.skipOffsetFromNow = skipOffsetFromNow;
     this.skipOffsetFromLatest = skipOffsetFromLatest;
@@ -524,9 +528,8 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private List<IntervalGranularityInfo> createDefaultGranularityTimeline(List<DateTime> nonSegmentGranThresholds)
   {
     if (nonSegmentGranThresholds.isEmpty()) {
-      throw new IAE(
-          "CascadingReindexingTemplate requires at least one reindexing rule "
-          + "(segment granularity or other type)"
+      throw InvalidInput.exception(
+          "CascadingReindexingTemplate requires at least one reindexing rule (segment granularity or other type)"
       );
     }
 

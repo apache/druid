@@ -113,4 +113,45 @@ public class ReindexingDeletionRule extends AbstractReindexingRule
   {
     return virtualColumns;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ReindexingDeletionRule that = (ReindexingDeletionRule) o;
+    return Objects.equals(getId(), that.getId())
+           && Objects.equals(getDescription(), that.getDescription())
+           && Objects.equals(getOlderThan(), that.getOlderThan())
+           && Objects.equals(deleteWhere, that.deleteWhere)
+           && Objects.equals(virtualColumns, that.virtualColumns);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getId(),
+        getDescription(),
+        getOlderThan(),
+        deleteWhere,
+        virtualColumns
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ReindexingDeletionRule{"
+           + "id='" + getId() + '\''
+           + ", description='" + getDescription() + '\''
+           + ", olderThan=" + getOlderThan()
+           + ", deleteWhere=" + deleteWhere
+           + ", virtualColumns=" + virtualColumns
+           + '}';
+  }
 }

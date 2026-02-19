@@ -68,4 +68,42 @@ public class ReindexingSegmentGranularityRule extends AbstractReindexingRule
     return segmentGranularity;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ReindexingSegmentGranularityRule that = (ReindexingSegmentGranularityRule) o;
+    return Objects.equals(getId(), that.getId())
+           && Objects.equals(getDescription(), that.getDescription())
+           && Objects.equals(getOlderThan(), that.getOlderThan())
+           && Objects.equals(segmentGranularity, that.segmentGranularity);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getId(),
+        getDescription(),
+        getOlderThan(),
+        segmentGranularity
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ReindexingSegmentGranularityRule{"
+           + "id='" + getId() + '\''
+           + ", description='" + getDescription() + '\''
+           + ", olderThan=" + getOlderThan()
+           + ", segmentGranularity=" + segmentGranularity
+           + '}';
+  }
+
 }

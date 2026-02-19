@@ -28,8 +28,26 @@ import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
+/**
+ * A {@link ReindexingRule} that specifies a data schema for reindexing tasks to configure.
+ * <p>
+ * This rule allows users to specify dimensionsspec metricsspec, query granularity, rollup, and projections for reindexing tasks to apply
+ * <p>
+ * This is a non-additive rule. Multiple data schema rules cannot be applied to the same interval being reindexed.
+ * <p>
+ * Example inline usage:
+ * <pre>{@code
+ * {
+ *   "id": "change-query-granularity-30d",
+ *   "olderThan": "P30D",
+ *   "queryGranularity": "HOUR",
+ *   "rollup": true
+ * }</pre>
+ */
 public class ReindexingDataSchemaRule extends AbstractReindexingRule
 {
   private final UserCompactionTaskDimensionsConfig dimensionsSpec;
@@ -85,5 +103,55 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
   public Boolean getRollup()
   {
     return rollup;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ReindexingDataSchemaRule that = (ReindexingDataSchemaRule) o;
+    return Objects.equals(getId(), that.getId())
+           && Objects.equals(getDescription(), that.getDescription())
+           && Objects.equals(getOlderThan(), that.getOlderThan())
+           && Objects.equals(dimensionsSpec, that.dimensionsSpec)
+           && Objects.deepEquals(metricsSpec, that.metricsSpec)
+           && Objects.equals(queryGranularity, that.queryGranularity)
+           && Objects.equals(rollup, that.rollup)
+           && Objects.equals(projections, that.projections);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getId(),
+        getDescription(),
+        getOlderThan(),
+        dimensionsSpec,
+        Objects.hashCode(metricsSpec),
+        queryGranularity,
+        rollup,
+        projections
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ReindexingDataSchemaRule{"
+           + "id='" + getId() + '\''
+           + ", description='" + getDescription() + '\''
+           + ", olderThan=" + getOlderThan()
+           + ", dimensionsSpec=" + dimensionsSpec
+           + ", metricsSpec=" + Arrays.toString(metricsSpec)
+           + ", queryGranularity=" + queryGranularity
+           + ", rollup=" + rollup
+           + ", projections=" + projections
+           + '}';
   }
 }

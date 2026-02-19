@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Associates a time interval with its segment granularity and optional source rule.
@@ -59,5 +60,36 @@ public class IntervalGranularityInfo
   public ReindexingSegmentGranularityRule getSourceRule()
   {
     return sourceRule;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IntervalGranularityInfo that = (IntervalGranularityInfo) o;
+    return Objects.equals(interval, that.interval)
+           && Objects.equals(granularity, that.granularity)
+           && Objects.equals(sourceRule, that.sourceRule);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(interval, granularity, sourceRule);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IntervalGranularityInfo{"
+           + "interval=" + interval
+           + ", granularity=" + granularity
+           + ", sourceRule=" + (sourceRule != null ? sourceRule.getId() : "null")
+           + '}';
   }
 }

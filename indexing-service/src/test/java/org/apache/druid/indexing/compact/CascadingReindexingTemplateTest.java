@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -177,8 +178,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     final ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
     EasyMock.replay(mockProvider);
 
-    IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
         () -> new CascadingReindexingTemplate(
             "testDataSource",
             null,
@@ -193,6 +194,77 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals("Cannot set both skipOffsetFromNow and skipOffsetFromLatest", exception.getMessage());
+    EasyMock.verify(mockProvider);
+  }
+
+  @Test
+  public void test_constructor_nullDataSourceThrowsException()
+  {
+    final ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
+    EasyMock.replay(mockProvider);
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> new CascadingReindexingTemplate(
+            null,  // null dataSource
+            null,
+            null,
+            mockProvider,
+            null,
+            null,
+            null,
+            null,
+            Granularities.DAY
+        )
+    );
+
+    Assert.assertTrue(exception.getMessage().contains("'dataSource' cannot be null"));
+    EasyMock.verify(mockProvider);
+  }
+
+  @Test
+  public void test_constructor_nullRuleProviderThrowsException()
+  {
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> new CascadingReindexingTemplate(
+            "testDataSource",
+            null,
+            null,
+            null,  // null ruleProvider
+            null,
+            null,
+            null,
+            null,
+            Granularities.DAY
+        )
+    );
+
+    Assert.assertTrue(exception.getMessage().contains("'ruleProvider' cannot be null"));
+  }
+
+  @Test
+  public void test_constructor_nullDefaultSegmentGranularityThrowsException()
+  {
+    final ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
+    EasyMock.replay(mockProvider);
+
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> new CascadingReindexingTemplate(
+            "testDataSource",
+            null,
+            null,
+            mockProvider,
+            null,
+            null,
+            null,
+            null,
+            null  // null defaultSegmentGranularity
+        )
+    );
+
+    Assert.assertTrue(exception.getMessage().contains("'defaultSegmentGranularity' cannot be null"));
     EasyMock.verify(mockProvider);
   }
 
@@ -393,12 +465,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
 
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR);
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY);
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR),
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY),
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH)
-        ))
+        .segmentGranularityRules(List.of(hourRule, dayRule, monthRule))
         .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
@@ -413,18 +485,26 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-10-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-10-01T00:00:00Z"), DateTimes.of("2024-12-29T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-29T00:00:00Z"), DateTimes.of("2025-01-22T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        )
+    );
 
-    Assert.assertEquals(3, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(2).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -469,17 +549,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
 
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR);
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY);
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH);
+
+    // The data schema rules are here to trigger splits in the base timeline for granularity rules.
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(7), Granularities.HOUR),
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY),
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH)
-        ))
+        .segmentGranularityRules(List.of(hourRule, dayRule, monthRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-100d", null, Period.days(100), null, new AggregatorFactory[0], null, null, null)
+            createReindexingDataSchemaRule("metrics-8d", Period.days(8)),
+            createReindexingDataSchemaRule("metrics-14d", Period.days(14)),
+            createReindexingDataSchemaRule("metrics-45d", Period.days(45)),
+            createReindexingDataSchemaRule("metrics-100d", Period.days(100))
         ))
         .build();
 
@@ -495,30 +576,46 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-10-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-10-01T00:00:00Z"), DateTimes.of("2024-10-21T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-10-21T00:00:00Z"), DateTimes.of("2024-12-15T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-15T00:00:00Z"), DateTimes.of("2024-12-29T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-29T00:00:00Z"), DateTimes.of("2025-01-15T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2025-01-15T16:00:00Z"), DateTimes.of("2025-01-21T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2025-01-21T16:00:00Z"), DateTimes.of("2025-01-22T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        )
+    );
 
-    Assert.assertEquals(7, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(1).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-10-21T00:00:00Z"), intervals.get(2).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(2).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(3).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(3).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(4).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(5).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(5).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2025-01-21T16:00:00Z"), intervals.get(6).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(6).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -561,8 +658,9 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .dataSchemaRules(List.of(
             new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
+            createReindexingDataSchemaRule("metrics-8d", Period.days(8)),
+            createReindexingDataSchemaRule("metrics-14d", Period.days(14)),
+            createReindexingDataSchemaRule("metrics-45d", Period.days(45))
         ))
         .build();
 
@@ -578,18 +676,27 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    // When no segment granularity rules exist, a synthetic rule is created with the smallest period
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-12-15T00:00:00Z")),
+            Granularities.DAY,
+            null  // Synthetic rule has no source
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-15T00:00:00Z"), DateTimes.of("2025-01-15T00:00:00Z")),
+            Granularities.DAY,
+            null  // Synthetic rule has no source
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2025-01-15T00:00:00Z"), DateTimes.of("2025-01-21T00:00:00Z")),
+            Granularities.DAY,
+            null  // Synthetic rule has no source
+        )
+    );
 
-    Assert.assertEquals(3, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(1).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2025-01-15T00:00:00Z"), intervals.get(2).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-21T00:00:00Z"), intervals.get(2).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -637,11 +744,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
 
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH);
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(3), Granularities.MONTH),
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY)
-        ))
+        .segmentGranularityRules(List.of(monthRule, dayRule))
         .dataSchemaRules(List.of(
             new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null),
             new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
@@ -661,24 +768,36 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.HOUR
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-10-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-10-01T00:00:00Z"), DateTimes.of("2024-12-29T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-29T00:00:00Z"), DateTimes.of("2025-01-08T16:00:00Z")),
+            Granularities.HOUR,
+            null  // Synthetic prepended rule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2025-01-08T16:00:00Z"), DateTimes.of("2025-01-15T16:00:00Z")),
+            Granularities.HOUR,
+            null  // Synthetic prepended rule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2025-01-15T16:00:00Z"), DateTimes.of("2025-01-22T16:00:00Z")),
+            Granularities.HOUR,
+            null  // Synthetic prepended rule
+        )
+    );
 
-    Assert.assertEquals(5, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-10-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(1).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-29T00:00:00Z"), intervals.get(2).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(2).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2025-01-08T16:00:00Z"), intervals.get(3).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(3).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2025-01-15T16:00:00Z"), intervals.get(4).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-22T16:00:00Z"), intervals.get(4).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -728,18 +847,20 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-02-04T22:12:04.873Z");
 
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-                                                                  .segmentGranularityRules(List.of(
-                                                                      new ReindexingSegmentGranularityRule("month-rule", null, Period.years(1), Granularities.YEAR),
-                                                                      new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.MONTH),
-                                                                      new ReindexingSegmentGranularityRule("day-rule", null, Period.days(7), Granularities.DAY)
-                                                                  ))
-                                                                  .dataSchemaRules(List.of(
-                                                                      new ReindexingDataSchemaRule("metrics-7d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
-                                                                      new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-                                                                      new ReindexingDataSchemaRule("metrics-21d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
-                                                                  ))
-                                                                  .build();
+    ReindexingSegmentGranularityRule yearRule = new ReindexingSegmentGranularityRule("year-rule", null, Period.years(1), Granularities.YEAR);
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH);
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.days(7), Granularities.DAY);
+
+    ReindexingRuleProvider provider =
+        InlineReindexingRuleProvider
+            .builder()
+            .segmentGranularityRules(List.of(yearRule, monthRule, dayRule))
+            .dataSchemaRules(List.of(
+                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
+                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
+                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
+            ))
+            .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
         "testDS",
@@ -753,27 +874,41 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.HOUR
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2023-01-01T00:00:00Z")),
+            Granularities.YEAR,
+            yearRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2023-01-01T00:00:00Z"), DateTimes.of("2023-12-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2023-12-01T00:00:00Z"), DateTimes.of("2024-01-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-01-01T00:00:00Z"), DateTimes.of("2024-01-21T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-01-21T00:00:00Z"), DateTimes.of("2024-01-28T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-01-28T00:00:00"), DateTimes.of("2024-02-03T22:00:00")),
+            Granularities.HOUR,
+            null  // Synthetic prepended rule
+        )
+    );
 
-    Assert.assertEquals(6, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2023-01-01T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(1).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2023-12-01T00:00:00Z"), intervals.get(2).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(2).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-01-01T00:00:00Z"), intervals.get(3).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(3).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-01-21T00:00:00Z"), intervals.get(4).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00Z"), intervals.get(4).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-01-28T00:00:00"), intervals.get(5).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-02-03T22:00:00"), intervals.get(5).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -809,8 +944,8 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
         () -> template.generateAlignedSearchIntervals(referenceTime)
     );
 
@@ -853,10 +988,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-02-01T00:00:00Z");
 
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH)
-        ))
+        .segmentGranularityRules(List.of(monthRule))
         .dataSchemaRules(List.of(
             new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null)
         ))
@@ -874,12 +1009,16 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2025-01-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        )
+    );
 
-    Assert.assertEquals(1, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2025-01-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -916,10 +1055,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-01T01:00:00Z");
 
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.days(1), Granularities.DAY);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(1), Granularities.DAY)
-        ))
+        .segmentGranularityRules(List.of(dayRule))
         .dataSchemaRules(List.of(
             new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null)
         ))
@@ -937,12 +1076,16 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-12-31T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        )
+    );
 
-    Assert.assertEquals(1, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-31T00:00:00Z"), intervals.get(0).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -982,10 +1125,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-15T00:00:00Z");
 
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule("day-rule", null, Period.months(1), Granularities.DAY);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.DAY)
-        ))
+        .segmentGranularityRules(List.of(dayRule))
         .dataSchemaRules(List.of(
             new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null),
             new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null)
@@ -1004,15 +1147,21 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-12-12T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-12T00:00:00Z"), DateTimes.of("2024-12-15T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        )
+    );
 
-    Assert.assertEquals(2, intervals.size());
-
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(0).getInterval().getEnd());
-
-    Assert.assertEquals(DateTimes.of("2024-12-12T00:00:00Z"), intervals.get(1).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-15T00:00:00Z"), intervals.get(1).getInterval().getEnd());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
   }
 
   /**
@@ -1044,10 +1193,10 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
 
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH);
+
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("month-rule", null, Period.months(1), Granularities.MONTH)
-        ))
+        .segmentGranularityRules(List.of(monthRule))
         .build();
 
     CascadingReindexingTemplate template = new CascadingReindexingTemplate(
@@ -1062,12 +1211,141 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         Granularities.DAY
     );
 
-    List<IntervalGranularityInfo> intervals = template.generateAlignedSearchIntervals(referenceTime);
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-12-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        )
+    );
 
-    Assert.assertEquals(1, intervals.size());
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
+  }
 
-    Assert.assertEquals(DateTimes.MIN, intervals.get(0).getInterval().getStart());
-    Assert.assertEquals(DateTimes.of("2024-12-01T00:00:00Z"), intervals.get(0).getInterval().getEnd());
+  /**
+   * TEST: Validation failure - default granularity is coarser than most recent segment granularity rule
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P30D→HOUR, P90D→DAY</li>
+   *   <li>Other Rules: P7D-metrics (finer than P30D, triggers prepending with default granularity)</li>
+   *   <li>Default Segment Granularity: MONTH (COARSER than HOUR!)</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Sort rules by period: P90D→DAY (oldest), P30D→HOUR (newest)</li>
+   *   <li>P7D metrics is finer than P30D, so prepend interval with default MONTH granularity</li>
+   *   <li>Timeline would be: [-∞, DAY_boundary) DAY, [DAY_boundary, HOUR_boundary) HOUR, [HOUR_boundary, MONTH_boundary) MONTH</li>
+   *   <li>Validation: HOUR → MONTH progression means granularity is getting COARSER toward present</li>
+   * </ol>
+   * <p>
+   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_failsWhenDefaultGranularityIsCoarserThanMostRecentSegmentGranRule()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingRuleProvider provider =
+        InlineReindexingRuleProvider
+            .builder()
+            .segmentGranularityRules(List.of(
+                new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
+                new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
+            ))
+            .dataSchemaRules(List.of(
+                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
+            ))
+            .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.MONTH  // MONTH is coarser than HOUR!
+    );
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> template.generateAlignedSearchIntervals(referenceTime)
+    );
+
+    Assert.assertTrue(
+        exception.getMessage().contains("Invalid segment granularity timeline")
+    );
+    Assert.assertTrue(
+        exception.getMessage().contains("coarser granularity")
+    );
+  }
+
+  /**
+   * TEST: Validation failure - older rule has finer granularity than newer rule
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P30D→DAY, P90D→HOUR</li>
+   *   <li>Other Rules: None</li>
+   *   <li>Default Segment Granularity: DAY</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Sort rules by period: P90D→HOUR (oldest), P30D→DAY (newest)</li>
+   *   <li>Timeline would be: [-∞, HOUR_boundary) HOUR, [HOUR_boundary, DAY_boundary) DAY</li>
+   *   <li>Validation: HOUR → DAY progression means granularity is getting COARSER toward present</li>
+   *   <li>This violates the constraint: older data (P90D) has HOUR granularity, newer data (P30D) has DAY granularity</li>
+   * </ol>
+   * <p>
+   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_failsWhenOlderRuleHasFinerGranularityThanNewerRule()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingRuleProvider provider =
+        InlineReindexingRuleProvider
+            .builder()
+            .segmentGranularityRules(List.of(
+                new ReindexingSegmentGranularityRule("day-rule", null, Period.days(30), Granularities.DAY),
+                new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(90), Granularities.HOUR)
+            ))
+            .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> template.generateAlignedSearchIntervals(referenceTime)
+    );
+
+    Assert.assertTrue(
+        exception.getMessage().contains("Invalid segment granularity timeline")
+    );
+    Assert.assertTrue(
+        exception.getMessage().contains("coarser granularity")
+    );
   }
 
   private static class TestCascadingReindexingTemplate extends CascadingReindexingTemplate
@@ -1177,127 +1455,6 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     return mockParams;
   }
 
-  /**
-   * TEST: Validation failure - default granularity is coarser than most recent segment granularity rule
-   * <p>
-   * REFERENCE TIME: 2025-01-29T16:15:00Z
-   * <p>
-   * INPUT RULES:
-   * <ul>
-   *   <li>Segment Granularity Rules: P30D→HOUR, P90D→DAY</li>
-   *   <li>Other Rules: P7D-metrics (finer than P30D, triggers prepending with default granularity)</li>
-   *   <li>Default Segment Granularity: MONTH (COARSER than HOUR!)</li>
-   * </ul>
-   * <p>
-   * PROCESSING:
-   * <ol>
-   *   <li>Sort rules by period: P90D→DAY (oldest), P30D→HOUR (newest)</li>
-   *   <li>P7D metrics is finer than P30D, so prepend interval with default MONTH granularity</li>
-   *   <li>Timeline would be: [-∞, DAY_boundary) DAY, [DAY_boundary, HOUR_boundary) HOUR, [HOUR_boundary, MONTH_boundary) MONTH</li>
-   *   <li>Validation: HOUR → MONTH progression means granularity is getting COARSER toward present</li>
-   * </ol>
-   * <p>
-   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
-   */
-  @Test
-  public void test_generateAlignedSearchIntervals_failsWhenDefaultGranularityIsCoarserThanMostRecentSegmentGranRule()
-  {
-    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
-
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(30), Granularities.HOUR),
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(90), Granularities.DAY)
-        ))
-        .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
-        ))
-        .build();
-
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        null,
-        Granularities.MONTH  // MONTH is coarser than HOUR!
-    );
-
-    IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> template.generateAlignedSearchIntervals(referenceTime)
-    );
-
-    Assert.assertTrue(
-        exception.getMessage().contains("Invalid segment granularity timeline")
-    );
-    Assert.assertTrue(
-        exception.getMessage().contains("coarser granularity")
-    );
-  }
-
-  /**
-   * TEST: Validation failure - older rule has finer granularity than newer rule
-   * <p>
-   * REFERENCE TIME: 2025-01-29T16:15:00Z
-   * <p>
-   * INPUT RULES:
-   * <ul>
-   *   <li>Segment Granularity Rules: P30D→DAY, P90D→HOUR</li>
-   *   <li>Other Rules: None</li>
-   *   <li>Default Segment Granularity: DAY</li>
-   * </ul>
-   * <p>
-   * PROCESSING:
-   * <ol>
-   *   <li>Sort rules by period: P90D→HOUR (oldest), P30D→DAY (newest)</li>
-   *   <li>Timeline would be: [-∞, HOUR_boundary) HOUR, [HOUR_boundary, DAY_boundary) DAY</li>
-   *   <li>Validation: HOUR → DAY progression means granularity is getting COARSER toward present</li>
-   *   <li>This violates the constraint: older data (P90D) has HOUR granularity, newer data (P30D) has DAY granularity</li>
-   * </ol>
-   * <p>
-   * EXPECTED: IllegalArgumentException with message about invalid granularity timeline
-   */
-  @Test
-  public void test_generateAlignedSearchIntervals_failsWhenOlderRuleHasFinerGranularityThanNewerRule()
-  {
-    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
-
-    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
-        .segmentGranularityRules(List.of(
-            new ReindexingSegmentGranularityRule("day-rule", null, Period.days(30), Granularities.DAY),
-            new ReindexingSegmentGranularityRule("hour-rule", null, Period.days(90), Granularities.HOUR)
-        ))
-        .build();
-
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        null,
-        Granularities.DAY
-    );
-
-    IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> template.generateAlignedSearchIntervals(referenceTime)
-    );
-
-    Assert.assertTrue(
-        exception.getMessage().contains("Invalid segment granularity timeline")
-    );
-    Assert.assertTrue(
-        exception.getMessage().contains("coarser granularity")
-    );
-  }
-
   private DruidInputSource createMockSource()
   {
     final Interval[] capturedInterval = new Interval[1];
@@ -1314,5 +1471,24 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .anyTimes();
     EasyMock.replay(mockSource);
     return mockSource;
+  }
+
+  /**
+   * Helper method to create a ReindexingDataSchemaRule with minimal required fields for testing
+   * <p>
+   * Helps quickly generate multiple rules to be used in testing formation of timelines and splits.
+   */
+  private ReindexingDataSchemaRule createReindexingDataSchemaRule(String name, Period period)
+  {
+    return new ReindexingDataSchemaRule(
+        name,
+        null,
+        period,
+        null,
+        new AggregatorFactory[0],
+        null,
+        null,
+        null
+    );
   }
 }

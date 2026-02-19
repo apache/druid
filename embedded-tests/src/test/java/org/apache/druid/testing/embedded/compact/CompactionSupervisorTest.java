@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
@@ -350,7 +349,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   @Test
   public void test_cascadingReindexing_withVirtualColumnOnNestedData_filtersCorrectly()
   {
-    // Virtual Collumns on nested data is only supported with MSQ compaction engine right now.
+    // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
     CompactionEngine compactionEngine = CompactionEngine.MSQ;
     configureCompaction(compactionEngine);
 
@@ -379,13 +378,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(4, getTotalRowCount());
 
     VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "extractedFieldA",
-                "json_value(extraInfo, '$.fieldA')",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "extractedFieldA",
+            "json_value(extraInfo, '$.fieldA')",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
         )
     );
 

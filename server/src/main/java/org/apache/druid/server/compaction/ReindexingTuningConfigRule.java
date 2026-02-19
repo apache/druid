@@ -75,4 +75,42 @@ public class ReindexingTuningConfigRule extends AbstractReindexingRule
   {
     return tuningConfig;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ReindexingTuningConfigRule that = (ReindexingTuningConfigRule) o;
+    return Objects.equals(getId(), that.getId())
+           && Objects.equals(getDescription(), that.getDescription())
+           && Objects.equals(getOlderThan(), that.getOlderThan())
+           && Objects.equals(tuningConfig, that.tuningConfig);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getId(),
+        getDescription(),
+        getOlderThan(),
+        tuningConfig
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ReindexingTuningConfigRule{"
+           + "id='" + getId() + '\''
+           + ", description='" + getDescription() + '\''
+           + ", olderThan=" + getOlderThan()
+           + ", tuningConfig=" + tuningConfig
+           + '}';
+  }
 }

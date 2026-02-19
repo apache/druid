@@ -46,7 +46,7 @@ public class SegmentGranularityTimelineValidationException extends IAE
         "Invalid segment granularity timeline for dataSource[%s]: "
         + "Interval[%s] with granularity[%s] is more recent than "
         + "interval[%s] with granularity[%s], but has a coarser granularity. "
-        + "Segment granularity must stay the same or become finer as data ages from present to past.",
+        + "Segment granularity must stay the same or become coarser as data ages from present to past.",
         dataSource,
         newerInterval,
         newerGranularity,
