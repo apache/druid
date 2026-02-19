@@ -128,16 +128,17 @@ public class ReindexingDataSchemaRule extends AbstractReindexingRule
   @Override
   public int hashCode()
   {
-    return Objects.hash(
+    int result = Objects.hash(
         getId(),
         getDescription(),
         getOlderThan(),
         dimensionsSpec,
-        Objects.hashCode(metricsSpec),
         queryGranularity,
         rollup,
         projections
     );
+    result = 31 * result + Arrays.hashCode(metricsSpec);
+    return result;
   }
 
   @Override
