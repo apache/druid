@@ -135,14 +135,18 @@ public class ReindexingIOConfigRuleTest
   }
 
   @Test
-  public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
+  public void test_constructor_zeroPeriod_succeeds()
   {
+    // P0D is valid - indicates rules that apply immediately to all data
     UserCompactionTaskIOConfig config = new UserCompactionTaskIOConfig(null);
     Period zeroPeriod = Period.days(0);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> new ReindexingIOConfigRule("test-id", "description", zeroPeriod, config)
+    ReindexingIOConfigRule rule = new ReindexingIOConfigRule(
+        "test-id",
+        "description",
+        zeroPeriod,
+        config
     );
+    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test

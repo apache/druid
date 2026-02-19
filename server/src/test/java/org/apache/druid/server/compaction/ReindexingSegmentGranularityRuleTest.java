@@ -138,13 +138,17 @@ public class ReindexingSegmentGranularityRuleTest
   }
 
   @Test
-  public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
+  public void test_constructor_zeroPeriod_succeeds()
   {
+    // P0D is valid - indicates rules that apply immediately to all data
     Period zeroPeriod = Period.days(0);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> new ReindexingSegmentGranularityRule("test-id", "description", zeroPeriod, Granularities.HOUR)
+    ReindexingSegmentGranularityRule rule = new ReindexingSegmentGranularityRule(
+        "test-id",
+        "description",
+        zeroPeriod,
+        Granularities.HOUR
     );
+    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
@@ -199,7 +203,7 @@ public class ReindexingSegmentGranularityRuleTest
         Granularities.EIGHT_HOUR,
         Granularities.WEEK,
         new PeriodGranularity(Period.days(3), null, DateTimeZone.UTC),  // Custom period
-        new PeriodGranularity(Period.days(1), null, DateTimeZone.forID("America/Los_Angeles"))  // With timezone
+        new PeriodGranularity(Period.days(1), null, DateTimes.inferTzFromString("America/Los_Angeles"))  // With timezone
     };
 
     for (Granularity granularity : unsupportedGranularities) {

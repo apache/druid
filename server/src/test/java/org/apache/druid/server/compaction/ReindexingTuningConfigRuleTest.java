@@ -136,13 +136,17 @@ public class ReindexingTuningConfigRuleTest
   }
 
   @Test
-  public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
+  public void test_constructor_zeroPeriod_succeeds()
   {
+    // P0D is valid - indicates rules that apply immediately to all data
     Period zeroPeriod = Period.days(0);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> new ReindexingTuningConfigRule("test-id", "description", zeroPeriod, createTestTuningConfig())
+    ReindexingTuningConfigRule rule = new ReindexingTuningConfigRule(
+        "test-id",
+        "description",
+        zeroPeriod,
+        createTestTuningConfig()
     );
+    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test

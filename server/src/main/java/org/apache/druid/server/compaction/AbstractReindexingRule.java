@@ -59,59 +59,54 @@ public abstract class AbstractReindexingRule implements ReindexingRule
     this.description = description;
     this.olderThan = Objects.requireNonNull(olderThan, "olderThan period cannot be null");
 
-    validatePeriodIsPositive(olderThan);
+    validatePeriodIsNonNegative(olderThan);
   }
 
   /**
-   * Validates that a period represents a positive duration.
+   * Validates that a period represents a non-negative duration (>= 0).
+   * <p>
+   * Zero periods (P0D) are allowed - they indicate rules that should apply immediately to all data.
+   * Negative periods are rejected as they would be nonsensical.
    * <p>
    * For periods with precise units (days, hours, minutes, seconds), validates by converting
    * to a standard duration. For periods with variable-length units (months, years), validates
-   * that at least one component is positive, since these cannot be converted to a precise duration.
+   * that no components are negative, since these cannot be converted to a precise duration.
    *
    * @param period the period to validate
-   * @throws IllegalArgumentException if the period is not positive
+   * @throws IllegalArgumentException if the period is negative
    */
-  private static void validatePeriodIsPositive(Period period)
+  private static void validatePeriodIsNonNegative(Period period)
   {
     if (hasMonthsOrYears(period)) {
-      if (!isPeriodPositive(period)) {
-        throw new IllegalArgumentException("period must be positive. Supplied period: " + period);
+      if (isPeriodNegative(period)) {
+        throw new IllegalArgumentException("period must not be negative. Supplied period: " + period);
       }
     } else {
-      if (period.toStandardDuration().getMillis() <= 0) {
-        throw new IllegalArgumentException("period must be positive. Supplied period: " + period);
+      if (period.toStandardDuration().getMillis() < 0) {
+        throw new IllegalArgumentException("period must not be negative. Supplied period: " + period);
       }
     }
   }
 
   /**
-   * Checks if a period with variable-length components (months/years) is positive.
+   * Checks if a period with variable-length components (months/years) has any negative components.
+   * <p>
+   * This is purposely an unscientific check that simply ensures no negative values are present in any component of the period.
+   * It should be "good enough" for almost all reasonable use cases.
    *
    * @param period the period to check
-   * @return true if any component is positive and no components are negative
+   * @return true if any component is negative
    */
-  private static boolean isPeriodPositive(Period period)
+  private static boolean isPeriodNegative(Period period)
   {
-    boolean hasPositiveComponent = period.getYears() > 0
-                                   || period.getMonths() > 0
-                                   || period.getWeeks() > 0
-                                   || period.getDays() > 0
-                                   || period.getHours() > 0
-                                   || period.getMinutes() > 0
-                                   || period.getSeconds() > 0
-                                   || period.getMillis() > 0;
-
-    boolean hasNegativeComponent = period.getYears() < 0
-                                   || period.getMonths() < 0
-                                   || period.getWeeks() < 0
-                                   || period.getDays() < 0
-                                   || period.getHours() < 0
-                                   || period.getMinutes() < 0
-                                   || period.getSeconds() < 0
-                                   || period.getMillis() < 0;
-
-    return hasPositiveComponent && !hasNegativeComponent;
+    return period.getYears() < 0
+           || period.getMonths() < 0
+           || period.getWeeks() < 0
+           || period.getDays() < 0
+           || period.getHours() < 0
+           || period.getMinutes() < 0
+           || period.getSeconds() < 0
+           || period.getMillis() < 0;
   }
 
   @JsonProperty

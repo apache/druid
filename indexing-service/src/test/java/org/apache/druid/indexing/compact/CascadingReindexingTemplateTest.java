@@ -1224,6 +1224,165 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   /**
+   * TEST: Zero period rule (P0D) applies immediately to all data
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P0D→HOUR (applies to all data immediately)</li>
+   *   <li>Other Rules: None</li>
+   *   <li>Default Segment Granularity: DAY</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Synthetic Rules: None</li>
+   *   <li>Initial Timeline: [-∞, 2025-01-29T16:00:00) - HOUR (P0D means threshold equals reference time)</li>
+   *   <li>Timeline Splits: None (no non-segment-gran rules)</li>
+   * </ol>
+   * <p>
+   * EXPECTED OUTPUT: 1 interval
+   * <ol>
+   *   <li>[-∞, 2025-01-29T16:00:00) - HOUR (aligned to hour boundary at reference time)</li>
+   * </ol>
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_zeroPeriodRuleAppliesImmediately()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
+        "immediate-hour-rule",
+        "Apply HOUR granularity to all data immediately",
+        Period.days(0),
+        Granularities.HOUR
+    );
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(hourRule))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2025-01-29T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        )
+    );
+
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
+  }
+
+  /**
+   * TEST: Zero period rule (P0D) with other rules creates proper cascading timeline
+   * <p>
+   * REFERENCE TIME: 2025-01-29T16:15:00Z
+   * <p>
+   * INPUT RULES:
+   * <ul>
+   *   <li>Segment Granularity Rules: P0D→HOUR, P30D→DAY, P90D→MONTH</li>
+   *   <li>Other Rules: None</li>
+   *   <li>Default Segment Granularity: DAY</li>
+   * </ul>
+   * <p>
+   * PROCESSING:
+   * <ol>
+   *   <li>Synthetic Rules: None</li>
+   *   <li>Sort rules by period: P90D (oldest), P30D (middle), P0D (newest/applies immediately)</li>
+   *   <li>Initial Timeline:
+   *     <ul>
+   *       <li>P90D → MONTH: Raw 2024-10-31T16:15 → Aligned 2024-10-01T00:00</li>
+   *       <li>P30D → DAY: Raw 2024-12-30T16:15 → Aligned 2024-12-30T00:00</li>
+   *       <li>P0D → HOUR: Raw 2025-01-29T16:15 → Aligned 2025-01-29T16:00</li>
+   *     </ul>
+   *   </li>
+   *   <li>Timeline Splits: None (no non-segment-gran rules)</li>
+   * </ol>
+   * <p>
+   * EXPECTED OUTPUT: 3 intervals
+   * <ol>
+   *   <li>[-∞, 2024-10-01T00:00:00) - MONTH</li>
+   *   <li>[2024-10-01T00:00:00, 2024-12-30T00:00:00) - DAY</li>
+   *   <li>[2024-12-30T00:00:00, 2025-01-29T16:00:00) - HOUR</li>
+   * </ol>
+   */
+  @Test
+  public void test_generateAlignedSearchIntervals_zeroPeriodRuleWithOtherRules()
+  {
+    DateTime referenceTime = DateTimes.of("2025-01-29T16:15:00Z");
+
+    ReindexingSegmentGranularityRule monthRule = new ReindexingSegmentGranularityRule(
+        "month-rule",
+        null,
+        Period.days(90),
+        Granularities.MONTH
+    );
+    ReindexingSegmentGranularityRule dayRule = new ReindexingSegmentGranularityRule(
+        "day-rule",
+        null,
+        Period.days(30),
+        Granularities.DAY
+    );
+    ReindexingSegmentGranularityRule hourRule = new ReindexingSegmentGranularityRule(
+        "immediate-hour-rule",
+        "Apply HOUR granularity immediately",
+        Period.days(0),
+        Granularities.HOUR
+    );
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .segmentGranularityRules(List.of(hourRule, dayRule, monthRule))
+        .build();
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        "testDS",
+        null,
+        null,
+        provider,
+        null,
+        null,
+        null,
+        null,
+        Granularities.DAY
+    );
+
+    List<IntervalGranularityInfo> expected = List.of(
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.MIN, DateTimes.of("2024-10-01T00:00:00Z")),
+            Granularities.MONTH,
+            monthRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-10-01T00:00:00Z"), DateTimes.of("2024-12-30T00:00:00Z")),
+            Granularities.DAY,
+            dayRule
+        ),
+        new IntervalGranularityInfo(
+            new Interval(DateTimes.of("2024-12-30T00:00:00Z"), DateTimes.of("2025-01-29T16:00:00Z")),
+            Granularities.HOUR,
+            hourRule
+        )
+    );
+
+    List<IntervalGranularityInfo> actual = template.generateAlignedSearchIntervals(referenceTime);
+    Assert.assertEquals(expected, actual);
+  }
+
+  /**
    * TEST: Validation failure - default granularity is coarser than most recent segment granularity rule
    * <p>
    * REFERENCE TIME: 2025-01-29T16:15:00Z

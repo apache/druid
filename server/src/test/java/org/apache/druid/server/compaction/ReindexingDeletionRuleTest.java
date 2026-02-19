@@ -163,13 +163,18 @@ public class ReindexingDeletionRuleTest
   }
 
   @Test
-  public void test_constructor_zeroPeriod_throwsIllegalArgumentException()
+  public void test_constructor_zeroPeriod_succeeds()
   {
+    // P0D is valid - indicates rules that apply immediately to all data
     Period zeroPeriod = Period.days(0);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> new ReindexingDeletionRule("test-id", "description", zeroPeriod, testFilter, null)
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
+        "test-id",
+        "description",
+        zeroPeriod,
+        testFilter,
+        null
     );
+    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
@@ -258,14 +263,18 @@ public class ReindexingDeletionRuleTest
   }
 
   @Test
-  public void test_constructor_zeroMonthsPeriod_throwsIllegalArgumentException()
+  public void test_constructor_zeroMonthsPeriod_succeeds()
   {
-    // P0M should fail - all components are zero/non-positive
+    // P0M is valid - equivalent to P0D, indicates rules that apply immediately to all data
     Period zeroPeriod = Period.months(0);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> new ReindexingDeletionRule("test-id", "description", zeroPeriod, testFilter, null)
+    ReindexingDeletionRule rule = new ReindexingDeletionRule(
+        "test-id",
+        "description",
+        zeroPeriod,
+        testFilter,
+        null
     );
+    Assert.assertEquals(zeroPeriod, rule.getOlderThan());
   }
 
   @Test
