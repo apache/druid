@@ -82,6 +82,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
   private final Stopwatch sinceRequestSentToServer = Stopwatch.createUnstarted();
+  private final Stopwatch sinceRequestSucceeded = Stopwatch.createUnstarted();
   private int runsInQueue = 0;
 
   public SegmentHolder(
@@ -153,6 +154,13 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     }
   }
 
+  public void markRequestSucceeded()
+  {
+    if (!sinceRequestSucceeded.isRunning()) {
+      sinceRequestSucceeded.start();
+    }
+  }
+
   /**
    * A request is considered to have timed out if the time elapsed since it was
    * first sent to the server is greater than the configured load timeout.
@@ -162,6 +170,15 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   public boolean hasRequestTimedOut()
   {
     return sinceRequestSentToServer.millisElapsed() > requestTimeout.getMillis();
+  }
+
+  /**
+   * Returns true if it has already been {@link HttpLoadQueuePeonConfig#getLoadTimeout()}
+   * since this request completed successfully.
+   */
+  public boolean isStaleSuccessfulRequest()
+  {
+    return sinceRequestSucceeded.millisElapsed() > requestTimeout.getMillis();
   }
 
   public int incrementAndGetRunsInQueue()

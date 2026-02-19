@@ -495,7 +495,7 @@ public class RunRulesTest
         )
         .atLeastOnce();
 
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsInQueue(EasyMock.anyObject())).andReturn(Set.of()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.replay(databaseRuleManager, mockPeon);
 
@@ -736,7 +736,7 @@ public class RunRulesTest
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(anotherMockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(anotherMockPeon.getSegmentsInQueue(EasyMock.anyObject())).andReturn(Set.of()).anyTimes();
     EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
 
     EasyMock.replay(anotherMockPeon);
@@ -1296,7 +1296,7 @@ public class RunRulesTest
   {
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsInQueue(EasyMock.anyObject())).andReturn(Set.of()).anyTimes();
     EasyMock.replay(mockPeon);
   }
 

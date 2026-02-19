@@ -35,7 +35,16 @@ public interface LoadQueuePeon
 
   Set<DataSegment> getSegmentsToLoad();
 
-  Set<SegmentHolder> getSegmentsInQueue();
+  /**
+   * Returns the segments currently queued on this peon for a load or drop operation.
+   * This also includes segments that are being moved from this server to another
+   * for balancing, and have currently only been marked with {@link #markSegmentToDrop}.
+   *
+   * @param segmentsLoadedOnServer Segments which are known to be currently loaded
+   *                               on the corresponding server. Used by the peon
+   *                               to reconcile its internal state.
+   */
+  Set<SegmentHolder> getSegmentsInQueue(Set<DataSegment> segmentsLoadedOnServer);
 
   Set<DataSegment> getSegmentsToDrop();
 
