@@ -945,8 +945,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}]"
-            + " and target state[ObjectMetadata{theObject=null}]. Try resetting the supervisor."
+            "Stored metadata state[ObjectMetadata{theObject={foo=baz}}] has already been updated by other tasks"
+            + " and has diverged from the expected start metadata state[ObjectMetadata{theObject=null}]."
+            + " This task will be replaced by the supervisor with a new task using updated start offsets."
+            + " Reset the supervisor if the issue persists."
         ),
         result2
     );
@@ -1093,8 +1095,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            "Inconsistency between stored metadata state[ObjectMetadata{theObject={foo=baz}}] and "
-            + "target state[ObjectMetadata{theObject={foo=qux}}]. Try resetting the supervisor."
+            "Stored metadata state[ObjectMetadata{theObject={foo=baz}}] has already been updated by other tasks"
+            + " and has diverged from the expected start metadata state[ObjectMetadata{theObject={foo=qux}}]."
+            + " This task will be replaced by the supervisor with a new task using updated start offsets."
+            + " Reset the supervisor if the issue persists."
         ),
         result2
     );

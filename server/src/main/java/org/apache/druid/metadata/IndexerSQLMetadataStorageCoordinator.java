@@ -2310,7 +2310,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
     }
 
-    if (startMetadataGreaterThanExisting && !startMetadataMatchesExisting) {
+    if (startMetadataMatchesExisting) {
+      // Proceed with the commit
+    } else if (startMetadataGreaterThanExisting) {
       // Offsets stored in startMetadata is greater than the last commited metadata.
       // This can happen because the previous task is still publishing its segments and can resolve once
       // the previous task finishes publishing.
@@ -2319,12 +2321,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           + " end state[%s]. Try resetting the supervisor.",
           startMetadata, oldCommitMetadataFromDb
       );
-    }
-
-    if (!startMetadataMatchesExisting) {
-      // Not in the desired start state.
+    } else {
+      // startMetadata is older than committed metadata
+      // The task trying to publish is probably a replica trying to commit offsets already published by another task.
+      // OR the metadata has been updated manually
       return SegmentPublishResult.fail(
-          "Inconsistency between stored metadata state[%s] and target state[%s]. Try resetting the supervisor.",
+          "Stored metadata state[%s] has already been updated by other tasks and"
+          + " has diverged from the expected start metadata state[%s]."
+          + " This task will be replaced by the supervisor with a new task using updated start offsets."
+          + " Reset the supervisor if the issue persists.",
           oldCommitMetadataFromDb, startMetadata
       );
     }
