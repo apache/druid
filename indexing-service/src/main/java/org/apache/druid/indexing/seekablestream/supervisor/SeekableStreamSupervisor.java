@@ -3352,7 +3352,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   /**
    * Checks the duration of {@link #activelyReadingTaskGroups}, requests them
    * to checkpoint themselves if they have exceeded the specified run duration
-   * or if early stop has been requested. If checkpoint is successfull, the
+   * or if early stop has been requested. If checkpoint is successful, the
    * {@link #partitionOffsets} are updated and checkpointed tasks are moved to
    * {@link #pendingCompletionTaskGroups}.
    */
