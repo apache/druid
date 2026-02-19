@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -296,6 +297,17 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
 
+    // Check if the task is failing
+    final ServiceMetricEvent failedTaskEvent = eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasService("druid/overlord")
+                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+    Assertions.assertEquals(
+        "Unknown",
+        failedTaskEvent.getUserDims().get(DruidMetrics.DESCRIPTION)
+    );
     waitForSegmentsToBeQueryable(1);
 
     SupervisorStatus supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);

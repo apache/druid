@@ -78,7 +78,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\", \"druid-kubernetes-overlord-extensions\"]"
+            + "\"postgresql-metadata-storage\", \"druid-kubernetes-overlord-extensions\"]"
         );
   }
 
