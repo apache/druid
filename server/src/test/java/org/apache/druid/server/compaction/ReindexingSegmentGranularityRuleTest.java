@@ -19,11 +19,14 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -161,5 +164,53 @@ public class ReindexingSegmentGranularityRuleTest
         NullPointerException.class,
         () -> new ReindexingSegmentGranularityRule("test-id", "description", PERIOD_7_DAYS, null)
     );
+  }
+
+  @Test
+  public void test_constructor_supportedGranularities_allSucceed()
+  {
+    Granularity[] supportedGranularities = {
+        Granularities.MINUTE,
+        Granularities.FIFTEEN_MINUTE,
+        Granularities.HOUR,
+        Granularities.DAY,
+        Granularities.MONTH,
+        Granularities.QUARTER,
+        Granularities.YEAR
+    };
+
+    for (Granularity granularity : supportedGranularities) {
+      ReindexingSegmentGranularityRule rule = new ReindexingSegmentGranularityRule(
+          "test-id",
+          "description",
+          PERIOD_7_DAYS,
+          granularity
+      );
+      Assert.assertEquals(granularity, rule.getSegmentGranularity());
+    }
+  }
+
+  @Test
+  public void test_constructor_unsupportedGranularities_allThrowDruidException()
+  {
+    Granularity[] unsupportedGranularities = {
+        Granularities.THIRTY_MINUTE,
+        Granularities.SIX_HOUR,
+        Granularities.EIGHT_HOUR,
+        Granularities.WEEK,
+        new PeriodGranularity(Period.days(3), null, DateTimeZone.UTC),  // Custom period
+        new PeriodGranularity(Period.days(1), null, DateTimeZone.forID("America/Los_Angeles"))  // With timezone
+    };
+
+    for (Granularity granularity : unsupportedGranularities) {
+      DruidException exception = Assert.assertThrows(
+          DruidException.class,
+          () -> new ReindexingSegmentGranularityRule("test-id", "description", PERIOD_7_DAYS, granularity)
+      );
+      Assert.assertTrue(
+          "Expected exception message to contain 'Unsupported segment granularity' but got: " + exception.getMessage(),
+          exception.getMessage().contains("Unsupported segment granularity")
+      );
+    }
   }
 }

@@ -21,18 +21,22 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
  * A {@link ReindexingRule} that specifies a segment granularity for reindexing tasks to configure.
  * <p>
  * This rule controls how time-series data is bucketed into segments during reindexing. For example, changing from
- * 15-minute segments to hourly segments reduces segment count.
+ * 15-minute segments to hourly segments reduces segment count. There is a strict allow list of supported granularities
+ * to prevent misconfiguration.
  * <p>
  * This is a non-additive rule. Multiple segment granularity rules cannot be applied to the same segment.
  * <p>
@@ -48,6 +52,16 @@ import java.util.Objects;
  */
 public class ReindexingSegmentGranularityRule extends AbstractReindexingRule
 {
+  private static final List<Granularity> SUPPORTED_SEGMENT_GRANULARITIES = List.of(
+      Granularities.MINUTE,
+      Granularities.FIFTEEN_MINUTE,
+      Granularities.HOUR,
+      Granularities.DAY,
+      Granularities.MONTH,
+      Granularities.QUARTER,
+      Granularities.YEAR
+  );
+
   private final Granularity segmentGranularity;
 
   @JsonCreator
@@ -59,7 +73,12 @@ public class ReindexingSegmentGranularityRule extends AbstractReindexingRule
   )
   {
     super(id, description, olderThan);
-    this.segmentGranularity = Objects.requireNonNull(segmentGranularity);
+    InvalidInput.conditionalException(
+        SUPPORTED_SEGMENT_GRANULARITIES.contains(segmentGranularity),
+        "Unsupported segment granularity [%s]. Supported values are: MINUTE, FIFTEEN_MINUTE, HOUR, DAY, MONTH, QUARTER, YEAR",
+        segmentGranularity
+    );
+    this.segmentGranularity = segmentGranularity;
   }
 
   @JsonProperty
