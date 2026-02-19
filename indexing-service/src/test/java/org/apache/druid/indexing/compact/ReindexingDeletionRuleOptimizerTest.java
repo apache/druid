@@ -488,8 +488,7 @@ public class ReindexingDeletionRuleOptimizerTest
 
     DataSourceCompactionConfig result = optimizer.optimizeConfig(config, candidate, params);
 
-    // Virtual columns should be null when no virtual columns are referenced
-    Assert.assertNull(result.getTransformSpec().getVirtualColumns());
+    Assert.assertEquals(VirtualColumns.EMPTY, result.getTransformSpec().getVirtualColumns());
   }
 
   @Test
